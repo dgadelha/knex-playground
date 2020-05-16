@@ -1,0 +1,43 @@
+{
+  "name": "knex-playground",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build --prod"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/animations": "~9.1.7",
+    "@angular/common": "~9.1.7",
+    "@angular/compiler": "~9.1.7",
+    "@angular/core": "~9.1.7",
+    "@angular/forms": "~9.1.7",
+    "@angular/platform-browser": "~9.1.7",
+    "@angular/platform-browser-dynamic": "~9.1.7",
+    "@angular/router": "~9.1.7",
+    "knex": "^0.21.1",
+    "mssql": "^6.2.0",
+    "ngx-monaco-editor": "^9.0.0",
+    "rxjs": "~6.5.4",
+    "sql-formatter": "^2.3.3",
+    "tslib": "^1.10.0",
+    "zone.js": "~0.10.2"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "~0.901.6",
+    "@angular/cli": "~9.1.6",
+    "@angular/compiler-cli": "~9.1.7",
+    "@types/node": "^12.11.1",
+    "@types/sql-formatter": "^2.3.0",
+    "ts-node": "~8.3.0",
+    "tslint": "~6.1.0",
+    "typescript": "~3.8.3"
+  },
+  "browser": {
+    "crypto": false,
+    "fs": false,
+    "stream": false,
+    "timers": false
+  }
+}
