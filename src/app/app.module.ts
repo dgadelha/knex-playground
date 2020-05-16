@@ -14,7 +14,7 @@ const monacoConfig: NgxMonacoEditorConfig = {
 
   async onMonacoLoad() {
     try {
-      const typeRes = await fetch("/assets/knex/index.d.ts");
+      const typeRes = await fetch("./assets/knex/index.d.ts");
       const types = await typeRes.text();
       const mappedTypes = types.replace(/^import .*$/gm, "").replace("export = Knex;", "declare const knex: Knex;");
 
