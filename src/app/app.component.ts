@@ -27,9 +27,9 @@ export class AppComponent {
     const knex = this.knex;
 
     try {
-      this.sql = "--- generated SQL code\n" + sqlFormatter.format(eval(newCode).toQuery());
+      this.sql = "--- generated SQL code\n" + sqlFormatter.format(eval(newCode).toQuery()) + "\n";
     } catch (err) {
-      this.sql = `--- ${err?.toString() ?? err}`;
+      this.sql = `--- ${err?.toString() ?? err}\n`;
     }
   }
 }
