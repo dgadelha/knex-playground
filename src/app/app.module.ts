@@ -4,6 +4,7 @@ import { FormsModule } from "@angular/forms";
 import { MonacoEditorModule, NgxMonacoEditorConfig } from "ngx-monaco-editor";
 
 import { AppComponent } from "./app.component";
+import { FooterComponent } from './footer/footer.component';
 
 const monacoConfig: NgxMonacoEditorConfig = {
   defaultOptions: {
@@ -28,6 +29,7 @@ const monacoConfig: NgxMonacoEditorConfig = {
 @NgModule({
   declarations: [
     AppComponent,
+    FooterComponent,
   ],
   imports: [
     BrowserModule,

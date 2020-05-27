@@ -1,0 +1,20 @@
+<div id="footer">
+  <a href="https://knexjs.org/" rel="external noopener noreferrer" target="_blank">
+    <img src="./assets/knex-icon-white.png" alt="Knex Icon">
+    Knex.js {{ knexVersion }}
+  </a>
+
+  <span (click)="clientSelect.click()">
+    <img [src]="'./assets/clients/' + client + '.png'" alt="Knex Client Icon">
+    <select #clientSelect [ngModel]="client" (ngModelChange)="clientChange.emit($event)">
+      <option *ngFor="let option of clients" [value]="option.id">{{ option.name }}</option>
+    </select>
+  </span>
+
+  <div class="spacer"></div>
+
+  <a href="https://github.com/dgadelha/knex-playground" rel="external noopener noreferrer" target="_blank">
+    <img src="./assets/github.png" alt="GitHub Icon">
+    GitHub
+  </a>
+</div>
