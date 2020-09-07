@@ -19,7 +19,7 @@
     "knex": "^0.21.5",
     "mssql": "^6.2.1",
     "ngx-monaco-editor": "^9.0.0",
-    "rxjs": "~6.6.2",
+    "rxjs": "~6.6.3",
     "sql-formatter": "^2.3.3",
     "tslib": "^2.0.0",
     "zone.js": "~0.10.2"
