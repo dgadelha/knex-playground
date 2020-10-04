@@ -41,6 +41,10 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
+            "allowedCommonJsDependencies": [
+              "knex",
+              "sql-formatter"
+            ],
             "outputPath": "dist",
             "index": "src/index.html",
             "main": "src/main.ts",
