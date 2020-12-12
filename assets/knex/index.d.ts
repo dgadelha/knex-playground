@@ -16,6 +16,7 @@ import ResultTypes = require('./result');
 import { Tables } from './tables';
 
 import { ConnectionOptions } from "tls";
+import { Stream } from "stream";
 
 // # Generic type-level utilities
 
@@ -354,11 +355,15 @@ interface Knex<TRecord extends {} = any, TResult = unknown[]>
   initialize(config?: Knex.Config): void;
   destroy(callback: Function): void;
   destroy(): Promise<void>;
-  batchInsert(
+
+  batchInsert<TRecord2 = TRecord, TResult2 = number[]>(
     tableName: Knex.TableDescriptor,
-    data: readonly any[],
-    chunkSize?: number
-  ): Knex.QueryBuilder<TRecord, {}>;
+    data: TRecord2 extends Knex.CompositeTableType<unknown>
+      ? ReadonlyArray<Knex.ResolveTableType<TRecord2, 'insert'>>
+      : ReadonlyArray<Knex.DbRecordArr<TRecord2>>,
+    chunkSize?: number,
+  ): Knex.BatchInsertBuilder<TRecord2, TResult2>;
+
   schema: Knex.SchemaBuilder;
   queryBuilder<TRecord2 = TRecord, TResult2 = TResult>(): Knex.QueryBuilder<
     TRecord2,
@@ -370,6 +375,8 @@ interface Knex<TRecord extends {} = any, TResult = unknown[]>
   seed: Knex.Seeder;
   fn: Knex.FunctionHelper;
   ref: Knex.RefBuilder;
+  userParams: Record<string, any>;
+  withUserParams(params: Record<string, any>): Knex;
 }
 
 declare function Knex<TRecord extends {} = any, TResult = unknown[]>(
@@ -604,7 +611,9 @@ declare namespace Knex {
     pluck<TResult2 extends {}>(column: string): QueryBuilder<TRecord, TResult2>;
 
     insert(
-      data: TRecord extends CompositeTableType<unknown> ? ResolveTableType<TRecord, 'insert'> : DbRecordArr<TRecord>,
+      data: TRecord extends CompositeTableType<unknown>
+        ? ResolveTableType<TRecord, 'insert'> | ReadonlyArray<ResolveTableType<TRecord, 'insert'>>
+        : DbRecordArr<TRecord> | ReadonlyArray<DbRecordArr<TRecord>>,
       returning: '*'
     ): QueryBuilder<TRecord, DeferredKeySelection<TRecord, never>[]>;
     insert<
@@ -615,7 +624,9 @@ declare namespace Knex {
         TKey
       >[]
     >(
-      data: TRecord extends CompositeTableType<unknown> ? ResolveTableType<TRecord, 'insert'> : DbRecordArr<TRecord>,
+      data: TRecord extends CompositeTableType<unknown>
+        ? ResolveTableType<TRecord, 'insert'> | ReadonlyArray<ResolveTableType<TRecord, 'insert'>>
+        : DbRecordArr<TRecord> | ReadonlyArray<DbRecordArr<TRecord>>,
       returning: TKey
     ): QueryBuilder<TRecord, TResult2>;
     insert<
@@ -626,7 +637,9 @@ declare namespace Knex {
         TKey
       >[]
     >(
-      data: TRecord extends CompositeTableType<unknown> ? ResolveTableType<TRecord, 'insert'> : DbRecordArr<TRecord>,
+      data: TRecord extends CompositeTableType<unknown>
+        ? ResolveTableType<TRecord, 'insert'> | ReadonlyArray<ResolveTableType<TRecord, 'insert'>>
+        : DbRecordArr<TRecord> | ReadonlyArray<DbRecordArr<TRecord>>,
       returning: readonly TKey[]
     ): QueryBuilder<TRecord, TResult2>;
     insert<
@@ -637,7 +650,9 @@ declare namespace Knex {
         TKey
       >[]
     >(
-      data: TRecord extends CompositeTableType<unknown> ? ResolveTableType<TRecord, 'insert'> : DbRecordArr<TRecord>,
+      data: TRecord extends CompositeTableType<unknown>
+        ? ResolveTableType<TRecord, 'insert'> | ReadonlyArray<ResolveTableType<TRecord, 'insert'>>
+        : DbRecordArr<TRecord> | ReadonlyArray<DbRecordArr<TRecord>>,
       returning: TKey
     ): QueryBuilder<TRecord, TResult2>;
     insert<
@@ -648,11 +663,15 @@ declare namespace Knex {
         TKey
       >[]
     >(
-      data: TRecord extends CompositeTableType<unknown> ? ResolveTableType<TRecord, 'insert'> : DbRecordArr<TRecord>,
+      data: TRecord extends CompositeTableType<unknown>
+        ? ResolveTableType<TRecord, 'insert'> | ReadonlyArray<ResolveTableType<TRecord, 'insert'>>
+        : DbRecordArr<TRecord> | ReadonlyArray<DbRecordArr<TRecord>>,
       returning: readonly TKey[]
     ): QueryBuilder<TRecord, TResult2>;
     insert<TResult2 = number[]>(
-      data: TRecord extends CompositeTableType<unknown> ? ResolveTableType<TRecord, 'insert'> : DbRecordArr<TRecord>
+      data: TRecord extends CompositeTableType<unknown>
+        ? ResolveTableType<TRecord, 'insert'> | ReadonlyArray<ResolveTableType<TRecord, 'insert'>>
+        : DbRecordArr<TRecord> | ReadonlyArray<DbRecordArr<TRecord>>
     ): QueryBuilder<TRecord, TResult2>;
 
     modify<TRecord2 extends {} = any, TResult2 extends {} = any>(
@@ -1260,7 +1279,7 @@ declare namespace Knex {
     ): QueryBuilder<TRecord, TResult>;
     <TRecordInner, TResultInner>(
       columnName: string,
-      values: QueryBuilder<TRecordInner, TResultInner>
+      values: Value[] | QueryBuilder<TRecordInner, TResultInner>
     ): QueryBuilder<TRecord, TResult>;
     <K extends keyof TRecord, TRecordInner, TResultInner>(
       columnNames: readonly K[],
@@ -1488,6 +1507,35 @@ declare namespace Knex {
 
   interface RefBuilder {
       <TSrc extends string>(src: TSrc): Ref<TSrc, {[K in TSrc]: TSrc}>;
+  }
+
+  interface BatchInsertBuilder<TRecord extends {} = any, TResult = number[]> extends Promise<ResolveResult<TResult>> {
+    transacting(trx: Transaction): this;
+    // see returning methods from QueryInterface
+    returning(column: '*'): BatchInsertBuilder<TRecord, DeferredKeySelection<TRecord, never>[]>;
+    returning<
+      TKey extends StrKey<ResolveTableType<TRecord>>,
+      TResult2 = DeferredIndex.Augment<
+        UnwrapArrayMember<TResult>,
+        ResolveTableType<TRecord>,
+        TKey
+        >[]
+      >(
+      column: TKey
+    ): BatchInsertBuilder<TRecord, TResult2>;
+    returning<
+      TKey extends StrKey<ResolveTableType<TRecord>>,
+      TResult2 = DeferredKeySelection.SetSingle<
+        DeferredKeySelection.Augment<UnwrapArrayMember<TResult>, ResolveTableType<TRecord>, TKey>,
+        false
+        >[]
+      >(
+      columns: readonly TKey[]
+    ): BatchInsertBuilder<TRecord, TResult2>;
+    // if data with specific type passed, exclude this method
+    returning<TResult2 = SafePartial<TRecord>[]>(
+      column: unknown extends TRecord ? string | readonly string[] : never
+    ): BatchInsertBuilder<TRecord, TResult2>;
   }
 
   //
@@ -1733,6 +1781,7 @@ declare namespace Knex {
     comment(value: string): ColumnBuilder;
     alter(): ColumnBuilder;
     queryContext(context: any): ColumnBuilder;
+    withKeyName(keyName: string): ColumnBuilder;
   }
 
   interface ForeignConstraintBuilder {
@@ -1795,6 +1844,7 @@ declare namespace Knex {
     | ConnectionConfig
     | MariaSqlConnectionConfig
     | MySqlConnectionConfig
+    | MySql2ConnectionConfig
     | MsSqlConnectionConfig
     | OracleDbConnectionConfig
     | PgConnectionConfig
@@ -1924,6 +1974,25 @@ declare namespace Knex {
     expirationChecker?(): boolean;
   }
 
+  // Config object for mysql2: https://github.com/sidorares/node-mysql2/blob/master/lib/connection_config.js
+  // Some options for connection pooling and MySQL server API are excluded.
+  interface MySql2ConnectionConfig extends MySqlConnectionConfig {
+    authPlugins?: {[pluginName: string]: (pluginMetadata: any) => ((pluginData: any) => any)};
+    authSwitchHandler?: (data: any, callback: () => void) => any;
+    charsetNumber?: number;
+    compress?: boolean;
+    connectAttributes?: {[attrNames: string]: any};
+    enableKeepAlive?: boolean;
+    keepAliveInitialDelay?: number;
+    maxPreparedStatements?: number;
+    namedPlaceholders?: boolean;
+    nestTables?: boolean | string;
+    passwordSha1?: string;
+    rowsAsArray?: boolean;
+    stream?: boolean | ((opts: any) => Stream) | Stream;
+    uri?: string;
+  }
+
   interface OracleDbConnectionConfig {
     host: string;
     user: string;
@@ -1951,6 +2020,7 @@ declare namespace Knex {
     connectionTimeoutMillis?: number;
     keepAliveInitialDelayMillis?: number;
     ssl?: boolean | ConnectionOptions;
+    application_name?: string;
   }
 
   type RedshiftConnectionConfig = PgConnectionConfig;
