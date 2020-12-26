@@ -16,7 +16,7 @@
     "@angular/platform-browser": "~10.2.0",
     "@angular/platform-browser-dynamic": "~10.2.0",
     "@angular/router": "~10.2.0",
-    "knex": "^0.21.14",
+    "knex": "^0.21.15",
     "mssql": "^6.2.3",
     "ngx-monaco-editor": "^9.0.0",
     "rxjs": "~6.6.3",
