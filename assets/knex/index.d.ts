@@ -4,7 +4,7 @@
 //                 Matt R. Wilson <https://github.com/mastermatt>
 //                 Satana Charuwichitratana <https://github.com/micksatana>
 //                 Shrey Jain <https://github.com/shreyjain1994>
-// TypeScript Version: 3.7
+// TypeScript Version: 4.1
 
 import tarn = require('tarn');
 import events = require('events');
@@ -70,7 +70,7 @@ interface Boxed<T> {
 // If T can't be assigned to TBase fallback to an alternate type TAlt
 type IncompatibleToAlt<T, TBase, TAlt> = T extends TBase ? T : TAlt;
 
-type ArrayIfAlready<T1, T2> = T1 extends any[] ? T2[] : T2;
+type ArrayIfAlready<T1, T2> = AnyToUnknown<T1> extends any[] ? T2[] : T2;
 
 // Boxing is necessary to prevent distribution of conditional types:
 // https://lorefnon.tech/2019/05/02/using-boxing-to-prevent-distribution-of-conditional-types/
@@ -328,7 +328,16 @@ interface DMLOptions {
   includeTriggerModifications?: boolean;
 }
 
-interface Knex<TRecord extends {} = any, TResult = unknown[]>
+// Not all of these are possible for all drivers, notably, sqlite doesn't support any of these
+type IsolationLevels = 'read uncommitted' | 'read committed' | 'snapshot' | 'repeatable read' | 'serializable';
+interface TransactionConfig {
+  isolationLevel?: IsolationLevels;
+  userParams?: Record<string, any>;
+  doNotRejectOnRollback?: boolean;
+  connection?: any;
+}
+
+export interface Knex<TRecord extends {} = any, TResult = unknown[]>
   extends Knex.QueryInterface<TRecord, TResult>, events.EventEmitter {
   <TTable extends Knex.TableNames>(
     tableName: TTable,
@@ -344,15 +353,18 @@ interface Knex<TRecord extends {} = any, TResult = unknown[]>
   raw: Knex.RawBuilder<TRecord>;
 
   transactionProvider(
-    config?: any
+    config?: TransactionConfig
   ): () => Promise<Knex.Transaction>;
   transaction(
+    config?: TransactionConfig
+  ): Promise<Knex.Transaction>;
+  transaction(
     transactionScope?: null,
-    config?: any
+    config?: TransactionConfig
   ): Promise<Knex.Transaction>;
   transaction<T>(
     transactionScope: (trx: Knex.Transaction) => Promise<T> | void,
-    config?: any
+    config?: TransactionConfig
   ): Promise<T>;
   initialize(config?: Knex.Config): void;
   destroy(callback: Function): void;
@@ -381,11 +393,25 @@ interface Knex<TRecord extends {} = any, TResult = unknown[]>
   withUserParams(params: Record<string, any>): Knex;
 }
 
-declare function Knex<TRecord extends {} = any, TResult = unknown[]>(
+export declare function knex<TRecord extends {} = any, TResult = unknown[]>(
   config: Knex.Config | string
 ): Knex<TRecord, TResult>;
 
-declare namespace Knex {
+export declare namespace knex {
+  class QueryBuilder {
+    static extend(
+      methodName: string,
+      fn: <TRecord extends {} = any, TResult = unknown[]>(
+        this: Knex.QueryBuilder<TRecord, TResult>,
+        ...args: any[]
+      ) => Knex.QueryBuilder<TRecord, TResult>
+    ): void;
+  }
+
+  export class KnexTimeoutError extends Error {}
+}
+
+export declare namespace Knex {
   //
   // Utility Types
   //
@@ -454,7 +480,8 @@ declare namespace Knex {
 
   interface OnConflictQueryBuilder<TRecord, TResult> {
     ignore(): QueryBuilder<TRecord, TResult>;
-    merge(data?: DbRecord<TRecord>): QueryBuilder<TRecord, TResult>;
+    merge(mergeColumns?: (keyof TRecord)[]): QueryBuilder<TRecord, TResult>;
+    merge(data?: Extract<DbRecord<ResolveTableType<TRecord, 'update'>>, object>): QueryBuilder<TRecord, TResult>;
   }
 
   //
@@ -550,6 +577,9 @@ declare namespace Knex {
     havingNotBetween: HavingRange<TRecord, TResult>;
     orHavingBetween: HavingRange<TRecord, TResult>;
     havingBetween: HavingRange<TRecord, TResult>;
+    havingNotIn: HavingRange<TRecord, TResult>;
+    andHavingNotIn: HavingRange<TRecord, TResult>;
+    orHavingNotIn: HavingRange<TRecord, TResult>;
 
     // Clear
     clearSelect(): QueryBuilder<
@@ -811,7 +841,7 @@ declare namespace Knex {
     ): QueryBuilder<TRecord, TResult2>;
 
     onConflict<
-      TKey extends StrKey<TRecord>,
+      TKey extends StrKey<ResolveTableType<TRecord>>,
       TResult2 = DeferredIndex.Augment<
         UnwrapArrayMember<TResult>,
         TRecord,
@@ -821,7 +851,7 @@ declare namespace Knex {
       column: TKey
     ): OnConflictQueryBuilder<TRecord, TResult2>;
     onConflict<
-      TKey extends StrKey<TRecord>,
+      TKey extends StrKey<ResolveTableType<TRecord>>,
       TResult2 = DeferredKeySelection.SetSingle<
         DeferredKeySelection.Augment<UnwrapArrayMember<TResult>, TRecord, TKey>,
         false
@@ -829,6 +859,16 @@ declare namespace Knex {
     >(
       columns: readonly TKey[]
     ): OnConflictQueryBuilder<TRecord, TResult2>;
+
+    onConflict(
+      columns: string
+    ): OnConflictQueryBuilder<TRecord, TResult>;
+
+    onConflict(
+      columns: string[]
+    ): OnConflictQueryBuilder<TRecord, TResult>;
+
+    onConflict(): OnConflictQueryBuilder<TRecord, TResult>;
 
     del(
       returning: '*',
@@ -1041,14 +1081,15 @@ declare namespace Knex {
       TJoinTargetRecord extends {} = any,
       TRecord2 extends {} = TRecord & TJoinTargetRecord,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       raw: Raw
     ): QueryBuilder<TRecord2, TResult2>;
     <
       TTable extends TableNames,
-      TRecord2 = ResolveTableType<TRecord> & ResolveTableType<TableType<TTable>>,
+      TRecord2 = ResolveTableType<TRecord> &
+        ResolveTableType<TableType<TTable>>,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       tableName: TTable,
       clause: JoinCallback
     ): QueryBuilder<TRecord2, TResult2>;
@@ -1056,7 +1097,7 @@ declare namespace Knex {
       TJoinTargetRecord extends {} = any,
       TRecord2 extends {} = TRecord & TJoinTargetRecord,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       tableName: TableDescriptor | AliasDict | QueryCallback,
       clause: JoinCallback
     ): QueryBuilder<TRecord2, TResult2>;
@@ -1064,7 +1105,7 @@ declare namespace Knex {
       TJoinTargetRecord extends {} = any,
       TRecord2 extends {} = TRecord & TJoinTargetRecord,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       tableName: TableDescriptor | AliasDict | QueryCallback,
       columns: { [key: string]: string | number | boolean | Raw }
     ): QueryBuilder<TRecord2, TResult2>;
@@ -1072,16 +1113,42 @@ declare namespace Knex {
       TJoinTargetRecord extends {} = any,
       TRecord2 extends {} = TRecord & TJoinTargetRecord,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       tableName: TableDescriptor | AliasDict | QueryCallback,
       raw: Raw
     ): QueryBuilder<TRecord2, TResult2>;
     <
-      TTable extends TableNames,
-      TRecord2 = ResolveTableType<TRecord> & ResolveTableType<TableType<TTable>>,
+      TTable1 extends TableNames,
+      TTable2 extends TableNames,
+      TKey1 extends StrKey<ResolveTableType<TableType<TTable1>>> & StrKey<TRecord1>,
+      TKey2 extends StrKey<ResolveTableType<TableType<TTable2>>>,
+      TRecord1 = ResolveTableType<TRecord>,
+      TRecord2 = TRecord1 & ResolveTableType<TableType<TTable2>>,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
-      tableName: TTable,
+    >(
+      tableName: TTable2,
+      column1: `${TTable1}.${TKey1}`,
+      column2: `${TTable2}.${TKey2}`
+    ): QueryBuilder<TRecord2, TResult2>;
+    <
+      TTable1 extends TableNames,
+      TTable2 extends TableNames,
+      TKey1 extends StrKey<ResolveTableType<TableType<TTable1>>> & StrKey<TRecord1>,
+      TKey2 extends StrKey<ResolveTableType<TableType<TTable2>>>,
+      TRecord1 = ResolveTableType<TRecord>,
+      TRecord2 = TRecord1 & ResolveTableType<TableType<TTable2>>,
+      TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
+    >(
+      tableName: TTable2,
+      column1: `${TTable2}.${TKey2}`,
+      column2: `${TTable1}.${TKey1}`
+    ): QueryBuilder<TRecord2, TResult2>;
+    <
+      TJoinTargetRecord extends {} = any,
+      TRecord2 extends {} = TRecord & TJoinTargetRecord,
+      TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
+    >(
+      tableName: TableDescriptor | AliasDict | QueryCallback,
       column1: string,
       column2: string
     ): QueryBuilder<TRecord2, TResult2>;
@@ -1089,35 +1156,44 @@ declare namespace Knex {
       TJoinTargetRecord extends {} = any,
       TRecord2 extends {} = TRecord & TJoinTargetRecord,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
-      tableName: TableDescriptor | AliasDict | QueryCallback,
-      column1: string,
-      column2: string
-    ): QueryBuilder<TRecord2, TResult2>;
-    <
-      TJoinTargetRecord extends {} = any,
-      TRecord2 extends {} = TRecord & TJoinTargetRecord,
-      TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       tableName: TableDescriptor | AliasDict | QueryCallback,
       column1: string,
       raw: Raw
     ): QueryBuilder<TRecord2, TResult2>;
     <
-      TTable extends TableNames,
-      TRecord2 = ResolveTableType<TRecord> & ResolveTableType<TableType<TTable>>,
+      TTable1 extends TableNames,
+      TTable2 extends TableNames,
+      TKey1 extends StrKey<ResolveTableType<TableType<TTable1>>> & StrKey<TRecord1>,
+      TKey2 extends StrKey<ResolveTableType<TableType<TTable2>>>,
+      TRecord1 = ResolveTableType<TRecord>,
+      TRecord2 = TRecord1 & ResolveTableType<TableType<TTable2>>,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
-      tableName: TTable,
-      column1: string,
+    >(
+      tableName: TTable2,
+      column1: `${TTable1}.${TKey1}`,
       operator: string,
-      column2: string
+      column2: `${TTable2}.${TKey2}`
+    ): QueryBuilder<TRecord2, TResult2>;
+    <
+      TTable1 extends TableNames,
+      TTable2 extends TableNames,
+      TKey1 extends StrKey<ResolveTableType<TableType<TTable1>>> & StrKey<TRecord1>,
+      TKey2 extends StrKey<ResolveTableType<TableType<TTable2>>>,
+      TRecord1 = ResolveTableType<TRecord>,
+      TRecord2 = TRecord1 & ResolveTableType<TableType<TTable2>>,
+      TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
+    >(
+      tableName: TTable2,
+      column1: `${TTable2}.${TKey2}`,
+      operator: string,
+      column2: `${TTable1}.${TKey1}`,
     ): QueryBuilder<TRecord2, TResult2>;
     <
       TJoinTargetRecord extends {} = any,
       TRecord2 extends {} = TRecord & TJoinTargetRecord,
       TResult2 = DeferredKeySelection.ReplaceBase<TResult, TRecord2>
-      >(
+    >(
       tableName: TableDescriptor | AliasDict | QueryCallback,
       column1: string,
       operator: string,
@@ -1645,6 +1721,7 @@ declare namespace Knex {
     readonly [Symbol.toStringTag]: string;
   }
   interface ChainableInterface<T = any> extends Pick<Promise<T>, keyof Promise<T> & ExposedPromiseKeys>, StringTagSupport {
+    generateDdlCommands(): Promise<{ pre: string[], sql: string[], post: string[] }>;
     toQuery(): string;
     options(options: Readonly<{ [key: string]: any }>): this;
     connection(connection: any): this;
@@ -1663,7 +1740,7 @@ declare namespace Knex {
     asCallback(callback: Function): Promise<T>;
   }
 
-  interface Transaction<TRecord extends {} = any, TResult = any>
+  interface Transaction<TRecord extends {} = any, TResult = any[]>
     extends Knex<TRecord, TResult> {
     executionPromise: Promise<TResult>;
     isCompleted: () => boolean;
@@ -1806,7 +1883,7 @@ declare namespace Knex {
     references(columnName: string): ReferencingColumnBuilder;
     onDelete(command: string): ColumnBuilder;
     onUpdate(command: string): ColumnBuilder;
-    defaultTo(value: Value | null): ColumnBuilder;
+    defaultTo(value: Value | null, options?: DefaultToOptions): ColumnBuilder;
     unsigned(): ColumnBuilder;
     notNullable(): ColumnBuilder;
     nullable(): ColumnBuilder;
@@ -1901,12 +1978,120 @@ declare namespace Knex {
     requestTimeout?: number;
   }
 
-  // Config object for mssql: see https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/mssql/index.d.ts
-  interface MsSqlConnectionConfig {
+  type MsSqlAuthenticationTypeOptions =
+    | 'default'
+    | 'ntlm'
+    | 'azure-active-directory-password'
+    | 'azure-active-directory-access-token'
+    | 'azure-active-directory-msi-vm'
+    | 'azure-active-directory-msi-app-service'
+    | 'azure-active-directory-service-principal-secret';
+
+interface MsSqlDefaultAuthenticationConfig extends MsSqlConnectionConfigBase {
+  type?: 'default' | never;
+}
+
+interface MsSqlAzureActiveDirectoryMsiAppServiceAuthenticationConfig
+  extends MsSqlConnectionConfigBase {
+  type: 'azure-active-directory-msi-app-service';
+  /**
+   * If you user want to connect to an Azure app service using a specific client account
+   * they need to provide `clientId` asscoiate to their created idnetity.
+   *
+   * This is optional for retrieve token from azure web app service
+   */
+  clientId?: string;
+  /**
+   * A msi app service environment need to provide `msiEndpoint` for retriving the accesstoken.
+   */
+  msiEndpoint?: string;
+  /**
+   * A msi app service environment need to provide `msiSecret` for retriving the accesstoken.
+   */
+  msiSecret?: string;
+}
+
+interface MsSqlAzureActiveDirectoryMsiVmAuthenticationConfig
+  extends MsSqlConnectionConfigBase {
+  type: 'azure-active-directory-msi-vm';
+  /**
+   * If you user want to connect to an Azure app service using a specific client account
+   * they need to provide `clientId` asscoiate to their created idnetity.
+   *
+   * This is optional for retrieve token from azure web app service
+   */
+  clientId?: string;
+  /**
+   * A user need to provide `msiEndpoint` for retriving the accesstoken.
+   */
+  msiEndpoint?: string;
+}
+
+interface MsSqlAzureActiveDirectoryAccessTokenAuthenticationConfig
+  extends MsSqlConnectionConfigBase {
+  type: 'azure-active-directory-access-token';
+  /**
+   * A user-provided access token
+   */
+  token: string;
+}
+interface MsSqlAzureActiveDirectoryPasswordAuthenticationConfig
+  extends MsSqlConnectionConfigBase {
+  type: 'azure-active-directory-password';
+  /**
+   * Optional parameter for specific Azure tenant ID
+   */
+  domain: string;
+  userName: string;
+  password: string;
+}
+
+interface MsSqlAzureActiveDirectoryServicePrincipalSecretConfig
+  extends MsSqlConnectionConfigBase {
+  type: 'azure-active-directory-service-principal-secret';
+  /**
+   * Application (`client`) ID from your registered Azure application
+   */
+  clientId: string;
+  /**
+   * The created `client secret` for this registered Azure application
+   */
+  clientSecret: string;
+  /**
+   * Directory (`tenant`) ID from your registered Azure application
+   */
+  tenantId: string;
+}
+
+interface MsSqlNtlmAuthenticationConfig extends MsSqlConnectionConfigBase {
+  type: 'ntlm';
+  /**
+   * Once you set domain for ntlm authentication type, driver will connect to SQL Server using domain login.
+   *
+   * This is necessary for forming a connection using ntlm type
+   */
+  domain: string;
+  userName: string;
+  password: string;
+}
+
+type MsSqlConnectionConfig =
+  | MsSqlDefaultAuthenticationConfig
+  | MsSqlNtlmAuthenticationConfig
+  | MsSqlAzureActiveDirectoryAccessTokenAuthenticationConfig
+  | MsSqlAzureActiveDirectoryMsiAppServiceAuthenticationConfig
+  | MsSqlAzureActiveDirectoryMsiVmAuthenticationConfig
+  | MsSqlAzureActiveDirectoryPasswordAuthenticationConfig
+  | MsSqlAzureActiveDirectoryServicePrincipalSecretConfig;
+
+  // Config object for tedious: see http://tediousjs.github.io/tedious/api-connection.html
+interface MsSqlConnectionConfigBase {
+    type?: MsSqlAuthenticationTypeOptions;
+
     driver?: string;
-    user?: string;
+    userName?: string; // equivalent to knex "user"
     password?: string;
-    server: string;
+    server: string; // equivalent to knex "host"
     port?: number;
     domain?: string;
     database: string;
@@ -2129,6 +2314,7 @@ declare namespace Knex {
     sortDirsSeparately?: boolean;
     loadExtensions?: readonly string[];
     migrationSource?: MigrationSource<unknown>;
+    name?: string;
   }
 
   interface Migrator {
@@ -2173,9 +2359,10 @@ declare namespace Knex {
     enumName: string;
   }
 
-  //
-  // Clients
-  //
+  interface DefaultToOptions {
+    // only supported by mssql driver
+    constraintName?: string;
+  }
 
   class Client extends events.EventEmitter {
     constructor(config: Config);
@@ -2231,18 +2418,6 @@ declare namespace Knex {
     assertCanCancelQuery(): void;
     cancelQuery(): void;
   }
-
-  class QueryBuilder {
-    static extend(
-      methodName: string,
-      fn: <TRecord extends {} = any, TResult = unknown[]>(
-        this: QueryBuilder<TRecord, TResult>,
-        ...args: any[]
-      ) => QueryBuilder<TRecord, TResult>
-    ): void;
-  }
-
-  export class KnexTimeoutError extends Error {}
 }
 
-export = Knex;
+export default knex;
