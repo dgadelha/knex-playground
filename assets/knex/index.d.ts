@@ -1419,6 +1419,16 @@ export declare namespace Knex {
   interface TypePreservingAggregation<TRecord = any, TResult = unknown[], TValue = any> {
     <
       TKey extends keyof ResolveTableType<TRecord>,
+      TOptions extends { "as": string },
+      TResult2 = AggregationQueryResult<TResult, {
+        [k in TOptions["as"]]: ResolveTableType<TRecord>[TKey]
+      }>
+    >(
+      columnName: Readonly<TKey>,
+      options: Readonly<TOptions>
+    ): QueryBuilder<TRecord, TResult2>;
+    <
+      TKey extends keyof ResolveTableType<TRecord>,
       TResult2 = AggregationQueryResult<TResult, Dict<ResolveTableType<TRecord>[TKey]>>
     >(
       ...columnNames: readonly TKey[]
@@ -1727,6 +1737,7 @@ export declare namespace Knex {
     connection(connection: any): this;
     debug(enabled: boolean): this;
     transacting(trx: Transaction): this;
+    stream(): AsyncIterable<ArrayMember<T>>;
     stream(handler: (readable: stream.PassThrough) => any): Promise<any>;
     stream(
       options: Readonly<{ [key: string]: any }>,
@@ -1859,7 +1870,7 @@ export declare namespace Knex {
       columns: readonly string[],
       foreignKeyName?: string
     ): MultikeyForeignConstraintBuilder;
-    dropForeign(columnNames: readonly string[], foreignKeyName?: string): TableBuilder;
+    dropForeign(columnNames: string | readonly string[], foreignKeyName?: string): TableBuilder;
     dropUnique(columnNames: readonly (string | Raw)[], indexName?: string): TableBuilder;
     dropPrimary(constraintName?: string): TableBuilder;
     dropIndex(columnNames: string | readonly (string | Raw)[], indexName?: string): TableBuilder;
