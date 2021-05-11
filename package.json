@@ -18,7 +18,7 @@
     "@angular/router": "~11.2.6",
     "@materia-ui/ngx-monaco-editor": "^5.0.0",
     "fs-browser-stub": "^1.0.1",
-    "knex": "^0.95.4",
+    "knex": "^0.95.5",
     "monaco-editor": "^0.23.0",
     "mssql": "^6.3.1",
     "rxjs": "~6.6.6",
