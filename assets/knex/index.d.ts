@@ -391,6 +391,7 @@ export interface Knex<TRecord extends {} = any, TResult = unknown[]>
   ref: Knex.RefBuilder;
   userParams: Record<string, any>;
   withUserParams(params: Record<string, any>): Knex;
+  isTransaction?: boolean;
 }
 
 export declare function knex<TRecord extends {} = any, TResult = unknown[]>(
@@ -409,6 +410,8 @@ export declare namespace knex {
   }
 
   export class KnexTimeoutError extends Error {}
+
+  export const Client: typeof Knex.Client;
 }
 
 export declare namespace Knex {
@@ -1220,6 +1223,12 @@ export declare namespace Knex {
     orOn(column1: string, column2: string): JoinClause;
     orOn(column1: string, raw: Raw): JoinClause;
     orOn(column1: string, operator: string, column2: string | Raw): JoinClause;
+    onVal(column1: string, value: Value): JoinClause;
+    onVal(column1: string, operator: string, value: Value): JoinClause;
+    andOnVal(column1: string, value: Value): JoinClause;
+    andOnVal(column1: string, operator: string, value: Value): JoinClause;
+    orOnVal(column1: string, value: Value): JoinClause;
+    orOnVal(column1: string, operator: string, value: Value): JoinClause;
     onIn(column1: string, values: readonly any[]): JoinClause;
     andOnIn(column1: string, values: readonly any[]): JoinClause;
     orOnIn(column1: string, values: readonly any[]): JoinClause;
@@ -1806,8 +1815,14 @@ export declare namespace Knex {
   }
 
   interface TableBuilder {
-    increments(columnName?: string): ColumnBuilder;
-    bigIncrements(columnName?: string): ColumnBuilder;
+    increments(
+      columnName?: string,
+      options?: { primaryKey?: boolean }
+    ): ColumnBuilder;
+    bigIncrements(
+      columnName?: string,
+      options?: { primaryKey?: boolean }
+    ): ColumnBuilder;
     dropColumn(columnName: string): TableBuilder;
     dropColumns(...columnNames: string[]): TableBuilder;
     renameColumn(from: string, to: string): ColumnBuilder;
@@ -2257,6 +2272,7 @@ interface MsSqlConnectionConfigBase {
   /** Used with SQLite3 adapter */
   interface Sqlite3ConnectionConfig {
     filename: string;
+    flags?: string[];
     debug?: boolean;
     expirationChecker?(): boolean;
   }
