@@ -5,7 +5,7 @@ ngx-monaco-editor {
   margin: 0;
   padding: 0;
   display: block;
-  height: 100%;
+  height: calc(100vh - 22px);
 }
 
 @media (max-width: 767px) {
