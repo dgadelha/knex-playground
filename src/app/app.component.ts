@@ -1,4 +1,4 @@
-import { Component } from "@angular/core";
+import { Component, HostListener, OnInit } from "@angular/core";
 import Knex from "knex";
 import * as sqlFormatter from "sql-formatter";
 import { version as knexVersion } from "../../node_modules/knex/package.json";
@@ -9,7 +9,7 @@ import { MonacoService } from "./monaco.service";
   templateUrl: "app.component.html",
   styleUrls: ["app.component.scss"],
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
   client = "pg";
 
   knex = Knex({ client: this.client });
@@ -35,7 +35,20 @@ export class AppComponent {
 
   constructor(private monacoService: MonacoService) {}
 
+  ngOnInit() {
+    this.hashChangeHandler();
+  }
+
+  @HostListener("window:hashchange")
+  hashChangeHandler() {
+    if (window.location.hash.length > 1) {
+      this.code = atob(window.location.hash.substring(1));
+    }
+  }
+
   onCodeChange(newCode: string) {
+    history.replaceState(null, document.title, `#${btoa(newCode)}`);
+
     const knex = this.knex;
 
     try {
