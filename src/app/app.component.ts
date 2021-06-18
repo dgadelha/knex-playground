@@ -43,6 +43,7 @@ export class AppComponent implements OnInit {
   hashChangeHandler() {
     if (window.location.hash.length > 1) {
       this.code = atob(window.location.hash.substring(1));
+      this.onCodeChange(this.code);
     }
   }
 
