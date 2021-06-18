@@ -37,12 +37,14 @@ export class FoldingDecorationProvider {
     }
 }
 FoldingDecorationProvider.COLLAPSED_VISUAL_DECORATION = ModelDecorationOptions.register({
+    description: 'folding-collapsed-visual-decoration',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     afterContentClassName: 'inline-folded',
     isWholeLine: true,
     firstLineDecorationClassName: ThemeIcon.asClassName(foldingCollapsedIcon)
 });
 FoldingDecorationProvider.COLLAPSED_HIGHLIGHTED_VISUAL_DECORATION = ModelDecorationOptions.register({
+    description: 'folding-collapsed-highlighted-visual-decoration',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     afterContentClassName: 'inline-folded',
     className: 'folded-background',
@@ -50,15 +52,18 @@ FoldingDecorationProvider.COLLAPSED_HIGHLIGHTED_VISUAL_DECORATION = ModelDecorat
     firstLineDecorationClassName: ThemeIcon.asClassName(foldingCollapsedIcon)
 });
 FoldingDecorationProvider.EXPANDED_AUTO_HIDE_VISUAL_DECORATION = ModelDecorationOptions.register({
+    description: 'folding-expanded-auto-hide-visual-decoration',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     isWholeLine: true,
     firstLineDecorationClassName: ThemeIcon.asClassName(foldingExpandedIcon)
 });
 FoldingDecorationProvider.EXPANDED_VISUAL_DECORATION = ModelDecorationOptions.register({
+    description: 'folding-expanded-visual-decoration',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     isWholeLine: true,
     firstLineDecorationClassName: 'alwaysShowFoldIcons ' + ThemeIcon.asClassName(foldingExpandedIcon)
 });
 FoldingDecorationProvider.HIDDEN_RANGE_DECORATION = ModelDecorationOptions.register({
+    description: 'folding-hidden-range-decoration',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */
 });

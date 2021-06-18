@@ -121,6 +121,7 @@ export var language = {
         'private',
         'protected',
         'public',
+        'override',
         'readonly',
         'require',
         'global',
@@ -223,7 +224,7 @@ export var language = {
             { include: '@whitespace' },
             // regular expression: ensure it is terminated before beginning (otherwise it is an opeator)
             [
-                /\/(?=([^\\\/]|\\.)+\/([gimsuy]*)(\s*)(\.|;|,|\)|\]|\}|$))/,
+                /\/(?=([^\\\/]|\\.)+\/([dgimsuy]*)(\s*)(\.|;|,|\)|\]|\}|$))/,
                 { token: 'regexp', bracket: '@open', next: '@regexp' }
             ],
             // delimiters and operators
@@ -288,7 +289,7 @@ export var language = {
             [/@regexpesc/, 'regexp.escape'],
             [/\\\./, 'regexp.invalid'],
             [
-                /(\/)([gimsuy]*)/,
+                /(\/)([dgimsuy]*)/,
                 [{ token: 'regexp', bracket: '@close', next: '@pop' }, 'keyword.other']
             ]
         ],

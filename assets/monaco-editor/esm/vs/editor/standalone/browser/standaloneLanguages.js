@@ -388,6 +388,12 @@ export function registerDocumentRangeSemanticTokensProvider(languageId, provider
     return modes.DocumentRangeSemanticTokensProviderRegistry.register(languageId, provider);
 }
 /**
+ * Register an inline completions provider.
+ */
+export function registerInlineCompletionsProvider(languageId, provider) {
+    return modes.InlineCompletionsProviderRegistry.register(languageId, provider);
+}
+/**
  * @internal
  */
 export function createMonacoLanguagesAPI() {
@@ -424,6 +430,7 @@ export function createMonacoLanguagesAPI() {
         registerSelectionRangeProvider: registerSelectionRangeProvider,
         registerDocumentSemanticTokensProvider: registerDocumentSemanticTokensProvider,
         registerDocumentRangeSemanticTokensProvider: registerDocumentRangeSemanticTokensProvider,
+        registerInlineCompletionsProvider: registerInlineCompletionsProvider,
         // enums
         DocumentHighlightKind: standaloneEnums.DocumentHighlightKind,
         CompletionItemKind: standaloneEnums.CompletionItemKind,
@@ -434,7 +441,8 @@ export function createMonacoLanguagesAPI() {
         IndentAction: standaloneEnums.IndentAction,
         CompletionTriggerKind: standaloneEnums.CompletionTriggerKind,
         SignatureHelpTriggerKind: standaloneEnums.SignatureHelpTriggerKind,
-        InlineHintKind: standaloneEnums.InlineHintKind,
+        InlayHintKind: standaloneEnums.InlayHintKind,
+        InlineCompletionTriggerKind: standaloneEnums.InlineCompletionTriggerKind,
         // classes
         FoldingRangeKind: modes.FoldingRangeKind,
     };

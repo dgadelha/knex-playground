@@ -25,7 +25,7 @@ export class AbstractGotoSymbolQuickAccessProvider extends AbstractEditorNavigat
     constructor(options = Object.create(null)) {
         super(options);
         this.options = options;
-        options.canAcceptInBackground = true;
+        this.options.canAcceptInBackground = true;
     }
     provideWithoutTextEditor(picker) {
         this.provideLabelPick(picker, localize('cannotRunGotoSymbolWithoutEditor', "To go to a symbol, first open a text editor with symbol information."));

@@ -49,7 +49,7 @@ export class View extends ViewEventHandler {
         const viewController = new ViewController(configuration, model, userInputEvents, commandDelegate);
         // The view context is passed on to most classes (basically to reduce param. counts in ctors)
         this._context = new ViewContext(configuration, themeService.getColorTheme(), model);
-        this._configPixelRatio = this._configPixelRatio = this._context.configuration.options.get(122 /* pixelRatio */);
+        this._configPixelRatio = this._context.configuration.options.get(126 /* pixelRatio */);
         // Ensure the view is the first event handler in order to update the layout
         this._context.addEventHandler(this);
         this._register(themeService.onDidColorThemeChange(theme => {
@@ -190,7 +190,7 @@ export class View extends ViewEventHandler {
     }
     _applyLayout() {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         this.domNode.setWidth(layoutInfo.width);
         this.domNode.setHeight(layoutInfo.height);
         this._overflowGuardContainer.setWidth(layoutInfo.width);
@@ -200,7 +200,7 @@ export class View extends ViewEventHandler {
     }
     _getEditorClassName() {
         const focused = this._textAreaHandler.isFocused() ? ' focused' : '';
-        return this._context.configuration.options.get(121 /* editorClassName */) + ' ' + getThemeTypeSelector(this._context.theme.type) + focused;
+        return this._context.configuration.options.get(125 /* editorClassName */) + ' ' + getThemeTypeSelector(this._context.theme.type) + focused;
     }
     // --- begin event handlers
     handleEvents(events) {
@@ -208,7 +208,7 @@ export class View extends ViewEventHandler {
         this._scheduleRender();
     }
     onConfigurationChanged(e) {
-        this._configPixelRatio = this._context.configuration.options.get(122 /* pixelRatio */);
+        this._configPixelRatio = this._context.configuration.options.get(126 /* pixelRatio */);
         this.domNode.setClassName(this._getEditorClassName());
         this._applyLayout();
         return false;

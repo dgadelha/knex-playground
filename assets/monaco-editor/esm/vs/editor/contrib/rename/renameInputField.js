@@ -19,7 +19,7 @@ import { IContextKeyService, RawContextKey } from '../../../platform/contextkey/
 import { inputBackground, inputBorder, inputForeground, widgetShadow, editorWidgetBackground } from '../../../platform/theme/common/colorRegistry.js';
 import { IThemeService } from '../../../platform/theme/common/themeService.js';
 import { IKeybindingService } from '../../../platform/keybinding/common/keybinding.js';
-export const CONTEXT_RENAME_INPUT_VISIBLE = new RawContextKey('renameInputVisible', false);
+export const CONTEXT_RENAME_INPUT_VISIBLE = new RawContextKey('renameInputVisible', false, localize('renameInputVisible', "Whether the rename input widget is visible"));
 let RenameInputField = class RenameInputField {
     constructor(_editor, _acceptKeybindings, _themeService, _keybindingService, contextKeyService) {
         this._editor = _editor;
@@ -31,7 +31,7 @@ let RenameInputField = class RenameInputField {
         this._visibleContextKey = CONTEXT_RENAME_INPUT_VISIBLE.bindTo(contextKeyService);
         this._editor.addContentWidget(this);
         this._disposables.add(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(38 /* fontInfo */)) {
+            if (e.hasChanged(40 /* fontInfo */)) {
                 this._updateFont();
             }
         }));
@@ -89,7 +89,7 @@ let RenameInputField = class RenameInputField {
         if (!this._input || !this._label) {
             return;
         }
-        const fontInfo = this._editor.getOption(38 /* fontInfo */);
+        const fontInfo = this._editor.getOption(40 /* fontInfo */);
         this._input.style.fontFamily = fontInfo.fontFamily;
         this._input.style.fontWeight = fontInfo.fontWeight;
         this._input.style.fontSize = `${fontInfo.fontSize}px`;

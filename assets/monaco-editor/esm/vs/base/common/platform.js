@@ -15,15 +15,15 @@ let _locale = undefined;
 let _language = LANGUAGE_DEFAULT;
 let _translationsConfigFile = undefined;
 let _userAgent = undefined;
-const _globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
+export const globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
 let nodeProcess = undefined;
-if (typeof process !== 'undefined') {
+if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.process !== 'undefined') {
+    // Native environment (sandboxed)
+    nodeProcess = globals.vscode.process;
+}
+else if (typeof process !== 'undefined') {
     // Native environment (non-sandboxed)
     nodeProcess = process;
-}
-else if (typeof _globals.vscode !== 'undefined') {
-    // Native environment (sandboxed)
-    nodeProcess = _globals.vscode.process;
 }
 const isElectronRenderer = typeof ((_a = nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.versions) === null || _a === void 0 ? void 0 : _a.electron) === 'string' && nodeProcess.type === 'renderer';
 export const isElectronSandboxed = isElectronRenderer && (nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.sandboxed);
@@ -33,7 +33,7 @@ export const browserCodeLoadingCacheStrategy = (() => {
         return 'bypassHeatCheck';
     }
     // Otherwise, only enabled conditionally
-    const env = nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.env['ENABLE_VSCODE_BROWSER_CODE_LOADING'];
+    const env = nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.env['VSCODE_BROWSER_CODE_LOADING'];
     if (typeof env === 'string') {
         if (env === 'none' || env === 'code' || env === 'bypassHeatCheck' || env === 'bypassHeatCheckAndEagerCompile') {
             return env;
@@ -98,7 +98,6 @@ export const isNative = _isNative;
 export const isWeb = _isWeb;
 export const isIOS = _isIOS;
 export const userAgent = _userAgent;
-export const globals = _globals;
 export const setImmediate = (function defineSetImmediate() {
     if (globals.setImmediate) {
         return globals.setImmediate.bind(globals);
@@ -127,7 +126,7 @@ export const setImmediate = (function defineSetImmediate() {
             globals.postMessage({ vscodeSetImmediateId: myId }, '*');
         };
     }
-    if (nodeProcess && typeof nodeProcess.nextTick === 'function') {
+    if (typeof (nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.nextTick) === 'function') {
         return nodeProcess.nextTick.bind(nodeProcess);
     }
     const _promise = Promise.resolve();

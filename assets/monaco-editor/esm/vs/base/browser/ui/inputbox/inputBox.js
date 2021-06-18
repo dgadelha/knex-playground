@@ -28,6 +28,7 @@ const defaultOpts = {
 };
 export class InputBox extends Widget {
     constructor(container, contextViewProvider, options) {
+        var _a;
         super();
         this.state = 'idle';
         this.maxHeight = Number.POSITIVE_INFINITY;
@@ -40,6 +41,7 @@ export class InputBox extends Widget {
         mixin(this.options, defaultOpts, false);
         this.message = null;
         this.placeholder = this.options.placeholder || '';
+        this.tooltip = (_a = this.options.tooltip) !== null && _a !== void 0 ? _a : (this.placeholder || '');
         this.ariaLabel = this.options.ariaLabel || '';
         this.inputBackground = this.options.inputBackground;
         this.inputForeground = this.options.inputForeground;
@@ -97,6 +99,9 @@ export class InputBox extends Widget {
         if (this.placeholder) {
             this.setPlaceHolder(this.placeholder);
         }
+        if (this.tooltip) {
+            this.setTooltip(this.tooltip);
+        }
         this.oninput(this.input, () => this.onValueChange());
         this.onblur(this.input, () => this.onBlur());
         this.onfocus(this.input, () => this.onFocus());
@@ -118,7 +123,10 @@ export class InputBox extends Widget {
     setPlaceHolder(placeHolder) {
         this.placeholder = placeHolder;
         this.input.setAttribute('placeholder', placeHolder);
-        this.input.title = placeHolder;
+    }
+    setTooltip(tooltip) {
+        this.tooltip = tooltip;
+        this.input.title = tooltip;
     }
     setAriaLabel(label) {
         this.ariaLabel = label;

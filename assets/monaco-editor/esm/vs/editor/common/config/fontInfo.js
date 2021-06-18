@@ -31,12 +31,12 @@ export class BareFontInfo {
      * @internal
      */
     static createFromValidatedSettings(options, zoomLevel, pixelRatio, ignoreEditorZoom) {
-        const fontFamily = options.get(37 /* fontFamily */);
-        const fontWeight = options.get(41 /* fontWeight */);
-        const fontSize = options.get(40 /* fontSize */);
-        const fontFeatureSettings = options.get(39 /* fontLigatures */);
-        const lineHeight = options.get(53 /* lineHeight */);
-        const letterSpacing = options.get(50 /* letterSpacing */);
+        const fontFamily = options.get(39 /* fontFamily */);
+        const fontWeight = options.get(43 /* fontWeight */);
+        const fontSize = options.get(42 /* fontSize */);
+        const fontFeatureSettings = options.get(41 /* fontLigatures */);
+        const lineHeight = options.get(56 /* lineHeight */);
+        const letterSpacing = options.get(53 /* letterSpacing */);
         return BareFontInfo._create(fontFamily, fontWeight, fontSize, fontFeatureSettings, lineHeight, letterSpacing, zoomLevel, pixelRatio, ignoreEditorZoom);
     }
     /**

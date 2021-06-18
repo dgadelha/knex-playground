@@ -1,1 +1,1 @@
-export * from 'monaco-editor-core';
+export * from '../../../editor/editor.api';

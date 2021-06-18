@@ -200,6 +200,7 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
             }
         }
         return {
+            description: 'marker-decoration',
             stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
             className,
             showIfCollapsed: true,

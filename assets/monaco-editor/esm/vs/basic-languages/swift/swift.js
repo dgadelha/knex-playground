@@ -186,7 +186,7 @@ export var language = {
         ],
         attribute: [
             [
-                /\@@identifier/,
+                /@@@identifier/,
                 {
                     cases: {
                         '@attributes': 'keyword.control',

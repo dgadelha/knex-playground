@@ -5,8 +5,8 @@
 import { AbstractCommandsQuickAccessProvider } from '../../../platform/quickinput/browser/commandsQuickAccess.js';
 import { stripIcons } from '../../../base/common/iconLabels.js';
 export class AbstractEditorCommandsQuickAccessProvider extends AbstractCommandsQuickAccessProvider {
-    constructor(options, instantiationService, keybindingService, commandService, telemetryService, notificationService) {
-        super(options, instantiationService, keybindingService, commandService, telemetryService, notificationService);
+    constructor(options, instantiationService, keybindingService, commandService, telemetryService, dialogService) {
+        super(options, instantiationService, keybindingService, commandService, telemetryService, dialogService);
     }
     getCodeEditorCommandPicks() {
         const activeTextEditorControl = this.activeTextEditorControl;

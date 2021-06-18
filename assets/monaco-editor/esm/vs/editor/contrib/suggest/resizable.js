@@ -91,6 +91,8 @@ export class ResizableHTMLElement {
         this._eastSash.dispose();
         this._westSash.dispose();
         this._sashListener.dispose();
+        this._onDidResize.dispose();
+        this._onDidWillResize.dispose();
         this.domNode.remove();
     }
     enableSashes(north, east, south, west) {
@@ -114,6 +116,12 @@ export class ResizableHTMLElement {
             this._southSash.layout();
             this._westSash.layout();
         }
+    }
+    clearSashHoverState() {
+        this._eastSash.clearSashHoverState();
+        this._westSash.clearSashHoverState();
+        this._northSash.clearSashHoverState();
+        this._southSash.clearSashHoverState();
     }
     get size() {
         return this._size;

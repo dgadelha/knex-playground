@@ -64,15 +64,15 @@ export class ViewLines extends ViewPart {
         this.domNode = this._visibleLines.domNode;
         const conf = this._context.configuration;
         const options = this._context.configuration.options;
-        const fontInfo = options.get(38 /* fontInfo */);
-        const wrappingInfo = options.get(125 /* wrappingInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        const wrappingInfo = options.get(129 /* wrappingInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
         this._isViewportWrapping = wrappingInfo.isViewportWrapping;
-        this._revealHorizontalRightPadding = options.get(84 /* revealHorizontalRightPadding */);
-        this._cursorSurroundingLines = options.get(22 /* cursorSurroundingLines */);
-        this._cursorSurroundingLinesStyle = options.get(23 /* cursorSurroundingLinesStyle */);
-        this._canUseLayerHinting = !options.get(25 /* disableLayerHinting */);
+        this._revealHorizontalRightPadding = options.get(87 /* revealHorizontalRightPadding */);
+        this._cursorSurroundingLines = options.get(23 /* cursorSurroundingLines */);
+        this._cursorSurroundingLinesStyle = options.get(24 /* cursorSurroundingLinesStyle */);
+        this._canUseLayerHinting = !options.get(26 /* disableLayerHinting */);
         this._viewLineOptions = new ViewLineOptions(conf, this._context.theme.type);
         PartFingerprints.write(this.domNode, 7 /* ViewLines */);
         this.domNode.setClassName(`view-lines ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME}`);
@@ -104,22 +104,22 @@ export class ViewLines extends ViewPart {
     // ---- begin view event handlers
     onConfigurationChanged(e) {
         this._visibleLines.onConfigurationChanged(e);
-        if (e.hasChanged(125 /* wrappingInfo */)) {
+        if (e.hasChanged(129 /* wrappingInfo */)) {
             this._maxLineWidth = 0;
         }
         const options = this._context.configuration.options;
-        const fontInfo = options.get(38 /* fontInfo */);
-        const wrappingInfo = options.get(125 /* wrappingInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        const wrappingInfo = options.get(129 /* wrappingInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
         this._isViewportWrapping = wrappingInfo.isViewportWrapping;
-        this._revealHorizontalRightPadding = options.get(84 /* revealHorizontalRightPadding */);
-        this._cursorSurroundingLines = options.get(22 /* cursorSurroundingLines */);
-        this._cursorSurroundingLinesStyle = options.get(23 /* cursorSurroundingLinesStyle */);
-        this._canUseLayerHinting = !options.get(25 /* disableLayerHinting */);
+        this._revealHorizontalRightPadding = options.get(87 /* revealHorizontalRightPadding */);
+        this._cursorSurroundingLines = options.get(23 /* cursorSurroundingLines */);
+        this._cursorSurroundingLinesStyle = options.get(24 /* cursorSurroundingLinesStyle */);
+        this._canUseLayerHinting = !options.get(26 /* disableLayerHinting */);
         Configuration.applyFontInfo(this.domNode, fontInfo);
         this._onOptionsMaybeChanged();
-        if (e.hasChanged(124 /* layoutInfo */)) {
+        if (e.hasChanged(128 /* layoutInfo */)) {
             this._maxLineWidth = 0;
         }
         return true;

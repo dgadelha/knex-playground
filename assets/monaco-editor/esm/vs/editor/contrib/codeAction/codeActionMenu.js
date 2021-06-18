@@ -72,8 +72,9 @@ let CodeActionMenu = class CodeActionMenu extends Disposable {
             const menuActions = this.getMenuActions(trigger, actionsToShow, codeActions.documentation);
             const anchor = Position.isIPosition(at) ? this._toCoords(at) : at || { x: 0, y: 0 };
             const resolver = this._keybindingResolver.getResolver();
+            const useShadowDOM = this._editor.getOption(112 /* useShadowDOM */);
             this._contextMenuService.showContextMenu({
-                domForShadowRoot: this._editor.getDomNode(),
+                domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,
                 getAnchor: () => anchor,
                 getActions: () => menuActions,
                 onHide: () => {

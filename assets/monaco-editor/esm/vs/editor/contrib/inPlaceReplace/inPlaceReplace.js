@@ -100,6 +100,7 @@ let InPlaceReplaceController = class InPlaceReplaceController {
 };
 InPlaceReplaceController.ID = 'editor.contrib.inPlaceReplaceController';
 InPlaceReplaceController.DECORATION = ModelDecorationOptions.register({
+    description: 'in-place-replace',
     className: 'valueSetReplacement'
 });
 InPlaceReplaceController = __decorate([

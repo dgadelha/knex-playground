@@ -37,7 +37,7 @@ export class MouseHandler extends ViewEventHandler {
         this.mouseTargetFactory = new MouseTargetFactory(this._context, viewHelper);
         this._mouseDownOperation = this._register(new MouseDownOperation(this._context, this.viewController, this.viewHelper, (e, testEventTarget) => this._createMouseTarget(e, testEventTarget), (e) => this._getMouseColumn(e)));
         this.lastMouseLeaveTime = -1;
-        this._height = this._context.configuration.options.get(124 /* layoutInfo */).height;
+        this._height = this._context.configuration.options.get(128 /* layoutInfo */).height;
         const mouseEvents = new EditorMouseEventFactory(this.viewHelper.viewDomNode);
         this._register(mouseEvents.onContextMenu(this.viewHelper.viewDomNode, (e) => this._onContextMenu(e, true)));
         this._register(mouseEvents.onMouseMoveThrottled(this.viewHelper.viewDomNode, (e) => this._onMouseMove(e), createMouseMoveEventMerger(this.mouseTargetFactory), MouseHandler.MOUSE_MOVE_MINIMUM_TIME));
@@ -46,7 +46,7 @@ export class MouseHandler extends ViewEventHandler {
         this._register(mouseEvents.onMouseDown(this.viewHelper.viewDomNode, (e) => this._onMouseDown(e)));
         const onMouseWheel = (browserEvent) => {
             this.viewController.emitMouseWheel(browserEvent);
-            if (!this._context.configuration.options.get(62 /* mouseWheelZoom */)) {
+            if (!this._context.configuration.options.get(65 /* mouseWheelZoom */)) {
                 return;
             }
             const e = new StandardWheelEvent(browserEvent);
@@ -72,9 +72,9 @@ export class MouseHandler extends ViewEventHandler {
     }
     // --- begin event handlers
     onConfigurationChanged(e) {
-        if (e.hasChanged(124 /* layoutInfo */)) {
+        if (e.hasChanged(128 /* layoutInfo */)) {
             // layout change
-            const height = this._context.configuration.options.get(124 /* layoutInfo */).height;
+            const height = this._context.configuration.options.get(128 /* layoutInfo */).height;
             if (this._height !== height) {
                 this._height = height;
                 this._mouseDownOperation.onHeightChanged();
@@ -148,7 +148,7 @@ export class MouseHandler extends ViewEventHandler {
         const targetIsContent = (t.type === 6 /* CONTENT_TEXT */ || t.type === 7 /* CONTENT_EMPTY */);
         const targetIsGutter = (t.type === 2 /* GUTTER_GLYPH_MARGIN */ || t.type === 3 /* GUTTER_LINE_NUMBERS */ || t.type === 4 /* GUTTER_LINE_DECORATIONS */);
         const targetIsLineNumbers = (t.type === 3 /* GUTTER_LINE_NUMBERS */);
-        const selectOnLineNumbers = this._context.configuration.options.get(93 /* selectOnLineNumbers */);
+        const selectOnLineNumbers = this._context.configuration.options.get(96 /* selectOnLineNumbers */);
         const targetIsViewZone = (t.type === 8 /* CONTENT_VIEW_ZONE */ || t.type === 5 /* GUTTER_VIEW_ZONE */);
         const targetIsWidget = (t.type === 9 /* CONTENT_WIDGET */);
         let shouldHandle = e.leftButton || e.middleButton;
@@ -239,9 +239,9 @@ class MouseDownOperation extends Disposable {
         // Overwrite the detail of the MouseEvent, as it will be sent out in an event and contributions might rely on it.
         e.detail = this._mouseState.count;
         const options = this._context.configuration.options;
-        if (!options.get(75 /* readOnly */)
-            && options.get(27 /* dragAndDrop */)
-            && !options.get(15 /* columnSelection */)
+        if (!options.get(78 /* readOnly */)
+            && options.get(29 /* dragAndDrop */)
+            && !options.get(16 /* columnSelection */)
             && !this._mouseState.altKey // we don't support multiple mouse
             && e.detail < 2 // only single click on a selection can work
             && !this._isActive // the mouse is not down yet

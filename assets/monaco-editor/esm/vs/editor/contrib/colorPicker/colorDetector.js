@@ -72,7 +72,7 @@ let ColorDetector = class ColorDetector extends Disposable {
                 return colorDecorators['enable'];
             }
         }
-        return this._editor.getOption(14 /* colorDecorators */);
+        return this._editor.getOption(15 /* colorDecorators */);
     }
     static get(editor) {
         return editor.getContribution(this.ID);
@@ -151,7 +151,7 @@ let ColorDetector = class ColorDetector extends Disposable {
             let color = `rgba(${rgba.r}, ${rgba.g}, ${rgba.b}, ${rgba.a})`;
             let key = 'colorBox-' + subKey;
             if (!this._decorationsTypes.has(key) && !newDecorationsTypes[key]) {
-                this._codeEditorService.registerDecorationType(key, {
+                this._codeEditorService.registerDecorationType('color-detector-color', key, {
                     before: {
                         contentText: ' ',
                         border: 'solid 0.1em #000',

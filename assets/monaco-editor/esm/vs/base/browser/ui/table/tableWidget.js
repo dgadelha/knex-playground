@@ -144,9 +144,6 @@ export class Table {
     getSelectedElements() {
         return this.list.getSelectedElements();
     }
-    setSelection(indexes, browserEvent) {
-        this.list.setSelection(indexes, browserEvent);
-    }
     getSelection() {
         return this.list.getSelection();
     }

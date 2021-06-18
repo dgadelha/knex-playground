@@ -22,7 +22,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import * as nls from '../../../nls.js';
 import * as dom from '../../../base/browser/dom.js';
-import { MarkdownString, isEmptyMarkdownString, markedStringsEquals } from '../../../base/common/htmlContent.js';
+import { MarkdownString, isEmptyMarkdownString } from '../../../base/common/htmlContent.js';
 import { DisposableStore } from '../../../base/common/lifecycle.js';
 import { Range } from '../../common/core/range.js';
 import { MarkdownRenderer } from '../../browser/core/markdownRenderer.js';
@@ -34,15 +34,15 @@ import { getHover } from './getHover.js';
 import { Position } from '../../common/core/position.js';
 const $ = dom.$;
 export class MarkdownHover {
-    constructor(range, contents) {
+    constructor(owner, range, contents) {
+        this.owner = owner;
         this.range = range;
         this.contents = contents;
     }
-    equals(other) {
-        if (other instanceof MarkdownHover) {
-            return markedStringsEquals(this.contents, other.contents);
-        }
-        return false;
+    isValidForHoverAnchor(anchor) {
+        return (anchor.type === 1 /* Range */
+            && this.range.startColumn <= anchor.range.startColumn
+            && this.range.endColumn >= anchor.range.endColumn);
     }
 }
 let MarkdownHoverParticipant = class MarkdownHoverParticipant {
@@ -52,15 +52,18 @@ let MarkdownHoverParticipant = class MarkdownHoverParticipant {
         this._modeService = _modeService;
         this._openerService = _openerService;
     }
-    createLoadingMessage(range) {
-        return new MarkdownHover(range, [new MarkdownString().appendText(nls.localize('modesContentHover.loading', "Loading..."))]);
+    createLoadingMessage(anchor) {
+        if (anchor.type !== 1 /* Range */) {
+            return null;
+        }
+        return new MarkdownHover(this, anchor.range, [new MarkdownString().appendText(nls.localize('modesContentHover.loading', "Loading..."))]);
     }
-    computeSync(hoverRange, lineDecorations) {
-        if (!this._editor.hasModel()) {
+    computeSync(anchor, lineDecorations) {
+        if (!this._editor.hasModel() || anchor.type !== 1 /* Range */) {
             return [];
         }
         const model = this._editor.getModel();
-        const lineNumber = hoverRange.startLineNumber;
+        const lineNumber = anchor.range.startLineNumber;
         const maxColumn = model.getLineMaxColumn(lineNumber);
         const result = [];
         for (const d of lineDecorations) {
@@ -70,33 +73,33 @@ let MarkdownHoverParticipant = class MarkdownHoverParticipant {
             if (!hoverMessage || isEmptyMarkdownString(hoverMessage)) {
                 continue;
             }
-            const range = new Range(hoverRange.startLineNumber, startColumn, hoverRange.startLineNumber, endColumn);
-            result.push(new MarkdownHover(range, asArray(hoverMessage)));
+            const range = new Range(anchor.range.startLineNumber, startColumn, anchor.range.startLineNumber, endColumn);
+            result.push(new MarkdownHover(this, range, asArray(hoverMessage)));
         }
         return result;
     }
-    computeAsync(range, token) {
+    computeAsync(anchor, lineDecorations, token) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (!this._editor.hasModel() || !range) {
+            if (!this._editor.hasModel() || anchor.type !== 1 /* Range */) {
                 return Promise.resolve([]);
             }
             const model = this._editor.getModel();
             if (!HoverProviderRegistry.has(model)) {
                 return Promise.resolve([]);
             }
-            const hovers = yield getHover(model, new Position(range.startLineNumber, range.startColumn), token);
+            const hovers = yield getHover(model, new Position(anchor.range.startLineNumber, anchor.range.startColumn), token);
             const result = [];
             for (const hover of hovers) {
                 if (isEmptyMarkdownString(hover.contents)) {
                     continue;
                 }
-                const rng = hover.range ? Range.lift(hover.range) : range;
-                result.push(new MarkdownHover(rng, hover.contents));
+                const rng = hover.range ? Range.lift(hover.range) : anchor.range;
+                result.push(new MarkdownHover(this, rng, hover.contents));
             }
             return result;
         });
     }
-    renderHoverParts(hoverParts, fragment) {
+    renderHoverParts(hoverParts, fragment, statusBar) {
         const disposables = new DisposableStore();
         for (const hoverPart of hoverParts) {
             for (const contents of hoverPart.contents) {

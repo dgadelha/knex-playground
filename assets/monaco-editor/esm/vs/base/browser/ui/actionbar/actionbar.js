@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import './actionbar.css';
 import { Disposable, dispose } from '../../../common/lifecycle.js';
 import { ActionRunner } from '../../../common/actions.js';
@@ -57,20 +66,10 @@ export class ActionBar extends Disposable {
                 previousKeys = [15 /* LeftArrow */];
                 nextKeys = [17 /* RightArrow */];
                 break;
-            case 1 /* HORIZONTAL_REVERSE */:
-                previousKeys = [17 /* RightArrow */];
-                nextKeys = [15 /* LeftArrow */];
-                this.domNode.className += ' reverse';
-                break;
-            case 2 /* VERTICAL */:
+            case 1 /* VERTICAL */:
                 previousKeys = [16 /* UpArrow */];
                 nextKeys = [18 /* DownArrow */];
                 this.domNode.className += ' vertical';
-                break;
-            case 3 /* VERTICAL_REVERSE */:
-                previousKeys = [18 /* DownArrow */];
-                nextKeys = [16 /* UpArrow */];
-                this.domNode.className += ' vertical reverse';
                 break;
         }
         this._register(DOM.addDisposableListener(this.domNode, DOM.EventType.KEY_DOWN, e => {
@@ -86,8 +85,14 @@ export class ActionBar extends Disposable {
             else if (event.equals(9 /* Escape */) && this.cancelHasListener) {
                 this._onDidCancel.fire();
             }
+            else if (event.equals(14 /* Home */)) {
+                eventHandled = this.focusFirst();
+            }
+            else if (event.equals(13 /* End */)) {
+                eventHandled = this.focusLast();
+            }
             else if (event.equals(2 /* Tab */) && focusedItem instanceof BaseActionViewItem && focusedItem.trapsArrowNavigation) {
-                this.focusNext();
+                eventHandled = this.focusNext();
             }
             else if (this.isTriggerKeyEvent(event)) {
                 // Staying out of the else branch even if not triggered
@@ -225,6 +230,9 @@ export class ActionBar extends Disposable {
         this._actionIds = [];
         DOM.clearNode(this.actionsList);
     }
+    length() {
+        return this.viewItems.length;
+    }
     focus(arg) {
         let selectFirst = false;
         let index = undefined;
@@ -250,9 +258,20 @@ export class ActionBar extends Disposable {
             this.updateFocus();
         }
     }
+    focusFirst() {
+        this.focusedItem = this.length() > 1 ? 1 : 0;
+        return this.focusPrevious();
+    }
+    focusLast() {
+        this.focusedItem = this.length() < 2 ? 0 : this.length() - 2;
+        return this.focusNext();
+    }
     focusNext() {
         if (typeof this.focusedItem === 'undefined') {
             this.focusedItem = this.viewItems.length - 1;
+        }
+        else if (this.viewItems.length <= 1) {
+            return false;
         }
         const startIndex = this.focusedItem;
         let item;
@@ -270,6 +289,9 @@ export class ActionBar extends Disposable {
     focusPrevious() {
         if (typeof this.focusedItem === 'undefined') {
             this.focusedItem = 0;
+        }
+        else if (this.viewItems.length <= 1) {
+            return false;
         }
         const startIndex = this.focusedItem;
         let item;
@@ -328,7 +350,9 @@ export class ActionBar extends Disposable {
         }
     }
     run(action, context) {
-        return this._actionRunner.run(action, context);
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this._actionRunner.run(action, context);
+        });
     }
     dispose() {
         dispose(this.viewItems);

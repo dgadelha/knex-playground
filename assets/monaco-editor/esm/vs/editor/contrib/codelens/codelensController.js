@@ -53,10 +53,10 @@ let CodeLensContribution = class CodeLensContribution {
         this._disposables.add(this._editor.onDidChangeModel(() => this._onModelChange()));
         this._disposables.add(this._editor.onDidChangeModelLanguage(() => this._onModelChange()));
         this._disposables.add(this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(38 /* fontInfo */) || e.hasChanged(13 /* codeLensFontSize */) || e.hasChanged(12 /* codeLensFontFamily */)) {
+            if (e.hasChanged(40 /* fontInfo */) || e.hasChanged(14 /* codeLensFontSize */) || e.hasChanged(13 /* codeLensFontFamily */)) {
                 this._updateLensStyle();
             }
-            if (e.hasChanged(11 /* codeLens */)) {
+            if (e.hasChanged(12 /* codeLens */)) {
                 this._onModelChange();
             }
         }));
@@ -77,24 +77,25 @@ let CodeLensContribution = class CodeLensContribution {
         this._styleElement.remove();
     }
     _getLayoutInfo() {
-        let fontSize = this._editor.getOption(13 /* codeLensFontSize */);
+        let fontSize = this._editor.getOption(14 /* codeLensFontSize */);
         let codeLensHeight;
         if (!fontSize || fontSize < 5) {
-            fontSize = (this._editor.getOption(40 /* fontSize */) * .9) | 0;
-            codeLensHeight = this._editor.getOption(53 /* lineHeight */);
+            fontSize = (this._editor.getOption(42 /* fontSize */) * .9) | 0;
+            codeLensHeight = this._editor.getOption(56 /* lineHeight */);
         }
         else {
-            codeLensHeight = (fontSize * Math.max(1.3, this._editor.getOption(53 /* lineHeight */) / this._editor.getOption(40 /* fontSize */))) | 0;
+            codeLensHeight = (fontSize * Math.max(1.3, this._editor.getOption(56 /* lineHeight */) / this._editor.getOption(42 /* fontSize */))) | 0;
         }
         return { codeLensHeight, fontSize };
     }
     _updateLensStyle() {
         const { codeLensHeight, fontSize } = this._getLayoutInfo();
-        const fontFamily = this._editor.getOption(12 /* codeLensFontFamily */);
-        const editorFontInfo = this._editor.getOption(38 /* fontInfo */);
+        const fontFamily = this._editor.getOption(13 /* codeLensFontFamily */);
+        const editorFontInfo = this._editor.getOption(40 /* fontInfo */);
         const fontFamilyVar = `--codelens-font-family${this._styleClassName}`;
+        const fontFeaturesVar = `--codelens-font-features${this._styleClassName}`;
         let newStyle = `
-		.monaco-editor .codelens-decoration.${this._styleClassName} { line-height: ${codeLensHeight}px; font-size: ${fontSize}px; padding-right: ${Math.round(fontSize * 0.5)}px; font-feature-settings: ${editorFontInfo.fontFeatureSettings} }
+		.monaco-editor .codelens-decoration.${this._styleClassName} { line-height: ${codeLensHeight}px; font-size: ${fontSize}px; padding-right: ${Math.round(fontSize * 0.5)}px; font-feature-settings: var(${fontFeaturesVar}) }
 		.monaco-editor .codelens-decoration.${this._styleClassName} span.codicon { line-height: ${codeLensHeight}px; font-size: ${fontSize}px; }
 		`;
         if (fontFamily) {
@@ -102,6 +103,7 @@ let CodeLensContribution = class CodeLensContribution {
         }
         this._styleElement.textContent = newStyle;
         this._editor.getContainerDomNode().style.setProperty(fontFamilyVar, fontFamily !== null && fontFamily !== void 0 ? fontFamily : 'inherit');
+        this._editor.getContainerDomNode().style.setProperty(fontFeaturesVar, editorFontInfo.fontFeatureSettings);
         //
         this._editor.changeViewZones(accessor => {
             for (let lens of this._lenses) {
@@ -125,7 +127,7 @@ let CodeLensContribution = class CodeLensContribution {
         if (!model) {
             return;
         }
-        if (!this._editor.getOption(11 /* codeLens */)) {
+        if (!this._editor.getOption(12 /* codeLens */)) {
             return;
         }
         const cachedLenses = this._codeLensCache.get(model);

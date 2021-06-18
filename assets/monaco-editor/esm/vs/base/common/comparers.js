@@ -1,21 +1,21 @@
 import { IdleValue } from './async.js';
-// When comparing large numbers of strings, such as in sorting large arrays, is better for
-// performance to create an Intl.Collator object and use the function provided by its compare
-// property than it is to use String.prototype.localeCompare()
-// A collator with numeric sorting enabled, and no sensitivity to case or to accents
+// When comparing large numbers of strings it's better for performance to create an
+// Intl.Collator object and use the function provided by its compare property
+// than it is to use String.prototype.localeCompare()
+// A collator with numeric sorting enabled, and no sensitivity to case, accents or diacritics.
 const intlFileNameCollatorBaseNumeric = new IdleValue(() => {
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
     return {
         collator: collator,
         collatorIsNumeric: collator.resolvedOptions().numeric
     };
-}); /** Compares filenames without distinguishing the name from the extension. Disambiguates by unicode comparison. */
+});
+/** Compares filenames without distinguishing the name from the extension. Disambiguates by unicode comparison. */
 export function compareFileNames(one, other, caseSensitive = false) {
     const a = one || '';
     const b = other || '';
     const result = intlFileNameCollatorBaseNumeric.value.collator.compare(a, b);
-    // Using the numeric option in the collator will
-    // make compare(`foo1`, `foo01`) === 0. We must disambiguate.
+    // Using the numeric option will make compare(`foo1`, `foo01`) === 0. Disambiguate.
     if (intlFileNameCollatorBaseNumeric.value.collatorIsNumeric && result === 0 && a !== b) {
         return a < b ? -1 : 1;
     }

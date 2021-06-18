@@ -61,7 +61,7 @@ class LineSuffix {
             const end = _model.getPositionAt(offset + 1);
             this._marker = _model.deltaDecorations([], [{
                     range: Range.fromPositions(_position, end),
-                    options: { stickiness: 1 /* NeverGrowsWhenTypingAtEdges */ }
+                    options: { description: 'suggest-line-suffix', stickiness: 1 /* NeverGrowsWhenTypingAtEdges */ }
                 }]);
         }
     }
@@ -100,8 +100,8 @@ let SuggestController = class SuggestController {
         this.model = _instantiationService.createInstance(SuggestModel, this.editor);
         // context key: update insert/replace mode
         const ctxInsertMode = SuggestContext.InsertMode.bindTo(_contextKeyService);
-        ctxInsertMode.set(editor.getOption(101 /* suggest */).insertMode);
-        this.model.onDidTrigger(() => ctxInsertMode.set(editor.getOption(101 /* suggest */).insertMode));
+        ctxInsertMode.set(editor.getOption(104 /* suggest */).insertMode);
+        this.model.onDidTrigger(() => ctxInsertMode.set(editor.getOption(104 /* suggest */).insertMode));
         this.widget = this._toDispose.add(new IdleValue(() => {
             const widget = this._instantiationService.createInstance(SuggestWidget, this.editor);
             this._toDispose.add(widget);
@@ -345,7 +345,7 @@ let SuggestController = class SuggestController {
     }
     getOverwriteInfo(item, toggleMode) {
         assertType(this.editor.hasModel());
-        let replace = this.editor.getOption(101 /* suggest */).insertMode === 'replace';
+        let replace = this.editor.getOption(104 /* suggest */).insertMode === 'replace';
         if (toggleMode) {
             replace = !replace;
         }
@@ -358,10 +358,9 @@ let SuggestController = class SuggestController {
             overwriteAfter: overwriteAfter + suffixDelta
         };
     }
-    _alertCompletionItem({ completion: suggestion }) {
-        const textLabel = typeof suggestion.label === 'string' ? suggestion.label : suggestion.label.name;
-        if (isNonEmptyArray(suggestion.additionalTextEdits)) {
-            let msg = nls.localize('aria.alert.snippet', "Accepting '{0}' made {1} additional edits", textLabel, suggestion.additionalTextEdits.length);
+    _alertCompletionItem(item) {
+        if (isNonEmptyArray(item.completion.additionalTextEdits)) {
+            let msg = nls.localize('aria.alert.snippet', "Accepting '{0}' made {1} additional edits", item.textLabel, item.completion.additionalTextEdits.length);
             alert(msg);
         }
     }
@@ -482,6 +481,12 @@ let SuggestController = class SuggestController {
     }
     resetWidgetSize() {
         this.widget.value.resetPersistedSize();
+    }
+    forceRenderingAbove() {
+        this.widget.value.forceRenderingAbove();
+    }
+    stopForceRenderingAbove() {
+        this.widget.value.stopForceRenderingAbove();
     }
 };
 SuggestController.ID = 'editor.contrib.suggestController';

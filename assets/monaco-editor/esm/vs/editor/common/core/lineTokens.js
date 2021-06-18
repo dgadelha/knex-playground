@@ -9,6 +9,15 @@ export class LineTokens {
         this._tokensCount = (this._tokens.length >>> 1);
         this._text = text;
     }
+    static createEmpty(lineContent) {
+        const defaultMetadata = ((0 /* None */ << 11 /* FONT_STYLE_OFFSET */)
+            | (1 /* DefaultForeground */ << 14 /* FOREGROUND_OFFSET */)
+            | (2 /* DefaultBackground */ << 23 /* BACKGROUND_OFFSET */)) >>> 0;
+        const tokens = new Uint32Array(2);
+        tokens[0] = lineContent.length;
+        tokens[1] = defaultMetadata;
+        return new LineTokens(tokens, lineContent);
+    }
     equals(other) {
         if (other instanceof LineTokens) {
             return this.slicedEquals(other, 0, this._tokensCount);

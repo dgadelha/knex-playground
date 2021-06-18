@@ -5,10 +5,24 @@
 import * as strings from '../../../base/common/strings.js';
 import * as platform from '../../../base/common/platform.js';
 import * as buffer from '../../../base/common/buffer.js';
+let _utf16LE_TextDecoder;
+function getUTF16LE_TextDecoder() {
+    if (!_utf16LE_TextDecoder) {
+        _utf16LE_TextDecoder = new TextDecoder('UTF-16LE');
+    }
+    return _utf16LE_TextDecoder;
+}
+let _utf16BE_TextDecoder;
+function getUTF16BE_TextDecoder() {
+    if (!_utf16BE_TextDecoder) {
+        _utf16BE_TextDecoder = new TextDecoder('UTF-16BE');
+    }
+    return _utf16BE_TextDecoder;
+}
 let _platformTextDecoder;
 export function getPlatformTextDecoder() {
     if (!_platformTextDecoder) {
-        _platformTextDecoder = new TextDecoder(platform.isLittleEndian() ? 'UTF-16LE' : 'UTF-16BE');
+        _platformTextDecoder = platform.isLittleEndian() ? getUTF16LE_TextDecoder() : getUTF16BE_TextDecoder();
     }
     return _platformTextDecoder;
 }
@@ -25,7 +39,14 @@ else {
 }
 function standardDecodeUTF16LE(source, offset, len) {
     const view = new Uint16Array(source.buffer, offset, len);
-    return getPlatformTextDecoder().decode(view);
+    if (len > 0 && (view[0] === 0xFEFF || view[0] === 0xFFFE)) {
+        // UTF16 sometimes starts with a BOM https://de.wikipedia.org/wiki/Byte_Order_Mark
+        // It looks like TextDecoder.decode will eat up a leading BOM (0xFEFF or 0xFFFE)
+        // We don't want that behavior because we know the string is UTF16LE and the BOM should be maintained
+        // So we use the manual decoder
+        return compatDecodeUTF16LE(source, offset, len);
+    }
+    return getUTF16LE_TextDecoder().decode(view);
 }
 function compatDecodeUTF16LE(source, offset, len) {
     let result = [];

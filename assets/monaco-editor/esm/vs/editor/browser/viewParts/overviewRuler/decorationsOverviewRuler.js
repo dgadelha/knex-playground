@@ -11,17 +11,17 @@ import { editorCursorForeground, editorOverviewRulerBorder, editorOverviewRulerB
 class Settings {
     constructor(config, theme) {
         const options = config.options;
-        this.lineHeight = options.get(53 /* lineHeight */);
-        this.pixelRatio = options.get(122 /* pixelRatio */);
-        this.overviewRulerLanes = options.get(68 /* overviewRulerLanes */);
-        this.renderBorder = options.get(67 /* overviewRulerBorder */);
+        this.lineHeight = options.get(56 /* lineHeight */);
+        this.pixelRatio = options.get(126 /* pixelRatio */);
+        this.overviewRulerLanes = options.get(71 /* overviewRulerLanes */);
+        this.renderBorder = options.get(70 /* overviewRulerBorder */);
         const borderColor = theme.getColor(editorOverviewRulerBorder);
         this.borderColor = borderColor ? borderColor.toString() : null;
-        this.hideCursor = options.get(46 /* hideCursorInOverviewRuler */);
+        this.hideCursor = options.get(48 /* hideCursorInOverviewRuler */);
         const cursorColor = theme.getColor(editorCursorForeground);
         this.cursorColor = cursorColor ? cursorColor.transparent(0.7).toString() : null;
         this.themeType = theme.type;
-        const minimapOpts = options.get(59 /* minimap */);
+        const minimapOpts = options.get(62 /* minimap */);
         const minimapEnabled = minimapOpts.enabled;
         const minimapSide = minimapOpts.side;
         const backgroundColor = minimapEnabled
@@ -33,7 +33,7 @@ class Settings {
         else {
             this.backgroundColor = Color.Format.CSS.formatHex(backgroundColor);
         }
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         const position = layoutInfo.overviewRuler;
         this.top = position.top;
         this.right = position.right;

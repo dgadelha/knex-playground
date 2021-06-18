@@ -132,7 +132,7 @@ class WordHighlighter {
         this.editor = editor;
         this._hasWordHighlights = ctxHasWordHighlights.bindTo(contextKeyService);
         this._ignorePositionChangeEvent = false;
-        this.occurrencesHighlight = this.editor.getOption(66 /* occurrencesHighlight */);
+        this.occurrencesHighlight = this.editor.getOption(69 /* occurrencesHighlight */);
         this.model = this.editor.getModel();
         this.toUnhook.add(editor.onDidChangeCursorPosition((e) => {
             if (this._ignorePositionChangeEvent) {
@@ -150,7 +150,7 @@ class WordHighlighter {
             this._stopAll();
         }));
         this.toUnhook.add(editor.onDidChangeConfiguration((e) => {
-            let newValue = this.editor.getOption(66 /* occurrencesHighlight */);
+            let newValue = this.editor.getOption(69 /* occurrencesHighlight */);
             if (this.occurrencesHighlight !== newValue) {
                 this.occurrencesHighlight = newValue;
                 this._stopAll();
@@ -306,7 +306,7 @@ class WordHighlighter {
             this._stopAll();
             let myRequestId = ++this.workerRequestTokenId;
             this.workerRequestCompleted = false;
-            this.workerRequest = computeOccurencesAtPosition(this.model, this.editor.getSelection(), this.editor.getOption(110 /* wordSeparators */));
+            this.workerRequest = computeOccurencesAtPosition(this.model, this.editor.getSelection(), this.editor.getOption(114 /* wordSeparators */));
             this.workerRequest.result.then(data => {
                 if (myRequestId === this.workerRequestTokenId) {
                     this.workerRequestCompleted = true;
@@ -362,6 +362,7 @@ class WordHighlighter {
     }
 }
 WordHighlighter._WRITE_OPTIONS = ModelDecorationOptions.register({
+    description: 'word-highlight-strong',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     className: 'wordHighlightStrong',
     overviewRuler: {
@@ -370,6 +371,7 @@ WordHighlighter._WRITE_OPTIONS = ModelDecorationOptions.register({
     }
 });
 WordHighlighter._TEXT_OPTIONS = ModelDecorationOptions.register({
+    description: 'selection-highlight',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     className: 'selectionHighlight',
     overviewRuler: {
@@ -378,6 +380,7 @@ WordHighlighter._TEXT_OPTIONS = ModelDecorationOptions.register({
     }
 });
 WordHighlighter._REGULAR_OPTIONS = ModelDecorationOptions.register({
+    description: 'word-highlight',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     className: 'wordHighlight',
     overviewRuler: {

@@ -15,7 +15,7 @@ export class GlyphHoverWidget extends Widget {
         this._domNode.setAttribute('role', 'tooltip');
         this._showAtLineNumber = -1;
         this._register(this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(38 /* fontInfo */)) {
+            if (e.hasChanged(40 /* fontInfo */)) {
                 this.updateFont();
             }
         }));
@@ -42,7 +42,7 @@ export class GlyphHoverWidget extends Widget {
         const editorLayout = this._editor.getLayoutInfo();
         const topForLineNumber = this._editor.getTopForLineNumber(this._showAtLineNumber);
         const editorScrollTop = this._editor.getScrollTop();
-        const lineHeight = this._editor.getOption(53 /* lineHeight */);
+        const lineHeight = this._editor.getOption(56 /* lineHeight */);
         const nodeHeight = this._domNode.clientHeight;
         const top = topForLineNumber - editorScrollTop - ((nodeHeight - lineHeight) / 2);
         this._domNode.style.left = `${editorLayout.glyphMarginLeft + editorLayout.glyphMarginWidth}px`;

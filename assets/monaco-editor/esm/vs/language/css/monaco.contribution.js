@@ -6,10 +6,10 @@ import '../../editor/editor.api.js';
 import { languages, Emitter } from './fillers/monaco-editor-core.js';
 // --- CSS configuration and defaults ---------
 var LanguageServiceDefaultsImpl = /** @class */ (function () {
-    function LanguageServiceDefaultsImpl(languageId, diagnosticsOptions, modeConfiguration) {
+    function LanguageServiceDefaultsImpl(languageId, options, modeConfiguration) {
         this._onDidChange = new Emitter();
         this._languageId = languageId;
-        this.setDiagnosticsOptions(diagnosticsOptions);
+        this.setOptions(options);
         this.setModeConfiguration(modeConfiguration);
     }
     Object.defineProperty(LanguageServiceDefaultsImpl.prototype, "onDidChange", {
@@ -35,14 +35,24 @@ var LanguageServiceDefaultsImpl = /** @class */ (function () {
     });
     Object.defineProperty(LanguageServiceDefaultsImpl.prototype, "diagnosticsOptions", {
         get: function () {
-            return this._diagnosticsOptions;
+            return this.options;
         },
         enumerable: false,
         configurable: true
     });
-    LanguageServiceDefaultsImpl.prototype.setDiagnosticsOptions = function (options) {
-        this._diagnosticsOptions = options || Object.create(null);
+    Object.defineProperty(LanguageServiceDefaultsImpl.prototype, "options", {
+        get: function () {
+            return this._options;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    LanguageServiceDefaultsImpl.prototype.setOptions = function (options) {
+        this._options = options || Object.create(null);
         this._onDidChange.fire(this);
+    };
+    LanguageServiceDefaultsImpl.prototype.setDiagnosticsOptions = function (options) {
+        this.setOptions(options);
     };
     LanguageServiceDefaultsImpl.prototype.setModeConfiguration = function (modeConfiguration) {
         this._modeConfiguration = modeConfiguration || Object.create(null);
@@ -50,7 +60,7 @@ var LanguageServiceDefaultsImpl = /** @class */ (function () {
     };
     return LanguageServiceDefaultsImpl;
 }());
-var diagnosticDefault = {
+var optionsDefault = {
     validate: true,
     lint: {
         compatibleVendorPrefixes: 'ignore',
@@ -71,7 +81,8 @@ var diagnosticDefault = {
         important: 'ignore',
         float: 'ignore',
         idSelector: 'ignore'
-    }
+    },
+    data: { useDefaultDataProvider: true }
 };
 var modeConfigurationDefault = {
     completionItems: true,
@@ -86,9 +97,9 @@ var modeConfigurationDefault = {
     diagnostics: true,
     selectionRanges: true
 };
-export var cssDefaults = new LanguageServiceDefaultsImpl('css', diagnosticDefault, modeConfigurationDefault);
-export var scssDefaults = new LanguageServiceDefaultsImpl('scss', diagnosticDefault, modeConfigurationDefault);
-export var lessDefaults = new LanguageServiceDefaultsImpl('less', diagnosticDefault, modeConfigurationDefault);
+export var cssDefaults = new LanguageServiceDefaultsImpl('css', optionsDefault, modeConfigurationDefault);
+export var scssDefaults = new LanguageServiceDefaultsImpl('scss', optionsDefault, modeConfigurationDefault);
+export var lessDefaults = new LanguageServiceDefaultsImpl('less', optionsDefault, modeConfigurationDefault);
 // export to the global based API
 languages.css = { cssDefaults: cssDefaults, lessDefaults: lessDefaults, scssDefaults: scssDefaults };
 // --- Registration to monaco editor ---

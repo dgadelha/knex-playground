@@ -7,6 +7,7 @@ import { ReplaceCommand } from '../commands/replaceCommand.js';
 import { CursorColumns, EditOperationResult, isQuote } from './cursorCommon.js';
 import { MoveOperations } from './cursorMoveOperations.js';
 import { Range } from '../core/range.js';
+import { Position } from '../core/position.js';
 export class DeleteOperations {
     static deleteRight(prevEditOperationType, config, model, selections) {
         let commands = [];
@@ -16,7 +17,7 @@ export class DeleteOperations {
             let deleteSelection = selection;
             if (deleteSelection.isEmpty()) {
                 let position = selection.getPosition();
-                let rightOfPosition = MoveOperations.right(config, model, position.lineNumber, position.column);
+                let rightOfPosition = MoveOperations.right(config, model, position);
                 deleteSelection = new Range(rightOfPosition.lineNumber, rightOfPosition.column, position.lineNumber, position.column);
             }
             if (deleteSelection.isEmpty()) {
@@ -31,8 +32,11 @@ export class DeleteOperations {
         }
         return [shouldPushStackElementBefore, commands];
     }
-    static isAutoClosingPairDelete(autoClosingBrackets, autoClosingQuotes, autoClosingPairsOpen, model, selections) {
+    static isAutoClosingPairDelete(autoClosingDelete, autoClosingBrackets, autoClosingQuotes, autoClosingPairsOpen, model, selections, autoClosedCharacters) {
         if (autoClosingBrackets === 'never' && autoClosingQuotes === 'never') {
+            return false;
+        }
+        if (autoClosingDelete === 'never') {
             return false;
         }
         for (let i = 0, len = selections.length; i < len; i++) {
@@ -70,6 +74,20 @@ export class DeleteOperations {
             if (!foundAutoClosingPair) {
                 return false;
             }
+            // Must delete the pair only if it was automatically inserted by the editor
+            if (autoClosingDelete === 'auto') {
+                let found = false;
+                for (let j = 0, lenJ = autoClosedCharacters.length; j < lenJ; j++) {
+                    const autoClosedCharacter = autoClosedCharacters[j];
+                    if (position.lineNumber === autoClosedCharacter.startLineNumber && position.column === autoClosedCharacter.startColumn) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    return false;
+                }
+            }
         }
         return true;
     }
@@ -82,49 +100,61 @@ export class DeleteOperations {
         }
         return [true, commands];
     }
-    static deleteLeft(prevEditOperationType, config, model, selections) {
-        if (this.isAutoClosingPairDelete(config.autoClosingBrackets, config.autoClosingQuotes, config.autoClosingPairs.autoClosingPairsOpenByEnd, model, selections)) {
+    static deleteLeft(prevEditOperationType, config, model, selections, autoClosedCharacters) {
+        if (this.isAutoClosingPairDelete(config.autoClosingDelete, config.autoClosingBrackets, config.autoClosingQuotes, config.autoClosingPairs.autoClosingPairsOpenByEnd, model, selections, autoClosedCharacters)) {
             return this._runAutoClosingPairDelete(config, model, selections);
         }
-        let commands = [];
+        const commands = [];
         let shouldPushStackElementBefore = (prevEditOperationType !== 2 /* DeletingLeft */);
         for (let i = 0, len = selections.length; i < len; i++) {
-            const selection = selections[i];
-            let deleteSelection = selection;
-            if (deleteSelection.isEmpty()) {
-                let position = selection.getPosition();
-                if (config.useTabStops && position.column > 1) {
-                    let lineContent = model.getLineContent(position.lineNumber);
-                    let firstNonWhitespaceIndex = strings.firstNonWhitespaceIndex(lineContent);
-                    let lastIndentationColumn = (firstNonWhitespaceIndex === -1
-                        ? /* entire string is whitespace */ lineContent.length + 1
-                        : firstNonWhitespaceIndex + 1);
-                    if (position.column <= lastIndentationColumn) {
-                        let fromVisibleColumn = CursorColumns.visibleColumnFromColumn2(config, model, position);
-                        let toVisibleColumn = CursorColumns.prevIndentTabStop(fromVisibleColumn, config.indentSize);
-                        let toColumn = CursorColumns.columnFromVisibleColumn2(config, model, position.lineNumber, toVisibleColumn);
-                        deleteSelection = new Range(position.lineNumber, toColumn, position.lineNumber, position.column);
-                    }
-                    else {
-                        deleteSelection = new Range(position.lineNumber, position.column - 1, position.lineNumber, position.column);
-                    }
-                }
-                else {
-                    let leftOfPosition = MoveOperations.left(config, model, position.lineNumber, position.column);
-                    deleteSelection = new Range(leftOfPosition.lineNumber, leftOfPosition.column, position.lineNumber, position.column);
-                }
-            }
-            if (deleteSelection.isEmpty()) {
-                // Probably at beginning of file => ignore
+            let deleteRange = DeleteOperations.getDeleteRange(selections[i], model, config);
+            // Ignore empty delete ranges, as they have no effect
+            // They happen if the cursor is at the beginning of the file.
+            if (deleteRange.isEmpty()) {
                 commands[i] = null;
                 continue;
             }
-            if (deleteSelection.startLineNumber !== deleteSelection.endLineNumber) {
+            if (deleteRange.startLineNumber !== deleteRange.endLineNumber) {
                 shouldPushStackElementBefore = true;
             }
-            commands[i] = new ReplaceCommand(deleteSelection, '');
+            commands[i] = new ReplaceCommand(deleteRange, '');
         }
         return [shouldPushStackElementBefore, commands];
+    }
+    static getDeleteRange(selection, model, config) {
+        if (!selection.isEmpty()) {
+            return selection;
+        }
+        const position = selection.getPosition();
+        // Unintend when using tab stops and cursor is within indentation
+        if (config.useTabStops && position.column > 1) {
+            const lineContent = model.getLineContent(position.lineNumber);
+            const firstNonWhitespaceIndex = strings.firstNonWhitespaceIndex(lineContent);
+            const lastIndentationColumn = (firstNonWhitespaceIndex === -1
+                ? /* entire string is whitespace */ lineContent.length + 1
+                : firstNonWhitespaceIndex + 1);
+            if (position.column <= lastIndentationColumn) {
+                const fromVisibleColumn = CursorColumns.visibleColumnFromColumn2(config, model, position);
+                const toVisibleColumn = CursorColumns.prevIndentTabStop(fromVisibleColumn, config.indentSize);
+                const toColumn = CursorColumns.columnFromVisibleColumn2(config, model, position.lineNumber, toVisibleColumn);
+                return new Range(position.lineNumber, toColumn, position.lineNumber, position.column);
+            }
+        }
+        return Range.fromPositions(DeleteOperations.getPositionAfterDeleteLeft(position, model), position);
+    }
+    static getPositionAfterDeleteLeft(position, model) {
+        if (position.column > 1) {
+            // Convert 1-based columns to 0-based offsets and back.
+            const idx = strings.getLeftDeleteOffset(position.column - 1, model.getLineContent(position.lineNumber));
+            return position.with(undefined, idx + 1);
+        }
+        else if (position.lineNumber > 1) {
+            const newLine = position.lineNumber - 1;
+            return new Position(newLine, model.getLineMaxColumn(newLine));
+        }
+        else {
+            return position;
+        }
     }
     static cut(config, model, selections) {
         let commands = [];

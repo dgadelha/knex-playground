@@ -3,6 +3,17 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 'use strict';
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -196,15 +207,27 @@ var TypeScriptWorker = /** @class */ (function () {
         });
     };
     // --- language features
-    TypeScriptWorker.clearFiles = function (diagnostics) {
+    TypeScriptWorker.clearFiles = function (tsDiagnostics) {
         // Clear the `file` field, which cannot be JSON'yfied because it
         // contains cyclic data structures, except for the `fileName`
         // property.
-        diagnostics.forEach(function (diag) {
-            var _a;
-            diag.file = diag.file ? { fileName: diag.file.fileName } : undefined;
-            (_a = diag.relatedInformation) === null || _a === void 0 ? void 0 : _a.forEach(function (diag2) { return (diag2.file = diag2.file ? { fileName: diag2.file.fileName } : undefined); });
-        });
+        // Do a deep clone so we don't mutate the ts.Diagnostic object (see https://github.com/microsoft/monaco-editor/issues/2392)
+        var diagnostics = [];
+        for (var _i = 0, tsDiagnostics_1 = tsDiagnostics; _i < tsDiagnostics_1.length; _i++) {
+            var tsDiagnostic = tsDiagnostics_1[_i];
+            var diagnostic = __assign({}, tsDiagnostic);
+            diagnostic.file = diagnostic.file ? { fileName: diagnostic.file.fileName } : undefined;
+            if (tsDiagnostic.relatedInformation) {
+                diagnostic.relatedInformation = [];
+                for (var _a = 0, _b = tsDiagnostic.relatedInformation; _a < _b.length; _a++) {
+                    var tsRelatedDiagnostic = _b[_a];
+                    var relatedDiagnostic = __assign({}, tsRelatedDiagnostic);
+                    relatedDiagnostic.file = relatedDiagnostic.file ? { fileName: relatedDiagnostic.file.fileName } : undefined;
+                    diagnostic.relatedInformation.push(relatedDiagnostic);
+                }
+            }
+            diagnostics.push(diagnostic);
+        }
         return diagnostics;
     };
     TypeScriptWorker.prototype.getSyntacticDiagnostics = function (fileName) {
@@ -268,7 +291,7 @@ var TypeScriptWorker = /** @class */ (function () {
     TypeScriptWorker.prototype.getCompletionEntryDetails = function (fileName, position, entry) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                return [2 /*return*/, this._languageService.getCompletionEntryDetails(fileName, position, entry, undefined, undefined, undefined)];
+                return [2 /*return*/, this._languageService.getCompletionEntryDetails(fileName, position, entry, undefined, undefined, undefined, undefined)];
             });
         });
     };

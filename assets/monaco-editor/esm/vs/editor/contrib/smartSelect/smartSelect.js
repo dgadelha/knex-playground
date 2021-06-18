@@ -66,7 +66,7 @@ class SmartSelectController {
                 return;
             }
             if (!this._state) {
-                yield provideSelectionRanges(model, selections.map(s => s.getPosition()), this._editor.getOption(97 /* smartSelect */), CancellationToken.None).then(ranges => {
+                yield provideSelectionRanges(model, selections.map(s => s.getPosition()), this._editor.getOption(100 /* smartSelect */), CancellationToken.None).then(ranges => {
                     var _a;
                     if (!arrays.isNonEmptyArray(ranges) || ranges.length !== selections.length) {
                         // invalid result

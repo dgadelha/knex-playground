@@ -13,6 +13,22 @@ import { sep, posix, normalize } from './path.js';
 export function toSlashes(osPath) {
     return osPath.replace(/[\\/]/g, posix.sep);
 }
+/**
+ * Takes a Windows OS path (using backward or forward slashes) and turns it into a posix path:
+ * - turns backward slashes into forward slashes
+ * - makes it absolute if it starts with a drive letter
+ * This should only be done for OS paths from Windows (or user provided paths potentially from Windows).
+ * Using it on a Linux or MaxOS path might change it.
+ */
+export function toPosixPath(osPath) {
+    if (osPath.indexOf('/') === -1) {
+        osPath = toSlashes(osPath);
+    }
+    if (/^[a-zA-Z]:(\/|$)/.test(osPath)) { // starts with a drive letter
+        osPath = '/' + osPath;
+    }
+    return osPath;
+}
 export function isEqualOrParent(base, parentCandidate, ignoreCase, separator = sep) {
     if (base === parentCandidate) {
         return true;

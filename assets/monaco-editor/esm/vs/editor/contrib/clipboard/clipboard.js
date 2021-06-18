@@ -18,7 +18,7 @@ import { CopyOptions, InMemoryClipboardMetadataManager } from '../../browser/con
 import { EditorAction, registerEditorAction, MultiCommand } from '../../browser/editorExtensions.js';
 import { ICodeEditorService } from '../../browser/services/codeEditorService.js';
 import { EditorContextKeys } from '../../common/editorContextKeys.js';
-import { MenuId } from '../../../platform/actions/common/actions.js';
+import { MenuRegistry, MenuId } from '../../../platform/actions/common/actions.js';
 import { IClipboardService } from '../../../platform/clipboard/common/clipboardService.js';
 const CLIPBOARD_CONTEXT_MENU_GROUP = '9_cutcopypaste';
 const supportsCut = (platform.isNative || document.queryCommandSupported('cut'));
@@ -58,6 +58,12 @@ export const CutAction = supportsCut ? registerCommand(new MultiCommand({
             group: '',
             title: nls.localize('actions.clipboard.cutLabel', "Cut"),
             order: 1
+        }, {
+            menuId: MenuId.SimpleEditorContext,
+            group: CLIPBOARD_CONTEXT_MENU_GROUP,
+            title: nls.localize('actions.clipboard.cutLabel', "Cut"),
+            when: EditorContextKeys.writable,
+            order: 1,
         }]
 })) : undefined;
 export const CopyAction = supportsCopy ? registerCommand(new MultiCommand({
@@ -86,8 +92,15 @@ export const CopyAction = supportsCopy ? registerCommand(new MultiCommand({
             group: '',
             title: nls.localize('actions.clipboard.copyLabel', "Copy"),
             order: 1
+        }, {
+            menuId: MenuId.SimpleEditorContext,
+            group: CLIPBOARD_CONTEXT_MENU_GROUP,
+            title: nls.localize('actions.clipboard.copyLabel', "Copy"),
+            order: 2,
         }]
 })) : undefined;
+MenuRegistry.appendMenuItem(MenuId.MenubarEditMenu, { submenu: MenuId.MenubarCopy, title: { value: nls.localize('copy as', "Copy As"), original: 'Copy As', }, group: '2_ccp', order: 3 });
+MenuRegistry.appendMenuItem(MenuId.EditorContext, { submenu: MenuId.EditorContextCopy, title: { value: nls.localize('copy as', "Copy As"), original: 'Copy As', }, group: CLIPBOARD_CONTEXT_MENU_GROUP, order: 3 });
 export const PasteAction = supportsPaste ? registerCommand(new MultiCommand({
     id: 'editor.action.clipboardPasteAction',
     precondition: undefined,
@@ -104,18 +117,24 @@ export const PasteAction = supportsPaste ? registerCommand(new MultiCommand({
             menuId: MenuId.MenubarEditMenu,
             group: '2_ccp',
             title: nls.localize({ key: 'miPaste', comment: ['&& denotes a mnemonic'] }, "&&Paste"),
-            order: 3
+            order: 4
         }, {
             menuId: MenuId.EditorContext,
             group: CLIPBOARD_CONTEXT_MENU_GROUP,
             title: nls.localize('actions.clipboard.pasteLabel', "Paste"),
             when: EditorContextKeys.writable,
-            order: 3,
+            order: 4,
         }, {
             menuId: MenuId.CommandPalette,
             group: '',
             title: nls.localize('actions.clipboard.pasteLabel', "Paste"),
             order: 1
+        }, {
+            menuId: MenuId.SimpleEditorContext,
+            group: CLIPBOARD_CONTEXT_MENU_GROUP,
+            title: nls.localize('actions.clipboard.pasteLabel', "Paste"),
+            when: EditorContextKeys.writable,
+            order: 4,
         }]
 })) : undefined;
 class ExecCommandCopyWithSyntaxHighlightingAction extends EditorAction {
@@ -136,7 +155,7 @@ class ExecCommandCopyWithSyntaxHighlightingAction extends EditorAction {
         if (!editor.hasModel()) {
             return;
         }
-        const emptySelectionClipboard = editor.getOption(28 /* emptySelectionClipboard */);
+        const emptySelectionClipboard = editor.getOption(30 /* emptySelectionClipboard */);
         if (!emptySelectionClipboard && editor.getSelection().isEmpty()) {
             return;
         }
@@ -151,12 +170,12 @@ function registerExecCommandImpl(target, browserCommand) {
         return;
     }
     // 1. handle case when focus is in editor.
-    target.addImplementation(10000, (accessor, args) => {
+    target.addImplementation(10000, 'code-editor', (accessor, args) => {
         // Only if editor text focus (i.e. not if editor has widget focus).
         const focusedEditor = accessor.get(ICodeEditorService).getFocusedCodeEditor();
         if (focusedEditor && focusedEditor.hasTextFocus()) {
             // Do not execute if there is no selection and empty selection clipboard is off
-            const emptySelectionClipboard = focusedEditor.getOption(28 /* emptySelectionClipboard */);
+            const emptySelectionClipboard = focusedEditor.getOption(30 /* emptySelectionClipboard */);
             const selection = focusedEditor.getSelection();
             if (selection && selection.isEmpty() && !emptySelectionClipboard) {
                 return true;
@@ -167,7 +186,7 @@ function registerExecCommandImpl(target, browserCommand) {
         return false;
     });
     // 2. (default) handle case when focus is somewhere else.
-    target.addImplementation(0, (accessor, args) => {
+    target.addImplementation(0, 'generic-dom', (accessor, args) => {
         document.execCommand(browserCommand);
         return true;
     });
@@ -176,7 +195,7 @@ registerExecCommandImpl(CutAction, 'cut');
 registerExecCommandImpl(CopyAction, 'copy');
 if (PasteAction) {
     // 1. Paste: handle case when focus is in editor.
-    PasteAction.addImplementation(10000, (accessor, args) => {
+    PasteAction.addImplementation(10000, 'code-editor', (accessor, args) => {
         const codeEditorService = accessor.get(ICodeEditorService);
         const clipboardService = accessor.get(IClipboardService);
         // Only if editor text focus (i.e. not if editor has widget focus).
@@ -193,7 +212,7 @@ if (PasteAction) {
                         let multicursorText = null;
                         let mode = null;
                         if (metadata) {
-                            pasteOnNewLine = (focusedEditor.getOption(28 /* emptySelectionClipboard */) && !!metadata.isFromEmptySelection);
+                            pasteOnNewLine = (focusedEditor.getOption(30 /* emptySelectionClipboard */) && !!metadata.isFromEmptySelection);
                             multicursorText = (typeof metadata.multicursorText !== 'undefined' ? metadata.multicursorText : null);
                             mode = metadata.mode;
                         }
@@ -212,7 +231,7 @@ if (PasteAction) {
         return false;
     });
     // 2. Paste: (default) handle case when focus is somewhere else.
-    PasteAction.addImplementation(0, (accessor, args) => {
+    PasteAction.addImplementation(0, 'generic-dom', (accessor, args) => {
         document.execCommand('paste');
         return true;
     });

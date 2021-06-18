@@ -90,11 +90,11 @@ let ItemRenderer = class ItemRenderer {
         data.readMore.title = nls.localize('readMore', "Read More");
         const configureFont = () => {
             const options = this._editor.getOptions();
-            const fontInfo = options.get(38 /* fontInfo */);
+            const fontInfo = options.get(40 /* fontInfo */);
             const fontFamily = fontInfo.fontFamily;
             const fontFeatureSettings = fontInfo.fontFeatureSettings;
-            const fontSize = options.get(102 /* suggestFontSize */) || fontInfo.fontSize;
-            const lineHeight = options.get(103 /* suggestLineHeight */) || fontInfo.lineHeight;
+            const fontSize = options.get(105 /* suggestFontSize */) || fontInfo.fontSize;
+            const lineHeight = options.get(106 /* suggestLineHeight */) || fontInfo.lineHeight;
             const fontWeight = fontInfo.fontWeight;
             const fontSizePx = `${fontSize}px`;
             const lineHeightPx = `${lineHeight}px`;
@@ -110,7 +110,7 @@ let ItemRenderer = class ItemRenderer {
         };
         configureFont();
         data.disposables.add(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(38 /* fontInfo */) || e.hasChanged(102 /* suggestFontSize */) || e.hasChanged(103 /* suggestLineHeight */)) {
+            if (e.hasChanged(40 /* fontInfo */) || e.hasChanged(105 /* suggestFontSize */) || e.hasChanged(106 /* suggestLineHeight */)) {
                 configureFont();
             }
         }));
@@ -119,7 +119,6 @@ let ItemRenderer = class ItemRenderer {
     renderElement(element, index, data) {
         var _b, _c, _d;
         const { completion } = element;
-        const textLabel = typeof completion.label === 'string' ? completion.label : completion.label.name;
         data.root.id = getAriaId(index);
         data.colorspan.style.backgroundColor = '';
         const labelOptions = {
@@ -137,7 +136,7 @@ let ItemRenderer = class ItemRenderer {
             // special logic for 'file' completion items
             data.icon.className = 'icon hide';
             data.iconContainer.className = 'icon hide';
-            const labelClasses = getIconClasses(this._modelService, this._modeService, URI.from({ scheme: 'fake', path: textLabel }), FileKind.FILE);
+            const labelClasses = getIconClasses(this._modelService, this._modeService, URI.from({ scheme: 'fake', path: element.textLabel }), FileKind.FILE);
             const detailClasses = getIconClasses(this._modelService, this._modeService, URI.from({ scheme: 'fake', path: completion.detail }), FileKind.FILE);
             labelOptions.extraClasses = labelClasses.length > detailClasses.length ? labelClasses : detailClasses;
         }
@@ -146,7 +145,7 @@ let ItemRenderer = class ItemRenderer {
             data.icon.className = 'icon hide';
             data.iconContainer.className = 'icon hide';
             labelOptions.extraClasses = flatten([
-                getIconClasses(this._modelService, this._modeService, URI.from({ scheme: 'fake', path: textLabel }), FileKind.FOLDER),
+                getIconClasses(this._modelService, this._modeService, URI.from({ scheme: 'fake', path: element.textLabel }), FileKind.FOLDER),
                 getIconClasses(this._modelService, this._modeService, URI.from({ scheme: 'fake', path: completion.detail }), FileKind.FOLDER)
             ]);
         }
@@ -160,22 +159,22 @@ let ItemRenderer = class ItemRenderer {
             labelOptions.extraClasses = (labelOptions.extraClasses || []).concat(['deprecated']);
             labelOptions.matches = [];
         }
-        data.iconLabel.setLabel(textLabel, undefined, labelOptions);
+        data.iconLabel.setLabel(element.textLabel, undefined, labelOptions);
         if (typeof completion.label === 'string') {
             data.parametersLabel.textContent = '';
             data.qualifierLabel.textContent = '';
-            data.detailsLabel.textContent = (completion.detail || '').replace(/\n.*$/m, '');
+            data.detailsLabel.textContent = stripNewLines(completion.detail || '');
             data.root.classList.add('string-label');
             data.root.title = '';
         }
         else {
-            data.parametersLabel.textContent = (completion.label.parameters || '').replace(/\n.*$/m, '');
-            data.qualifierLabel.textContent = (completion.label.qualifier || '').replace(/\n.*$/m, '');
-            data.detailsLabel.textContent = (completion.label.type || '').replace(/\n.*$/m, '');
+            data.parametersLabel.textContent = stripNewLines(completion.label.parameters || '');
+            data.qualifierLabel.textContent = stripNewLines(completion.label.qualifier || '');
+            data.detailsLabel.textContent = stripNewLines(completion.label.type || '');
             data.root.classList.remove('string-label');
-            data.root.title = `${textLabel}${(_b = completion.label.parameters) !== null && _b !== void 0 ? _b : ''}  ${(_c = completion.label.qualifier) !== null && _c !== void 0 ? _c : ''}  ${(_d = completion.label.type) !== null && _d !== void 0 ? _d : ''}`;
+            data.root.title = `${element.textLabel}${(_b = completion.label.parameters) !== null && _b !== void 0 ? _b : ''}  ${(_c = completion.label.qualifier) !== null && _c !== void 0 ? _c : ''}  ${(_d = completion.label.type) !== null && _d !== void 0 ? _d : ''}`;
         }
-        if (this._editor.getOption(101 /* suggest */).showInlineDetails) {
+        if (this._editor.getOption(104 /* suggest */).showInlineDetails) {
             show(data.detailsLabel);
         }
         else {
@@ -211,3 +210,6 @@ ItemRenderer = __decorate([
     __param(3, IThemeService)
 ], ItemRenderer);
 export { ItemRenderer };
+function stripNewLines(str) {
+    return str.replace(/\r\n|\r|\n/g, '');
+}

@@ -42,17 +42,26 @@ import * as cssService from './_deps/vscode-css-languageservice/cssLanguageServi
 var CSSWorker = /** @class */ (function () {
     function CSSWorker(ctx, createData) {
         this._ctx = ctx;
-        this._languageSettings = createData.languageSettings;
+        this._languageSettings = createData.options;
         this._languageId = createData.languageId;
+        var data = createData.options.data;
+        var useDefaultDataProvider = data === null || data === void 0 ? void 0 : data.useDefaultDataProvider;
+        var customDataProviders = [];
+        if (data === null || data === void 0 ? void 0 : data.dataProviders) {
+            for (var id in data.dataProviders) {
+                customDataProviders.push(cssService.newCSSDataProvider(data.dataProviders[id]));
+            }
+        }
+        var lsOptions = { customDataProviders: customDataProviders, useDefaultDataProvider: useDefaultDataProvider };
         switch (this._languageId) {
             case 'css':
-                this._languageService = cssService.getCSSLanguageService();
+                this._languageService = cssService.getCSSLanguageService(lsOptions);
                 break;
             case 'less':
-                this._languageService = cssService.getLESSLanguageService();
+                this._languageService = cssService.getLESSLanguageService(lsOptions);
                 break;
             case 'scss':
-                this._languageService = cssService.getSCSSLanguageService();
+                this._languageService = cssService.getSCSSLanguageService(lsOptions);
                 break;
             default:
                 throw new Error('Invalid language id: ' + this._languageId);

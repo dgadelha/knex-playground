@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { createScanner } from '../parser/htmlScanner.js';
 import * as strings from '../utils/strings.js';
-import { URI as Uri } from './../../vscode-uri/index.js';
+import { URI as Uri } from '../../vscode-uri/index.js';
 import { TokenType, Range } from '../htmlLanguageTypes.js';
 function normalizeRef(url) {
     var first = url[0];

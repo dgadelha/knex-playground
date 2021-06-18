@@ -93,7 +93,7 @@ let CodeEditorServiceImpl = class CodeEditorServiceImpl extends AbstractCodeEdit
     _removeEditorStyleSheets(editorId) {
         this._editorStyleSheets.delete(editorId);
     }
-    registerDecorationType(key, options, parentTypeKey, editor) {
+    registerDecorationType(description, key, options, parentTypeKey, editor) {
         let provider = this._decorationOptionProviders.get(key);
         if (!provider) {
             const styleSheet = this._getOrCreateStyleSheet(editor);
@@ -104,7 +104,7 @@ let CodeEditorServiceImpl = class CodeEditorServiceImpl extends AbstractCodeEdit
                 options: options || Object.create(null)
             };
             if (!parentTypeKey) {
-                provider = new DecorationTypeOptionsProvider(this._themeService, styleSheet, providerArgs);
+                provider = new DecorationTypeOptionsProvider(description, this._themeService, styleSheet, providerArgs);
             }
             else {
                 provider = new DecorationSubTypeOptionsProvider(this._themeService, styleSheet, providerArgs);
@@ -169,8 +169,9 @@ export class DecorationSubTypeOptionsProvider {
     }
 }
 export class DecorationTypeOptionsProvider {
-    constructor(themeService, styleSheet, providerArgs) {
+    constructor(description, themeService, styleSheet, providerArgs) {
         this._disposables = new DisposableStore();
+        this.description = description;
         this._styleSheet = styleSheet;
         this._styleSheet.ref();
         this.refCount = 0;
@@ -218,6 +219,7 @@ export class DecorationTypeOptionsProvider {
             return this;
         }
         return {
+            description: this.description,
             inlineClassName: this.inlineClassName,
             beforeContentClassName: this.beforeContentClassName,
             afterContentClassName: this.afterContentClassName,
@@ -233,7 +235,7 @@ export class DecorationTypeOptionsProvider {
         this._styleSheet.unref();
     }
 }
-const _CSS_MAP = {
+export const _CSS_MAP = {
     color: 'color:{0} !important;',
     opacity: 'opacity:{0};',
     backgroundColor: 'background-color:{0};',

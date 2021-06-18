@@ -28,7 +28,6 @@ export function setupMode1(defaults) {
     if (languageId === 'html') {
         languages.registerDocumentFormattingEditProvider(languageId, new languageFeatures.DocumentFormattingEditProvider(worker));
         languages.registerDocumentRangeFormattingEditProvider(languageId, new languageFeatures.DocumentRangeFormattingEditProvider(worker));
-        new languageFeatures.DiagnosticsAdapter(languageId, worker, defaults);
     }
 }
 export function setupMode(defaults) {
@@ -75,9 +74,6 @@ export function setupMode(defaults) {
         }
         if (modeConfiguration.documentRangeFormattingEdits) {
             providers.push(languages.registerDocumentRangeFormattingEditProvider(languageId, new languageFeatures.DocumentRangeFormattingEditProvider(worker)));
-        }
-        if (modeConfiguration.diagnostics) {
-            providers.push(new languageFeatures.DiagnosticsAdapter(languageId, worker, defaults));
         }
     }
     registerProviders();

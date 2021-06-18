@@ -18,6 +18,7 @@ export class InitializingRangeProvider {
                         endColumn: editorModel.getLineLength(range.endLineNumber)
                     },
                     options: {
+                        description: 'folding-initializing-range-provider',
                         stickiness: 1 /* NeverGrowsWhenTypingAtEdges */
                     }
                 };

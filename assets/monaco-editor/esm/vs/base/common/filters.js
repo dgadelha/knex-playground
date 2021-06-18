@@ -296,29 +296,15 @@ export function matchesFuzzy(word, wordToMatchAgainst, enableSeparateSubstringMa
     // Default Filter
     return enableSeparateSubstringMatching ? fuzzySeparateFilter(word, wordToMatchAgainst) : fuzzyContiguousFilter(word, wordToMatchAgainst);
 }
-export function anyScore(pattern, lowPattern, _patternPos, word, lowWord, _wordPos) {
-    const result = fuzzyScore(pattern, lowPattern, 0, word, lowWord, 0, true);
-    if (result) {
-        return result;
-    }
-    let matches = [];
-    let score = 0;
-    let idx = _wordPos;
-    for (let patternPos = 0; patternPos < lowPattern.length && patternPos < _maxLen; ++patternPos) {
-        const wordPos = lowWord.indexOf(lowPattern.charAt(patternPos), idx);
-        if (wordPos >= 0) {
-            score += 1;
-            matches.unshift(wordPos);
-            idx = wordPos + 1;
-        }
-        else if (matches.length > 0) {
-            // once we have started matching things
-            // we need to match the remaining pattern
-            // characters
-            break;
+export function anyScore(pattern, lowPattern, patternPos, word, lowWord, wordPos) {
+    const max = Math.min(13, pattern.length);
+    for (; patternPos < max; patternPos++) {
+        const result = fuzzyScore(pattern, lowPattern, patternPos, word, lowWord, wordPos, false);
+        if (result) {
+            return result;
         }
     }
-    return [score, _wordPos, ...matches];
+    return [0, wordPos];
 }
 //#region --- fuzzyScore ---
 export function createMatches(score) {

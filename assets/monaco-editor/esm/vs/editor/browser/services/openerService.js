@@ -36,10 +36,15 @@ let CommandOpener = class CommandOpener {
     constructor(_commandService) {
         this._commandService = _commandService;
     }
-    open(target) {
+    open(target, options) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!matchesScheme(target, Schemas.command)) {
                 return false;
+            }
+            if (!(options === null || options === void 0 ? void 0 : options.allowCommands)) {
+                // silently ignore commands when command-links are disabled, also
+                // surpress other openers by returning TRUE
+                return true;
             }
             // run command or bail out if command isn't known
             if (typeof target === 'string') {
@@ -167,7 +172,7 @@ let OpenerService = class OpenerService {
             // check with contributed validators
             const targetURI = typeof target === 'string' ? URI.parse(target) : target;
             // validate against the original URI that this URI resolves to, if one exists
-            const validationTarget = (_a = this._resolvedUriTargets.get(targetURI)) !== null && _a !== void 0 ? _a : targetURI;
+            const validationTarget = (_a = this._resolvedUriTargets.get(targetURI)) !== null && _a !== void 0 ? _a : target;
             for (const validator of this._validators) {
                 if (!(yield validator.shouldOpen(validationTarget))) {
                     return false;
@@ -186,30 +191,41 @@ let OpenerService = class OpenerService {
     resolveExternalUri(resource, options) {
         return __awaiter(this, void 0, void 0, function* () {
             for (const resolver of this._resolvers) {
-                const result = yield resolver.resolveExternalUri(resource, options);
-                if (result) {
-                    if (!this._resolvedUriTargets.has(result.resolved)) {
-                        this._resolvedUriTargets.set(result.resolved, resource);
+                try {
+                    const result = yield resolver.resolveExternalUri(resource, options);
+                    if (result) {
+                        if (!this._resolvedUriTargets.has(result.resolved)) {
+                            this._resolvedUriTargets.set(result.resolved, resource);
+                        }
+                        return result;
                     }
-                    return result;
+                }
+                catch (_a) {
+                    // noop
                 }
             }
-            return { resolved: resource, dispose: () => { } };
+            throw new Error('Could not resolve external URI: ' + resource.toString());
         });
     }
     _doOpenExternal(resource, options) {
         return __awaiter(this, void 0, void 0, function* () {
             //todo@jrieken IExternalUriResolver should support `uri: URI | string`
             const uri = typeof resource === 'string' ? URI.parse(resource) : resource;
-            const { resolved } = yield this.resolveExternalUri(uri, options);
+            let externalUri;
+            try {
+                externalUri = (yield this.resolveExternalUri(uri, options)).resolved;
+            }
+            catch (_a) {
+                externalUri = uri;
+            }
             let href;
-            if (typeof resource === 'string' && uri.toString() === resolved.toString()) {
+            if (typeof resource === 'string' && uri.toString() === externalUri.toString()) {
                 // open the url-string AS IS
                 href = resource;
             }
             else {
                 // open URI using the toString(noEncode)+encodeURI-trick
-                href = encodeURI(resolved.toString(true));
+                href = encodeURI(externalUri.toString(true));
             }
             if (options === null || options === void 0 ? void 0 : options.allowContributedOpeners) {
                 const preferredOpenerId = typeof (options === null || options === void 0 ? void 0 : options.allowContributedOpeners) === 'string' ? options === null || options === void 0 ? void 0 : options.allowContributedOpeners : undefined;

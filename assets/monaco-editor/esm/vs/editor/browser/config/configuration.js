@@ -213,7 +213,7 @@ export class Configuration extends CommonEditorConfiguration {
         this.accessibilityService = accessibilityService;
         this._elementSizeObserver = this._register(new ElementSizeObserver(referenceDomElement, options.dimension, () => this._recomputeOptions()));
         this._register(CSSBasedConfiguration.INSTANCE.onDidChange(() => this._recomputeOptions()));
-        if (this._validatedOptions.get(9 /* automaticLayout */)) {
+        if (this._validatedOptions.get(10 /* automaticLayout */)) {
             this._elementSizeObserver.startObserving();
         }
         this._register(browser.onDidChangeZoomLevel(_ => this._recomputeOptions()));

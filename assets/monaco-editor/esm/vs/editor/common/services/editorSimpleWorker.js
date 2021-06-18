@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { mergeSort } from '../../../base/common/arrays.js';
 import { stringDiff } from '../../../base/common/diff/diff.js';
 import { globals } from '../../../base/common/platform.js';
 import { URI } from '../../../base/common/uri.js';
@@ -31,9 +30,6 @@ import { StopWatch } from '../../../base/common/stopwatch.js';
 class MirrorModel extends BaseMirrorModel {
     get uri() {
         return this._uri;
-    }
-    get version() {
-        return this._versionId;
     }
     get eol() {
         return this._eol;
@@ -283,7 +279,7 @@ export class EditorSimpleWorker {
             }
             const result = [];
             let lastEol = undefined;
-            edits = mergeSort(edits, (a, b) => {
+            edits = edits.slice(0).sort((a, b) => {
                 if (a.range && b.range) {
                     return Range.compareRangesUsingStarts(a.range, b.range);
                 }

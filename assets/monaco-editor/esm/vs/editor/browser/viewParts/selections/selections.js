@@ -32,9 +32,9 @@ export class SelectionsOverlay extends DynamicViewOverlay {
         this._previousFrameVisibleRangesWithStyle = [];
         this._context = context;
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(53 /* lineHeight */);
-        this._roundedSelection = options.get(85 /* roundedSelection */);
-        this._typicalHalfwidthCharacterWidth = options.get(38 /* fontInfo */).typicalHalfwidthCharacterWidth;
+        this._lineHeight = options.get(56 /* lineHeight */);
+        this._roundedSelection = options.get(88 /* roundedSelection */);
+        this._typicalHalfwidthCharacterWidth = options.get(40 /* fontInfo */).typicalHalfwidthCharacterWidth;
         this._selections = [];
         this._renderResult = null;
         this._context.addEventHandler(this);
@@ -47,9 +47,9 @@ export class SelectionsOverlay extends DynamicViewOverlay {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(53 /* lineHeight */);
-        this._roundedSelection = options.get(85 /* roundedSelection */);
-        this._typicalHalfwidthCharacterWidth = options.get(38 /* fontInfo */).typicalHalfwidthCharacterWidth;
+        this._lineHeight = options.get(56 /* lineHeight */);
+        this._roundedSelection = options.get(88 /* roundedSelection */);
+        this._typicalHalfwidthCharacterWidth = options.get(40 /* fontInfo */).typicalHalfwidthCharacterWidth;
         return true;
     }
     onCursorStateChanged(e) {

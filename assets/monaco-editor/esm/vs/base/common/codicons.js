@@ -36,6 +36,14 @@ export const iconRegistry = _registry;
 export function registerCodicon(id, def) {
     return new Codicon(id, def);
 }
+// Selects all codicon names encapsulated in the `$()` syntax and wraps the
+// results with spaces so that screen readers can read the text better.
+export function getCodiconAriaLabel(text) {
+    if (!text) {
+        return '';
+    }
+    return text.replace(/\$\((.*?)\)/g, (_match, codiconName) => ` ${codiconName} `).trim();
+}
 export class Codicon {
     constructor(id, definition, description) {
         this.id = id;
@@ -99,7 +107,6 @@ export var CSSIcon;
     Codicon.tagAdd = new Codicon('tag-add', { fontCharacter: '\\ea66' });
     Codicon.tagRemove = new Codicon('tag-remove', { fontCharacter: '\\ea66' });
     Codicon.person = new Codicon('person', { fontCharacter: '\\ea67' });
-    Codicon.personAdd = new Codicon('person-add', { fontCharacter: '\\ea67' });
     Codicon.personFollow = new Codicon('person-follow', { fontCharacter: '\\ea67' });
     Codicon.personOutline = new Codicon('person-outline', { fontCharacter: '\\ea67' });
     Codicon.personFilled = new Codicon('person-filled', { fontCharacter: '\\ea67' });
@@ -516,5 +523,22 @@ export var CSSIcon;
     Codicon.runBelow = new Codicon('run-below', { fontCharacter: '\\ebbe' });
     Codicon.notebookTemplate = new Codicon('notebook-template', { fontCharacter: '\\ebbf' });
     Codicon.debugRerun = new Codicon('debug-rerun', { fontCharacter: '\\ebc0' });
+    Codicon.workspaceTrusted = new Codicon('workspace-trusted', { fontCharacter: '\\ebc1' });
+    Codicon.workspaceUntrusted = new Codicon('workspace-untrusted', { fontCharacter: '\\ebc2' });
+    Codicon.workspaceUnspecified = new Codicon('workspace-unspecified', { fontCharacter: '\\ebc3' });
+    Codicon.terminalCmd = new Codicon('terminal-cmd', { fontCharacter: '\\ebc4' });
+    Codicon.terminalDebian = new Codicon('terminal-debian', { fontCharacter: '\\ebc5' });
+    Codicon.terminalLinux = new Codicon('terminal-linux', { fontCharacter: '\\ebc6' });
+    Codicon.terminalPowershell = new Codicon('terminal-powershell', { fontCharacter: '\\ebc7' });
+    Codicon.terminalTmux = new Codicon('terminal-tmux', { fontCharacter: '\\ebc8' });
+    Codicon.terminalUbuntu = new Codicon('terminal-ubuntu', { fontCharacter: '\\ebc9' });
+    Codicon.terminalBash = new Codicon('terminal-bash', { fontCharacter: '\\ebca' });
+    Codicon.arrowSwap = new Codicon('arrow-swap', { fontCharacter: '\\ebcb' });
+    Codicon.copy = new Codicon('copy', { fontCharacter: '\\ebcc' });
+    Codicon.personAdd = new Codicon('person-add', { fontCharacter: '\\ebcd' });
+    Codicon.filterFilled = new Codicon('filter-filled', { fontCharacter: '\\ebce' });
+    Codicon.wand = new Codicon('wand', { fontCharacter: '\\ebcf' });
+    Codicon.debugLineByLine = new Codicon('debug-line-by-line', { fontCharacter: '\\ebd0' });
+    Codicon.inspect = new Codicon('inspect', { fontCharacter: '\\ebd1' });
     Codicon.dropDownButton = new Codicon('drop-down-button', Codicon.chevronDown.definition);
 })(Codicon || (Codicon = {}));

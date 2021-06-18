@@ -2,9 +2,9 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { MarkupKind } from './../vscode-languageserver-types/main.js';
-export { TextDocument } from './../vscode-languageserver-textdocument/lib/esm/main.js';
-export * from './../vscode-languageserver-types/main.js';
+import { Position, Range, Location, MarkupContent, MarkupKind, MarkedString, SelectionRange, WorkspaceEdit, CompletionList, CompletionItemKind, CompletionItem, CompletionItemTag, InsertTextMode, Command, SymbolInformation, SymbolKind, Hover, TextEdit, InsertReplaceEdit, InsertTextFormat, DocumentHighlight, DocumentHighlightKind, DocumentLink, FoldingRange, FoldingRangeKind, Diagnostic, FormattingOptions, Color, ColorInformation, ColorPresentation } from './_deps/vscode-languageserver-types/main.js';
+import { TextDocument } from '../vscode-languageserver-textdocument/lib/esm/main.js';
+export { TextDocument, Position, Range, Location, MarkupContent, MarkupKind, MarkedString, SelectionRange, WorkspaceEdit, CompletionList, CompletionItemKind, CompletionItem, CompletionItemTag, InsertTextMode, Command, SymbolInformation, SymbolKind, Hover, TextEdit, InsertReplaceEdit, InsertTextFormat, DocumentHighlight, DocumentHighlightKind, DocumentLink, FoldingRange, FoldingRangeKind, Diagnostic, FormattingOptions, Color, ColorInformation, ColorPresentation };
 export var TokenType;
 (function (TokenType) {
     TokenType[TokenType["StartCommentTag"] = 0] = "StartCommentTag";

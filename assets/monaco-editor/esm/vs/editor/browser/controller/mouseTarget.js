@@ -10,6 +10,30 @@ import { Range as EditorRange } from '../../common/core/range.js';
 import { CursorColumns } from '../../common/controller/cursorCommon.js';
 import * as dom from '../../../base/browser/dom.js';
 import { AtomicTabMoveOperations } from '../../common/controller/cursorAtomicMoveOperations.js';
+class UnknownHitTestResult {
+    constructor(hitTarget = null) {
+        this.hitTarget = hitTarget;
+        this.type = 0 /* Unknown */;
+    }
+}
+class ContentHitTestResult {
+    constructor(position, spanNode) {
+        this.position = position;
+        this.spanNode = spanNode;
+        this.type = 1 /* Content */;
+    }
+}
+var HitTestResult;
+(function (HitTestResult) {
+    function createFromDOMInfo(ctx, spanNode, offset) {
+        const position = ctx.getPositionFromDOMInfo(spanNode, offset);
+        if (position) {
+            return new ContentHitTestResult(position, spanNode);
+        }
+        return new UnknownHitTestResult(spanNode);
+    }
+    HitTestResult.createFromDOMInfo = createFromDOMInfo;
+})(HitTestResult || (HitTestResult = {}));
 export class PointerHandlerLastRenderData {
     constructor(lastViewCursorsRenderData, lastTextareaPosition) {
         this.lastViewCursorsRenderData = lastViewCursorsRenderData;
@@ -119,11 +143,11 @@ export class HitTestContext {
     constructor(context, viewHelper, lastRenderData) {
         this.model = context.model;
         const options = context.configuration.options;
-        this.layoutInfo = options.get(124 /* layoutInfo */);
+        this.layoutInfo = options.get(128 /* layoutInfo */);
         this.viewDomNode = viewHelper.viewDomNode;
-        this.lineHeight = options.get(53 /* lineHeight */);
-        this.stickyTabStops = options.get(99 /* stickyTabStops */);
-        this.typicalHalfwidthCharacterWidth = options.get(38 /* fontInfo */).typicalHalfwidthCharacterWidth;
+        this.lineHeight = options.get(56 /* lineHeight */);
+        this.stickyTabStops = options.get(102 /* stickyTabStops */);
+        this.typicalHalfwidthCharacterWidth = options.get(40 /* fontInfo */).typicalHalfwidthCharacterWidth;
         this.lastRenderData = lastRenderData;
         this._context = context;
         this._viewHelper = viewHelper;
@@ -260,6 +284,8 @@ class HitTestRequest extends BareHitTestRequest {
     toString() {
         return `pos(${this.pos.x},${this.pos.y}), editorPos(${this.editorPos.x},${this.editorPos.y}), mouseVerticalOffset: ${this.mouseVerticalOffset}, mouseContentHorizontalOffset: ${this.mouseContentHorizontalOffset}\n\ttarget: ${this.target ? this.target.outerHTML : null}`;
     }
+    // public fulfill(type: MouseTargetType.OVERVIEW_RULER, position?: Position | null, range?: EditorRange | null, detail?: any): MouseTarget;
+    // public fulfill(type: MouseTargetType.OUTSIDE_EDITOR, position?: Position | null, range?: EditorRange | null, detail?: any): MouseTarget;
     fulfill(type, position = null, range = null, detail = null) {
         let mouseColumn = this.mouseColumn;
         if (position && position.column < this._ctx.model.getLineMaxColumn(position.lineNumber)) {
@@ -319,8 +345,8 @@ export class MouseTargetFactory {
                 return request.fulfill(0 /* UNKNOWN */);
             }
             const hitTestResult = MouseTargetFactory._doHitTest(ctx, request);
-            if (hitTestResult.position) {
-                return MouseTargetFactory.createMouseTargetFromHitTestPosition(ctx, request, hitTestResult.position.lineNumber, hitTestResult.position.column);
+            if (hitTestResult.type === 1 /* Content */) {
+                return MouseTargetFactory.createMouseTargetFromHitTestPosition(ctx, request, hitTestResult.spanNode, hitTestResult.position);
             }
             return this._createMouseTarget(ctx, request.withTarget(hitTestResult.hitTarget), true);
         }
@@ -371,7 +397,7 @@ export class MouseTargetFactory {
             const lastViewCursorsRenderData = ctx.lastRenderData.lastViewCursorsRenderData;
             for (const d of lastViewCursorsRenderData) {
                 if (request.target === d.domNode) {
-                    return request.fulfill(6 /* CONTENT_TEXT */, d.position);
+                    return request.fulfill(6 /* CONTENT_TEXT */, d.position, null, { mightBeForeignElement: false });
                 }
             }
         }
@@ -395,7 +421,7 @@ export class MouseTargetFactory {
                 const cursorVerticalOffset = ctx.getVerticalOffsetForLineNumber(d.position.lineNumber);
                 if (cursorVerticalOffset <= mouseVerticalOffset
                     && mouseVerticalOffset <= cursorVerticalOffset + d.height) {
-                    return request.fulfill(6 /* CONTENT_TEXT */, d.position);
+                    return request.fulfill(6 /* CONTENT_TEXT */, d.position, null, { mightBeForeignElement: false });
                 }
             }
         }
@@ -413,7 +439,7 @@ export class MouseTargetFactory {
         // Is it the textarea?
         if (ElementPath.isTextArea(request.targetPath)) {
             if (ctx.lastRenderData.lastTextareaPosition) {
-                return request.fulfill(6 /* CONTENT_TEXT */, ctx.lastRenderData.lastTextareaPosition);
+                return request.fulfill(6 /* CONTENT_TEXT */, ctx.lastRenderData.lastTextareaPosition, null, { mightBeForeignElement: false });
             }
             return request.fulfill(1 /* TEXTAREA */, ctx.lastRenderData.lastTextareaPosition);
         }
@@ -452,14 +478,14 @@ export class MouseTargetFactory {
             return null;
         }
         if (ctx.isInTopPadding(request.mouseVerticalOffset)) {
-            return request.fulfill(7 /* CONTENT_EMPTY */, new Position(1, 1), undefined, EMPTY_CONTENT_AFTER_LINES);
+            return request.fulfill(7 /* CONTENT_EMPTY */, new Position(1, 1), null, EMPTY_CONTENT_AFTER_LINES);
         }
         // Check if it is below any lines and any view zones
         if (ctx.isAfterLines(request.mouseVerticalOffset) || ctx.isInBottomPadding(request.mouseVerticalOffset)) {
             // This most likely indicates it happened after the last view-line
             const lineCount = ctx.model.getLineCount();
             const maxLineColumn = ctx.model.getLineMaxColumn(lineCount);
-            return request.fulfill(7 /* CONTENT_EMPTY */, new Position(lineCount, maxLineColumn), undefined, EMPTY_CONTENT_AFTER_LINES);
+            return request.fulfill(7 /* CONTENT_EMPTY */, new Position(lineCount, maxLineColumn), null, EMPTY_CONTENT_AFTER_LINES);
         }
         if (domHitTestExecuted) {
             // Check if we are hitting a view-line (can happen in the case of inline decorations on empty lines)
@@ -469,21 +495,21 @@ export class MouseTargetFactory {
                 if (ctx.model.getLineLength(lineNumber) === 0) {
                     const lineWidth = ctx.getLineWidth(lineNumber);
                     const detail = createEmptyContentDataInLines(request.mouseContentHorizontalOffset - lineWidth);
-                    return request.fulfill(7 /* CONTENT_EMPTY */, new Position(lineNumber, 1), undefined, detail);
+                    return request.fulfill(7 /* CONTENT_EMPTY */, new Position(lineNumber, 1), null, detail);
                 }
                 const lineWidth = ctx.getLineWidth(lineNumber);
                 if (request.mouseContentHorizontalOffset >= lineWidth) {
                     const detail = createEmptyContentDataInLines(request.mouseContentHorizontalOffset - lineWidth);
                     const pos = new Position(lineNumber, ctx.model.getLineMaxColumn(lineNumber));
-                    return request.fulfill(7 /* CONTENT_EMPTY */, pos, undefined, detail);
+                    return request.fulfill(7 /* CONTENT_EMPTY */, pos, null, detail);
                 }
             }
             // We have already executed hit test...
             return request.fulfill(0 /* UNKNOWN */);
         }
         const hitTestResult = MouseTargetFactory._doHitTest(ctx, request);
-        if (hitTestResult.position) {
-            return MouseTargetFactory.createMouseTargetFromHitTestPosition(ctx, request, hitTestResult.position.lineNumber, hitTestResult.position.column);
+        if (hitTestResult.type === 1 /* Content */) {
+            return MouseTargetFactory.createMouseTargetFromHitTestPosition(ctx, request, hitTestResult.spanNode, hitTestResult.position);
         }
         return this._createMouseTarget(ctx, request.withTarget(hitTestResult.hitTarget), true);
     }
@@ -520,9 +546,9 @@ export class MouseTargetFactory {
     }
     getMouseColumn(editorPos, pos) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         const mouseContentHorizontalOffset = this._context.viewLayout.getCurrentScrollLeft() + pos.x - editorPos.x - layoutInfo.contentLeft;
-        return MouseTargetFactory._getMouseColumn(mouseContentHorizontalOffset, options.get(38 /* fontInfo */).typicalHalfwidthCharacterWidth);
+        return MouseTargetFactory._getMouseColumn(mouseContentHorizontalOffset, options.get(40 /* fontInfo */).typicalHalfwidthCharacterWidth);
     }
     static _getMouseColumn(mouseContentHorizontalOffset, typicalHalfwidthCharacterWidth) {
         if (mouseContentHorizontalOffset < 0) {
@@ -531,12 +557,13 @@ export class MouseTargetFactory {
         const chars = Math.round(mouseContentHorizontalOffset / typicalHalfwidthCharacterWidth);
         return (chars + 1);
     }
-    static createMouseTargetFromHitTestPosition(ctx, request, lineNumber, column) {
-        const pos = new Position(lineNumber, column);
+    static createMouseTargetFromHitTestPosition(ctx, request, spanNode, pos) {
+        const lineNumber = pos.lineNumber;
+        const column = pos.column;
         const lineWidth = ctx.getLineWidth(lineNumber);
         if (request.mouseContentHorizontalOffset > lineWidth) {
             const detail = createEmptyContentDataInLines(request.mouseContentHorizontalOffset - lineWidth);
-            return request.fulfill(7 /* CONTENT_EMPTY */, pos, undefined, detail);
+            return request.fulfill(7 /* CONTENT_EMPTY */, pos, null, detail);
         }
         const visibleRange = ctx.visibleRangeForPosition(lineNumber, column);
         if (!visibleRange) {
@@ -544,7 +571,7 @@ export class MouseTargetFactory {
         }
         const columnHorizontalOffset = visibleRange.left;
         if (request.mouseContentHorizontalOffset === columnHorizontalOffset) {
-            return request.fulfill(6 /* CONTENT_TEXT */, pos);
+            return request.fulfill(6 /* CONTENT_TEXT */, pos, null, { mightBeForeignElement: false });
         }
         const points = [];
         points.push({ offset: visibleRange.left, column: column });
@@ -562,15 +589,18 @@ export class MouseTargetFactory {
             }
         }
         points.sort((a, b) => a.offset - b.offset);
+        const mouseCoordinates = request.pos.toClientCoordinates();
+        const spanNodeClientRect = spanNode.getBoundingClientRect();
+        const mouseIsOverSpanNode = (spanNodeClientRect.left <= mouseCoordinates.clientX && mouseCoordinates.clientX <= spanNodeClientRect.right);
         for (let i = 1; i < points.length; i++) {
             const prev = points[i - 1];
             const curr = points[i];
             if (prev.offset <= request.mouseContentHorizontalOffset && request.mouseContentHorizontalOffset <= curr.offset) {
                 const rng = new EditorRange(lineNumber, prev.column, lineNumber, curr.column);
-                return request.fulfill(6 /* CONTENT_TEXT */, pos, rng);
+                return request.fulfill(6 /* CONTENT_TEXT */, pos, rng, { mightBeForeignElement: !mouseIsOverSpanNode });
             }
         }
-        return request.fulfill(6 /* CONTENT_TEXT */, pos);
+        return request.fulfill(6 /* CONTENT_TEXT */, pos, null, { mightBeForeignElement: !mouseIsOverSpanNode });
     }
     /**
      * Most probably WebKit browsers and Edge
@@ -590,7 +620,7 @@ export class MouseTargetFactory {
         }
         const adjustedPage = new PageCoordinates(request.pos.x, adjustedPageY);
         const r = this._actualDoHitTestWithCaretRangeFromPoint(ctx, adjustedPage.toClientCoordinates());
-        if (r.position) {
+        if (r.type === 1 /* Content */) {
             return r;
         }
         // Also try to hit test without the adjustment (for the edge cases that we are near the top or bottom)
@@ -611,14 +641,10 @@ export class MouseTargetFactory {
             range = document.caretRangeFromPoint(coords.clientX, coords.clientY);
         }
         if (!range || !range.startContainer) {
-            return {
-                position: null,
-                hitTarget: null
-            };
+            return new UnknownHitTestResult();
         }
         // Chrome always hits a TEXT_NODE, while Edge sometimes hits a token span
         const startContainer = range.startContainer;
-        let hitTarget = null;
         if (startContainer.nodeType === startContainer.TEXT_NODE) {
             // startContainer is expected to be the token text
             const parent1 = startContainer.parentNode; // expected to be the token span
@@ -626,14 +652,10 @@ export class MouseTargetFactory {
             const parent3 = parent2 ? parent2.parentNode : null; // expected to be the view line div
             const parent3ClassName = parent3 && parent3.nodeType === parent3.ELEMENT_NODE ? parent3.className : null;
             if (parent3ClassName === ViewLine.CLASS_NAME) {
-                const p = ctx.getPositionFromDOMInfo(parent1, range.startOffset);
-                return {
-                    position: p,
-                    hitTarget: null
-                };
+                return HitTestResult.createFromDOMInfo(ctx, parent1, range.startOffset);
             }
             else {
-                hitTarget = startContainer.parentNode;
+                return new UnknownHitTestResult(startContainer.parentNode);
             }
         }
         else if (startContainer.nodeType === startContainer.ELEMENT_NODE) {
@@ -642,20 +664,13 @@ export class MouseTargetFactory {
             const parent2 = parent1 ? parent1.parentNode : null; // expected to be the view line div
             const parent2ClassName = parent2 && parent2.nodeType === parent2.ELEMENT_NODE ? parent2.className : null;
             if (parent2ClassName === ViewLine.CLASS_NAME) {
-                const p = ctx.getPositionFromDOMInfo(startContainer, startContainer.textContent.length);
-                return {
-                    position: p,
-                    hitTarget: null
-                };
+                return HitTestResult.createFromDOMInfo(ctx, startContainer, startContainer.textContent.length);
             }
             else {
-                hitTarget = startContainer;
+                return new UnknownHitTestResult(startContainer);
             }
         }
-        return {
-            position: null,
-            hitTarget: hitTarget
-        };
+        return new UnknownHitTestResult();
     }
     /**
      * Most probably Gecko
@@ -669,17 +684,10 @@ export class MouseTargetFactory {
             const parent3 = parent2 ? parent2.parentNode : null; // expected to be the view line div
             const parent3ClassName = parent3 && parent3.nodeType === parent3.ELEMENT_NODE ? parent3.className : null;
             if (parent3ClassName === ViewLine.CLASS_NAME) {
-                const p = ctx.getPositionFromDOMInfo(hitResult.offsetNode.parentNode, hitResult.offset);
-                return {
-                    position: p,
-                    hitTarget: null
-                };
+                return HitTestResult.createFromDOMInfo(ctx, hitResult.offsetNode.parentNode, hitResult.offset);
             }
             else {
-                return {
-                    position: null,
-                    hitTarget: hitResult.offsetNode.parentNode
-                };
+                return new UnknownHitTestResult(hitResult.offsetNode.parentNode);
             }
         }
         // For inline decorations, Gecko sometimes returns the `<span>` of the line and the offset is the `<span>` with the inline decoration
@@ -693,26 +701,15 @@ export class MouseTargetFactory {
                 // it returned the `<span>` of the line and the offset is the `<span>` with the inline decoration
                 const tokenSpan = hitResult.offsetNode.childNodes[Math.min(hitResult.offset, hitResult.offsetNode.childNodes.length - 1)];
                 if (tokenSpan) {
-                    const p = ctx.getPositionFromDOMInfo(tokenSpan, 0);
-                    return {
-                        position: p,
-                        hitTarget: null
-                    };
+                    return HitTestResult.createFromDOMInfo(ctx, tokenSpan, 0);
                 }
             }
             else if (parent2ClassName === ViewLine.CLASS_NAME) {
                 // it returned the `<span>` with the inline decoration
-                const p = ctx.getPositionFromDOMInfo(hitResult.offsetNode, 0);
-                return {
-                    position: p,
-                    hitTarget: null
-                };
+                return HitTestResult.createFromDOMInfo(ctx, hitResult.offsetNode, 0);
             }
         }
-        return {
-            position: null,
-            hitTarget: hitResult.offsetNode
-        };
+        return new UnknownHitTestResult(hitResult.offsetNode);
     }
     static _snapToSoftTabBoundary(position, viewModel) {
         const lineContent = viewModel.getLineContent(position.lineNumber);
@@ -724,22 +721,16 @@ export class MouseTargetFactory {
         return position;
     }
     static _doHitTest(ctx, request) {
-        let result;
+        let result = new UnknownHitTestResult();
         if (typeof document.caretRangeFromPoint === 'function') {
             result = this._doHitTestWithCaretRangeFromPoint(ctx, request);
         }
         else if (document.caretPositionFromPoint) {
             result = this._doHitTestWithCaretPositionFromPoint(ctx, request.pos.toClientCoordinates());
         }
-        else {
-            result = {
-                position: null,
-                hitTarget: null
-            };
-        }
         // Snap to the nearest soft tab boundary if atomic soft tabs are enabled.
-        if (result.position && ctx.stickyTabStops) {
-            result.position = this._snapToSoftTabBoundary(result.position, ctx.model);
+        if (result.type === 1 /* Content */ && ctx.stickyTabStops) {
+            result = new ContentHitTestResult(this._snapToSoftTabBoundary(result.position, ctx.model), result.spanNode);
         }
         return result;
     }

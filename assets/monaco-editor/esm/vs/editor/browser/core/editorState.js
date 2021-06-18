@@ -69,7 +69,6 @@ export class EditorState {
 export class EditorStateCancellationTokenSource extends EditorKeybindingCancellationTokenSource {
     constructor(editor, flags, range, parent) {
         super(editor, parent);
-        this.editor = editor;
         this._listener = new DisposableStore();
         if (flags & 4 /* Position */) {
             this._listener.add(editor.onDidChangeCursorPosition(e => {

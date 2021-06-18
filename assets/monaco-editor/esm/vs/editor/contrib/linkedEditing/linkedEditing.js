@@ -62,7 +62,7 @@ let LinkedEditingContribution = class LinkedEditingContribution extends Disposab
         this._currentRequestModelVersion = null;
         this._register(this._editor.onDidChangeModel(() => this.reinitialize()));
         this._register(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(56 /* linkedEditing */) || e.hasChanged(76 /* renameOnType */)) {
+            if (e.hasChanged(59 /* linkedEditing */) || e.hasChanged(79 /* renameOnType */)) {
                 this.reinitialize();
             }
         }));
@@ -75,7 +75,7 @@ let LinkedEditingContribution = class LinkedEditingContribution extends Disposab
     }
     reinitialize() {
         const model = this._editor.getModel();
-        const isEnabled = model !== null && (this._editor.getOption(56 /* linkedEditing */) || this._editor.getOption(76 /* renameOnType */)) && LinkedEditingRangeProviderRegistry.has(model);
+        const isEnabled = model !== null && (this._editor.getOption(59 /* linkedEditing */) || this._editor.getOption(79 /* renameOnType */)) && LinkedEditingRangeProviderRegistry.has(model);
         if (isEnabled === this._enabled) {
             return;
         }
@@ -279,6 +279,7 @@ let LinkedEditingContribution = class LinkedEditingContribution extends Disposab
 };
 LinkedEditingContribution.ID = 'editor.contrib.linkedEditing';
 LinkedEditingContribution.DECORATION = ModelDecorationOptions.register({
+    description: 'linked-editing',
     stickiness: 0 /* AlwaysGrowsWhenTypingAtEdges */,
     className: DECORATION_CLASS_NAME
 });

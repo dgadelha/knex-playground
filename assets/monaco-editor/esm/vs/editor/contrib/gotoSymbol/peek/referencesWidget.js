@@ -142,6 +142,7 @@ class DecorationsManager {
     }
 }
 DecorationsManager.DecorationOptions = ModelDecorationOptions.register({
+    description: 'reference-decoration',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     className: 'reference-decoration'
 });
@@ -271,7 +272,7 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
             keyboardNavigationLabelProvider: this._instantiationService.createInstance(StringRepresentationProvider),
             identityProvider: new IdentityProvider(),
             openOnSingleClick: true,
-            openOnFocus: true,
+            selectionNavigation: true,
             overrideStyles: {
                 listBackground: peekView.peekViewResultsBackground
             }

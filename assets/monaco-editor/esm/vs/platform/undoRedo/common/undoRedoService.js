@@ -561,7 +561,7 @@ let UndoRedoService = class UndoRedoService {
     }
     _onError(err, element) {
         onUnexpectedError(err);
-        // An error occured while undoing or redoing => drop the undo/redo stack for all affected resources
+        // An error occurred while undoing or redoing => drop the undo/redo stack for all affected resources
         for (const strResource of element.strResources) {
             this.removeElements(strResource);
         }
@@ -654,7 +654,7 @@ let UndoRedoService = class UndoRedoService {
     _tryToSplitAndUndo(strResource, element, ignoreResources, message) {
         if (element.canSplit()) {
             this._splitPastWorkspaceElement(element, ignoreResources);
-            this._notificationService.info(message);
+            this._notificationService.warn(message);
             return new WorkspaceVerificationError(this._undo(strResource, 0, true));
         }
         else {
@@ -662,7 +662,7 @@ let UndoRedoService = class UndoRedoService {
             for (const strResource of element.strResources) {
                 this.removeElements(strResource);
             }
-            this._notificationService.info(message);
+            this._notificationService.warn(message);
             return new WorkspaceVerificationError();
         }
     }
@@ -786,7 +786,7 @@ let UndoRedoService = class UndoRedoService {
         }
         if (editStack.locked) {
             const message = nls.localize({ key: 'cannotResourceUndoDueToInProgressUndoRedo', comment: ['{0} is a label for an operation.'] }, "Could not undo '{0}' because there is already an undo or redo operation running.", element.label);
-            this._notificationService.info(message);
+            this._notificationService.warn(message);
             return;
         }
         return this._invokeResourcePrepare(element, (cleanup) => {
@@ -922,7 +922,7 @@ let UndoRedoService = class UndoRedoService {
     _tryToSplitAndRedo(strResource, element, ignoreResources, message) {
         if (element.canSplit()) {
             this._splitFutureWorkspaceElement(element, ignoreResources);
-            this._notificationService.info(message);
+            this._notificationService.warn(message);
             return new WorkspaceVerificationError(this._redo(strResource));
         }
         else {
@@ -930,7 +930,7 @@ let UndoRedoService = class UndoRedoService {
             for (const strResource of element.strResources) {
                 this.removeElements(strResource);
             }
-            this._notificationService.info(message);
+            this._notificationService.warn(message);
             return new WorkspaceVerificationError();
         }
     }
@@ -1004,7 +1004,7 @@ let UndoRedoService = class UndoRedoService {
         }
         if (editStack.locked) {
             const message = nls.localize({ key: 'cannotResourceRedoDueToInProgressUndoRedo', comment: ['{0} is a label for an operation.'] }, "Could not redo '{0}' because there is already an undo or redo operation running.", element.label);
-            this._notificationService.info(message);
+            this._notificationService.warn(message);
             return;
         }
         return this._invokeResourcePrepare(element, (cleanup) => {

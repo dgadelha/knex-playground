@@ -22,14 +22,18 @@ define('vs/basic-languages/cameligo/cameligo',["require", "exports"], function (
             { open: '[', close: ']' },
             { open: '(', close: ')' },
             { open: '<', close: '>' },
-            { open: "'", close: "'" }
+            { open: "'", close: "'" },
+            { open: "\"", close: "\"" },
+            { open: "(*", close: "*)" },
         ],
         surroundingPairs: [
             { open: '{', close: '}' },
             { open: '[', close: ']' },
             { open: '(', close: ')' },
             { open: '<', close: '>' },
-            { open: "'", close: "'" }
+            { open: "'", close: "'" },
+            { open: "\"", close: "\"" },
+            { open: "(*", close: "*)" },
         ]
     };
     exports.language = {
@@ -44,14 +48,16 @@ define('vs/basic-languages/cameligo/cameligo',["require", "exports"], function (
         ],
         keywords: [
             'abs',
-            'begin',
+            'assert',
+            'block',
             'Bytes',
+            'case',
             'Crypto',
             'Current',
             'else',
-            'end',
             'failwith',
             'false',
+            'for',
             'fun',
             'if',
             'in',
@@ -69,17 +75,20 @@ define('vs/basic-languages/cameligo/cameligo',["require", "exports"], function (
             'operation',
             'Operation',
             'of',
+            'record',
             'Set',
             'set',
             'sender',
+            'skip',
             'source',
             'String',
             'then',
+            'to',
             'true',
             'type',
-            'with'
+            'with',
         ],
-        typeKeywords: ['int', 'unit', 'string', 'tz'],
+        typeKeywords: ['int', 'unit', 'string', 'tz', 'nat', 'bool'],
         operators: [
             '=',
             '>',
@@ -101,7 +110,9 @@ define('vs/basic-languages/cameligo/cameligo',["require", "exports"], function (
             '^',
             '%',
             '->',
-            '<-'
+            '<-',
+            '&&',
+            '||',
         ],
         // we include these common regular expressions
         symbols: /[=><:@\^&|+\-*\/\^%]+/,

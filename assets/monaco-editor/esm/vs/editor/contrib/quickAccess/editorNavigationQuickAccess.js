@@ -111,6 +111,7 @@ export class AbstractEditorNavigationQuickAccessProvider {
                 {
                     range,
                     options: {
+                        description: 'quick-access-range-highlight',
                         className: 'rangeHighlight',
                         isWholeLine: true
                     }
@@ -119,6 +120,7 @@ export class AbstractEditorNavigationQuickAccessProvider {
                 {
                     range,
                     options: {
+                        description: 'quick-access-range-highlight-overview',
                         overviewRuler: {
                             color: themeColorFromId(overviewRulerRangeHighlight),
                             position: OverviewRulerLane.Full

@@ -201,6 +201,11 @@ define('vs/language/typescript/lib/lib.index',["require", "exports"], function (
     exports.libFileSet['lib.es2020.sharedmemory.d.ts'] = true;
     exports.libFileSet['lib.es2020.string.d.ts'] = true;
     exports.libFileSet['lib.es2020.symbol.wellknown.d.ts'] = true;
+    exports.libFileSet['lib.es2021.d.ts'] = true;
+    exports.libFileSet['lib.es2021.full.d.ts'] = true;
+    exports.libFileSet['lib.es2021.promise.d.ts'] = true;
+    exports.libFileSet['lib.es2021.string.d.ts'] = true;
+    exports.libFileSet['lib.es2021.weakref.d.ts'] = true;
     exports.libFileSet['lib.es5.d.ts'] = true;
     exports.libFileSet['lib.es6.d.ts'] = true;
     exports.libFileSet['lib.esnext.d.ts'] = true;
@@ -266,7 +271,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/lib.index", "./fillers/monaco-editor-core"], function (require, exports, lib_index_1, monaco_editor_core_1) {
+define('vs/language/typescript/languageFeatures',["require", "exports", "./monaco.contribution", "./lib/lib.index", "./fillers/monaco-editor-core"], function (require, exports, monaco_contribution_1, lib_index_1, monaco_editor_core_1) {
     /*---------------------------------------------------------------------------------------------
      *  Copyright (c) Microsoft Corporation. All rights reserved.
      *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -423,18 +428,45 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
                 if (model.getModeId() !== _selector) {
                     return;
                 }
+                var maybeValidate = function () {
+                    var onlyVisible = _this._defaults.getDiagnosticsOptions().onlyVisible;
+                    if (onlyVisible) {
+                        if (model.isAttachedToEditor()) {
+                            _this._doValidate(model);
+                        }
+                    }
+                    else {
+                        _this._doValidate(model);
+                    }
+                };
                 var handle;
                 var changeSubscription = model.onDidChangeContent(function () {
                     clearTimeout(handle);
-                    handle = setTimeout(function () { return _this._doValidate(model); }, 500);
+                    handle = setTimeout(maybeValidate, 500);
+                });
+                var visibleSubscription = model.onDidChangeAttached(function () {
+                    var onlyVisible = _this._defaults.getDiagnosticsOptions().onlyVisible;
+                    if (onlyVisible) {
+                        if (model.isAttachedToEditor()) {
+                            // this model is now attached to an editor
+                            // => compute diagnostics
+                            maybeValidate();
+                        }
+                        else {
+                            // this model is no longer attached to an editor
+                            // => clear existing diagnostics
+                            monaco_editor_core_1.editor.setModelMarkers(model, _this._selector, []);
+                        }
+                    }
                 });
                 _this._listener[model.uri.toString()] = {
                     dispose: function () {
                         changeSubscription.dispose();
+                        visibleSubscription.dispose();
                         clearTimeout(handle);
                     }
                 };
-                _this._doValidate(model);
+                maybeValidate();
             };
             var onModelRemoved = function (model) {
                 monaco_editor_core_1.editor.setModelMarkers(model, _this._selector, []);
@@ -444,7 +476,7 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
                     delete _this._listener[key];
                 }
             };
-            _this._disposables.push(monaco_editor_core_1.editor.onDidCreateModel(onModelAdd));
+            _this._disposables.push(monaco_editor_core_1.editor.onDidCreateModel(function (model) { return onModelAdd(model); }));
             _this._disposables.push(monaco_editor_core_1.editor.onWillDisposeModel(onModelRemoved));
             _this._disposables.push(monaco_editor_core_1.editor.onDidChangeModelLanguage(function (event) {
                 onModelRemoved(event.model);
@@ -468,7 +500,7 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
             };
             _this._disposables.push(_this._defaults.onDidChange(recomputeDiagostics));
             _this._disposables.push(_this._defaults.onDidExtraLibsChange(recomputeDiagostics));
-            monaco_editor_core_1.editor.getModels().forEach(onModelAdd);
+            monaco_editor_core_1.editor.getModels().forEach(function (model) { return onModelAdd(model); });
             return _this;
         }
         DiagnosticsAdapter.prototype.dispose = function () {
@@ -558,7 +590,7 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
         DiagnosticsAdapter.prototype._convertRelatedInformation = function (model, relatedInformation) {
             var _this = this;
             if (!relatedInformation) {
-                return;
+                return [];
             }
             var result = [];
             relatedInformation.forEach(function (info) {
@@ -746,10 +778,10 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
     function tagToString(tag) {
         var tagLabel = "*@" + tag.name + "*";
         if (tag.name === 'param' && tag.text) {
-            var _a = tag.text.split(' '), paramName = _a[0], rest = _a.slice(1);
-            tagLabel += "`" + paramName + "`";
+            var _a = tag.text, paramName = _a[0], rest = _a.slice(1);
+            tagLabel += "`" + paramName.text + "`";
             if (rest.length > 0)
-                tagLabel += " \u2014 " + rest.join(' ');
+                tagLabel += " \u2014 " + rest.map(function (r) { return r.text; }).join(' ');
         }
         else if (tag.text) {
             tagLabel += " \u2014 " + tag.text;
@@ -947,7 +979,7 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
         }
         DefinitionAdapter.prototype.provideDefinition = function (model, position, token) {
             return __awaiter(this, void 0, void 0, function () {
-                var resource, offset, worker, entries, result, _i, entries_1, entry, uri, refModel;
+                var resource, offset, worker, entries, result, _i, entries_1, entry, uri, refModel, matchedLibFile, libModel;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0:
@@ -983,6 +1015,16 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
                                         uri: uri,
                                         range: this._textSpanToRange(refModel, entry.textSpan)
                                     });
+                                }
+                                else {
+                                    matchedLibFile = monaco_contribution_1.typescriptDefaults.getExtraLibs()[entry.fileName];
+                                    if (matchedLibFile) {
+                                        libModel = monaco_editor_core_1.editor.createModel(matchedLibFile.content, 'typescript', uri);
+                                        return [2 /*return*/, {
+                                                uri: uri,
+                                                range: this._textSpanToRange(libModel, entry.textSpan)
+                                            }];
+                                    }
                                 }
                             }
                             return [2 /*return*/, result];
@@ -1083,8 +1125,9 @@ define('vs/language/typescript/languageFeatures',["require", "exports", "./lib/l
                                     range: _this._textSpanToRange(model, item.spans[0]),
                                     selectionRange: _this._textSpanToRange(model, item.spans[0]),
                                     tags: [],
-                                    containerName: containerLabel
                                 };
+                                if (containerLabel)
+                                    result.containerName = containerLabel;
                                 if (item.childItems && item.childItems.length > 0) {
                                     for (var _i = 0, _a = item.childItems; _i < _a.length; _i++) {
                                         var child = _a[_i];

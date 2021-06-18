@@ -40,7 +40,7 @@ export class MonospaceLineBreaksComputerFactory {
         this.classifier = new WrappingCharacterClassifier(breakBeforeChars, breakAfterChars);
     }
     static create(options) {
-        return new MonospaceLineBreaksComputerFactory(options.get(113 /* wordWrapBreakBeforeCharacters */), options.get(112 /* wordWrapBreakAfterCharacters */));
+        return new MonospaceLineBreaksComputerFactory(options.get(117 /* wordWrapBreakBeforeCharacters */), options.get(116 /* wordWrapBreakAfterCharacters */));
     }
     createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent) {
         tabSize = tabSize | 0; //@perf

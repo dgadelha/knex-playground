@@ -41,17 +41,15 @@ export var Schemas;
     Schemas.vscodeNotebook = 'vscode-notebook';
     Schemas.vscodeNotebookCell = 'vscode-notebook-cell';
     Schemas.vscodeNotebookCellMetadata = 'vscode-notebook-cell-metadata';
+    Schemas.vscodeNotebookCellOutput = 'vscode-notebook-cell-output';
     Schemas.vscodeSettings = 'vscode-settings';
     Schemas.vscodeWorkspaceTrust = 'vscode-workspace-trust';
+    Schemas.vscodeTerminal = 'vscode-terminal';
     Schemas.webviewPanel = 'webview-panel';
     /**
      * Scheme used for loading the wrapper html and script in webviews.
      */
     Schemas.vscodeWebview = 'vscode-webview';
-    /**
-     * Scheme used for loading resources inside of webviews.
-     */
-    Schemas.vscodeWebviewResource = 'vscode-webview-resource';
     /**
      * Scheme used for extension pages
      */
@@ -61,6 +59,10 @@ export var Schemas;
      * files with our custom protocol handler (desktop only).
      */
     Schemas.vscodeFileResource = 'vscode-file';
+    /**
+     * Scheme used for temporary resources
+     */
+    Schemas.tmp = 'tmp';
 })(Schemas || (Schemas = {}));
 class RemoteAuthoritiesImpl {
     constructor() {
@@ -108,7 +110,7 @@ class FileAccessImpl {
             return RemoteAuthorities.rewrite(uri);
         }
         // Only convert the URI if we are in a native context and it has `file:` scheme
-        // and we have explicitly enabled the conversion (sandbox, or ENABLE_VSCODE_BROWSER_CODE_LOADING)
+        // and we have explicitly enabled the conversion (sandbox, or VSCODE_BROWSER_CODE_LOADING)
         if (platform.isNative && (__forceCodeFileUri || platform.isPreferringBrowserCodeLoad) && uri.scheme === Schemas.file) {
             return uri.with({
                 scheme: Schemas.vscodeFileResource,

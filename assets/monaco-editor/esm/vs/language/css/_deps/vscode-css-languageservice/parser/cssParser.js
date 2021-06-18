@@ -300,8 +300,7 @@ var Parser = /** @class */ (function () {
         return this._parseBody(node, this._parseRuleSetDeclaration.bind(this));
     };
     Parser.prototype._parseRuleSetDeclarationAtStatement = function () {
-        return this._parseAtApply()
-            || this._parseUnknownAtRule();
+        return this._parseUnknownAtRule();
     };
     Parser.prototype._parseRuleSetDeclaration = function () {
         // https://www.w3.org/TR/css-syntax-3/#consume-a-list-of-declarations0
@@ -309,23 +308,6 @@ var Parser = /** @class */ (function () {
             return this._parseRuleSetDeclarationAtStatement();
         }
         return this._parseDeclaration();
-    };
-    /**
-     * Parses declarations like:
-     *   @apply --my-theme;
-     *
-     * Follows https://tabatkins.github.io/specs/css-apply-rule/#using
-     */
-    Parser.prototype._parseAtApply = function () {
-        if (!this.peekKeyword('@apply')) {
-            return null;
-        }
-        var node = this.create(nodes.AtApplyRule);
-        this.consumeToken();
-        if (!node.setIdentifier(this._parseIdent([nodes.ReferenceType.Variable]))) {
-            return this.finish(node, ParseError.IdentifierExpected);
-        }
-        return this.finish(node);
     };
     Parser.prototype._needsSemicolonAfter = function (node) {
         switch (node.type) {

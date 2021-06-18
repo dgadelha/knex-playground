@@ -98,57 +98,10 @@ export function quickSelect(nth, data, compare) {
         return quickSelect(nth - (lower.length + pivots.length), higher, compare);
     }
 }
-/**
- * Like `Array#sort` but always stable. Usually runs a little slower `than Array#sort`
- * so only use this when actually needing stable sort.
- */
-export function mergeSort(data, compare) {
-    _sort(data, compare, 0, data.length - 1, []);
-    return data;
-}
-function _merge(a, compare, lo, mid, hi, aux) {
-    let leftIdx = lo, rightIdx = mid + 1;
-    for (let i = lo; i <= hi; i++) {
-        aux[i] = a[i];
-    }
-    for (let i = lo; i <= hi; i++) {
-        if (leftIdx > mid) {
-            // left side consumed
-            a[i] = aux[rightIdx++];
-        }
-        else if (rightIdx > hi) {
-            // right side consumed
-            a[i] = aux[leftIdx++];
-        }
-        else if (compare(aux[rightIdx], aux[leftIdx]) < 0) {
-            // right element is less -> comes first
-            a[i] = aux[rightIdx++];
-        }
-        else {
-            // left element comes first (less or equal)
-            a[i] = aux[leftIdx++];
-        }
-    }
-}
-function _sort(a, compare, lo, hi, aux) {
-    if (hi <= lo) {
-        return;
-    }
-    const mid = lo + ((hi - lo) / 2) | 0;
-    _sort(a, compare, lo, mid, aux);
-    _sort(a, compare, mid + 1, hi, aux);
-    if (compare(a[mid], a[mid + 1]) <= 0) {
-        // left and right are sorted and if the last-left element is less
-        // or equals than the first-right element there is nothing else
-        // to do
-        return;
-    }
-    _merge(a, compare, lo, mid, hi, aux);
-}
 export function groupBy(data, compare) {
     const result = [];
     let currentGroup = undefined;
-    for (const element of mergeSort(data.slice(0), compare)) {
+    for (const element of data.slice(0).sort(compare)) {
         if (!currentGroup || compare(currentGroup[0], element) !== 0) {
             currentGroup = [element];
             result.push(currentGroup);

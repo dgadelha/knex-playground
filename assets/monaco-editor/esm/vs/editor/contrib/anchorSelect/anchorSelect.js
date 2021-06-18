@@ -46,6 +46,7 @@ let SelectionAnchorController = class SelectionAnchorController {
             const newDecorationId = this.editor.deltaDecorations(previousDecorations, [{
                     range: Selection.fromPositions(position, position),
                     options: {
+                        description: 'selection-anchor',
                         stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
                         hoverMessage: new MarkdownString().appendText(localize('selectionAnchor', "Selection Anchor")),
                         className: 'selection-anchor'

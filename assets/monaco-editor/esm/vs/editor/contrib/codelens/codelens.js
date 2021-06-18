@@ -11,7 +11,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { mergeSort } from '../../../base/common/arrays.js';
 import { CancellationToken } from '../../../base/common/cancellation.js';
 import { illegalArgument, onUnexpectedExternalError } from '../../../base/common/errors.js';
 import { URI } from '../../../base/common/uri.js';
@@ -53,7 +52,7 @@ export function getCodeLensModel(model, token) {
             }
         }));
         yield Promise.all(promises);
-        result.lenses = mergeSort(result.lenses, (a, b) => {
+        result.lenses = result.lenses.sort((a, b) => {
             // sort by lineNumber, provider-rank, and column
             if (a.symbol.range.startLineNumber < b.symbol.range.startLineNumber) {
                 return -1;

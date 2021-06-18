@@ -54,6 +54,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+import { typescriptDefaults } from './monaco.contribution.js';
 import { libFileSet } from './lib/lib.index.js';
 import { editor, languages, Uri, Range, MarkerTag, MarkerSeverity } from './fillers/monaco-editor-core.js';
 //#region utils copied from typescript to prevent loading the entire typescriptServices ---
@@ -204,18 +205,45 @@ var DiagnosticsAdapter = /** @class */ (function (_super) {
             if (model.getModeId() !== _selector) {
                 return;
             }
+            var maybeValidate = function () {
+                var onlyVisible = _this._defaults.getDiagnosticsOptions().onlyVisible;
+                if (onlyVisible) {
+                    if (model.isAttachedToEditor()) {
+                        _this._doValidate(model);
+                    }
+                }
+                else {
+                    _this._doValidate(model);
+                }
+            };
             var handle;
             var changeSubscription = model.onDidChangeContent(function () {
                 clearTimeout(handle);
-                handle = setTimeout(function () { return _this._doValidate(model); }, 500);
+                handle = setTimeout(maybeValidate, 500);
+            });
+            var visibleSubscription = model.onDidChangeAttached(function () {
+                var onlyVisible = _this._defaults.getDiagnosticsOptions().onlyVisible;
+                if (onlyVisible) {
+                    if (model.isAttachedToEditor()) {
+                        // this model is now attached to an editor
+                        // => compute diagnostics
+                        maybeValidate();
+                    }
+                    else {
+                        // this model is no longer attached to an editor
+                        // => clear existing diagnostics
+                        editor.setModelMarkers(model, _this._selector, []);
+                    }
+                }
             });
             _this._listener[model.uri.toString()] = {
                 dispose: function () {
                     changeSubscription.dispose();
+                    visibleSubscription.dispose();
                     clearTimeout(handle);
                 }
             };
-            _this._doValidate(model);
+            maybeValidate();
         };
         var onModelRemoved = function (model) {
             editor.setModelMarkers(model, _this._selector, []);
@@ -225,7 +253,7 @@ var DiagnosticsAdapter = /** @class */ (function (_super) {
                 delete _this._listener[key];
             }
         };
-        _this._disposables.push(editor.onDidCreateModel(onModelAdd));
+        _this._disposables.push(editor.onDidCreateModel(function (model) { return onModelAdd(model); }));
         _this._disposables.push(editor.onWillDisposeModel(onModelRemoved));
         _this._disposables.push(editor.onDidChangeModelLanguage(function (event) {
             onModelRemoved(event.model);
@@ -249,7 +277,7 @@ var DiagnosticsAdapter = /** @class */ (function (_super) {
         };
         _this._disposables.push(_this._defaults.onDidChange(recomputeDiagostics));
         _this._disposables.push(_this._defaults.onDidExtraLibsChange(recomputeDiagostics));
-        editor.getModels().forEach(onModelAdd);
+        editor.getModels().forEach(function (model) { return onModelAdd(model); });
         return _this;
     }
     DiagnosticsAdapter.prototype.dispose = function () {
@@ -339,7 +367,7 @@ var DiagnosticsAdapter = /** @class */ (function (_super) {
     DiagnosticsAdapter.prototype._convertRelatedInformation = function (model, relatedInformation) {
         var _this = this;
         if (!relatedInformation) {
-            return;
+            return [];
         }
         var result = [];
         relatedInformation.forEach(function (info) {
@@ -527,10 +555,10 @@ export { SuggestAdapter };
 function tagToString(tag) {
     var tagLabel = "*@" + tag.name + "*";
     if (tag.name === 'param' && tag.text) {
-        var _a = tag.text.split(' '), paramName = _a[0], rest = _a.slice(1);
-        tagLabel += "`" + paramName + "`";
+        var _a = tag.text, paramName = _a[0], rest = _a.slice(1);
+        tagLabel += "`" + paramName.text + "`";
         if (rest.length > 0)
-            tagLabel += " \u2014 " + rest.join(' ');
+            tagLabel += " \u2014 " + rest.map(function (r) { return r.text; }).join(' ');
     }
     else if (tag.text) {
         tagLabel += " \u2014 " + tag.text;
@@ -728,7 +756,7 @@ var DefinitionAdapter = /** @class */ (function (_super) {
     }
     DefinitionAdapter.prototype.provideDefinition = function (model, position, token) {
         return __awaiter(this, void 0, void 0, function () {
-            var resource, offset, worker, entries, result, _i, entries_1, entry, uri, refModel;
+            var resource, offset, worker, entries, result, _i, entries_1, entry, uri, refModel, matchedLibFile, libModel;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -764,6 +792,16 @@ var DefinitionAdapter = /** @class */ (function (_super) {
                                     uri: uri,
                                     range: this._textSpanToRange(refModel, entry.textSpan)
                                 });
+                            }
+                            else {
+                                matchedLibFile = typescriptDefaults.getExtraLibs()[entry.fileName];
+                                if (matchedLibFile) {
+                                    libModel = editor.createModel(matchedLibFile.content, 'typescript', uri);
+                                    return [2 /*return*/, {
+                                            uri: uri,
+                                            range: this._textSpanToRange(libModel, entry.textSpan)
+                                        }];
+                                }
                             }
                         }
                         return [2 /*return*/, result];
@@ -864,8 +902,9 @@ var OutlineAdapter = /** @class */ (function (_super) {
                                 range: _this._textSpanToRange(model, item.spans[0]),
                                 selectionRange: _this._textSpanToRange(model, item.spans[0]),
                                 tags: [],
-                                containerName: containerLabel
                             };
+                            if (containerLabel)
+                                result.containerName = containerLabel;
                             if (item.childItems && item.childItems.length > 0) {
                                 for (var _i = 0, _a = item.childItems; _i < _a.length; _i++) {
                                     var child = _a[_i];

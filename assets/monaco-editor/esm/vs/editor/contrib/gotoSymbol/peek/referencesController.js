@@ -39,7 +39,7 @@ import { IListService, WorkbenchListFocusContextKey } from '../../../../platform
 import { KeybindingsRegistry } from '../../../../platform/keybinding/common/keybindingsRegistry.js';
 import { KeyChord } from '../../../../base/common/keyCodes.js';
 import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
-export const ctxReferenceSearchVisible = new RawContextKey('referenceSearchVisible', false);
+export const ctxReferenceSearchVisible = new RawContextKey('referenceSearchVisible', false, nls.localize('referenceSearchVisible', "Whether reference peek is visible, like 'Peek References' or 'Peek Definition'"));
 let ReferencesController = class ReferencesController {
     constructor(_defaultTreeKeyboardSupport, _editor, contextKeyService, _editorService, _notificationService, _instantiationService, _storageService, _configurationService) {
         this._defaultTreeKeyboardSupport = _defaultTreeKeyboardSupport;
@@ -150,7 +150,7 @@ let ReferencesController = class ReferencesController {
                     let selection = this._model.nearestReference(uri, pos);
                     if (selection) {
                         return this._widget.setSelection(selection).then(() => {
-                            if (this._widget && this._editor.getOption(71 /* peekWidgetDefaultFocus */) === 'editor') {
+                            if (this._widget && this._editor.getOption(74 /* peekWidgetDefaultFocus */) === 'editor') {
                                 this._widget.focusOnPreviewEditor();
                             }
                         });

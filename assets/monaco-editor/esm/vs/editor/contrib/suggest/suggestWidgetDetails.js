@@ -49,7 +49,7 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         this._docs = dom.append(this._body, dom.$('p.docs'));
         this._configureFont();
         this._disposables.add(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(38 /* fontInfo */)) {
+            if (e.hasChanged(40 /* fontInfo */)) {
                 this._configureFont();
             }
         }));
@@ -60,10 +60,10 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
     }
     _configureFont() {
         const options = this._editor.getOptions();
-        const fontInfo = options.get(38 /* fontInfo */);
+        const fontInfo = options.get(40 /* fontInfo */);
         const fontFamily = fontInfo.fontFamily;
-        const fontSize = options.get(102 /* suggestFontSize */) || fontInfo.fontSize;
-        const lineHeight = options.get(103 /* suggestLineHeight */) || fontInfo.lineHeight;
+        const fontSize = options.get(105 /* suggestFontSize */) || fontInfo.fontSize;
+        const lineHeight = options.get(106 /* suggestLineHeight */) || fontInfo.lineHeight;
         const fontWeight = fontInfo.fontWeight;
         const fontSizePx = `${fontSize}px`;
         const lineHeightPx = `${lineHeight}px`;
@@ -76,7 +76,7 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         this._close.style.width = lineHeightPx;
     }
     getLayoutInfo() {
-        const lineHeight = this._editor.getOption(103 /* suggestLineHeight */) || this._editor.getOption(38 /* fontInfo */).lineHeight;
+        const lineHeight = this._editor.getOption(106 /* suggestLineHeight */) || this._editor.getOption(40 /* fontInfo */).lineHeight;
         const borderWidth = this._borderWidth;
         const borderHeight = borderWidth * 2;
         return {
@@ -95,15 +95,17 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         this._onDidChangeContents.fire(this);
     }
     renderItem(item, explainMode) {
-        var _a;
+        var _a, _b;
         this._renderDisposeable.clear();
         let { detail, documentation } = item.completion;
         if (explainMode) {
             let md = '';
-            md += `score: ${item.score[0]}${item.word ? `, compared '${item.completion.filterText && (item.completion.filterText + ' (filterText)') || typeof item.completion.label === 'string' ? item.completion.label : item.completion.label.name}' with '${item.word}'` : ' (no prefix)'}\n`;
-            md += `distance: ${item.distance}, see localityBonus-setting\n`;
+            md += `score: ${item.score[0]}\n`;
+            md += `prefix: ${(_a = item.word) !== null && _a !== void 0 ? _a : '(no prefix)'}\n`;
+            md += `word: ${item.completion.filterText ? item.completion.filterText + ' (filterText)' : item.textLabel}\n`;
+            md += `distance: ${item.distance} (localityBonus-setting)\n`;
             md += `index: ${item.idx}, based on ${item.completion.sortText && `sortText: "${item.completion.sortText}"` || 'label'}\n`;
-            md += `commit characters: ${(_a = item.completion.commitCharacters) === null || _a === void 0 ? void 0 : _a.join('')}\n`;
+            md += `commit_chars: ${(_b = item.completion.commitCharacters) === null || _b === void 0 ? void 0 : _b.join('')}\n`;
             documentation = new MarkdownString().appendCodeblock('empty', md);
             detail = `Provider: ${item.provider._debugDisplayName}`;
         }
@@ -256,6 +258,7 @@ export class SuggestDetailsOverlay {
         }));
     }
     dispose() {
+        this._resizable.dispose();
         this._disposables.dispose();
         this.hide();
     }
@@ -276,6 +279,7 @@ export class SuggestDetailsOverlay {
         }
     }
     hide(sessionEnded = false) {
+        this._resizable.clearSashHoverState();
         if (this._added) {
             this._editor.removeOverlayWidget(this);
             this._added = false;

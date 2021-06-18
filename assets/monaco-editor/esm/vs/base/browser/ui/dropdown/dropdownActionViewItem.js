@@ -8,13 +8,13 @@ import { Emitter } from '../../../common/event.js';
 import { BaseActionViewItem } from '../actionbar/actionViewItems.js';
 import { DropdownMenu } from './dropdown.js';
 export class DropdownMenuActionViewItem extends BaseActionViewItem {
-    constructor(action, menuActionsOrProvider, contextMenuProvider, options = {}) {
+    constructor(action, menuActionsOrProvider, contextMenuProvider, options = Object.create(null)) {
         super(null, action, options);
-        this.options = options;
         this.actionItem = null;
         this._onDidChangeVisibility = this._register(new Emitter());
         this.menuActionsOrProvider = menuActionsOrProvider;
         this.contextMenuProvider = contextMenuProvider;
+        this.options = options;
         if (this.options.actionRunner) {
             this.actionRunner = this.options.actionRunner;
         }

@@ -385,7 +385,7 @@ define('vs/basic-languages/julia/julia',["require", "exports"], function (requir
                 ],
                 [/\$\w+/, 'key'],
                 [/\$\(/, 'key', '@paste'],
-                [/@@ident/, 'annotation'],
+                [/@@@ident/, 'annotation'],
                 // whitespace
                 { include: '@whitespace' },
                 // characters

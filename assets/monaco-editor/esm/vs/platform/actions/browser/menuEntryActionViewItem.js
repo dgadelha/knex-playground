@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import './menuEntryActionViewItem.css';
 import { asCSSUrl, ModifierKeyEmitter } from '../../../base/browser/dom.js';
 import { domEvent } from '../../../base/browser/event.js';
@@ -20,15 +29,17 @@ import { localize } from '../../../nls.js';
 import { MenuItemAction, SubmenuItemAction } from '../common/actions.js';
 import { IContextMenuService } from '../../contextview/browser/contextView.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
+import { UILabelProvider } from '../../../base/common/keybindingLabels.js';
 import { INotificationService } from '../../notification/common/notification.js';
 import { ThemeIcon } from '../../theme/common/themeService.js';
 import { ActionViewItem } from '../../../base/browser/ui/actionbar/actionViewItems.js';
 import { DropdownMenuActionViewItem } from '../../../base/browser/ui/dropdown/dropdownActionViewItem.js';
-import { isWindows, isLinux } from '../../../base/common/platform.js';
-export function createAndFillInActionBarActions(menu, options, target, isPrimaryGroup, primaryMaxCount, shouldInlineSubmenu) {
+import { isWindows, isLinux, OS } from '../../../base/common/platform.js';
+export function createAndFillInActionBarActions(menu, options, target, primaryGroup, primaryMaxCount, shouldInlineSubmenu, useSeparatorsInPrimaryActions) {
     const groups = menu.getActions(options);
+    const isPrimaryAction = typeof primaryGroup === 'string' ? (actionGroup) => actionGroup === primaryGroup : primaryGroup;
     // Action bars handle alternative actions on their own so the alternative actions should be ignored
-    fillInActions(groups, target, false, isPrimaryGroup, primaryMaxCount, shouldInlineSubmenu);
+    fillInActions(groups, target, false, isPrimaryAction, primaryMaxCount, shouldInlineSubmenu, useSeparatorsInPrimaryActions);
     return asDisposable(groups);
 }
 function asDisposable(groups) {
@@ -40,7 +51,7 @@ function asDisposable(groups) {
     }
     return disposables;
 }
-function fillInActions(groups, target, useAlternativeActions, isPrimaryGroup = group => group === 'navigation', primaryMaxCount = Number.MAX_SAFE_INTEGER, shouldInlineSubmenu = () => false) {
+function fillInActions(groups, target, useAlternativeActions, isPrimaryAction = actionGroup => actionGroup === 'navigation', primaryMaxCount = Number.MAX_SAFE_INTEGER, shouldInlineSubmenu = () => false, useSeparatorsInPrimaryActions = false) {
     let primaryBucket;
     let secondaryBucket;
     if (Array.isArray(target)) {
@@ -54,8 +65,11 @@ function fillInActions(groups, target, useAlternativeActions, isPrimaryGroup = g
     const submenuInfo = new Set();
     for (const [group, actions] of groups) {
         let target;
-        if (isPrimaryGroup(group)) {
+        if (isPrimaryAction(group)) {
             target = primaryBucket;
+            if (target.length > 0 && useSeparatorsInPrimaryActions) {
+                target.push(new Separator());
+            }
         }
         else {
             target = secondaryBucket;
@@ -77,7 +91,7 @@ function fillInActions(groups, target, useAlternativeActions, isPrimaryGroup = g
     // ask the outside if submenu should be inlined or not. only ask when
     // there would be enough space
     for (const { group, action, index } of submenuInfo) {
-        const target = isPrimaryGroup(group) ? primaryBucket : secondaryBucket;
+        const target = isPrimaryAction(group) ? primaryBucket : secondaryBucket;
         // inlining submenus with length 0 or 1 is easy,
         // larger submenus need to be checked with the overall limit
         const submenuActions = action.actions;
@@ -94,27 +108,34 @@ function fillInActions(groups, target, useAlternativeActions, isPrimaryGroup = g
 let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewItem {
     constructor(_action, _keybindingService, _notificationService) {
         super(undefined, _action, { icon: !!(_action.class || _action.item.icon), label: !_action.class && !_action.item.icon });
-        this._action = _action;
         this._keybindingService = _keybindingService;
         this._notificationService = _notificationService;
         this._wantsAltCommand = false;
         this._itemClassDispose = this._register(new MutableDisposable());
         this._altKey = ModifierKeyEmitter.getInstance();
     }
+    get _menuItemAction() {
+        return this._action;
+    }
     get _commandAction() {
-        return this._wantsAltCommand && this._action.alt || this._action;
+        return this._wantsAltCommand && this._menuItemAction.alt || this._menuItemAction;
     }
     onClick(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.actionRunner
-            .run(this._commandAction, this._context)
-            .catch(err => this._notificationService.error(err));
+        return __awaiter(this, void 0, void 0, function* () {
+            event.preventDefault();
+            event.stopPropagation();
+            try {
+                yield this.actionRunner.run(this._commandAction, this._context);
+            }
+            catch (err) {
+                this._notificationService.error(err);
+            }
+        });
     }
     render(container) {
         super.render(container);
         container.classList.add('menu-entry');
-        this._updateItemClass(this._action.item);
+        this._updateItemClass(this._menuItemAction.item);
         let mouseOver = false;
         let alternativeKeyDown = this._altKey.keyStatus.altKey || ((isWindows || isLinux) && this._altKey.keyStatus.shiftKey);
         const updateAltState = () => {
@@ -126,7 +147,7 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
                 this.updateClass();
             }
         };
-        if (this._action.alt) {
+        if (this._menuItemAction.alt) {
             this._register(this._altKey.event(value => {
                 alternativeKeyDown = value.altKey || ((isWindows || isLinux) && value.shiftKey);
                 updateAltState();
@@ -151,20 +172,30 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
             const keybinding = this._keybindingService.lookupKeybinding(this._commandAction.id);
             const keybindingLabel = keybinding && keybinding.getLabel();
             const tooltip = this._commandAction.tooltip || this._commandAction.label;
-            this.label.title = keybindingLabel
+            let title = keybindingLabel
                 ? localize('titleAndKb', "{0} ({1})", tooltip, keybindingLabel)
                 : tooltip;
+            if (!this._wantsAltCommand && this._menuItemAction.alt) {
+                const altTooltip = this._menuItemAction.alt.tooltip || this._menuItemAction.alt.label;
+                const altKeybinding = this._keybindingService.lookupKeybinding(this._menuItemAction.alt.id);
+                const altKeybindingLabel = altKeybinding && altKeybinding.getLabel();
+                const altTitleSection = altKeybindingLabel
+                    ? localize('titleAndKb', "{0} ({1})", altTooltip, altKeybindingLabel)
+                    : altTooltip;
+                title += `\n[${UILabelProvider.modifierLabels[OS].altKey}] ${altTitleSection}`;
+            }
+            this.label.title = title;
         }
     }
     updateClass() {
         if (this.options.icon) {
-            if (this._commandAction !== this._action) {
-                if (this._action.alt) {
-                    this._updateItemClass(this._action.alt.item);
+            if (this._commandAction !== this._menuItemAction) {
+                if (this._menuItemAction.alt) {
+                    this._updateItemClass(this._menuItemAction.alt.item);
                 }
             }
-            else if (this._action.alt) {
-                this._updateItemClass(this._action.item);
+            else if (this._menuItemAction.alt) {
+                this._updateItemClass(this._menuItemAction.item);
             }
         }
     }
@@ -181,10 +212,10 @@ let MenuEntryActionViewItem = class MenuEntryActionViewItem extends ActionViewIt
         }
         if (ThemeIcon.isThemeIcon(icon)) {
             // theme icons
-            const iconClass = ThemeIcon.asClassName(icon);
-            label.classList.add(...iconClass.split(' '));
+            const iconClasses = ThemeIcon.asClassNameArray(icon);
+            label.classList.add(...iconClasses);
             this._itemClassDispose.value = toDisposable(() => {
-                label.classList.remove(...iconClass.split(' '));
+                label.classList.remove(...iconClasses);
             });
         }
         else {

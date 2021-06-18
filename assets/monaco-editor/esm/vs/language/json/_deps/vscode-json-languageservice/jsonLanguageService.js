@@ -11,7 +11,7 @@ import { schemaContributions } from './services/configuration.js';
 import { JSONSchemaService } from './services/jsonSchemaService.js';
 import { getFoldingRanges } from './services/jsonFolding.js';
 import { getSelectionRanges } from './services/jsonSelectionRanges.js';
-import { format as formatJSON } from './../jsonc-parser/main.js';
+import { format as formatJSON } from '../jsonc-parser/main.js';
 import { Range, TextEdit } from './jsonLanguageTypes.js';
 import { findLinks } from './services/jsonLinks.js';
 export * from './jsonLanguageTypes.js';

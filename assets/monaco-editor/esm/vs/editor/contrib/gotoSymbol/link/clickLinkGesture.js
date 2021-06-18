@@ -65,13 +65,13 @@ export class ClickLinkGesture extends Disposable {
         this._onCancel = this._register(new Emitter());
         this.onCancel = this._onCancel.event;
         this._editor = editor;
-        this._opts = createOptions(this._editor.getOption(64 /* multiCursorModifier */));
+        this._opts = createOptions(this._editor.getOption(67 /* multiCursorModifier */));
         this._lastMouseMoveEvent = null;
         this._hasTriggerKeyOnMouseDown = false;
         this._lineNumberOnMouseDown = 0;
         this._register(this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(64 /* multiCursorModifier */)) {
-                const newOpts = createOptions(this._editor.getOption(64 /* multiCursorModifier */));
+            if (e.hasChanged(67 /* multiCursorModifier */)) {
+                const newOpts = createOptions(this._editor.getOption(67 /* multiCursorModifier */));
                 if (this._opts.equals(newOpts)) {
                     return;
                 }

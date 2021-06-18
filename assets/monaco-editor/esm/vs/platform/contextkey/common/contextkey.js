@@ -18,7 +18,6 @@ STATIC_VALUES.set('isEdge', _userAgent.indexOf('Edg/') >= 0);
 STATIC_VALUES.set('isFirefox', _userAgent.indexOf('Firefox') >= 0);
 STATIC_VALUES.set('isChrome', _userAgent.indexOf('Chrome') >= 0);
 STATIC_VALUES.set('isSafari', _userAgent.indexOf('Safari') >= 0);
-STATIC_VALUES.set('isIPad', _userAgent.indexOf('iPad') >= 0);
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 export class ContextKeyExpr {
     static has(key) {
@@ -907,7 +906,6 @@ export class ContextKeyOrExpr {
 export class RawContextKey extends ContextKeyDefinedExpr {
     constructor(key, defaultValue, metaOrHide) {
         super(key);
-        this.key = key;
         this._defaultValue = defaultValue;
         // collect all context keys into a central place
         if (typeof metaOrHide === 'object') {

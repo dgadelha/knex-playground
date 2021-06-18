@@ -285,7 +285,7 @@ export class WordOperations {
         if (!selection.isEmpty()) {
             return selection;
         }
-        if (DeleteOperations.isAutoClosingPairDelete(ctx.autoClosingBrackets, ctx.autoClosingQuotes, ctx.autoClosingPairs.autoClosingPairsOpenByEnd, ctx.model, [ctx.selection])) {
+        if (DeleteOperations.isAutoClosingPairDelete(ctx.autoClosingDelete, ctx.autoClosingBrackets, ctx.autoClosingQuotes, ctx.autoClosingPairs.autoClosingPairsOpenByEnd, ctx.model, [ctx.selection], ctx.autoClosedCharacters)) {
             const position = ctx.selection.getPosition();
             return new Range(position.lineNumber, position.column - 1, position.lineNumber, position.column + 1);
         }

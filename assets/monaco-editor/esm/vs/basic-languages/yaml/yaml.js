@@ -68,7 +68,7 @@ export var language = {
             { include: '@flowScalars' },
             // String nodes
             [
-                /.+$/,
+                /[^#]+/,
                 {
                     cases: {
                         '@keywords': 'keyword',

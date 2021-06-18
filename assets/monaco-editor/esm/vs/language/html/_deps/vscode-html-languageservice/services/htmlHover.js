@@ -8,7 +8,7 @@ import { isDefined } from '../utils/object.js';
 import { generateDocumentation } from '../languageFacts/dataProvider.js';
 import { entities } from '../parser/htmlEntities.js';
 import { isLetterOrDigit } from '../utils/strings.js';
-import * as nls from './../../../fillers/vscode-nls.js';
+import * as nls from '../../../fillers/vscode-nls.js';
 var localize = nls.loadMessageBundle();
 var HTMLHover = /** @class */ (function () {
     function HTMLHover(lsOptions, dataManager) {

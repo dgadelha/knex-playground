@@ -32,7 +32,7 @@ export class InlineDiffMargin extends Disposable {
         this._diffActions = document.createElement('div');
         this._diffActions.className = Codicon.lightBulb.classNames + ' lightbulb-glyph';
         this._diffActions.style.position = 'absolute';
-        const lineHeight = editor.getOption(53 /* lineHeight */);
+        const lineHeight = editor.getOption(56 /* lineHeight */);
         const lineFeed = editor.getModel().getEOL();
         this._diffActions.style.right = '0px';
         this._diffActions.style.visibility = 'hidden';
@@ -57,7 +57,7 @@ export class InlineDiffMargin extends Disposable {
             }));
             actions.push(copyLineAction);
         }
-        const readOnly = editor.getOption(75 /* readOnly */);
+        const readOnly = editor.getOption(78 /* readOnly */);
         if (!readOnly) {
             actions.push(new Action('diff.inline.revertChange', nls.localize('diff.inline.revertChange.label', "Revert this change"), undefined, true, () => __awaiter(this, void 0, void 0, function* () {
                 const range = new Range(diff.originalStartLineNumber, 1, diff.originalEndLineNumber, diff.originalModel.getLineMaxColumn(diff.originalEndLineNumber));

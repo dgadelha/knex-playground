@@ -51,6 +51,7 @@ export class ParameterHintsModel extends Disposable {
         this.triggerId = 0;
         this.editor = editor;
         this.throttledDelayer = new Delayer(delay);
+        this._register(this.editor.onDidBlurEditorWidget(() => this.cancel()));
         this._register(this.editor.onDidChangeConfiguration(() => this.onEditorConfigurationChange()));
         this._register(this.editor.onDidChangeModel(e => this.onModelChanged()));
         this._register(this.editor.onDidChangeModelLanguage(_ => this.onModelChanged()));
@@ -94,7 +95,7 @@ export class ParameterHintsModel extends Disposable {
         const length = this.state.hints.signatures.length;
         const activeSignature = this.state.hints.activeSignature;
         const last = (activeSignature % length) === (length - 1);
-        const cycle = this.editor.getOption(70 /* parameterHints */).cycle;
+        const cycle = this.editor.getOption(73 /* parameterHints */).cycle;
         // If there is only one signature, or we're on last signature of list
         if ((length < 2 || last) && !cycle) {
             this.cancel();
@@ -109,7 +110,7 @@ export class ParameterHintsModel extends Disposable {
         const length = this.state.hints.signatures.length;
         const activeSignature = this.state.hints.activeSignature;
         const first = activeSignature === 0;
-        const cycle = this.editor.getOption(70 /* parameterHints */).cycle;
+        const cycle = this.editor.getOption(73 /* parameterHints */).cycle;
         // If there is only one signature, or we're on first signature of list
         if ((length < 2 || first) && !cycle) {
             this.cancel();
@@ -234,7 +235,7 @@ export class ParameterHintsModel extends Disposable {
         }
     }
     onEditorConfigurationChange() {
-        this.triggerOnType = this.editor.getOption(70 /* parameterHints */).enabled;
+        this.triggerOnType = this.editor.getOption(73 /* parameterHints */).enabled;
         if (!this.triggerOnType) {
             this.cancel();
         }

@@ -34,7 +34,7 @@ import { IContextKeyService } from '../../../platform/contextkey/common/contextk
 import { Context as SuggestContext } from './suggest.js';
 import { attachListStyler } from '../../../platform/theme/common/styler.js';
 import { IThemeService, registerThemingParticipant } from '../../../platform/theme/common/themeService.js';
-import { registerColor, editorWidgetBackground, quickInputListFocusBackground, activeContrastBorder, listHighlightForeground, editorForeground, editorWidgetBorder, focusBorder, textLinkForeground, textCodeBlockBackground } from '../../../platform/theme/common/colorRegistry.js';
+import { registerColor, editorWidgetBackground, quickInputListFocusBackground, activeContrastBorder, listHighlightForeground, editorForeground, editorWidgetBorder, focusBorder, textLinkForeground, textCodeBlockBackground, quickInputListFocusForeground, listFocusHighlightForeground } from '../../../platform/theme/common/colorRegistry.js';
 import { IStorageService } from '../../../platform/storage/common/storage.js';
 import { TimeoutTimer, createCancelablePromise, disposableTimeout } from '../../../base/common/async.js';
 import { IInstantiationService } from '../../../platform/instantiation/common/instantiation.js';
@@ -50,8 +50,10 @@ import { clamp } from '../../../base/common/numbers.js';
 export const editorSuggestWidgetBackground = registerColor('editorSuggestWidget.background', { dark: editorWidgetBackground, light: editorWidgetBackground, hc: editorWidgetBackground }, nls.localize('editorSuggestWidgetBackground', 'Background color of the suggest widget.'));
 export const editorSuggestWidgetBorder = registerColor('editorSuggestWidget.border', { dark: editorWidgetBorder, light: editorWidgetBorder, hc: editorWidgetBorder }, nls.localize('editorSuggestWidgetBorder', 'Border color of the suggest widget.'));
 export const editorSuggestWidgetForeground = registerColor('editorSuggestWidget.foreground', { dark: editorForeground, light: editorForeground, hc: editorForeground }, nls.localize('editorSuggestWidgetForeground', 'Foreground color of the suggest widget.'));
+export const editorSuggestWidgetSelectedForeground = registerColor('editorSuggestWidget.selectedForeground', { dark: quickInputListFocusForeground, light: quickInputListFocusForeground, hc: quickInputListFocusForeground }, nls.localize('editorSuggestWidgetSelectedForeground', 'Foreground color of the selected entry in the suggest widget.'));
 export const editorSuggestWidgetSelectedBackground = registerColor('editorSuggestWidget.selectedBackground', { dark: quickInputListFocusBackground, light: quickInputListFocusBackground, hc: quickInputListFocusBackground }, nls.localize('editorSuggestWidgetSelectedBackground', 'Background color of the selected entry in the suggest widget.'));
 export const editorSuggestWidgetHighlightForeground = registerColor('editorSuggestWidget.highlightForeground', { dark: listHighlightForeground, light: listHighlightForeground, hc: listHighlightForeground }, nls.localize('editorSuggestWidgetHighlightForeground', 'Color of the match highlights in the suggest widget.'));
+export const editorSuggestWidgetHighlightFocusForeground = registerColor('editorSuggestWidget.focusHighlightForeground', { dark: listFocusHighlightForeground, light: listFocusHighlightForeground, hc: listFocusHighlightForeground }, nls.localize('editorSuggestWidgetFocusHighlightForeground', 'Color of the match highlights in the suggest widget when an item is focused.'));
 class PersistedWidgetSize {
     constructor(_service, editor) {
         this._service = _service;
@@ -85,6 +87,7 @@ let SuggestWidget = class SuggestWidget {
         this._state = 0 /* Hidden */;
         this._isAuto = false;
         this._ignoreFocusEvents = false;
+        this._forceRenderingAbove = false;
         this._explainMode = false;
         this._showTimeout = new TimeoutTimer();
         this._disposables = new DisposableStore();
@@ -148,7 +151,7 @@ let SuggestWidget = class SuggestWidget {
         const details = instantiationService.createInstance(SuggestDetailsWidget, this.editor);
         details.onDidClose(this.toggleDetails, this, this._disposables);
         this._details = new SuggestDetailsOverlay(details, this.editor);
-        const applyIconStyle = () => this.element.domNode.classList.toggle('no-icons', !this.editor.getOption(101 /* suggest */).showIcons);
+        const applyIconStyle = () => this.element.domNode.classList.toggle('no-icons', !this.editor.getOption(104 /* suggest */).showIcons);
         applyIconStyle();
         const renderer = instantiationService.createInstance(ItemRenderer, this.editor);
         this._disposables.add(renderer);
@@ -163,14 +166,13 @@ let SuggestWidget = class SuggestWidget {
             accessibilityProvider: {
                 getRole: () => 'option',
                 getAriaLabel: (item) => {
-                    const textLabel = typeof item.completion.label === 'string' ? item.completion.label : item.completion.label.name;
                     if (item.isResolved && this._isDetailsVisible()) {
                         const { documentation, detail } = item.completion;
                         const docs = strings.format('{0}{1}', detail || '', documentation ? (typeof documentation === 'string' ? documentation : documentation.value) : '');
-                        return nls.localize('ariaCurrenttSuggestionReadDetails', "{0}, docs: {1}", textLabel, docs);
+                        return nls.localize('ariaCurrenttSuggestionReadDetails', "{0}, docs: {1}", item.textLabel, docs);
                     }
                     else {
-                        return textLabel;
+                        return item.textLabel;
                     }
                 },
                 getWidgetAriaLabel: () => nls.localize('suggest', "Suggest"),
@@ -178,7 +180,7 @@ let SuggestWidget = class SuggestWidget {
             }
         });
         this._status = instantiationService.createInstance(SuggestWidgetStatus, this.element.domNode);
-        const applyStatusBarStyle = () => this.element.domNode.classList.toggle('with-status-bar', this.editor.getOption(101 /* suggest */).showStatusBar);
+        const applyStatusBarStyle = () => this.element.domNode.classList.toggle('with-status-bar', this.editor.getOption(104 /* suggest */).showStatusBar);
         applyStatusBarStyle();
         this._disposables.add(attachListStyler(this._list, _themeService, {
             listInactiveFocusBackground: editorSuggestWidgetSelectedBackground,
@@ -192,7 +194,7 @@ let SuggestWidget = class SuggestWidget {
         this._disposables.add(this._list.onDidChangeFocus(e => this._onListFocus(e)));
         this._disposables.add(this.editor.onDidChangeCursorSelection(() => this._onCursorSelectionChanged()));
         this._disposables.add(this.editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(101 /* suggest */)) {
+            if (e.hasChanged(104 /* suggest */)) {
                 applyStatusBarStyle();
                 applyIconStyle();
             }
@@ -347,6 +349,7 @@ let SuggestWidget = class SuggestWidget {
                 this._contentWidget.hide();
                 this._ctxSuggestWidgetVisible.reset();
                 this._ctxSuggestWidgetMultipleSuggestions.reset();
+                this._showTimeout.cancel();
                 this.element.domNode.classList.remove('visible');
                 this._list.splice(0, this._list.length);
                 this._focusedItem = undefined;
@@ -554,7 +557,7 @@ let SuggestWidget = class SuggestWidget {
             this._details.hide();
             this.element.domNode.classList.remove('shows-details');
         }
-        else if (canExpandCompletionItem(this._list.getFocusedElements()[0]) && (this._state === 3 /* Open */ || this._state === 5 /* Details */ || this._state === 4 /* Frozen */)) {
+        else if ((canExpandCompletionItem(this._list.getFocusedElements()[0]) || this._explainMode) && (this._state === 3 /* Open */ || this._state === 5 /* Details */ || this._state === 4 /* Frozen */)) {
             // show details widget (iff possible)
             this._ctxSuggestWidgetDetailsVisible.set(true);
             this._setDetailsVisible(true);
@@ -574,9 +577,14 @@ let SuggestWidget = class SuggestWidget {
         this.element.domNode.classList.add('shows-details');
     }
     toggleExplainMode() {
-        if (this._list.getFocusedElements()[0] && this._isDetailsVisible()) {
+        if (this._list.getFocusedElements()[0]) {
             this._explainMode = !this._explainMode;
-            this.showDetails(false);
+            if (!this._isDetailsVisible()) {
+                this.toggleDetails();
+            }
+            else {
+                this.showDetails(false);
+            }
         }
     }
     resetPersistedSize() {
@@ -587,6 +595,7 @@ let SuggestWidget = class SuggestWidget {
         (_a = this._loadingTimeout) === null || _a === void 0 ? void 0 : _a.dispose();
         this._setState(0 /* Hidden */);
         this._onDidHide.fire(this);
+        this.element.clearSashHoverState();
         // ensure that a reasonable widget height is persisted so that
         // accidential "resize-to-single-items" cases aren't happening
         const dim = this._persistedSize.restore();
@@ -668,7 +677,7 @@ let SuggestWidget = class SuggestWidget {
             if (height > maxHeight) {
                 height = maxHeight;
             }
-            if (height > maxHeightBelow) {
+            if (height > maxHeightBelow || this._forceRenderingAbove) {
                 this._contentWidget.setPreference(1 /* ABOVE */);
                 this.element.enableSashes(true, true, false, false);
                 maxHeight = maxHeightAbove;
@@ -707,9 +716,9 @@ let SuggestWidget = class SuggestWidget {
         }
     }
     getLayoutInfo() {
-        const fontInfo = this.editor.getOption(38 /* fontInfo */);
-        const itemHeight = clamp(this.editor.getOption(103 /* suggestLineHeight */) || fontInfo.lineHeight, 8, 1000);
-        const statusBarHeight = !this.editor.getOption(101 /* suggest */).showStatusBar || this._state === 2 /* Empty */ || this._state === 1 /* Loading */ ? 0 : itemHeight;
+        const fontInfo = this.editor.getOption(40 /* fontInfo */);
+        const itemHeight = clamp(this.editor.getOption(106 /* suggestLineHeight */) || fontInfo.lineHeight, 8, 1000);
+        const statusBarHeight = !this.editor.getOption(104 /* suggest */).showStatusBar || this._state === 2 /* Empty */ || this._state === 1 /* Loading */ ? 0 : itemHeight;
         const borderWidth = this._details.widget.borderWidth;
         const borderHeight = 2 * borderWidth;
         return {
@@ -728,6 +737,15 @@ let SuggestWidget = class SuggestWidget {
     }
     _setDetailsVisible(value) {
         this._storageService.store('expandSuggestionDocs', value, 0 /* GLOBAL */, 0 /* USER */);
+    }
+    forceRenderingAbove() {
+        if (!this._forceRenderingAbove) {
+            this._forceRenderingAbove = true;
+            this._layout(this._persistedSize.restore());
+        }
+    }
+    stopForceRenderingAbove() {
+        this._forceRenderingAbove = false;
     }
 };
 SuggestWidget.LOADING_MESSAGE = nls.localize('suggestWidget.loading', "Loading...");
@@ -814,9 +832,17 @@ registerThemingParticipant((theme, collector) => {
     if (matchHighlight) {
         collector.addRule(`.monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-highlighted-label .highlight { color: ${matchHighlight}; }`);
     }
+    const matchHighlightFocus = theme.getColor(editorSuggestWidgetHighlightFocusForeground);
+    if (matchHighlight) {
+        collector.addRule(`.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused .monaco-highlighted-label .highlight { color: ${matchHighlightFocus}; }`);
+    }
     const foreground = theme.getColor(editorSuggestWidgetForeground);
     if (foreground) {
         collector.addRule(`.monaco-editor .suggest-widget, .monaco-editor .suggest-details { color: ${foreground}; }`);
+    }
+    const selectedForeground = theme.getColor(editorSuggestWidgetSelectedForeground);
+    if (selectedForeground) {
+        collector.addRule(`.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused { color: ${selectedForeground}; }`);
     }
     const link = theme.getColor(textLinkForeground);
     if (link) {

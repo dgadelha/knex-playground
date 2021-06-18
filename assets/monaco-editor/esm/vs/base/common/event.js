@@ -145,17 +145,28 @@ export var Event;
      * Given an event, it returns another event which fires only when the event
      * element changes.
      */
-    function latch(event) {
+    function latch(event, equals = (a, b) => a === b) {
         let firstCall = true;
         let cache;
         return filter(event, value => {
-            const shouldEmit = firstCall || value !== cache;
+            const shouldEmit = firstCall || !equals(value, cache);
             firstCall = false;
             cache = value;
             return shouldEmit;
         });
     }
     Event.latch = latch;
+    /**
+     * Given an event, it returns another event which fires only when the event
+     * element changes.
+     */
+    function split(event, isT) {
+        return [
+            Event.filter(event, isT),
+            Event.filter(event, e => !isT(e)),
+        ];
+    }
+    Event.split = split;
     /**
      * Buffers the provided event until a first listener comes
      * along, at which point fire all the events at once and
@@ -480,11 +491,14 @@ export class Emitter {
         }
     }
     dispose() {
-        var _a, _b, _c;
-        (_a = this._listeners) === null || _a === void 0 ? void 0 : _a.clear();
-        (_b = this._deliveryQueue) === null || _b === void 0 ? void 0 : _b.clear();
-        (_c = this._leakageMon) === null || _c === void 0 ? void 0 : _c.dispose();
-        this._disposed = true;
+        var _a, _b, _c, _d, _e;
+        if (!this._disposed) {
+            this._disposed = true;
+            (_a = this._listeners) === null || _a === void 0 ? void 0 : _a.clear();
+            (_b = this._deliveryQueue) === null || _b === void 0 ? void 0 : _b.clear();
+            (_d = (_c = this._options) === null || _c === void 0 ? void 0 : _c.onLastListenerRemove) === null || _d === void 0 ? void 0 : _d.call(_c);
+            (_e = this._leakageMon) === null || _e === void 0 ? void 0 : _e.dispose();
+        }
     }
 }
 Emitter._noop = function () { };

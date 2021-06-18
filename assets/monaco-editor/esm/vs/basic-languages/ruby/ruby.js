@@ -259,7 +259,7 @@ export var language = {
             [/[A-Z][\w]*[!?=]?/, 'constructor.identifier'],
             [/\$[\w]*/, 'global.constant'],
             [/@[\w]*/, 'namespace.instance.identifier'],
-            [/@@[\w]*/, 'namespace.class.identifier'],
+            [/@@@[\w]*/, 'namespace.class.identifier'],
             // here document
             [/<<[-~](@heredelim).*/, { token: 'string.heredoc.delimiter', next: '@heredoc.$1' }],
             [
@@ -406,7 +406,7 @@ export var language = {
         interpolated: [
             [/\$\w*/, 'global.constant', '@pop'],
             [/@\w*/, 'namespace.class.identifier', '@pop'],
-            [/@@\w*/, 'namespace.instance.identifier', '@pop'],
+            [/@@@\w*/, 'namespace.instance.identifier', '@pop'],
             [
                 /[{]/,
                 {

@@ -14,6 +14,9 @@ class LinePart {
     isWhitespace() {
         return (this.metadata & 1 /* IS_WHITESPACE_MASK */ ? true : false);
     }
+    isPseudoAfter() {
+        return (this.metadata & 4 /* PSEUDO_AFTER_MASK */ ? true : false);
+    }
 }
 export class LineRange {
     constructor(startIndex, endIndex) {
@@ -198,31 +201,35 @@ export class RenderLineOutput {
 }
 export function renderViewLine(input, sb) {
     if (input.lineContent.length === 0) {
-        let containsForeignElements = 0 /* None */;
-        let content = '<span><span></span></span>';
         if (input.lineDecorations.length > 0) {
             // This line is empty, but it contains inline decorations
-            const beforeClassNames = [];
-            const afterClassNames = [];
-            for (let i = 0, len = input.lineDecorations.length; i < len; i++) {
-                const lineDecoration = input.lineDecorations[i];
-                if (lineDecoration.type === 1 /* Before */) {
-                    beforeClassNames.push(input.lineDecorations[i].className);
-                    containsForeignElements |= 1 /* Before */;
-                }
-                if (lineDecoration.type === 2 /* After */) {
-                    afterClassNames.push(input.lineDecorations[i].className);
-                    containsForeignElements |= 2 /* After */;
+            sb.appendASCIIString(`<span>`);
+            let beforeCount = 0;
+            let afterCount = 0;
+            let containsForeignElements = 0 /* None */;
+            for (const lineDecoration of input.lineDecorations) {
+                if (lineDecoration.type === 1 /* Before */ || lineDecoration.type === 2 /* After */) {
+                    sb.appendASCIIString(`<span class="`);
+                    sb.appendASCIIString(lineDecoration.className);
+                    sb.appendASCIIString(`"></span>`);
+                    if (lineDecoration.type === 1 /* Before */) {
+                        containsForeignElements |= 1 /* Before */;
+                        beforeCount++;
+                    }
+                    if (lineDecoration.type === 2 /* After */) {
+                        containsForeignElements |= 2 /* After */;
+                        afterCount++;
+                    }
                 }
             }
-            if (containsForeignElements !== 0 /* None */) {
-                const beforeSpan = (beforeClassNames.length > 0 ? `<span class="${beforeClassNames.join(' ')}"></span>` : ``);
-                const afterSpan = (afterClassNames.length > 0 ? `<span class="${afterClassNames.join(' ')}"></span>` : ``);
-                content = `<span>${beforeSpan}${afterSpan}</span>`;
-            }
+            sb.appendASCIIString(`</span>`);
+            const characterMapping = new CharacterMapping(1, beforeCount + afterCount);
+            characterMapping.setPartData(0, beforeCount, 0, 0);
+            return new RenderLineOutput(characterMapping, false, containsForeignElements);
         }
-        sb.appendASCIIString(content);
-        return new RenderLineOutput(new CharacterMapping(0, 0), false, containsForeignElements);
+        // completely empty line
+        sb.appendASCIIString('<span><span></span></span>');
+        return new RenderLineOutput(new CharacterMapping(0, 0), false, 0 /* None */);
     }
     return _renderLine(resolveRenderLineInput(input), sb);
 }
@@ -579,14 +586,11 @@ function _applyInlineDecorations(lineContent, len, tokens, _lineDecorations) {
     }
     const lastTokenEndIndex = tokens[tokens.length - 1].endIndex;
     if (lineDecorationIndex < lineDecorationsLen && lineDecorations[lineDecorationIndex].startOffset === lastTokenEndIndex) {
-        let classNames = [];
-        let metadata = 0;
         while (lineDecorationIndex < lineDecorationsLen && lineDecorations[lineDecorationIndex].startOffset === lastTokenEndIndex) {
-            classNames.push(lineDecorations[lineDecorationIndex].className);
-            metadata |= lineDecorations[lineDecorationIndex].metadata;
+            const lineDecoration = lineDecorations[lineDecorationIndex];
+            result[resultLen++] = new LinePart(lastResultEndIndex, lineDecoration.className, lineDecoration.metadata);
             lineDecorationIndex++;
         }
-        result[resultLen++] = new LinePart(lastResultEndIndex, classNames.join(' '), metadata);
     }
     return result;
 }
@@ -611,6 +615,7 @@ function _renderLine(input, sb) {
     const renderWhitespace = input.renderWhitespace;
     const renderControlCharacters = input.renderControlCharacters;
     const characterMapping = new CharacterMapping(len + 1, parts.length);
+    let lastCharacterMappingDefined = false;
     let charIndex = 0;
     let visibleColumn = startVisibleColumn;
     let charOffsetInPart = 0;
@@ -630,7 +635,7 @@ function _renderLine(input, sb) {
         const partType = part.type;
         const partRendersWhitespace = (renderWhitespace !== 0 /* None */ && part.isWhitespace());
         const partRendersWhitespaceWithWidth = partRendersWhitespace && !fontIsMonospace && (partType === 'mtkw' /*only whitespace*/ || !containsForeignElements);
-        const partIsEmptyAndHasPseudoAfter = (charIndex === partEndIndex && part.metadata === 4 /* PSEUDO_AFTER */);
+        const partIsEmptyAndHasPseudoAfter = (charIndex === partEndIndex && part.isPseudoAfter());
         charOffsetInPart = 0;
         sb.appendASCIIString('<span class="');
         sb.appendASCIIString(partRendersWhitespaceWithWidth ? 'mtkz' : partType);
@@ -713,7 +718,13 @@ function _renderLine(input, sb) {
                         sb.appendASCIIString('&amp;');
                         break;
                     case 0 /* Null */:
-                        sb.appendASCIIString('&#00;');
+                        if (renderControlCharacters) {
+                            // See https://unicode-table.com/en/blocks/control-pictures/
+                            sb.write1(9216);
+                        }
+                        else {
+                            sb.appendASCIIString('&#00;');
+                        }
                         break;
                     case 65279 /* UTF8_BOM */:
                     case 8232 /* LINE_SEPARATOR */:
@@ -725,8 +736,13 @@ function _renderLine(input, sb) {
                         if (strings.isFullWidthCharacter(charCode)) {
                             charWidth++;
                         }
+                        // See https://unicode-table.com/en/blocks/control-pictures/
                         if (renderControlCharacters && charCode < 32) {
                             sb.write1(9216 + charCode);
+                        }
+                        else if (renderControlCharacters && charCode === 127) {
+                            // DEL
+                            sb.write1(9249);
                         }
                         else {
                             sb.write1(charCode);
@@ -746,11 +762,17 @@ function _renderLine(input, sb) {
         else {
             partDisplacement = 0;
         }
+        if (charIndex >= len && !lastCharacterMappingDefined && part.isPseudoAfter()) {
+            lastCharacterMappingDefined = true;
+            characterMapping.setPartData(charIndex, partIndex, charOffsetInPart, partAbsoluteOffset);
+        }
         sb.appendASCIIString('</span>');
     }
-    // When getting client rects for the last character, we will position the
-    // text range at the end of the span, insteaf of at the beginning of next span
-    characterMapping.setPartData(len, parts.length - 1, charOffsetInPart, partAbsoluteOffset);
+    if (!lastCharacterMappingDefined) {
+        // When getting client rects for the last character, we will position the
+        // text range at the end of the span, insteaf of at the beginning of next span
+        characterMapping.setPartData(len, parts.length - 1, charOffsetInPart, partAbsoluteOffset);
+    }
     if (isOverflowing) {
         sb.appendASCIIString('<span>&hellip;</span>');
     }

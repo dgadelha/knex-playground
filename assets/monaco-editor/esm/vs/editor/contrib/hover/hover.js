@@ -22,17 +22,16 @@ import { ModesContentHoverWidget } from './modesContentHover.js';
 import { ModesGlyphHoverWidget } from './modesGlyphHover.js';
 import { IOpenerService } from '../../../platform/opener/common/opener.js';
 import { editorHoverBackground, editorHoverBorder, editorHoverHighlight, textCodeBlockBackground, textLinkForeground, editorHoverStatusBarBackground, editorHoverForeground } from '../../../platform/theme/common/colorRegistry.js';
-import { IThemeService, registerThemingParticipant } from '../../../platform/theme/common/themeService.js';
+import { registerThemingParticipant } from '../../../platform/theme/common/themeService.js';
 import { GotoDefinitionAtPositionEditorContribution } from '../gotoSymbol/link/goToDefinitionAtPosition.js';
 import { IContextKeyService } from '../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../platform/instantiation/common/instantiation.js';
 let ModesHoverController = class ModesHoverController {
-    constructor(_editor, _instantiationService, _openerService, _modeService, _themeService, _contextKeyService) {
+    constructor(_editor, _instantiationService, _openerService, _modeService, _contextKeyService) {
         this._editor = _editor;
         this._instantiationService = _instantiationService;
         this._openerService = _openerService;
         this._modeService = _modeService;
-        this._themeService = _themeService;
         this._toUnhook = new DisposableStore();
         this._isMouseDown = false;
         this._hoverClicked = false;
@@ -40,7 +39,7 @@ let ModesHoverController = class ModesHoverController {
         this._glyphWidget = null;
         this._hookEvents();
         this._didChangeConfigurationHandler = this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(48 /* hover */)) {
+            if (e.hasChanged(50 /* hover */)) {
                 this._unhookEvents();
                 this._hookEvents();
             }
@@ -52,7 +51,7 @@ let ModesHoverController = class ModesHoverController {
     }
     _hookEvents() {
         const hideWidgetsEventHandler = () => this._hideWidgets();
-        const hoverOpts = this._editor.getOption(48 /* hover */);
+        const hoverOpts = this._editor.getOption(50 /* hover */);
         this._isHoverEnabled = hoverOpts.enabled;
         this._isHoverSticky = hoverOpts.sticky;
         if (this._isHoverEnabled) {
@@ -104,7 +103,7 @@ let ModesHoverController = class ModesHoverController {
         this._isMouseDown = false;
     }
     _onEditorMouseMove(mouseEvent) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d, _e;
         let targetType = mouseEvent.target.type;
         if (this._isMouseDown && this._hoverClicked) {
             return;
@@ -126,42 +125,24 @@ let ModesHoverController = class ModesHoverController {
             // mouse moved on top of overlay hover widget
             return;
         }
-        if (targetType === 7 /* CONTENT_EMPTY */) {
-            const epsilon = this._editor.getOption(38 /* fontInfo */).typicalHalfwidthCharacterWidth / 2;
-            const data = mouseEvent.target.detail;
-            if (data && !data.isAfterLines && typeof data.horizontalDistanceToText === 'number' && data.horizontalDistanceToText < epsilon) {
-                // Let hover kick in even when the mouse is technically in the empty area after a line, given the distance is small enough
-                targetType = 6 /* CONTENT_TEXT */;
-            }
-        }
-        if (targetType === 6 /* CONTENT_TEXT */) {
-            (_d = this._glyphWidget) === null || _d === void 0 ? void 0 : _d.hide();
-            if (this._isHoverEnabled && mouseEvent.target.range) {
-                // TODO@rebornix. This should be removed if we move Color Picker out of Hover component.
-                // Check if mouse is hovering on color decorator
-                const hoverOnColorDecorator = [...((_e = mouseEvent.target.element) === null || _e === void 0 ? void 0 : _e.classList.values()) || []].find(className => className.startsWith('ced-colorBox'))
-                    && mouseEvent.target.range.endColumn - mouseEvent.target.range.startColumn === 1;
-                const showAtRange = (hoverOnColorDecorator // shift the mouse focus by one as color decorator is a `before` decoration of next character.
-                    ? new Range(mouseEvent.target.range.startLineNumber, mouseEvent.target.range.startColumn + 1, mouseEvent.target.range.endLineNumber, mouseEvent.target.range.endColumn + 1)
-                    : mouseEvent.target.range);
-                if (!this._contentWidget) {
-                    this._contentWidget = new ModesContentHoverWidget(this._editor, this._hoverVisibleKey, this._instantiationService, this._themeService);
-                }
-                this._contentWidget.startShowingAt(showAtRange, 0 /* Delayed */, false);
-            }
-        }
-        else if (targetType === 2 /* GUTTER_GLYPH_MARGIN */) {
-            (_f = this._contentWidget) === null || _f === void 0 ? void 0 : _f.hide();
-            if (this._isHoverEnabled && mouseEvent.target.position) {
-                if (!this._glyphWidget) {
-                    this._glyphWidget = new ModesGlyphHoverWidget(this._editor, this._modeService, this._openerService);
-                }
-                this._glyphWidget.startShowingAt(mouseEvent.target.position.lineNumber);
-            }
-        }
-        else {
+        if (!this._isHoverEnabled) {
             this._hideWidgets();
+            return;
         }
+        const contentWidget = this._getOrCreateContentWidget();
+        if (contentWidget.maybeShowAt(mouseEvent)) {
+            (_d = this._glyphWidget) === null || _d === void 0 ? void 0 : _d.hide();
+            return;
+        }
+        if (targetType === 2 /* GUTTER_GLYPH_MARGIN */ && mouseEvent.target.position) {
+            (_e = this._contentWidget) === null || _e === void 0 ? void 0 : _e.hide();
+            if (!this._glyphWidget) {
+                this._glyphWidget = new ModesGlyphHoverWidget(this._editor, this._modeService, this._openerService);
+            }
+            this._glyphWidget.startShowingAt(mouseEvent.target.position.lineNumber);
+            return;
+        }
+        this._hideWidgets();
     }
     _onKeyDown(e) {
         if (e.keyCode !== 5 /* Ctrl */ && e.keyCode !== 6 /* Alt */ && e.keyCode !== 57 /* Meta */ && e.keyCode !== 4 /* Shift */) {
@@ -178,15 +159,18 @@ let ModesHoverController = class ModesHoverController {
         (_b = this._glyphWidget) === null || _b === void 0 ? void 0 : _b.hide();
         (_c = this._contentWidget) === null || _c === void 0 ? void 0 : _c.hide();
     }
+    _getOrCreateContentWidget() {
+        if (!this._contentWidget) {
+            this._contentWidget = this._instantiationService.createInstance(ModesContentHoverWidget, this._editor, this._hoverVisibleKey);
+        }
+        return this._contentWidget;
+    }
     isColorPickerVisible() {
         var _a;
         return ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.isColorPickerVisible()) || false;
     }
     showContentHover(range, mode, focus) {
-        if (!this._contentWidget) {
-            this._contentWidget = new ModesContentHoverWidget(this._editor, this._hoverVisibleKey, this._instantiationService, this._themeService);
-        }
-        this._contentWidget.startShowingAt(range, mode, focus);
+        this._getOrCreateContentWidget().startShowingAtRange(range, mode, focus);
     }
     dispose() {
         var _a, _b;
@@ -202,8 +186,7 @@ ModesHoverController = __decorate([
     __param(1, IInstantiationService),
     __param(2, IOpenerService),
     __param(3, IModeService),
-    __param(4, IThemeService),
-    __param(5, IContextKeyService)
+    __param(4, IContextKeyService)
 ], ModesHoverController);
 export { ModesHoverController };
 class ShowHoverAction extends EditorAction {
@@ -267,14 +250,9 @@ class ShowDefinitionPreviewHoverAction extends EditorAction {
         const range = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
         const goto = GotoDefinitionAtPositionEditorContribution.get(editor);
         const promise = goto.startFindDefinitionFromCursor(position);
-        if (promise) {
-            promise.then(() => {
-                controller.showContentHover(range, 1 /* Immediate */, true);
-            });
-        }
-        else {
+        promise.then(() => {
             controller.showContentHover(range, 1 /* Immediate */, true);
-        }
+        });
     }
 }
 registerEditorContribution(ModesHoverController.ID, ModesHoverController);

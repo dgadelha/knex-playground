@@ -145,7 +145,7 @@ class AbstractMoveLinesAction extends EditorAction {
     run(_accessor, editor) {
         let commands = [];
         let selections = editor.getSelections() || [];
-        const autoIndent = editor.getOption(8 /* autoIndent */);
+        const autoIndent = editor.getOption(9 /* autoIndent */);
         for (const selection of selections) {
             commands.push(new MoveLinesCommand(selection, this.down, autoIndent));
         }
@@ -805,7 +805,7 @@ export class AbstractCaseAction extends EditorAction {
         if (model === null) {
             return;
         }
-        const wordSeparators = editor.getOption(110 /* wordSeparators */);
+        const wordSeparators = editor.getOption(114 /* wordSeparators */);
         const textEdits = [];
         for (const selection of selections) {
             if (selection.isEmpty()) {
@@ -885,6 +885,29 @@ export class TitleCaseAction extends AbstractCaseAction {
         return title;
     }
 }
+class BackwardsCompatibleRegExp {
+    constructor(_pattern, _flags) {
+        this._pattern = _pattern;
+        this._flags = _flags;
+        this._actual = null;
+        this._evaluated = false;
+    }
+    get() {
+        if (!this._evaluated) {
+            this._evaluated = true;
+            try {
+                this._actual = new RegExp(this._pattern, this._flags);
+            }
+            catch (err) {
+                // this browser does not support this regular expression
+            }
+        }
+        return this._actual;
+    }
+    isSupported() {
+        return (this.get() !== null);
+    }
+}
 export class SnakeCaseAction extends AbstractCaseAction {
     constructor() {
         super({
@@ -895,12 +918,20 @@ export class SnakeCaseAction extends AbstractCaseAction {
         });
     }
     _modifyText(text, wordSeparators) {
+        const regExp1 = SnakeCaseAction.regExp1.get();
+        const regExp2 = SnakeCaseAction.regExp2.get();
+        if (!regExp1 || !regExp2) {
+            // cannot support this
+            return text;
+        }
         return (text
-            .replace(/(\p{Ll})(\p{Lu})/gmu, '$1_$2')
-            .replace(/([^\b_])(\p{Lu})(\p{Ll})/gmu, '$1_$2$3')
+            .replace(regExp1, '$1_$2')
+            .replace(regExp2, '$1_$2$3')
             .toLocaleLowerCase());
     }
 }
+SnakeCaseAction.regExp1 = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu');
+SnakeCaseAction.regExp2 = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu})(\\p{Ll})', 'gmu');
 registerEditorAction(CopyLinesUpAction);
 registerEditorAction(CopyLinesDownAction);
 registerEditorAction(DuplicateSelectionAction);
@@ -921,4 +952,6 @@ registerEditorAction(TransposeAction);
 registerEditorAction(UpperCaseAction);
 registerEditorAction(LowerCaseAction);
 registerEditorAction(TitleCaseAction);
-registerEditorAction(SnakeCaseAction);
+if (SnakeCaseAction.regExp1.isSupported() && SnakeCaseAction.regExp2.isSupported()) {
+    registerEditorAction(SnakeCaseAction);
+}

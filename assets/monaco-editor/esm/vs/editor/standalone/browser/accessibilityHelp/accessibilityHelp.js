@@ -172,8 +172,8 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
             }
         }
         let text = getSelectionLabel(selections, charactersSelected);
-        if (options.get(49 /* inDiffEditor */)) {
-            if (options.get(75 /* readOnly */)) {
+        if (options.get(51 /* inDiffEditor */)) {
+            if (options.get(78 /* readOnly */)) {
                 text += AccessibilityHelpNLS.readonlyDiffEditor;
             }
             else {
@@ -181,7 +181,7 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
             }
         }
         else {
-            if (options.get(75 /* readOnly */)) {
+            if (options.get(78 /* readOnly */)) {
                 text += AccessibilityHelpNLS.readonlyEditor;
             }
             else {
@@ -203,7 +203,7 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
                 text += ' ' + turnOnMessage;
                 break;
         }
-        if (options.get(123 /* tabFocusMode */)) {
+        if (options.get(127 /* tabFocusMode */)) {
             text += '\n\n - ' + this._descriptionForCommand(ToggleTabFocusModeAction.ID, AccessibilityHelpNLS.tabFocusModeOnMsg, AccessibilityHelpNLS.tabFocusModeOnMsgNoKb);
         }
         else {

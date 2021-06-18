@@ -321,6 +321,7 @@ export class Cursor extends Disposable {
             autoClosedCharactersDeltaDecorations.push({
                 range: autoClosedCharactersRanges[i],
                 options: {
+                    description: 'auto-closed-character',
                     inlineClassName: 'auto-closed-character',
                     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */
                 }
@@ -328,6 +329,7 @@ export class Cursor extends Disposable {
             autoClosedEnclosingDeltaDecorations.push({
                 range: autoClosedEnclosingRanges[i],
                 options: {
+                    description: 'auto-closed-enclosing',
                     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */
                 }
             });
@@ -490,6 +492,9 @@ export class Cursor extends Disposable {
     setIsDoingComposition(isDoingComposition) {
         this._isDoingComposition = isDoingComposition;
     }
+    getAutoClosedCharacters() {
+        return AutoClosedAction.getAllAutoClosedCharacters(this._autoClosedActions);
+    }
     startComposition(eventsCollector) {
         this._selectionsWhenCompositionStarted = this.getSelections().slice(0);
     }
@@ -497,8 +502,7 @@ export class Cursor extends Disposable {
         this._executeEdit(() => {
             if (source === 'keyboard') {
                 // composition finishes, let's check if we need to auto complete if necessary.
-                const autoClosedCharacters = AutoClosedAction.getAllAutoClosedCharacters(this._autoClosedActions);
-                this._executeEditOperation(TypeOperations.compositionEndWithInterceptors(this._prevEditOperationType, this.context.cursorConfig, this._model, this._selectionsWhenCompositionStarted, this.getSelections(), autoClosedCharacters));
+                this._executeEditOperation(TypeOperations.compositionEndWithInterceptors(this._prevEditOperationType, this.context.cursorConfig, this._model, this._selectionsWhenCompositionStarted, this.getSelections(), this.getAutoClosedCharacters()));
                 this._selectionsWhenCompositionStarted = null;
             }
         }, eventsCollector, source);
@@ -513,8 +517,7 @@ export class Cursor extends Disposable {
                     const charLength = strings.nextCharLength(text, offset);
                     const chr = text.substr(offset, charLength);
                     // Here we must interpret each typed character individually
-                    const autoClosedCharacters = AutoClosedAction.getAllAutoClosedCharacters(this._autoClosedActions);
-                    this._executeEditOperation(TypeOperations.typeWithInterceptors(this._isDoingComposition, this._prevEditOperationType, this.context.cursorConfig, this._model, this.getSelections(), autoClosedCharacters, chr));
+                    this._executeEditOperation(TypeOperations.typeWithInterceptors(this._isDoingComposition, this._prevEditOperationType, this.context.cursorConfig, this._model, this.getSelections(), this.getAutoClosedCharacters(), chr));
                     offset += charLength;
                 }
             }

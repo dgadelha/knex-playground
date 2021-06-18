@@ -190,7 +190,7 @@ define('vs/basic-languages/swift/swift',["require", "exports"], function (requir
             ],
             attribute: [
                 [
-                    /\@@identifier/,
+                    /@@@identifier/,
                     {
                         cases: {
                             '@attributes': 'keyword.control',

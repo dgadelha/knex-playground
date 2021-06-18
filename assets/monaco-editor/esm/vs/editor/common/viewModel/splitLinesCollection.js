@@ -717,6 +717,26 @@ export class SplitLinesCollection {
         }
         return finalResult;
     }
+    normalizePosition(position, affinity) {
+        const viewLineNumber = this._toValidViewLineNumber(position.lineNumber);
+        const r = this.prefixSumComputer.getIndexOf(viewLineNumber - 1);
+        const lineIndex = r.index;
+        const remainder = r.remainder;
+        return this.lines[lineIndex].normalizePosition(this.model, lineIndex + 1, remainder, position, affinity);
+    }
+    getLineIndentColumn(lineNumber) {
+        const viewLineNumber = this._toValidViewLineNumber(lineNumber);
+        const r = this.prefixSumComputer.getIndexOf(viewLineNumber - 1);
+        const lineIndex = r.index;
+        const remainder = r.remainder;
+        if (remainder === 0) {
+            return this.model.getLineIndentColumn(lineIndex + 1);
+        }
+        // wrapped lines have no indentation.
+        // We deliberately don't handle the case that indentation is wrapped
+        // to avoid two view lines reporting indentation for the very same model line.
+        return 0;
+    }
 }
 class VisibleIdentitySplitLine {
     constructor() { }
@@ -768,6 +788,9 @@ class VisibleIdentitySplitLine {
     getViewLineNumberOfModelPosition(deltaLineNumber, _inputColumn) {
         return deltaLineNumber;
     }
+    normalizePosition(model, modelLineNumber, outputLineIndex, outputPosition, affinity) {
+        return outputPosition;
+    }
 }
 VisibleIdentitySplitLine.INSTANCE = new VisibleIdentitySplitLine();
 class InvisibleIdentitySplitLine {
@@ -812,6 +835,9 @@ class InvisibleIdentitySplitLine {
         throw new Error('Not supported');
     }
     getViewLineNumberOfModelPosition(_deltaLineNumber, _inputColumn) {
+        throw new Error('Not supported');
+    }
+    normalizePosition(model, modelLineNumber, outputLineIndex, outputPosition, affinity) {
         throw new Error('Not supported');
     }
 }
@@ -879,6 +905,9 @@ export class SplitLine {
         if (!this._isVisible) {
             throw new Error('Not supported');
         }
+        return this._getViewLineMinColumn(outputLineIndex);
+    }
+    _getViewLineMinColumn(outputLineIndex) {
         if (outputLineIndex > 0) {
             return this._lineBreakData.wrappedTextIndentLength + 1;
         }
@@ -888,7 +917,7 @@ export class SplitLine {
         if (!this._isVisible) {
             throw new Error('Not supported');
         }
-        return this.getViewLineContent(model, modelLineNumber, outputLineIndex).length + 1;
+        return this.getViewLineLength(model, modelLineNumber, outputLineIndex) + 1;
     }
     getViewLineData(model, modelLineNumber, outputLineIndex) {
         if (!this._isVisible) {
@@ -963,6 +992,20 @@ export class SplitLine {
         }
         const r = LineBreakData.getOutputPositionOfInputOffset(this._lineBreakData.breakOffsets, inputColumn - 1);
         return (deltaLineNumber + r.outputLineIndex);
+    }
+    normalizePosition(model, modelLineNumber, outputLineIndex, outputPosition, affinity) {
+        if (affinity === 0 /* Left */) {
+            if (outputLineIndex > 0 && outputPosition.column === this._getViewLineMinColumn(outputLineIndex)) {
+                return new Position(outputPosition.lineNumber - 1, this.getViewLineMaxColumn(model, modelLineNumber, outputLineIndex - 1));
+            }
+        }
+        else if (affinity === 1 /* Right */) {
+            const maxOutputLineIndex = this.getViewLineCount() - 1;
+            if (outputLineIndex < maxOutputLineIndex && outputPosition.column === this.getViewLineMaxColumn(model, modelLineNumber, outputLineIndex)) {
+                return new Position(outputPosition.lineNumber + 1, this._getViewLineMinColumn(outputLineIndex + 1));
+            }
+        }
+        return outputPosition;
     }
 }
 let _spaces = [''];
@@ -1143,6 +1186,12 @@ export class IdentityLinesCollection {
     }
     getDecorationsInRange(range, ownerId, filterOutValidation) {
         return this.model.getDecorationsInRange(range, ownerId, filterOutValidation);
+    }
+    normalizePosition(position, affinity) {
+        return this.model.normalizePosition(position, affinity);
+    }
+    getLineIndentColumn(lineNumber) {
+        return this.model.getLineIndentColumn(lineNumber);
     }
 }
 class OverviewRulerDecorations {

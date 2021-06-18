@@ -15,6 +15,7 @@ import { KeybindingsRegistry } from '../../platform/keybinding/common/keybinding
 import { Registry } from '../../platform/registry/common/platform.js';
 import { ITelemetryService } from '../../platform/telemetry/common/telemetry.js';
 import { withNullAsUndefined, assertType } from '../../base/common/types.js';
+import { ILogService } from '../../platform/log/common/log.js';
 export class Command {
     constructor(opts) {
         this.id = opts.id;
@@ -31,36 +32,36 @@ export class Command {
             this._registerMenuItem(this._menuOpts);
         }
         if (this._kbOpts) {
-            let kbWhen = this._kbOpts.kbExpr;
-            if (this.precondition) {
-                if (kbWhen) {
-                    kbWhen = ContextKeyExpr.and(kbWhen, this.precondition);
+            const kbOptsArr = Array.isArray(this._kbOpts) ? this._kbOpts : [this._kbOpts];
+            for (const kbOpts of kbOptsArr) {
+                let kbWhen = kbOpts.kbExpr;
+                if (this.precondition) {
+                    if (kbWhen) {
+                        kbWhen = ContextKeyExpr.and(kbWhen, this.precondition);
+                    }
+                    else {
+                        kbWhen = this.precondition;
+                    }
                 }
-                else {
-                    kbWhen = this.precondition;
-                }
+                const desc = {
+                    id: this.id,
+                    weight: kbOpts.weight,
+                    args: kbOpts.args,
+                    when: kbWhen,
+                    primary: kbOpts.primary,
+                    secondary: kbOpts.secondary,
+                    win: kbOpts.win,
+                    linux: kbOpts.linux,
+                    mac: kbOpts.mac,
+                };
+                KeybindingsRegistry.registerKeybindingRule(desc);
             }
-            KeybindingsRegistry.registerCommandAndKeybindingRule({
-                id: this.id,
-                handler: (accessor, args) => this.runCommand(accessor, args),
-                weight: this._kbOpts.weight,
-                args: this._kbOpts.args,
-                when: kbWhen,
-                primary: this._kbOpts.primary,
-                secondary: this._kbOpts.secondary,
-                win: this._kbOpts.win,
-                linux: this._kbOpts.linux,
-                mac: this._kbOpts.mac,
-                description: this._description
-            });
         }
-        else {
-            CommandsRegistry.registerCommand({
-                id: this.id,
-                handler: (accessor, args) => this.runCommand(accessor, args),
-                description: this._description
-            });
-        }
+        CommandsRegistry.registerCommand({
+            id: this.id,
+            handler: (accessor, args) => this.runCommand(accessor, args),
+            description: this._description
+        });
     }
     _registerMenuItem(item) {
         MenuRegistry.appendMenuItem(item.menuId, {
@@ -84,13 +85,13 @@ export class MultiCommand extends Command {
     /**
      * A higher priority gets to be looked at first
      */
-    addImplementation(priority, implementation) {
-        this._implementations.push([priority, implementation]);
-        this._implementations.sort((a, b) => b[0] - a[0]);
+    addImplementation(priority, name, implementation) {
+        this._implementations.push({ priority, name, implementation });
+        this._implementations.sort((a, b) => b.priority - a.priority);
         return {
             dispose: () => {
                 for (let i = 0; i < this._implementations.length; i++) {
-                    if (this._implementations[i][1] === implementation) {
+                    if (this._implementations[i].implementation === implementation) {
                         this._implementations.splice(i, 1);
                         return;
                     }
@@ -99,9 +100,11 @@ export class MultiCommand extends Command {
         };
     }
     runCommand(accessor, args) {
+        const logService = accessor.get(ILogService);
         for (const impl of this._implementations) {
-            const result = impl[1](accessor, args);
+            const result = impl.implementation(accessor, args);
             if (result) {
+                logService.trace(`Command '${this.id}' was handled by '${impl.name}'.`);
                 if (typeof result === 'boolean') {
                     return;
                 }
@@ -229,7 +232,7 @@ export class MultiEditorAction extends EditorAction {
     }
     run(accessor, editor, args) {
         for (const impl of this._implementations) {
-            const result = impl[1](accessor, args);
+            const result = impl[1](accessor, editor, args);
             if (result) {
                 if (typeof result === 'boolean') {
                     return;

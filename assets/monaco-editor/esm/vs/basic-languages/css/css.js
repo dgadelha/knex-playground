@@ -95,6 +95,7 @@ export var language = {
             { include: '@functioninvocation' },
             { include: '@numbers' },
             { include: '@name' },
+            { include: '@strings' },
             ['([<>=\\+\\-\\*\\/\\^\\|\\~,])', 'delimiter'],
             [',', 'delimiter']
         ],

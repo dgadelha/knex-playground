@@ -56,7 +56,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { CSSNavigation } from './cssNavigation.js';
 import * as nodes from '../parser/cssNodes.js';
-import { URI, Utils } from './../../vscode-uri/index.js';
+import { URI } from './../../vscode-uri/index.js';
 import { startsWith } from '../utils/strings.js';
 var SCSSNavigation = /** @class */ (function (_super) {
     __extends(SCSSNavigation, _super);
@@ -68,7 +68,7 @@ var SCSSNavigation = /** @class */ (function (_super) {
             node.type === nodes.NodeType.Use ||
             node.type === nodes.NodeType.Forward);
     };
-    SCSSNavigation.prototype.resolveRelativeReference = function (ref, documentUri, documentContext) {
+    SCSSNavigation.prototype.resolveRelativeReference = function (ref, documentUri, documentContext, isRawLink) {
         return __awaiter(this, void 0, void 0, function () {
             function toPathVariations(uri) {
                 // No valid path
@@ -117,12 +117,11 @@ var SCSSNavigation = /** @class */ (function (_super) {
                         if (startsWith(ref, 'sass:')) {
                             return [2 /*return*/, undefined]; // sass library
                         }
-                        return [4 /*yield*/, _super.prototype.resolveRelativeReference.call(this, ref, documentUri, documentContext)];
+                        return [4 /*yield*/, _super.prototype.resolveRelativeReference.call(this, ref, documentUri, documentContext, isRawLink)];
                     case 1:
                         target = _a.sent();
-                        if (!(this.fileSystemProvider && target)) return [3 /*break*/, 8];
+                        if (!(this.fileSystemProvider && target && isRawLink)) return [3 /*break*/, 8];
                         parsedUri = URI.parse(target);
-                        if (!(parsedUri.path && Utils.extname(parsedUri).length === 0)) return [3 /*break*/, 8];
                         _a.label = 2;
                     case 2:
                         _a.trys.push([2, 7, , 8]);
@@ -141,7 +140,7 @@ var SCSSNavigation = /** @class */ (function (_super) {
                     case 5:
                         j++;
                         return [3 /*break*/, 3];
-                    case 6: return [2 /*return*/, undefined];
+                    case 6: return [3 /*break*/, 8];
                     case 7:
                         e_1 = _a.sent();
                         return [3 /*break*/, 8];

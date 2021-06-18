@@ -17,6 +17,9 @@ export class MirrorTextModel {
     dispose() {
         this._lines.length = 0;
     }
+    get version() {
+        return this._versionId;
+    }
     getText() {
         if (this._cachedTextValue === null) {
             this._cachedTextValue = this._lines.join(this._eol);

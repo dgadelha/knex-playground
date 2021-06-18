@@ -55,7 +55,9 @@ var diagnosticDefault = {
     schemas: [],
     enableSchemaRequest: false,
     schemaRequest: 'warning',
-    schemaValidation: 'warning'
+    schemaValidation: 'warning',
+    comments: 'error',
+    trailingCommas: 'error'
 };
 var modeConfigurationDefault = {
     documentFormattingEdits: true,

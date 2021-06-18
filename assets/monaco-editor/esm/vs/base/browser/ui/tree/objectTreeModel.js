@@ -5,7 +5,6 @@
 import { Iterable } from '../../../common/iterator.js';
 import { IndexTreeModel } from './indexTreeModel.js';
 import { TreeError } from './tree.js';
-import { mergeSort } from '../../../common/arrays.js';
 export class ObjectTreeModel {
     constructor(user, list, options = {}) {
         this.user = user;
@@ -68,7 +67,7 @@ export class ObjectTreeModel {
     }
     preserveCollapseState(elements = Iterable.empty()) {
         if (this.sorter) {
-            elements = mergeSort([...elements], this.sorter.compare.bind(this.sorter));
+            elements = [...elements].sort(this.sorter.compare.bind(this.sorter));
         }
         return Iterable.map(elements, treeElement => {
             let node = this.nodes.get(treeElement.element);

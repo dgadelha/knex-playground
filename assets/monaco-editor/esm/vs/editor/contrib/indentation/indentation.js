@@ -361,7 +361,7 @@ export class AutoIndentOnPaste {
         // clean up
         this.callOnModel.clear();
         // we are disabled
-        if (this.editor.getOption(8 /* autoIndent */) < 4 /* Full */ || this.editor.getOption(42 /* formatOnPaste */)) {
+        if (this.editor.getOption(9 /* autoIndent */) < 4 /* Full */ || this.editor.getOption(44 /* formatOnPaste */)) {
             return;
         }
         // no model
@@ -384,7 +384,7 @@ export class AutoIndentOnPaste {
         if (!model.isCheapToTokenize(range.getStartPosition().lineNumber)) {
             return;
         }
-        const autoIndent = this.editor.getOption(8 /* autoIndent */);
+        const autoIndent = this.editor.getOption(9 /* autoIndent */);
         const { tabSize, indentSize, insertSpaces } = model.getOptions();
         let textEdits = [];
         let indentConverter = {

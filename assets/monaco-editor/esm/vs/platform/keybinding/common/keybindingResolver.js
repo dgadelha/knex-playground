@@ -172,12 +172,14 @@ export class KeybindingResolver {
     getKeybindings() {
         return this._keybindings;
     }
-    lookupPrimaryKeybinding(commandId) {
+    lookupPrimaryKeybinding(commandId, context) {
         let items = this._lookupMap.get(commandId);
         if (typeof items === 'undefined' || items.length === 0) {
             return null;
         }
-        return items[items.length - 1];
+        const itemMatchingContext = context &&
+            Array.from(items).reverse().find(item => context.contextMatchesRules(item.when));
+        return itemMatchingContext !== null && itemMatchingContext !== void 0 ? itemMatchingContext : items[items.length - 1];
     }
     resolve(context, currentChord, keypress) {
         this._log(`| Resolving ${keypress}${currentChord ? ` chorded from ${currentChord}` : ``}`);

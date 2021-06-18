@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var _a;
 import './media/diffReview.css';
 import * as nls from '../../../nls.js';
@@ -62,10 +71,7 @@ export class DiffReview extends Disposable {
         this.actionBarContainer = createFastDomNode(document.createElement('div'));
         this.actionBarContainer.setClassName('diff-review-actions');
         this._actionBar = this._register(new ActionBar(this.actionBarContainer.domNode));
-        this._actionBar.push(new Action('diffreview.close', nls.localize('label.close', "Close"), 'close-diff-review ' + ThemeIcon.asClassName(diffReviewCloseIcon), true, () => {
-            this.hide();
-            return Promise.resolve(null);
-        }), { label: false, icon: true });
+        this._actionBar.push(new Action('diffreview.close', nls.localize('label.close', "Close"), 'close-diff-review ' + ThemeIcon.asClassName(diffReviewCloseIcon), true, () => __awaiter(this, void 0, void 0, function* () { return this.hide(); })), { label: false, icon: true });
         this.domNode = createFastDomNode(document.createElement('div'));
         this.domNode.setClassName('diff-review monaco-editor-background');
         this._content = createFastDomNode(document.createElement('div'));
@@ -433,7 +439,7 @@ export class DiffReview extends Disposable {
         container.className = 'diff-review-table';
         container.setAttribute('role', 'list');
         container.setAttribute('aria-label', 'Difference review. Use "Stage | Unstage | Revert Selected Ranges" commands');
-        Configuration.applyFontInfoSlow(container, modifiedOptions.get(38 /* fontInfo */));
+        Configuration.applyFontInfoSlow(container, modifiedOptions.get(40 /* fontInfo */));
         let minOriginalLine = 0;
         let maxOriginalLine = 0;
         let minModifiedLine = 0;
@@ -493,7 +499,7 @@ export class DiffReview extends Disposable {
         // @@ -504,7 +517,7 @@
         header.setAttribute('role', 'listitem');
         container.appendChild(header);
-        const lineHeight = modifiedOptions.get(53 /* lineHeight */);
+        const lineHeight = modifiedOptions.get(56 /* lineHeight */);
         let modLine = minModifiedLine;
         for (let i = 0, len = diffs.length; i < len; i++) {
             const diffEntry = diffs[i];
@@ -529,9 +535,9 @@ export class DiffReview extends Disposable {
         const modifiedLineStart = diffEntry.modifiedLineStart;
         const modifiedLineEnd = diffEntry.modifiedLineEnd;
         const cnt = Math.max(modifiedLineEnd - modifiedLineStart, originalLineEnd - originalLineStart);
-        const originalLayoutInfo = originalOptions.get(124 /* layoutInfo */);
+        const originalLayoutInfo = originalOptions.get(128 /* layoutInfo */);
         const originalLineNumbersWidth = originalLayoutInfo.glyphMarginWidth + originalLayoutInfo.lineNumbersWidth;
-        const modifiedLayoutInfo = modifiedOptions.get(124 /* layoutInfo */);
+        const modifiedLayoutInfo = modifiedOptions.get(128 /* layoutInfo */);
         const modifiedLineNumbersWidth = 10 + modifiedLayoutInfo.glyphMarginWidth + modifiedLayoutInfo.lineNumbersWidth;
         for (let i = 0; i <= cnt; i++) {
             const originalLine = (originalLineStart === 0 ? 0 : originalLineStart + i);
@@ -626,17 +632,11 @@ export class DiffReview extends Disposable {
     }
     static _renderLine(model, options, tabSize, lineNumber) {
         const lineContent = model.getLineContent(lineNumber);
-        const fontInfo = options.get(38 /* fontInfo */);
-        const defaultMetadata = ((0 /* None */ << 11 /* FONT_STYLE_OFFSET */)
-            | (1 /* DefaultForeground */ << 14 /* FOREGROUND_OFFSET */)
-            | (2 /* DefaultBackground */ << 23 /* BACKGROUND_OFFSET */)) >>> 0;
-        const tokens = new Uint32Array(2);
-        tokens[0] = lineContent.length;
-        tokens[1] = defaultMetadata;
-        const lineTokens = new LineTokens(tokens, lineContent);
+        const fontInfo = options.get(40 /* fontInfo */);
+        const lineTokens = LineTokens.createEmpty(lineContent);
         const isBasicASCII = ViewLineRenderingData.isBasicASCII(lineContent, model.mightContainNonBasicASCII());
         const containsRTL = ViewLineRenderingData.containsRTL(lineContent, isBasicASCII, model.mightContainRTL());
-        const r = renderViewLine(new RenderLineInput((fontInfo.isMonospace && !options.get(26 /* disableMonospaceOptimizations */)), fontInfo.canUseHalfwidthRightwardsArrow, lineContent, false, isBasicASCII, containsRTL, 0, lineTokens, [], tabSize, 0, fontInfo.spaceWidth, fontInfo.middotWidth, fontInfo.wsmiddotWidth, options.get(100 /* stopRenderingLineAfter */), options.get(83 /* renderWhitespace */), options.get(77 /* renderControlCharacters */), options.get(39 /* fontLigatures */) !== EditorFontLigatures.OFF, null));
+        const r = renderViewLine(new RenderLineInput((fontInfo.isMonospace && !options.get(27 /* disableMonospaceOptimizations */)), fontInfo.canUseHalfwidthRightwardsArrow, lineContent, false, isBasicASCII, containsRTL, 0, lineTokens, [], tabSize, 0, fontInfo.spaceWidth, fontInfo.middotWidth, fontInfo.wsmiddotWidth, options.get(103 /* stopRenderingLineAfter */), options.get(86 /* renderWhitespace */), options.get(80 /* renderControlCharacters */), options.get(41 /* fontLigatures */) !== EditorFontLigatures.OFF, null));
         return r.html;
     }
 }

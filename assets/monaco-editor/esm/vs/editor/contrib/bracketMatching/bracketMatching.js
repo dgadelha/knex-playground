@@ -91,7 +91,7 @@ export class BracketMatchingController extends Disposable {
         this._lastVersionId = 0;
         this._decorations = [];
         this._updateBracketsSoon = this._register(new RunOnceScheduler(() => this._updateBrackets(), 50));
-        this._matchBrackets = this._editor.getOption(58 /* matchBrackets */);
+        this._matchBrackets = this._editor.getOption(61 /* matchBrackets */);
         this._updateBracketsSoon.schedule();
         this._register(editor.onDidChangeCursorPosition((e) => {
             if (this._matchBrackets === 'never') {
@@ -114,8 +114,8 @@ export class BracketMatchingController extends Disposable {
             this._updateBracketsSoon.schedule();
         }));
         this._register(editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(58 /* matchBrackets */)) {
-                this._matchBrackets = this._editor.getOption(58 /* matchBrackets */);
+            if (e.hasChanged(61 /* matchBrackets */)) {
+                this._matchBrackets = this._editor.getOption(61 /* matchBrackets */);
                 this._decorations = this._editor.deltaDecorations(this._decorations, []);
                 this._lastBracketsData = [];
                 this._lastVersionId = 0;
@@ -275,6 +275,7 @@ export class BracketMatchingController extends Disposable {
 }
 BracketMatchingController.ID = 'editor.contrib.bracketMatchingController';
 BracketMatchingController._DECORATION_OPTIONS_WITH_OVERVIEW_RULER = ModelDecorationOptions.register({
+    description: 'bracket-match-overview',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     className: 'bracket-match',
     overviewRuler: {
@@ -283,6 +284,7 @@ BracketMatchingController._DECORATION_OPTIONS_WITH_OVERVIEW_RULER = ModelDecorat
     }
 });
 BracketMatchingController._DECORATION_OPTIONS_WITHOUT_OVERVIEW_RULER = ModelDecorationOptions.register({
+    description: 'bracket-match-no-overview',
     stickiness: 1 /* NeverGrowsWhenTypingAtEdges */,
     className: 'bracket-match'
 });

@@ -15,6 +15,7 @@ var Severity;
     const _warning = 'warning';
     const _warn = 'warn';
     const _info = 'info';
+    const _ignore = 'ignore';
     /**
      * Parses 'error', 'warning', 'warn', 'info' in call casings
      * and falls back to ignore.
@@ -35,5 +36,14 @@ var Severity;
         return Severity.Ignore;
     }
     Severity.fromValue = fromValue;
+    function toString(severity) {
+        switch (severity) {
+            case Severity.Error: return _error;
+            case Severity.Warning: return _warning;
+            case Severity.Info: return _info;
+            default: return _ignore;
+        }
+    }
+    Severity.toString = toString;
 })(Severity || (Severity = {}));
 export default Severity;

@@ -83,7 +83,7 @@ class Arrow {
         dom.createCSSRule(`.monaco-editor ${this._ruleName}`, `border-style: solid; border-color: transparent; border-bottom-color: ${this._color}; border-width: ${this._height}px; bottom: -${this._height}px; margin-left: -${this._height}px; `);
     }
     show(where) {
-        this._decorations = this._editor.deltaDecorations(this._decorations, [{ range: Range.fromPositions(where), options: { className: this._ruleName, stickiness: 1 /* NeverGrowsWhenTypingAtEdges */ } }]);
+        this._decorations = this._editor.deltaDecorations(this._decorations, [{ range: Range.fromPositions(where), options: { description: 'zone-widget-arrow', className: this._ruleName, stickiness: 1 /* NeverGrowsWhenTypingAtEdges */ } }]);
     }
     hide() {
         this._editor.deltaDecorations(this._decorations, []);
@@ -233,7 +233,7 @@ export class ZoneWidget {
         }
     }
     _decoratingElementsHeight() {
-        let lineHeight = this.editor.getOption(53 /* lineHeight */);
+        let lineHeight = this.editor.getOption(56 /* lineHeight */);
         let result = 0;
         if (this.options.showArrow) {
             let arrowHeight = Math.round(lineHeight / 3);
@@ -254,7 +254,7 @@ export class ZoneWidget {
         // Render the widget as zone (rendering) and widget (lifecycle)
         const viewZoneDomNode = document.createElement('div');
         viewZoneDomNode.style.overflow = 'hidden';
-        const lineHeight = this.editor.getOption(53 /* lineHeight */);
+        const lineHeight = this.editor.getOption(56 /* lineHeight */);
         // adjust heightInLines to viewport
         const maxHeightInLines = Math.max(12, (this.editor.getLayoutInfo().height / lineHeight) * 0.8);
         heightInLines = Math.min(heightInLines, maxHeightInLines);
@@ -370,7 +370,7 @@ export class ZoneWidget {
         }));
         this._disposables.add(this._resizeSash.onDidChange((evt) => {
             if (data) {
-                let lineDelta = (evt.currentY - data.startY) / this.editor.getOption(53 /* lineHeight */);
+                let lineDelta = (evt.currentY - data.startY) / this.editor.getOption(56 /* lineHeight */);
                 let roundedLineDelta = lineDelta < 0 ? Math.ceil(lineDelta) : Math.floor(lineDelta);
                 let newHeightInLines = data.heightInLines + roundedLineDelta;
                 if (newHeightInLines > 5 && newHeightInLines < 35) {

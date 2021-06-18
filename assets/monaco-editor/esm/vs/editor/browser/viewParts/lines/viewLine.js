@@ -52,18 +52,18 @@ export class ViewLineOptions {
     constructor(config, themeType) {
         this.themeType = themeType;
         const options = config.options;
-        const fontInfo = options.get(38 /* fontInfo */);
-        this.renderWhitespace = options.get(83 /* renderWhitespace */);
-        this.renderControlCharacters = options.get(77 /* renderControlCharacters */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        this.renderWhitespace = options.get(86 /* renderWhitespace */);
+        this.renderControlCharacters = options.get(80 /* renderControlCharacters */);
         this.spaceWidth = fontInfo.spaceWidth;
         this.middotWidth = fontInfo.middotWidth;
         this.wsmiddotWidth = fontInfo.wsmiddotWidth;
         this.useMonospaceOptimizations = (fontInfo.isMonospace
-            && !options.get(26 /* disableMonospaceOptimizations */));
+            && !options.get(27 /* disableMonospaceOptimizations */));
         this.canUseHalfwidthRightwardsArrow = fontInfo.canUseHalfwidthRightwardsArrow;
-        this.lineHeight = options.get(53 /* lineHeight */);
-        this.stopRenderingLineAfter = options.get(100 /* stopRenderingLineAfter */);
-        this.fontLigatures = options.get(39 /* fontLigatures */);
+        this.lineHeight = options.get(56 /* lineHeight */);
+        this.stopRenderingLineAfter = options.get(103 /* stopRenderingLineAfter */);
+        this.fontLigatures = options.get(41 /* fontLigatures */);
     }
     equals(other) {
         return (this.themeType === other.themeType

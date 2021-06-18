@@ -126,7 +126,7 @@ class MessageWidget {
                     this._codeLink = dom.$('a.code-link');
                     this._codeLink.setAttribute('href', `${code.target.toString()}`);
                     this._codeLink.onclick = (e) => {
-                        this._openerService.open(code.target);
+                        this._openerService.open(code.target, { allowCommands: true });
                         e.preventDefault();
                         e.stopPropagation();
                     };
@@ -140,7 +140,7 @@ class MessageWidget {
         this._editor.applyFontInfo(this._relatedBlock);
         if (isNonEmptyArray(relatedInformation)) {
             const relatedInformationNode = this._relatedBlock.appendChild(document.createElement('div'));
-            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(53 /* lineHeight */) * 0.66)}px`;
+            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(56 /* lineHeight */) * 0.66)}px`;
             this._lines += 1;
             for (const related of relatedInformation) {
                 let container = document.createElement('div');
@@ -157,7 +157,7 @@ class MessageWidget {
                 relatedInformationNode.appendChild(container);
             }
         }
-        const fontInfo = this._editor.getOption(38 /* fontInfo */);
+        const fontInfo = this._editor.getOption(40 /* fontInfo */);
         const scrollWidth = Math.ceil(fontInfo.typicalFullwidthCharacterWidth * this._longestLineLength * 0.75);
         const scrollHeight = fontInfo.lineHeight * this._lines;
         this._scrollable.setScrollDimensions({ scrollWidth, scrollHeight });

@@ -21,16 +21,19 @@ import { Range } from '../../common/core/range.js';
 import { ResourceMap } from '../../../base/common/map.js';
 import { onUnexpectedError } from '../../../base/common/errors.js';
 export class OneReference {
-    constructor(isProviderFirst, parent, uri, _range, _rangeCallback) {
+    constructor(isProviderFirst, parent, link, _rangeCallback) {
         this.isProviderFirst = isProviderFirst;
         this.parent = parent;
-        this.uri = uri;
-        this._range = _range;
+        this.link = link;
         this._rangeCallback = _rangeCallback;
         this.id = defaultGenerator.nextId();
     }
+    get uri() {
+        return this.link.uri;
+    }
     get range() {
-        return this._range;
+        var _a, _b;
+        return (_b = (_a = this._range) !== null && _a !== void 0 ? _a : this.link.targetSelectionRange) !== null && _b !== void 0 ? _b : this.link.range;
     }
     set range(value) {
         this._range = value;
@@ -136,7 +139,7 @@ export class ReferencesModel {
             }
             // append, check for equality first!
             if (current.children.length === 0 || ReferencesModel._compareReferences(link, current.children[current.children.length - 1]) !== 0) {
-                const oneRef = new OneReference(providersFirst === link, current, link.uri, link.targetSelectionRange || link.range, ref => this._onDidChangeReferenceRange.fire(ref));
+                const oneRef = new OneReference(providersFirst === link, current, link, ref => this._onDidChangeReferenceRange.fire(ref));
                 this.references.push(oneRef);
                 current.children.push(oneRef);
             }

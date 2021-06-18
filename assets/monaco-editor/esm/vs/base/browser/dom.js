@@ -247,14 +247,7 @@ export function getClientArea(element) {
     }
     // If visual view port exits and it's on mobile, it should be used instead of window innerWidth / innerHeight, or document.body.clientWidth / document.body.clientHeight
     if (platform.isIOS && window.visualViewport) {
-        const width = window.visualViewport.width;
-        const height = window.visualViewport.height - (browser.isStandalone
-            // in PWA mode, the visual viewport always includes the safe-area-inset-bottom (which is for the home indicator)
-            // even when you are using the onscreen monitor, the visual viewport will include the area between system statusbar and the onscreen keyboard
-            // plus the area between onscreen keyboard and the bottom bezel, which is 20px on iOS.
-            ? (20 + 4) // + 4px for body margin
-            : 0);
-        return new Dimension(width, height);
+        return new Dimension(window.visualViewport.width, window.visualViewport.height);
     }
     // Try innerWidth / innerHeight
     if (window.innerWidth && window.innerHeight) {
@@ -795,6 +788,10 @@ export function computeScreenAwareSize(cssPx) {
     return Math.max(1, Math.floor(screenPx)) / window.devicePixelRatio;
 }
 /**
+ * Open safely a new window. This is the best way to do so, but you cannot tell
+ * if the window was opened or if it was blocked by the brower's popup blocker.
+ * If you want to tell if the browser blocked the new window, use `windowOpenNoOpenerWithSuccess`.
+ *
  * See https://github.com/microsoft/monaco-editor/issues/601
  * To protect against malicious code in the linked site, particularly phishing attempts,
  * the window.opener should be set to null to prevent the linked site from having access
@@ -802,19 +799,13 @@ export function computeScreenAwareSize(cssPx) {
  * See https://mathiasbynens.github.io/rel-noopener/
  */
 export function windowOpenNoOpener(url) {
-    if (browser.isElectron || browser.isEdgeLegacyWebView) {
-        // In VSCode, window.open() always returns null...
-        // The same is true for a WebView (see https://github.com/microsoft/monaco-editor/issues/628)
-        // Also call directly window.open in sandboxed Electron (see https://github.com/microsoft/monaco-editor/issues/2220)
-        window.open(url);
-    }
-    else {
-        let newTab = window.open();
-        if (newTab) {
-            newTab.opener = null;
-            newTab.location.href = url;
-        }
-    }
+    // By using 'noopener' in the `windowFeatures` argument, the newly created window will
+    // not be able to use `window.opener` to reach back to the current page.
+    // See https://stackoverflow.com/a/46958731
+    // See https://developer.mozilla.org/en-US/docs/Web/API/Window/open#noopener
+    // However, this also doesn't allow us to realize if the browser blocked
+    // the creation of the window.
+    window.open(url, '_blank', 'noopener');
 }
 export function animate(fn) {
     const step = () => {
@@ -848,6 +839,9 @@ export class ModifierKeyEmitter extends Emitter {
             metaKey: false
         };
         this._subscriptions.add(domEvent(window, 'keydown', true)(e => {
+            if (e.defaultPrevented) {
+                return;
+            }
             const event = new StandardKeyboardEvent(e);
             // If Alt-key keydown event is repeated, ignore it #112347
             // Only known to be necessary for Alt-Key at the moment #115810
@@ -882,6 +876,9 @@ export class ModifierKeyEmitter extends Emitter {
             }
         }));
         this._subscriptions.add(domEvent(window, 'keyup', true)(e => {
+            if (e.defaultPrevented) {
+                return;
+            }
             if (!e.altKey && this._keyStatus.altKey) {
                 this._keyStatus.lastKeyReleased = 'alt';
             }
@@ -951,5 +948,15 @@ export class ModifierKeyEmitter extends Emitter {
     dispose() {
         super.dispose();
         this._subscriptions.dispose();
+    }
+}
+export function addMatchMediaChangeListener(query, callback) {
+    const mediaQueryList = window.matchMedia(query);
+    if (typeof mediaQueryList.addEventListener === 'function') {
+        mediaQueryList.addEventListener('change', callback);
+    }
+    else {
+        // Safari 13.x
+        mediaQueryList.addListener(callback);
     }
 }

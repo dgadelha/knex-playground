@@ -77,3 +77,4 @@ export const CommandsRegistry = new class {
         return result;
     }
 };
+CommandsRegistry.registerCommand('noop', () => { });

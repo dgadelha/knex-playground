@@ -22,6 +22,7 @@ let StandaloneCodeEditorServiceImpl = class StandaloneCodeEditorServiceImpl exte
         this.onCodeEditorAdd(() => this._checkContextKey());
         this.onCodeEditorRemove(() => this._checkContextKey());
         this._editorIsOpen = contextKeyService.createKey('editorIsOpen', false);
+        this._activeCodeEditor = null;
     }
     _checkContextKey() {
         let hasCodeEditor = false;
@@ -33,8 +34,11 @@ let StandaloneCodeEditorServiceImpl = class StandaloneCodeEditorServiceImpl exte
         }
         this._editorIsOpen.set(hasCodeEditor);
     }
+    setActiveCodeEditor(activeCodeEditor) {
+        this._activeCodeEditor = activeCodeEditor;
+    }
     getActiveCodeEditor() {
-        return null; // not supported in the standalone case
+        return this._activeCodeEditor;
     }
     openCodeEditor(input, source, sideBySide) {
         if (!source) {

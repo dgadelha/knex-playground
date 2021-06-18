@@ -83,7 +83,7 @@ let QuickFixController = class QuickFixController extends Disposable {
                 }
                 finally {
                     if (retrigger) {
-                        this._trigger({ type: 1 /* Auto */, filter: {} });
+                        this._trigger({ type: 2 /* Auto */, filter: {} });
                     }
                 }
             })
@@ -104,7 +104,7 @@ let QuickFixController = class QuickFixController extends Disposable {
         }
         MessageController.get(this._editor).closeMessage();
         const triggerPosition = this._editor.getPosition();
-        this._trigger({ type: 2 /* Manual */, filter, autoApply, context: { notAvailableMessage, position: triggerPosition } });
+        this._trigger({ type: 1 /* Invoke */, filter, autoApply, context: { notAvailableMessage, position: triggerPosition } });
     }
     _trigger(trigger) {
         return this._model.trigger(trigger);

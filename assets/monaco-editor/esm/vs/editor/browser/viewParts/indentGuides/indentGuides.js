@@ -13,12 +13,12 @@ export class IndentGuidesOverlay extends DynamicViewOverlay {
         this._context = context;
         this._primaryLineNumber = 0;
         const options = this._context.configuration.options;
-        const wrappingInfo = options.get(125 /* wrappingInfo */);
-        const fontInfo = options.get(38 /* fontInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
+        const wrappingInfo = options.get(129 /* wrappingInfo */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._spaceWidth = fontInfo.spaceWidth;
-        this._enabled = options.get(78 /* renderIndentGuides */);
-        this._activeIndentEnabled = options.get(47 /* highlightActiveIndentGuide */);
+        this._enabled = options.get(81 /* renderIndentGuides */);
+        this._activeIndentEnabled = options.get(49 /* highlightActiveIndentGuide */);
         this._maxIndentLeft = wrappingInfo.wrappingColumn === -1 ? -1 : (wrappingInfo.wrappingColumn * fontInfo.typicalHalfwidthCharacterWidth);
         this._renderResult = null;
         this._context.addEventHandler(this);
@@ -31,12 +31,12 @@ export class IndentGuidesOverlay extends DynamicViewOverlay {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const wrappingInfo = options.get(125 /* wrappingInfo */);
-        const fontInfo = options.get(38 /* fontInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
+        const wrappingInfo = options.get(129 /* wrappingInfo */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._spaceWidth = fontInfo.spaceWidth;
-        this._enabled = options.get(78 /* renderIndentGuides */);
-        this._activeIndentEnabled = options.get(47 /* highlightActiveIndentGuide */);
+        this._enabled = options.get(81 /* renderIndentGuides */);
+        this._activeIndentEnabled = options.get(49 /* highlightActiveIndentGuide */);
         this._maxIndentLeft = wrappingInfo.wrappingColumn === -1 ? -1 : (wrappingInfo.wrappingColumn * fontInfo.typicalHalfwidthCharacterWidth);
         return true;
     }

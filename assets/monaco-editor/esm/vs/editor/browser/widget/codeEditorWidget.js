@@ -151,8 +151,8 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         this._register(this._configuration.onDidChange((e) => {
             this._onDidChangeConfiguration.fire(e);
             const options = this._configuration.options;
-            if (e.hasChanged(124 /* layoutInfo */)) {
-                const layoutInfo = options.get(124 /* layoutInfo */);
+            if (e.hasChanged(128 /* layoutInfo */)) {
+                const layoutInfo = options.get(128 /* layoutInfo */);
                 this._onDidLayoutChange.fire(layoutInfo);
             }
         }));
@@ -181,6 +181,10 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
             contributions = EditorExtensionsRegistry.getEditorContributions();
         }
         for (const desc of contributions) {
+            if (this._contributions[desc.id]) {
+                onUnexpectedError(new Error(`Cannot have two contributions with the same id ${desc.id}`));
+                continue;
+            }
             try {
                 const contribution = this._instantiationService.createInstance(desc.ctor, this);
                 this._contributions[desc.id] = contribution;
@@ -190,6 +194,10 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
             }
         }
         EditorExtensionsRegistry.getEditorActions().forEach((action) => {
+            if (this._actions[action.id]) {
+                onUnexpectedError(new Error(`Cannot have two actions with the same id ${action.id}`));
+                return;
+            }
             const internalAction = new InternalEditorAction(action.id, action.label, action.alias, withNullAsUndefined(action.precondition), () => {
                 return this._instantiationService.invokeFunction((accessor) => {
                     return Promise.resolve(action.runEditorCommand(accessor, this, null));
@@ -216,6 +224,10 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
             const contributionId = keys[i];
             this._contributions[contributionId].dispose();
         }
+        this._contributions = {};
+        this._actions = {};
+        this._contentWidgets = {};
+        this._overlayWidgets = {};
         this._removeDecorationTypes();
         this._postDetachModelCleanup(this._detachModel());
         this._onDidDispose.fire();
@@ -243,7 +255,7 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         if (!this._modelData) {
             return null;
         }
-        return WordOperations.getWordAtPosition(this._modelData.model, this._configuration.options.get(110 /* wordSeparators */), position);
+        return WordOperations.getWordAtPosition(this._modelData.model, this._configuration.options.get(114 /* wordSeparators */), position);
     }
     getValue(options = null) {
         if (!this._modelData) {
@@ -695,6 +707,9 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         if (this._triggerEditorCommand(source, handlerId, payload)) {
             return;
         }
+        this._triggerCommand(handlerId, payload);
+    }
+    _triggerCommand(handlerId, payload) {
         this._commandService.executeCommand(handlerId, payload);
     }
     _startComposition() {
@@ -771,7 +786,7 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         if (!this._modelData) {
             return false;
         }
-        if (this._configuration.options.get(75 /* readOnly */)) {
+        if (this._configuration.options.get(78 /* readOnly */)) {
             // read only editor => sorry!
             return false;
         }
@@ -782,7 +797,7 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         if (!this._modelData) {
             return false;
         }
-        if (this._configuration.options.get(75 /* readOnly */)) {
+        if (this._configuration.options.get(78 /* readOnly */)) {
             // read only editor => sorry!
             return false;
         }
@@ -793,7 +808,7 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         if (!this._modelData) {
             return false;
         }
-        if (this._configuration.options.get(75 /* readOnly */)) {
+        if (this._configuration.options.get(78 /* readOnly */)) {
             // read only editor => sorry!
             return false;
         }
@@ -859,7 +874,7 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
     }
     getLayoutInfo() {
         const options = this._configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         return layoutInfo;
     }
     createOverviewRuler(cssClassName) {
@@ -986,13 +1001,13 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         }
         const position = this._modelData.model.validatePosition(rawPosition);
         const options = this._configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         const top = CodeEditorWidget._getVerticalOffsetForPosition(this._modelData, position.lineNumber, position.column) - this.getScrollTop();
         const left = this._modelData.view.getOffsetForColumn(position.lineNumber, position.column) + layoutInfo.glyphMarginWidth + layoutInfo.lineNumbersWidth + layoutInfo.decorationsWidth - this.getScrollLeft();
         return {
             top: top,
             left: left,
-            height: options.get(53 /* lineHeight */)
+            height: options.get(56 /* lineHeight */)
         };
     }
     getOffsetForColumn(lineNumber, column) {
@@ -1014,7 +1029,7 @@ let CodeEditorWidget = class CodeEditorWidget extends Disposable {
         this._modelData.view.setAriaOptions(options);
     }
     applyFontInfo(target) {
-        Configuration.applyFontInfoSlow(target, this._configuration.options.get(38 /* fontInfo */));
+        Configuration.applyFontInfoSlow(target, this._configuration.options.get(40 /* fontInfo */));
     }
     _attachModel(model) {
         if (!model) {
@@ -1265,10 +1280,10 @@ class EditorContextKeysManager extends Disposable {
     }
     _updateFromConfig() {
         const options = this._editor.getOptions();
-        this._editorTabMovesFocus.set(options.get(123 /* tabFocusMode */));
-        this._editorReadonly.set(options.get(75 /* readOnly */));
-        this._inDiffEditor.set(options.get(49 /* inDiffEditor */));
-        this._editorColumnSelection.set(options.get(15 /* columnSelection */));
+        this._editorTabMovesFocus.set(options.get(127 /* tabFocusMode */));
+        this._editorReadonly.set(options.get(78 /* readOnly */));
+        this._inDiffEditor.set(options.get(51 /* inDiffEditor */));
+        this._editorColumnSelection.set(options.get(16 /* columnSelection */));
     }
     _updateFromSelection() {
         const selections = this._editor.getSelections();
@@ -1311,7 +1326,7 @@ export class EditorModeContext extends Disposable {
         this._hasReferenceProvider = EditorContextKeys.hasReferenceProvider.bindTo(_contextKeyService);
         this._hasRenameProvider = EditorContextKeys.hasRenameProvider.bindTo(_contextKeyService);
         this._hasSignatureHelpProvider = EditorContextKeys.hasSignatureHelpProvider.bindTo(_contextKeyService);
-        this._hasInlineHintsProvider = EditorContextKeys.hasInlineHintsProvider.bindTo(_contextKeyService);
+        this._hasInlayHintsProvider = EditorContextKeys.hasInlayHintsProvider.bindTo(_contextKeyService);
         this._hasDocumentFormattingProvider = EditorContextKeys.hasDocumentFormattingProvider.bindTo(_contextKeyService);
         this._hasDocumentSelectionFormattingProvider = EditorContextKeys.hasDocumentSelectionFormattingProvider.bindTo(_contextKeyService);
         this._hasMultipleDocumentFormattingProvider = EditorContextKeys.hasMultipleDocumentFormattingProvider.bindTo(_contextKeyService);
@@ -1337,7 +1352,7 @@ export class EditorModeContext extends Disposable {
         this._register(modes.DocumentFormattingEditProviderRegistry.onDidChange(update));
         this._register(modes.DocumentRangeFormattingEditProviderRegistry.onDidChange(update));
         this._register(modes.SignatureHelpProviderRegistry.onDidChange(update));
-        this._register(modes.InlineHintsProviderRegistry.onDidChange(update));
+        this._register(modes.InlayHintsProviderRegistry.onDidChange(update));
         update();
     }
     dispose() {
@@ -1385,7 +1400,7 @@ export class EditorModeContext extends Disposable {
             this._hasReferenceProvider.set(modes.ReferenceProviderRegistry.has(model));
             this._hasRenameProvider.set(modes.RenameProviderRegistry.has(model));
             this._hasSignatureHelpProvider.set(modes.SignatureHelpProviderRegistry.has(model));
-            this._hasInlineHintsProvider.set(modes.InlineHintsProviderRegistry.has(model));
+            this._hasInlayHintsProvider.set(modes.InlayHintsProviderRegistry.has(model));
             this._hasDocumentFormattingProvider.set(modes.DocumentFormattingEditProviderRegistry.has(model) || modes.DocumentRangeFormattingEditProviderRegistry.has(model));
             this._hasDocumentSelectionFormattingProvider.set(modes.DocumentRangeFormattingEditProviderRegistry.has(model));
             this._hasMultipleDocumentFormattingProvider.set(modes.DocumentFormattingEditProviderRegistry.all(model).length + modes.DocumentRangeFormattingEditProviderRegistry.all(model).length > 1);

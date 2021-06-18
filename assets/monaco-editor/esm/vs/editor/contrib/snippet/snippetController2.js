@@ -20,6 +20,7 @@ import { showSimpleSuggestions } from '../suggest/suggest.js';
 import { ContextKeyExpr, IContextKeyService, RawContextKey } from '../../../platform/contextkey/common/contextkey.js';
 import { ILogService } from '../../../platform/log/common/log.js';
 import { SnippetSession } from './snippetSession.js';
+import { localize } from '../../../nls.js';
 const _defaultOptions = {
     overwriteBefore: 0,
     overwriteAfter: 0,
@@ -182,9 +183,9 @@ let SnippetController2 = class SnippetController2 {
     }
 };
 SnippetController2.ID = 'snippetController2';
-SnippetController2.InSnippetMode = new RawContextKey('inSnippetMode', false);
-SnippetController2.HasNextTabstop = new RawContextKey('hasNextTabstop', false);
-SnippetController2.HasPrevTabstop = new RawContextKey('hasPrevTabstop', false);
+SnippetController2.InSnippetMode = new RawContextKey('inSnippetMode', false, localize('inSnippetMode', "Whether the editor in current in snippet mode"));
+SnippetController2.HasNextTabstop = new RawContextKey('hasNextTabstop', false, localize('hasNextTabstop', "Whether there is a next tab stop when in snippet mode"));
+SnippetController2.HasPrevTabstop = new RawContextKey('hasPrevTabstop', false, localize('hasPrevTabstop', "Whether there is a previous tab stop when in snippet mode"));
 SnippetController2 = __decorate([
     __param(1, ILogService),
     __param(2, IContextKeyService)

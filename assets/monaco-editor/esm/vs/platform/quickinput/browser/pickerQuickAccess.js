@@ -67,7 +67,7 @@ export class PickerQuickAccessProvider extends Disposable {
             // Collect picks and support both long running and short or combined
             const picksToken = picksCts.token;
             const picksFilter = picker.value.substr(this.prefix.length).trim();
-            const providedPicks = this.getPicks(picksFilter, picksDisposables, picksToken);
+            const providedPicks = this._getPicks(picksFilter, picksDisposables, picksToken);
             const applyPicks = (picks, skipEmpty) => {
                 var _a;
                 let items;

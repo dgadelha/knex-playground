@@ -52,7 +52,7 @@ registerSingleton(IPeekViewService, class {
 });
 export var PeekContext;
 (function (PeekContext) {
-    PeekContext.inPeekEditor = new RawContextKey('inReferenceSearchEditor', true);
+    PeekContext.inPeekEditor = new RawContextKey('inReferenceSearchEditor', true, nls.localize('inReferenceSearchEditor', "Whether the current code editor is embedded inside peek"));
     PeekContext.notInPeekEditor = PeekContext.inPeekEditor.toNegated();
 })(PeekContext || (PeekContext = {}));
 let PeekContextController = class PeekContextController {
@@ -168,7 +168,7 @@ let PeekViewWidget = class PeekViewWidget extends ZoneWidget {
     setTitle(primaryHeading, secondaryHeading) {
         if (this._primaryHeading && this._secondaryHeading) {
             this._primaryHeading.innerText = primaryHeading;
-            this._primaryHeading.setAttribute('aria-label', primaryHeading);
+            this._primaryHeading.setAttribute('title', primaryHeading);
             if (secondaryHeading) {
                 this._secondaryHeading.innerText = secondaryHeading;
             }
@@ -194,7 +194,7 @@ let PeekViewWidget = class PeekViewWidget extends ZoneWidget {
             this.dispose();
             return;
         }
-        const headHeight = Math.ceil(this.editor.getOption(53 /* lineHeight */) * 1.2);
+        const headHeight = Math.ceil(this.editor.getOption(56 /* lineHeight */) * 1.2);
         const bodyHeight = Math.round(heightInPixel - (headHeight + 2 /* the border-top/bottom width*/));
         this._doLayoutHead(headHeight, widthInPixel);
         this._doLayoutBody(bodyHeight, widthInPixel);

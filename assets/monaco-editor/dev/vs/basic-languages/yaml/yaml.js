@@ -72,7 +72,7 @@ define('vs/basic-languages/yaml/yaml',["require", "exports"], function (require,
                 { include: '@flowScalars' },
                 // String nodes
                 [
-                    /.+$/,
+                    /[^#]+/,
                     {
                         cases: {
                             '@keywords': 'keyword',

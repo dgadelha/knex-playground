@@ -576,55 +576,47 @@ export class TextModel extends Disposable {
         const linesCount = this._buffer.getLineCount();
         const initialStartLineNumber = range.startLineNumber;
         const initialStartColumn = range.startColumn;
-        let startLineNumber;
-        let startColumn;
-        if (initialStartLineNumber < 1) {
+        let startLineNumber = Math.floor((typeof initialStartLineNumber === 'number' && !isNaN(initialStartLineNumber)) ? initialStartLineNumber : 1);
+        let startColumn = Math.floor((typeof initialStartColumn === 'number' && !isNaN(initialStartColumn)) ? initialStartColumn : 1);
+        if (startLineNumber < 1) {
             startLineNumber = 1;
             startColumn = 1;
         }
-        else if (initialStartLineNumber > linesCount) {
+        else if (startLineNumber > linesCount) {
             startLineNumber = linesCount;
             startColumn = this.getLineMaxColumn(startLineNumber);
         }
         else {
-            startLineNumber = initialStartLineNumber | 0;
-            if (initialStartColumn <= 1) {
+            if (startColumn <= 1) {
                 startColumn = 1;
             }
             else {
                 const maxColumn = this.getLineMaxColumn(startLineNumber);
-                if (initialStartColumn >= maxColumn) {
+                if (startColumn >= maxColumn) {
                     startColumn = maxColumn;
-                }
-                else {
-                    startColumn = initialStartColumn | 0;
                 }
             }
         }
         const initialEndLineNumber = range.endLineNumber;
         const initialEndColumn = range.endColumn;
-        let endLineNumber;
-        let endColumn;
-        if (initialEndLineNumber < 1) {
+        let endLineNumber = Math.floor((typeof initialEndLineNumber === 'number' && !isNaN(initialEndLineNumber)) ? initialEndLineNumber : 1);
+        let endColumn = Math.floor((typeof initialEndColumn === 'number' && !isNaN(initialEndColumn)) ? initialEndColumn : 1);
+        if (endLineNumber < 1) {
             endLineNumber = 1;
             endColumn = 1;
         }
-        else if (initialEndLineNumber > linesCount) {
+        else if (endLineNumber > linesCount) {
             endLineNumber = linesCount;
             endColumn = this.getLineMaxColumn(endLineNumber);
         }
         else {
-            endLineNumber = initialEndLineNumber | 0;
-            if (initialEndColumn <= 1) {
+            if (endColumn <= 1) {
                 endColumn = 1;
             }
             else {
                 const maxColumn = this.getLineMaxColumn(endLineNumber);
-                if (initialEndColumn >= maxColumn) {
+                if (endColumn >= maxColumn) {
                     endColumn = maxColumn;
-                }
-                else {
-                    endColumn = initialEndColumn | 0;
                 }
             }
         }
@@ -1561,10 +1553,38 @@ export class TextModel extends Disposable {
     matchBracket(position) {
         return this._matchBracket(this.validatePosition(position));
     }
+    _establishBracketSearchOffsets(position, lineTokens, modeBrackets, tokenIndex) {
+        const tokenCount = lineTokens.getCount();
+        const currentLanguageId = lineTokens.getLanguageId(tokenIndex);
+        // limit search to not go before `maxBracketLength`
+        let searchStartOffset = Math.max(0, position.column - 1 - modeBrackets.maxBracketLength);
+        for (let i = tokenIndex - 1; i >= 0; i--) {
+            const tokenEndOffset = lineTokens.getEndOffset(i);
+            if (tokenEndOffset <= searchStartOffset) {
+                break;
+            }
+            if (ignoreBracketsInToken(lineTokens.getStandardTokenType(i)) || lineTokens.getLanguageId(i) !== currentLanguageId) {
+                searchStartOffset = tokenEndOffset;
+                break;
+            }
+        }
+        // limit search to not go after `maxBracketLength`
+        let searchEndOffset = Math.min(lineTokens.getLineContent().length, position.column - 1 + modeBrackets.maxBracketLength);
+        for (let i = tokenIndex + 1; i < tokenCount; i++) {
+            const tokenStartOffset = lineTokens.getStartOffset(i);
+            if (tokenStartOffset >= searchEndOffset) {
+                break;
+            }
+            if (ignoreBracketsInToken(lineTokens.getStandardTokenType(i)) || lineTokens.getLanguageId(i) !== currentLanguageId) {
+                searchEndOffset = tokenStartOffset;
+                break;
+            }
+        }
+        return { searchStartOffset, searchEndOffset };
+    }
     _matchBracket(position) {
         const lineNumber = position.lineNumber;
         const lineTokens = this._getLineTokens(lineNumber);
-        const tokenCount = lineTokens.getCount();
         const lineText = this._buffer.getLineContent(lineNumber);
         const tokenIndex = lineTokens.findTokenIndexAtOffset(position.column - 1);
         if (tokenIndex < 0) {
@@ -1573,19 +1593,7 @@ export class TextModel extends Disposable {
         const currentModeBrackets = LanguageConfigurationRegistry.getBracketsSupport(lineTokens.getLanguageId(tokenIndex));
         // check that the token is not to be ignored
         if (currentModeBrackets && !ignoreBracketsInToken(lineTokens.getStandardTokenType(tokenIndex))) {
-            // limit search to not go before `maxBracketLength`
-            let searchStartOffset = Math.max(0, position.column - 1 - currentModeBrackets.maxBracketLength);
-            for (let i = tokenIndex - 1; i >= 0; i--) {
-                const tokenEndOffset = lineTokens.getEndOffset(i);
-                if (tokenEndOffset <= searchStartOffset) {
-                    break;
-                }
-                if (ignoreBracketsInToken(lineTokens.getStandardTokenType(i))) {
-                    searchStartOffset = tokenEndOffset;
-                }
-            }
-            // limit search to not go after `maxBracketLength`
-            const searchEndOffset = Math.min(lineText.length, position.column - 1 + currentModeBrackets.maxBracketLength);
+            let { searchStartOffset, searchEndOffset } = this._establishBracketSearchOffsets(position, lineTokens, currentModeBrackets, tokenIndex);
             // it might be the case that [currentTokenStart -> currentTokenEnd] contains multiple brackets
             // `bestResult` will contain the most right-side result
             let bestResult = null;
@@ -1618,18 +1626,7 @@ export class TextModel extends Disposable {
             const prevModeBrackets = LanguageConfigurationRegistry.getBracketsSupport(lineTokens.getLanguageId(prevTokenIndex));
             // check that previous token is not to be ignored
             if (prevModeBrackets && !ignoreBracketsInToken(lineTokens.getStandardTokenType(prevTokenIndex))) {
-                // limit search in case previous token is very large, there's no need to go beyond `maxBracketLength`
-                const searchStartOffset = Math.max(0, position.column - 1 - prevModeBrackets.maxBracketLength);
-                let searchEndOffset = Math.min(lineText.length, position.column - 1 + prevModeBrackets.maxBracketLength);
-                for (let i = prevTokenIndex + 1; i < tokenCount; i++) {
-                    const tokenStartOffset = lineTokens.getStartOffset(i);
-                    if (tokenStartOffset >= searchEndOffset) {
-                        break;
-                    }
-                    if (ignoreBracketsInToken(lineTokens.getStandardTokenType(i))) {
-                        searchEndOffset = tokenStartOffset;
-                    }
-                }
+                let { searchStartOffset, searchEndOffset } = this._establishBracketSearchOffsets(position, lineTokens, prevModeBrackets, prevTokenIndex);
                 const foundBracket = BracketsUtils.findPrevBracketInRange(prevModeBrackets.reversedRegex, lineNumber, lineText, searchStartOffset, searchEndOffset);
                 // check that we didn't hit a bracket too far away from position
                 if (foundBracket && foundBracket.startColumn <= position.column && position.column <= foundBracket.endColumn) {
@@ -2375,6 +2372,18 @@ export class TextModel extends Disposable {
             }
         }
     }
+    //#endregion
+    normalizePosition(position, affinity) {
+        return position;
+    }
+    /**
+     * Gets the column at which indentation stops at a given line.
+     * @internal
+    */
+    getLineIndentColumn(lineNumber) {
+        // Columns start with 1.
+        return indentOfLine(this.getLineContent(lineNumber)) + 1;
+    }
 }
 TextModel.MODEL_SYNC_LIMIT = 50 * 1024 * 1024; // 50 MB
 TextModel.LARGE_FILE_SIZE_THRESHOLD = 20 * 1024 * 1024; // 20 MB;
@@ -2389,6 +2398,18 @@ TextModel.DEFAULT_CREATION_OPTIONS = {
     trimAutoWhitespace: EDITOR_MODEL_DEFAULTS.trimAutoWhitespace,
     largeFileOptimizations: EDITOR_MODEL_DEFAULTS.largeFileOptimizations,
 };
+function indentOfLine(line) {
+    let indent = 0;
+    for (const c of line) {
+        if (c === ' ' || c === '\t') {
+            indent++;
+        }
+        else {
+            break;
+        }
+    }
+    return indent;
+}
 //#region Decorations
 class DecorationsTrees {
     constructor() {
@@ -2517,6 +2538,7 @@ export class ModelDecorationMinimapOptions extends DecorationOptions {
 }
 export class ModelDecorationOptions {
     constructor(options) {
+        this.description = options.description;
         this.stickiness = options.stickiness || 0 /* AlwaysGrowsWhenTypingAtEdges */;
         this.zIndex = options.zIndex || 0;
         this.className = options.className ? cleanClassName(options.className) : null;
@@ -2543,15 +2565,15 @@ export class ModelDecorationOptions {
         return new ModelDecorationOptions(options);
     }
 }
-ModelDecorationOptions.EMPTY = ModelDecorationOptions.register({});
+ModelDecorationOptions.EMPTY = ModelDecorationOptions.register({ description: 'empty' });
 /**
  * The order carefully matches the values of the enum.
  */
 const TRACKED_RANGE_OPTIONS = [
-    ModelDecorationOptions.register({ stickiness: 0 /* AlwaysGrowsWhenTypingAtEdges */ }),
-    ModelDecorationOptions.register({ stickiness: 1 /* NeverGrowsWhenTypingAtEdges */ }),
-    ModelDecorationOptions.register({ stickiness: 2 /* GrowsOnlyWhenTypingBefore */ }),
-    ModelDecorationOptions.register({ stickiness: 3 /* GrowsOnlyWhenTypingAfter */ }),
+    ModelDecorationOptions.register({ description: 'tracked-range-always-grows-when-typing-at-edges', stickiness: 0 /* AlwaysGrowsWhenTypingAtEdges */ }),
+    ModelDecorationOptions.register({ description: 'tracked-range-never-grows-when-typing-at-edges', stickiness: 1 /* NeverGrowsWhenTypingAtEdges */ }),
+    ModelDecorationOptions.register({ description: 'tracked-range-grows-only-when-typing-before', stickiness: 2 /* GrowsOnlyWhenTypingBefore */ }),
+    ModelDecorationOptions.register({ description: 'tracked-range-grows-only-when-typing-after', stickiness: 3 /* GrowsOnlyWhenTypingAfter */ }),
 ];
 function _normalizeOptions(options) {
     if (options instanceof ModelDecorationOptions) {

@@ -90,11 +90,12 @@ export class Action extends Disposable {
             this._onDidChange.fire({ checked: value });
         }
     }
-    run(event, _data) {
-        if (this._actionCallback) {
-            return this._actionCallback(event);
-        }
-        return Promise.resolve(true);
+    run(event, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._actionCallback) {
+                yield this._actionCallback(event);
+            }
+        });
     }
 }
 export class ActionRunner extends Disposable {
@@ -108,21 +109,23 @@ export class ActionRunner extends Disposable {
     run(action, context) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!action.enabled) {
-                return Promise.resolve(null);
+                return;
             }
-            this._onBeforeRun.fire({ action: action });
+            this._onBeforeRun.fire({ action });
+            let error = undefined;
             try {
-                const result = yield this.runAction(action, context);
-                this._onDidRun.fire({ action: action, result: result });
+                yield this.runAction(action, context);
             }
-            catch (error) {
-                this._onDidRun.fire({ action: action, error: error });
+            catch (e) {
+                error = e;
             }
+            this._onDidRun.fire({ action, error });
         });
     }
     runAction(action, context) {
-        const res = context ? action.run(context) : action.run();
-        return Promise.resolve(res);
+        return __awaiter(this, void 0, void 0, function* () {
+            yield action.run(context);
+        });
     }
 }
 export class Separator extends Action {
@@ -143,13 +146,11 @@ export class SubmenuAction {
         this.class = cssClass;
         this._actions = actions;
     }
+    get actions() { return this._actions; }
     dispose() {
         // there is NOTHING to dispose and the SubmenuAction should
         // never have anything to dispose as it is a convenience type
         // to bridge into the rendering world.
-    }
-    get actions() {
-        return this._actions;
     }
     run() {
         return __awaiter(this, void 0, void 0, function* () { });

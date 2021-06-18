@@ -129,11 +129,11 @@ class Widget {
         this.allowEditorOverflow = this._actual.allowEditorOverflow || false;
         this.suppressMouseDown = this._actual.suppressMouseDown || false;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
-        this._fixedOverflowWidgets = options.get(32 /* fixedOverflowWidgets */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
+        this._fixedOverflowWidgets = options.get(34 /* fixedOverflowWidgets */);
         this._contentWidth = layoutInfo.contentWidth;
         this._contentLeft = layoutInfo.contentLeft;
-        this._lineHeight = options.get(53 /* lineHeight */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._range = null;
         this._viewRange = null;
         this._preference = [];
@@ -149,9 +149,9 @@ class Widget {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(53 /* lineHeight */);
-        if (e.hasChanged(124 /* layoutInfo */)) {
-            const layoutInfo = options.get(124 /* layoutInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
+        if (e.hasChanged(128 /* layoutInfo */)) {
+            const layoutInfo = options.get(128 /* layoutInfo */);
             this._contentLeft = layoutInfo.contentLeft;
             this._contentWidth = layoutInfo.contentWidth;
             this._maxWidth = this._getMaxWidth();

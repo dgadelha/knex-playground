@@ -95,12 +95,12 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
             if (!this.domNodes) {
                 return;
             }
-            const fontInfo = this.editor.getOption(38 /* fontInfo */);
+            const fontInfo = this.editor.getOption(40 /* fontInfo */);
             this.domNodes.element.style.fontSize = `${fontInfo.fontSize}px`;
         };
         updateFont();
         this._register(Event.chain(this.editor.onDidChangeConfiguration.bind(this.editor))
-            .filter(e => e.hasChanged(38 /* fontInfo */))
+            .filter(e => e.hasChanged(40 /* fontInfo */))
             .on(updateFont, null));
         this._register(this.editor.onDidLayoutChange(e => this.updateMaxHeight()));
         this.updateMaxHeight();
@@ -159,7 +159,7 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
             return;
         }
         const code = dom.append(this.domNodes.signature, $('.code'));
-        const fontInfo = this.editor.getOption(38 /* fontInfo */);
+        const fontInfo = this.editor.getOption(40 /* fontInfo */);
         code.style.fontSize = `${fontInfo.fontSize}px`;
         code.style.fontFamily = fontInfo.fontFamily;
         const hasParameters = signature.parameters.length > 0;

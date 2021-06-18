@@ -17,7 +17,7 @@ import { createCancelablePromise, raceCancellation } from '../../../base/common/
 import { KeyChord } from '../../../base/common/keyCodes.js';
 import { isWeb } from '../../../base/common/platform.js';
 import { isCodeEditor } from '../../browser/editorBrowser.js';
-import { EditorAction, registerEditorAction } from '../../browser/editorExtensions.js';
+import { EditorAction, registerInstantiatedEditorAction } from '../../browser/editorExtensions.js';
 import { ICodeEditorService } from '../../browser/services/codeEditorService.js';
 import * as corePosition from '../../common/core/position.js';
 import { Range } from '../../common/core/range.js';
@@ -47,6 +47,13 @@ MenuRegistry.appendMenuItem(MenuId.EditorContext, {
     group: 'navigation',
     order: 100
 });
+const _goToActionIds = new Set();
+function registerGoToAction(ctor) {
+    const result = new ctor();
+    registerInstantiatedEditorAction(result);
+    _goToActionIds.add(result.id);
+    return result;
+}
 class SymbolNavigationAction extends EditorAction {
     constructor(configuration, opts) {
         super(opts);
@@ -71,7 +78,7 @@ class SymbolNavigationAction extends EditorAction {
             let altAction;
             if (references.referenceAt(model.uri, pos)) {
                 const altActionId = this._getAlternativeCommand(editor);
-                if (altActionId !== this.id) {
+                if (altActionId !== this.id && _goToActionIds.has(altActionId)) {
                     altAction = editor.getAction(altActionId);
                 }
             }
@@ -150,7 +157,7 @@ class SymbolNavigationAction extends EditorAction {
             }
             if (highlight) {
                 const modelNow = targetEditor.getModel();
-                const ids = targetEditor.deltaDecorations([], [{ range, options: { className: 'symbolHighlight' } }]);
+                const ids = targetEditor.deltaDecorations([], [{ range, options: { description: 'symbol-navigate-action-highlight', className: 'symbolHighlight' } }]);
                 setTimeout(() => {
                     if (targetEditor.getModel() === modelNow) {
                         targetEditor.deltaDecorations(ids, []);
@@ -183,16 +190,16 @@ export class DefinitionAction extends SymbolNavigationAction {
             : nls.localize('generic.noResults', "No definition found");
     }
     _getAlternativeCommand(editor) {
-        return editor.getOption(45 /* gotoLocation */).alternativeDefinitionCommand;
+        return editor.getOption(47 /* gotoLocation */).alternativeDefinitionCommand;
     }
     _getGoToPreference(editor) {
-        return editor.getOption(45 /* gotoLocation */).multipleDefinitions;
+        return editor.getOption(47 /* gotoLocation */).multipleDefinitions;
     }
 }
 const goToDefinitionKb = isWeb && !isStandalone
     ? 2048 /* CtrlCmd */ | 70 /* F12 */
     : 70 /* F12 */;
-registerEditorAction((_a = class GoToDefinitionAction extends DefinitionAction {
+registerGoToAction((_a = class GoToDefinitionAction extends DefinitionAction {
         constructor() {
             super({
                 openToSide: false,
@@ -224,7 +231,7 @@ registerEditorAction((_a = class GoToDefinitionAction extends DefinitionAction {
     },
     _a.id = 'editor.action.revealDefinition',
     _a));
-registerEditorAction((_b = class OpenDefinitionToSideAction extends DefinitionAction {
+registerGoToAction((_b = class OpenDefinitionToSideAction extends DefinitionAction {
         constructor() {
             super({
                 openToSide: true,
@@ -246,7 +253,7 @@ registerEditorAction((_b = class OpenDefinitionToSideAction extends DefinitionAc
     },
     _b.id = 'editor.action.revealDefinitionAside',
     _b));
-registerEditorAction((_c = class PeekDefinitionAction extends DefinitionAction {
+registerGoToAction((_c = class PeekDefinitionAction extends DefinitionAction {
         constructor() {
             super({
                 openToSide: false,
@@ -288,13 +295,13 @@ class DeclarationAction extends SymbolNavigationAction {
             : nls.localize('decl.generic.noResults', "No declaration found");
     }
     _getAlternativeCommand(editor) {
-        return editor.getOption(45 /* gotoLocation */).alternativeDeclarationCommand;
+        return editor.getOption(47 /* gotoLocation */).alternativeDeclarationCommand;
     }
     _getGoToPreference(editor) {
-        return editor.getOption(45 /* gotoLocation */).multipleDeclarations;
+        return editor.getOption(47 /* gotoLocation */).multipleDeclarations;
     }
 }
-registerEditorAction((_d = class GoToDeclarationAction extends DeclarationAction {
+registerGoToAction((_d = class GoToDeclarationAction extends DeclarationAction {
         constructor() {
             super({
                 openToSide: false,
@@ -325,7 +332,7 @@ registerEditorAction((_d = class GoToDeclarationAction extends DeclarationAction
     },
     _d.id = 'editor.action.revealDeclaration',
     _d));
-registerEditorAction(class PeekDeclarationAction extends DeclarationAction {
+registerGoToAction(class PeekDeclarationAction extends DeclarationAction {
     constructor() {
         super({
             openToSide: false,
@@ -358,13 +365,13 @@ class TypeDefinitionAction extends SymbolNavigationAction {
             : nls.localize('goToTypeDefinition.generic.noResults', "No type definition found");
     }
     _getAlternativeCommand(editor) {
-        return editor.getOption(45 /* gotoLocation */).alternativeTypeDefinitionCommand;
+        return editor.getOption(47 /* gotoLocation */).alternativeTypeDefinitionCommand;
     }
     _getGoToPreference(editor) {
-        return editor.getOption(45 /* gotoLocation */).multipleTypeDefinitions;
+        return editor.getOption(47 /* gotoLocation */).multipleTypeDefinitions;
     }
 }
-registerEditorAction((_e = class GoToTypeDefinitionAction extends TypeDefinitionAction {
+registerGoToAction((_e = class GoToTypeDefinitionAction extends TypeDefinitionAction {
         constructor() {
             super({
                 openToSide: false,
@@ -395,7 +402,7 @@ registerEditorAction((_e = class GoToTypeDefinitionAction extends TypeDefinition
     },
     _e.ID = 'editor.action.goToTypeDefinition',
     _e));
-registerEditorAction((_f = class PeekTypeDefinitionAction extends TypeDefinitionAction {
+registerGoToAction((_f = class PeekTypeDefinitionAction extends TypeDefinitionAction {
         constructor() {
             super({
                 openToSide: false,
@@ -430,13 +437,13 @@ class ImplementationAction extends SymbolNavigationAction {
             : nls.localize('goToImplementation.generic.noResults', "No implementation found");
     }
     _getAlternativeCommand(editor) {
-        return editor.getOption(45 /* gotoLocation */).alternativeImplementationCommand;
+        return editor.getOption(47 /* gotoLocation */).alternativeImplementationCommand;
     }
     _getGoToPreference(editor) {
-        return editor.getOption(45 /* gotoLocation */).multipleImplementations;
+        return editor.getOption(47 /* gotoLocation */).multipleImplementations;
     }
 }
-registerEditorAction((_g = class GoToImplementationAction extends ImplementationAction {
+registerGoToAction((_g = class GoToImplementationAction extends ImplementationAction {
         constructor() {
             super({
                 openToSide: false,
@@ -467,7 +474,7 @@ registerEditorAction((_g = class GoToImplementationAction extends Implementation
     },
     _g.ID = 'editor.action.goToImplementation',
     _g));
-registerEditorAction((_h = class PeekImplementationAction extends ImplementationAction {
+registerGoToAction((_h = class PeekImplementationAction extends ImplementationAction {
         constructor() {
             super({
                 openToSide: false,
@@ -502,13 +509,13 @@ class ReferencesAction extends SymbolNavigationAction {
             : nls.localize('references.noGeneric', "No references found");
     }
     _getAlternativeCommand(editor) {
-        return editor.getOption(45 /* gotoLocation */).alternativeReferenceCommand;
+        return editor.getOption(47 /* gotoLocation */).alternativeReferenceCommand;
     }
     _getGoToPreference(editor) {
-        return editor.getOption(45 /* gotoLocation */).multipleReferences;
+        return editor.getOption(47 /* gotoLocation */).multipleReferences;
     }
 }
-registerEditorAction(class GoToReferencesAction extends ReferencesAction {
+registerGoToAction(class GoToReferencesAction extends ReferencesAction {
     constructor() {
         super({
             openToSide: false,
@@ -542,7 +549,7 @@ registerEditorAction(class GoToReferencesAction extends ReferencesAction {
         });
     }
 });
-registerEditorAction(class PeekReferencesAction extends ReferencesAction {
+registerGoToAction(class PeekReferencesAction extends ReferencesAction {
     constructor() {
         super({
             openToSide: false,
@@ -589,7 +596,7 @@ class GenericGoToLocationAction extends SymbolNavigationAction {
     }
     _getGoToPreference(editor) {
         var _a;
-        return (_a = this._gotoMultipleBehaviour) !== null && _a !== void 0 ? _a : editor.getOption(45 /* gotoLocation */).multipleReferences;
+        return (_a = this._gotoMultipleBehaviour) !== null && _a !== void 0 ? _a : editor.getOption(47 /* gotoLocation */).multipleReferences;
     }
     _getAlternativeCommand() { return ''; }
 }

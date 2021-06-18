@@ -43,7 +43,7 @@ var WorkerManager = /** @class */ (function () {
                 label: this._defaults.languageId,
                 // passed in to the create() method
                 createData: {
-                    languageSettings: this._defaults.diagnosticsOptions,
+                    options: this._defaults.options,
                     languageId: this._defaults.languageId
                 }
             });

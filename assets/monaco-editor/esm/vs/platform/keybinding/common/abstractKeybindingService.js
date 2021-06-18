@@ -36,8 +36,8 @@ export class AbstractKeybindingService extends Disposable {
     getKeybindings() {
         return this._getResolver().getKeybindings();
     }
-    lookupKeybinding(commandId) {
-        const result = this._getResolver().lookupPrimaryKeybinding(commandId);
+    lookupKeybinding(commandId, context) {
+        const result = this._getResolver().lookupPrimaryKeybinding(commandId, context);
         if (!result) {
             return undefined;
         }

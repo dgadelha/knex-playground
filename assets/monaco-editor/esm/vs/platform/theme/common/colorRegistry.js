@@ -8,6 +8,7 @@ import { Emitter } from '../../../base/common/event.js';
 import * as nls from '../../../nls.js';
 import { Extensions as JSONExtensions } from '../../jsonschemas/common/jsonContributionRegistry.js';
 import { RunOnceScheduler } from '../../../base/common/async.js';
+import { assertNever } from '../../../base/common/types.js';
 // color registry
 export const Extensions = {
     ColorContribution: 'base.contributions.colors'
@@ -133,9 +134,15 @@ export const editorWidgetResizeBorder = registerColor('editorWidget.resizeBorder
 export const quickInputBackground = registerColor('quickInput.background', { dark: editorWidgetBackground, light: editorWidgetBackground, hc: editorWidgetBackground }, nls.localize('pickerBackground', "Quick picker background color. The quick picker widget is the container for pickers like the command palette."));
 export const quickInputForeground = registerColor('quickInput.foreground', { dark: editorWidgetForeground, light: editorWidgetForeground, hc: editorWidgetForeground }, nls.localize('pickerForeground', "Quick picker foreground color. The quick picker widget is the container for pickers like the command palette."));
 export const quickInputTitleBackground = registerColor('quickInputTitle.background', { dark: new Color(new RGBA(255, 255, 255, 0.105)), light: new Color(new RGBA(0, 0, 0, 0.06)), hc: '#000000' }, nls.localize('pickerTitleBackground', "Quick picker title background color. The quick picker widget is the container for pickers like the command palette."));
-export const quickInputListFocusBackground = registerColor('quickInput.list.focusBackground', { dark: '#062F4A', light: '#D6EBFF', hc: null }, nls.localize('quickInput.listFocusBackground', "Quick picker background color for the focused item."));
 export const pickerGroupForeground = registerColor('pickerGroup.foreground', { dark: '#3794FF', light: '#0066BF', hc: Color.white }, nls.localize('pickerGroupForeground', "Quick picker color for grouping labels."));
 export const pickerGroupBorder = registerColor('pickerGroup.border', { dark: '#3F3F46', light: '#CCCEDB', hc: Color.white }, nls.localize('pickerGroupBorder', "Quick picker color for grouping borders."));
+/**
+ * Keybinding label
+ */
+export const keybindingLabelBackground = registerColor('keybindingLabel.background', { dark: new Color(new RGBA(128, 128, 128, 0.17)), light: new Color(new RGBA(221, 221, 221, 0.4)), hc: Color.transparent }, nls.localize('keybindingLabelBackground', "Keybinding label background color. The keybinding label is used to represent a keyboard shortcut."));
+export const keybindingLabelForeground = registerColor('keybindingLabel.foreground', { dark: Color.fromHex('#CCCCCC'), light: Color.fromHex('#555555'), hc: Color.white }, nls.localize('keybindingLabelForeground', "Keybinding label foreground color. The keybinding label is used to represent a keyboard shortcut."));
+export const keybindingLabelBorder = registerColor('keybindingLabel.border', { dark: new Color(new RGBA(51, 51, 51, 0.6)), light: new Color(new RGBA(204, 204, 204, 0.4)), hc: new Color(new RGBA(111, 195, 223)) }, nls.localize('keybindingLabelBorder', "Keybinding label border color. The keybinding label is used to represent a keyboard shortcut."));
+export const keybindingLabelBottomBorder = registerColor('keybindingLabel.bottomBorder', { dark: new Color(new RGBA(68, 68, 68, 0.6)), light: new Color(new RGBA(187, 187, 187, 0.4)), hc: new Color(new RGBA(111, 195, 223)) }, nls.localize('keybindingLabelBottomBorder', "Keybinding label border bottom color. The keybinding label is used to represent a keyboard shortcut."));
 /**
  * Editor selection colors.
  */
@@ -168,8 +175,8 @@ export const editorActiveLinkForeground = registerColor('editorLink.activeForegr
 /**
  * Inline hints
  */
-export const editorInlineHintForeground = registerColor('editorInlineHint.foreground', { dark: editorWidgetBackground, light: editorWidgetForeground, hc: editorWidgetBackground }, nls.localize('editorInlineHintForeground', 'Foreground color of inline hints'));
-export const editorInlineHintBackground = registerColor('editorInlineHint.background', { dark: editorWidgetForeground, light: editorWidgetBackground, hc: editorWidgetForeground }, nls.localize('editorInlineHintBackground', 'Background color of inline hints'));
+export const editorInlayHintForeground = registerColor('editorInlayHint.foreground', { dark: editorWidgetBackground, light: editorWidgetForeground, hc: editorWidgetBackground }, nls.localize('editorInlayHintForeground', 'Foreground color of inline hints'));
+export const editorInlayHintBackground = registerColor('editorInlayHint.background', { dark: editorWidgetForeground, light: editorWidgetBackground, hc: editorWidgetForeground }, nls.localize('editorInlayHintBackground', 'Background color of inline hints'));
 /**
  * Editor lighbulb icon colors
  */
@@ -200,13 +207,20 @@ export const listInactiveFocusBackground = registerColor('list.inactiveFocusBack
 export const listInactiveFocusOutline = registerColor('list.inactiveFocusOutline', { dark: null, light: null, hc: null }, nls.localize('listInactiveFocusOutline', "List/Tree outline color for the focused item when the list/tree is inactive. An active list/tree has keyboard focus, an inactive does not."));
 export const listHoverBackground = registerColor('list.hoverBackground', { dark: '#2A2D2E', light: '#F0F0F0', hc: null }, nls.localize('listHoverBackground', "List/Tree background when hovering over items using the mouse."));
 export const listHoverForeground = registerColor('list.hoverForeground', { dark: null, light: null, hc: null }, nls.localize('listHoverForeground', "List/Tree foreground when hovering over items using the mouse."));
-export const listDropBackground = registerColor('list.dropBackground', { dark: listFocusBackground, light: listFocusBackground, hc: null }, nls.localize('listDropBackground', "List/Tree drag and drop background when moving items around using the mouse."));
-export const listHighlightForeground = registerColor('list.highlightForeground', { dark: '#0097fb', light: '#0066BF', hc: focusBorder }, nls.localize('highlight', 'List/Tree foreground color of the match highlights when searching inside the list/tree.'));
+export const listDropBackground = registerColor('list.dropBackground', { dark: '#062F4A', light: '#D6EBFF', hc: null }, nls.localize('listDropBackground', "List/Tree drag and drop background when moving items around using the mouse."));
+export const listHighlightForeground = registerColor('list.highlightForeground', { dark: '#18A3FF', light: '#0066BF', hc: focusBorder }, nls.localize('highlight', 'List/Tree foreground color of the match highlights when searching inside the list/tree.'));
+export const listFocusHighlightForeground = registerColor('list.focusHighlightForeground', { dark: listHighlightForeground, light: listHighlightForeground, hc: listHighlightForeground }, nls.localize('listFocusHighlightForeground', 'List/Tree foreground color of the match highlights on actively focused items when searching inside the list/tree.'));
 export const listFilterWidgetBackground = registerColor('listFilterWidget.background', { light: '#efc1ad', dark: '#653723', hc: Color.black }, nls.localize('listFilterWidgetBackground', 'Background color of the type filter widget in lists and trees.'));
 export const listFilterWidgetOutline = registerColor('listFilterWidget.outline', { dark: Color.transparent, light: Color.transparent, hc: '#f38518' }, nls.localize('listFilterWidgetOutline', 'Outline color of the type filter widget in lists and trees.'));
 export const listFilterWidgetNoMatchesOutline = registerColor('listFilterWidget.noMatchesOutline', { dark: '#BE1100', light: '#BE1100', hc: contrastBorder }, nls.localize('listFilterWidgetNoMatchesOutline', 'Outline color of the type filter widget in lists and trees, when there are no matches.'));
 export const treeIndentGuidesStroke = registerColor('tree.indentGuidesStroke', { dark: '#585858', light: '#a9a9a9', hc: '#a9a9a9' }, nls.localize('treeIndentGuidesStroke', "Tree stroke color for the indentation guides."));
 export const tableColumnsBorder = registerColor('tree.tableColumnsBorder', { dark: '#CCCCCC20', light: '#61616120', hc: null }, nls.localize('treeIndentGuidesStroke', "Tree stroke color for the indentation guides."));
+/**
+ * Quick pick widget (dependent on List and tree colors)
+ */
+export const _deprecatedQuickInputListFocusBackground = registerColor('quickInput.list.focusBackground', { dark: null, light: null, hc: null }, '', undefined, nls.localize('quickInput.list.focusBackground deprecation', "Please use quickInputList.focusBackground instead"));
+export const quickInputListFocusForeground = registerColor('quickInputList.focusForeground', { dark: listActiveSelectionForeground, light: listActiveSelectionForeground, hc: listActiveSelectionForeground }, nls.localize('quickInput.listFocusForeground', "Quick picker foreground color for the focused item."));
+export const quickInputListFocusBackground = registerColor('quickInputList.focusBackground', { dark: oneOf(_deprecatedQuickInputListFocusBackground, listActiveSelectionBackground, '#062F4A'), light: oneOf(_deprecatedQuickInputListFocusBackground, listActiveSelectionBackground, '#D6EBFF'), hc: null }, nls.localize('quickInput.listFocusBackground', "Quick picker background color for the focused item."));
 /**
  * Menu colors
  */
@@ -238,59 +252,53 @@ export const problemsErrorIconForeground = registerColor('problemsErrorIcon.fore
 export const problemsWarningIconForeground = registerColor('problemsWarningIcon.foreground', { dark: editorWarningForeground, light: editorWarningForeground, hc: editorWarningForeground }, nls.localize('problemsWarningIconForeground', "The color used for the problems warning icon."));
 export const problemsInfoIconForeground = registerColor('problemsInfoIcon.foreground', { dark: editorInfoForeground, light: editorInfoForeground, hc: editorInfoForeground }, nls.localize('problemsInfoIconForeground', "The color used for the problems info icon."));
 // ----- color functions
+export function executeTransform(transform, theme) {
+    var _a, _b, _c;
+    switch (transform.op) {
+        case 0 /* Darken */:
+            return (_a = resolveColorValue(transform.value, theme)) === null || _a === void 0 ? void 0 : _a.darken(transform.factor);
+        case 1 /* Lighten */:
+            return (_b = resolveColorValue(transform.value, theme)) === null || _b === void 0 ? void 0 : _b.lighten(transform.factor);
+        case 2 /* Transparent */:
+            return (_c = resolveColorValue(transform.value, theme)) === null || _c === void 0 ? void 0 : _c.transparent(transform.factor);
+        case 3 /* OneOf */:
+            for (const candidate of transform.values) {
+                const color = resolveColorValue(candidate, theme);
+                if (color) {
+                    return color;
+                }
+            }
+            return undefined;
+        case 4 /* LessProminent */:
+            const from = resolveColorValue(transform.value, theme);
+            if (!from) {
+                return undefined;
+            }
+            const backgroundColor = resolveColorValue(transform.background, theme);
+            if (!backgroundColor) {
+                return from.transparent(transform.factor * transform.transparency);
+            }
+            return from.isDarkerThan(backgroundColor)
+                ? Color.getLighterColor(from, backgroundColor, transform.factor).transparent(transform.transparency)
+                : Color.getDarkerColor(from, backgroundColor, transform.factor).transparent(transform.transparency);
+        default:
+            throw assertNever(transform);
+    }
+}
 export function darken(colorValue, factor) {
-    return (theme) => {
-        let color = resolveColorValue(colorValue, theme);
-        if (color) {
-            return color.darken(factor);
-        }
-        return undefined;
-    };
+    return { op: 0 /* Darken */, value: colorValue, factor };
 }
 export function lighten(colorValue, factor) {
-    return (theme) => {
-        let color = resolveColorValue(colorValue, theme);
-        if (color) {
-            return color.lighten(factor);
-        }
-        return undefined;
-    };
+    return { op: 1 /* Lighten */, value: colorValue, factor };
 }
 export function transparent(colorValue, factor) {
-    return (theme) => {
-        let color = resolveColorValue(colorValue, theme);
-        if (color) {
-            return color.transparent(factor);
-        }
-        return undefined;
-    };
+    return { op: 2 /* Transparent */, value: colorValue, factor };
 }
 export function oneOf(...colorValues) {
-    return (theme) => {
-        for (let colorValue of colorValues) {
-            let color = resolveColorValue(colorValue, theme);
-            if (color) {
-                return color;
-            }
-        }
-        return undefined;
-    };
+    return { op: 3 /* OneOf */, values: colorValues };
 }
 function lessProminent(colorValue, backgroundColorValue, factor, transparency) {
-    return (theme) => {
-        let from = resolveColorValue(colorValue, theme);
-        if (from) {
-            let backgroundColor = resolveColorValue(backgroundColorValue, theme);
-            if (backgroundColor) {
-                if (from.isDarkerThan(backgroundColor)) {
-                    return Color.getLighterColor(from, backgroundColor, factor).transparent(transparency);
-                }
-                return Color.getDarkerColor(from, backgroundColor, factor).transparent(transparency);
-            }
-            return from.transparent(factor * transparency);
-        }
-        return undefined;
-    };
+    return { op: 4 /* LessProminent */, value: colorValue, background: backgroundColorValue, factor, transparency };
 }
 // ----- implementation
 /**
@@ -309,8 +317,8 @@ export function resolveColorValue(colorValue, theme) {
     else if (colorValue instanceof Color) {
         return colorValue;
     }
-    else if (typeof colorValue === 'function') {
-        return colorValue(theme);
+    else if (typeof colorValue === 'object') {
+        return executeTransform(colorValue, theme);
     }
     return undefined;
 }

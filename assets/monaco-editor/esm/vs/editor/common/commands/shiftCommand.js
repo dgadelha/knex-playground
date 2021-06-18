@@ -9,6 +9,9 @@ import { Selection } from '../core/selection.js';
 import { LanguageConfigurationRegistry } from '../modes/languageConfigurationRegistry.js';
 const repeatCache = Object.create(null);
 export function cachedStringRepeat(str, count) {
+    if (count <= 0) {
+        return '';
+    }
     if (!repeatCache[str]) {
         repeatCache[str] = ['', str];
     }

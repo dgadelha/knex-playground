@@ -58,7 +58,7 @@ let FormatOnType = class FormatOnType {
         // clean up
         this._callOnModel.clear();
         // we are disabled
-        if (!this._editor.getOption(43 /* formatOnType */)) {
+        if (!this._editor.getOption(45 /* formatOnType */)) {
             return;
         }
         // no model
@@ -152,7 +152,7 @@ let FormatOnPaste = class FormatOnPaste {
         // clean up
         this._callOnModel.clear();
         // we are disabled
-        if (!this.editor.getOption(42 /* formatOnPaste */)) {
+        if (!this.editor.getOption(44 /* formatOnPaste */)) {
             return;
         }
         // no model

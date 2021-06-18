@@ -22,45 +22,42 @@ import { IMarkerDecorationsService } from '../../common/services/markersDecorati
 import { onUnexpectedError } from '../../../base/common/errors.js';
 import { IOpenerService } from '../../../platform/opener/common/opener.js';
 import { MarkerController, NextMarkerAction } from '../gotoError/gotoError.js';
-import { IKeybindingService } from '../../../platform/keybinding/common/keybinding.js';
 import { createCancelablePromise, disposableTimeout } from '../../../base/common/async.js';
 import { getCodeActions } from '../codeAction/codeAction.js';
 import { QuickFixAction, QuickFixController } from '../codeAction/codeActionCommands.js';
 import { CodeActionKind } from '../codeAction/types.js';
 import { Progress } from '../../../platform/progress/common/progress.js';
-import { renderHoverAction } from '../../../base/browser/ui/hover/hoverWidget.js';
 const $ = dom.$;
 export class MarkerHover {
-    constructor(range, marker) {
+    constructor(owner, range, marker) {
+        this.owner = owner;
         this.range = range;
         this.marker = marker;
     }
-    equals(other) {
-        if (other instanceof MarkerHover) {
-            return IMarkerData.makeKey(this.marker) === IMarkerData.makeKey(other.marker);
-        }
-        return false;
+    isValidForHoverAnchor(anchor) {
+        return (anchor.type === 1 /* Range */
+            && this.range.startColumn <= anchor.range.startColumn
+            && this.range.endColumn >= anchor.range.endColumn);
     }
 }
 const markerCodeActionTrigger = {
-    type: 2 /* Manual */,
+    type: 1 /* Invoke */,
     filter: { include: CodeActionKind.QuickFix }
 };
 let MarkerHoverParticipant = class MarkerHoverParticipant {
-    constructor(_editor, _hover, _markerDecorationsService, _keybindingService, _openerService) {
+    constructor(_editor, _hover, _markerDecorationsService, _openerService) {
         this._editor = _editor;
         this._hover = _hover;
         this._markerDecorationsService = _markerDecorationsService;
-        this._keybindingService = _keybindingService;
         this._openerService = _openerService;
         this.recentMarkerCodeActionsInfo = undefined;
     }
-    computeSync(hoverRange, lineDecorations) {
-        if (!this._editor.hasModel()) {
+    computeSync(anchor, lineDecorations) {
+        if (!this._editor.hasModel() || anchor.type !== 1 /* Range */) {
             return [];
         }
         const model = this._editor.getModel();
-        const lineNumber = hoverRange.startLineNumber;
+        const lineNumber = anchor.range.startLineNumber;
         const maxColumn = model.getLineMaxColumn(lineNumber);
         const result = [];
         for (const d of lineDecorations) {
@@ -70,19 +67,19 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
             if (!marker) {
                 continue;
             }
-            const range = new Range(hoverRange.startLineNumber, startColumn, hoverRange.startLineNumber, endColumn);
-            result.push(new MarkerHover(range, marker));
+            const range = new Range(anchor.range.startLineNumber, startColumn, anchor.range.startLineNumber, endColumn);
+            result.push(new MarkerHover(this, range, marker));
         }
         return result;
     }
-    renderHoverParts(hoverParts, fragment) {
+    renderHoverParts(hoverParts, fragment, statusBar) {
         if (!hoverParts.length) {
             return Disposable.None;
         }
         const disposables = new DisposableStore();
         hoverParts.forEach(msg => fragment.appendChild(this.renderMarkerHover(msg, disposables)));
         const markerHoverForStatusbar = hoverParts.length === 1 ? hoverParts[0] : hoverParts.sort((a, b) => MarkerSeverity.compare(a.marker.severity, b.marker.severity))[0];
-        fragment.appendChild(this.renderMarkerStatusbar(markerHoverForStatusbar, disposables));
+        this.renderMarkerStatusbar(markerHoverForStatusbar, statusBar, disposables);
         return disposables;
     }
     renderMarkerHover(markerHover, disposables) {
@@ -104,7 +101,7 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                 const codeLink = dom.append(sourceAndCodeElement, $('a.code-link'));
                 codeLink.setAttribute('href', code.target.toString());
                 disposables.add(dom.addDisposableListener(codeLink, 'click', (e) => {
-                    this._openerService.open(code.target);
+                    this._openerService.open(code.target, { allowCommands: true });
                     e.preventDefault();
                     e.stopPropagation();
                 }));
@@ -145,11 +142,9 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
         }
         return hoverElement;
     }
-    renderMarkerStatusbar(markerHover, disposables) {
-        const hoverElement = $('div.hover-row.status-bar');
-        const actionsElement = dom.append(hoverElement, $('div.actions'));
+    renderMarkerStatusbar(markerHover, statusBar, disposables) {
         if (markerHover.marker.severity === MarkerSeverity.Error || markerHover.marker.severity === MarkerSeverity.Warning || markerHover.marker.severity === MarkerSeverity.Info) {
-            disposables.add(this.renderAction(actionsElement, {
+            statusBar.addAction({
                 label: nls.localize('view problem', "View Problem"),
                 commandId: NextMarkerAction.ID,
                 run: () => {
@@ -157,10 +152,10 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                     MarkerController.get(this._editor).showAtMarker(markerHover.marker);
                     this._editor.focus();
                 }
-            }));
+            });
         }
-        if (!this._editor.getOption(75 /* readOnly */)) {
-            const quickfixPlaceholderElement = dom.append(actionsElement, $('div'));
+        if (!this._editor.getOption(78 /* readOnly */)) {
+            const quickfixPlaceholderElement = statusBar.append($('div'));
             if (this.recentMarkerCodeActionsInfo) {
                 if (IMarkerData.makeKey(this.recentMarkerCodeActionsInfo.marker) === IMarkerData.makeKey(markerHover.marker)) {
                     if (!this.recentMarkerCodeActionsInfo.hasCodeActions) {
@@ -193,7 +188,7 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                         actions.dispose();
                     }
                 }));
-                disposables.add(this.renderAction(actionsElement, {
+                statusBar.addAction({
                     label: nls.localize('quick fixes', "Quick Fix..."),
                     commandId: QuickFixAction.Id,
                     run: (target) => {
@@ -208,15 +203,9 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
                             y: elementPosition.top + elementPosition.height + 6
                         });
                     }
-                }));
+                });
             });
         }
-        return hoverElement;
-    }
-    renderAction(parent, actionOptions) {
-        const keybinding = this._keybindingService.lookupKeybinding(actionOptions.commandId);
-        const keybindingLabel = keybinding ? keybinding.getLabel() : null;
-        return renderHoverAction(parent, actionOptions, keybindingLabel);
     }
     getCodeActions(marker) {
         return createCancelablePromise(cancellationToken => {
@@ -226,7 +215,6 @@ let MarkerHoverParticipant = class MarkerHoverParticipant {
 };
 MarkerHoverParticipant = __decorate([
     __param(2, IMarkerDecorationsService),
-    __param(3, IKeybindingService),
-    __param(4, IOpenerService)
+    __param(3, IOpenerService)
 ], MarkerHoverParticipant);
 export { MarkerHoverParticipant };

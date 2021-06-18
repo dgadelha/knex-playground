@@ -27,7 +27,7 @@ export class MoveWordCommand extends EditorCommand {
         if (!editor.hasModel()) {
             return;
         }
-        const wordSeparators = getMapForWordSeparators(editor.getOption(110 /* wordSeparators */));
+        const wordSeparators = getMapForWordSeparators(editor.getOption(114 /* wordSeparators */));
         const model = editor.getModel();
         const selections = editor.getSelections();
         const result = selections.map((sel) => {
@@ -274,21 +274,24 @@ export class DeleteWordCommand extends EditorCommand {
         if (!editor.hasModel()) {
             return;
         }
-        const wordSeparators = getMapForWordSeparators(editor.getOption(110 /* wordSeparators */));
+        const wordSeparators = getMapForWordSeparators(editor.getOption(114 /* wordSeparators */));
         const model = editor.getModel();
         const selections = editor.getSelections();
         const autoClosingBrackets = editor.getOption(5 /* autoClosingBrackets */);
-        const autoClosingQuotes = editor.getOption(7 /* autoClosingQuotes */);
+        const autoClosingQuotes = editor.getOption(8 /* autoClosingQuotes */);
         const autoClosingPairs = LanguageConfigurationRegistry.getAutoClosingPairs(model.getLanguageIdentifier().id);
+        const viewModel = editor._getViewModel();
         const commands = selections.map((sel) => {
             const deleteRange = this._delete({
                 wordSeparators,
                 model,
                 selection: sel,
                 whitespaceHeuristics: this._whitespaceHeuristics,
+                autoClosingDelete: editor.getOption(6 /* autoClosingDelete */),
                 autoClosingBrackets,
                 autoClosingQuotes,
                 autoClosingPairs,
+                autoClosedCharacters: viewModel.getCursorAutoClosedCharacters()
             }, this._wordNavigationType);
             return new ReplaceCommand(deleteRange, '');
         });
@@ -402,7 +405,7 @@ export class DeleteInsideWord extends EditorAction {
         if (!editor.hasModel()) {
             return;
         }
-        const wordSeparators = getMapForWordSeparators(editor.getOption(110 /* wordSeparators */));
+        const wordSeparators = getMapForWordSeparators(editor.getOption(114 /* wordSeparators */));
         const model = editor.getModel();
         const selections = editor.getSelections();
         const commands = selections.map((sel) => {

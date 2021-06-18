@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as nls from './../../../fillers/vscode-nls.js';
+import * as nls from '../../../fillers/vscode-nls.js';
 import { TokenType, ScannerState } from '../htmlLanguageTypes.js';
 var localize = nls.loadMessageBundle();
 var MultiLineStream = /** @class */ (function () {
@@ -131,7 +131,9 @@ var _LFD = '\f'.charCodeAt(0);
 var _WSP = ' '.charCodeAt(0);
 var _TAB = '\t'.charCodeAt(0);
 var htmlScriptContents = {
-    'text/x-handlebars-template': true
+    'text/x-handlebars-template': true,
+    // Fix for https://github.com/microsoft/vscode/issues/77977
+    'text/html': true,
 };
 export function createScanner(input, initialOffset, initialState, emitPseudoCloseTags) {
     if (initialOffset === void 0) { initialOffset = 0; }

@@ -263,7 +263,7 @@ define('vs/basic-languages/ruby/ruby',["require", "exports"], function (require,
                 [/[A-Z][\w]*[!?=]?/, 'constructor.identifier'],
                 [/\$[\w]*/, 'global.constant'],
                 [/@[\w]*/, 'namespace.instance.identifier'],
-                [/@@[\w]*/, 'namespace.class.identifier'],
+                [/@@@[\w]*/, 'namespace.class.identifier'],
                 // here document
                 [/<<[-~](@heredelim).*/, { token: 'string.heredoc.delimiter', next: '@heredoc.$1' }],
                 [
@@ -410,7 +410,7 @@ define('vs/basic-languages/ruby/ruby',["require", "exports"], function (require,
             interpolated: [
                 [/\$\w*/, 'global.constant', '@pop'],
                 [/@\w*/, 'namespace.class.identifier', '@pop'],
-                [/@@\w*/, 'namespace.instance.identifier', '@pop'],
+                [/@@@\w*/, 'namespace.instance.identifier', '@pop'],
                 [
                     /[{]/,
                     {

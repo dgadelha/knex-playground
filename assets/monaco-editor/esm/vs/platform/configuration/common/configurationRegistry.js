@@ -41,7 +41,7 @@ class ConfigurationRegistry {
     registerConfigurations(configurations, validate = true) {
         const properties = [];
         configurations.forEach(configuration => {
-            properties.push(...this.validateAndRegisterProperties(configuration, validate)); // fills in defaults
+            properties.push(...this.validateAndRegisterProperties(configuration, validate, configuration.extensionInfo)); // fills in defaults
             this.configurationContributors.push(configuration);
             this.registerJSONConfiguration(configuration);
         });
@@ -55,7 +55,8 @@ class ConfigurationRegistry {
         }
         this.updateOverridePropertyPatternKey();
     }
-    validateAndRegisterProperties(configuration, validate = true, scope = 3 /* WINDOW */) {
+    validateAndRegisterProperties(configuration, validate = true, extensionInfo, scope = 3 /* WINDOW */) {
+        var _a;
         scope = types.isUndefinedOrNull(configuration.scope) ? scope : configuration.scope;
         let propertyKeys = [];
         let properties = configuration.properties;
@@ -74,6 +75,7 @@ class ConfigurationRegistry {
                 }
                 else {
                     property.scope = types.isUndefinedOrNull(property.scope) ? scope : property.scope;
+                    property.restricted = types.isUndefinedOrNull(property.restricted) ? !!((_a = extensionInfo === null || extensionInfo === void 0 ? void 0 : extensionInfo.restrictedConfigurations) === null || _a === void 0 ? void 0 : _a.includes(key)) : property.restricted;
                 }
                 // Add to properties maps
                 // Property is included by default if 'included' is unspecified
@@ -95,7 +97,7 @@ class ConfigurationRegistry {
         let subNodes = configuration.allOf;
         if (subNodes) {
             for (let node of subNodes) {
-                propertyKeys.push(...this.validateAndRegisterProperties(node, validate, scope));
+                propertyKeys.push(...this.validateAndRegisterProperties(node, validate, extensionInfo, scope));
             }
         }
         return propertyKeys;

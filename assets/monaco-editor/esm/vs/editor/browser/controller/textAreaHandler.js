@@ -42,15 +42,15 @@ export class TextAreaHandler extends ViewPart {
         this._scrollLeft = 0;
         this._scrollTop = 0;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         this._setAccessibilityOptions(options);
         this._contentLeft = layoutInfo.contentLeft;
         this._contentWidth = layoutInfo.contentWidth;
         this._contentHeight = layoutInfo.height;
-        this._fontInfo = options.get(38 /* fontInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
-        this._emptySelectionClipboard = options.get(28 /* emptySelectionClipboard */);
-        this._copyWithSyntaxHighlighting = options.get(18 /* copyWithSyntaxHighlighting */);
+        this._fontInfo = options.get(40 /* fontInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
+        this._emptySelectionClipboard = options.get(30 /* emptySelectionClipboard */);
+        this._copyWithSyntaxHighlighting = options.get(19 /* copyWithSyntaxHighlighting */);
         this._visibleTextArea = null;
         this._selections = [new Selection(1, 1, 1, 1)];
         this._modelSelections = [new Selection(1, 1, 1, 1)];
@@ -65,13 +65,13 @@ export class TextAreaHandler extends ViewPart {
         this.textArea.setAttribute('autocomplete', 'off');
         this.textArea.setAttribute('spellcheck', 'false');
         this.textArea.setAttribute('aria-label', this._getAriaLabel(options));
-        this.textArea.setAttribute('tabindex', String(options.get(107 /* tabIndex */)));
+        this.textArea.setAttribute('tabindex', String(options.get(110 /* tabIndex */)));
         this.textArea.setAttribute('role', 'textbox');
         this.textArea.setAttribute('aria-roledescription', nls.localize('editor', "editor"));
         this.textArea.setAttribute('aria-multiline', 'true');
         this.textArea.setAttribute('aria-haspopup', 'false');
         this.textArea.setAttribute('aria-autocomplete', 'both');
-        if (platform.isWeb && options.get(75 /* readOnly */)) {
+        if (options.get(28 /* domReadOnly */) && options.get(78 /* readOnly */)) {
             this.textArea.setAttribute('readonly', 'true');
         }
         this.textAreaCover = createFastDomNode(document.createElement('div'));
@@ -275,7 +275,7 @@ export class TextAreaHandler extends ViewPart {
     }
     _getWordBeforePosition(position) {
         const lineContent = this._context.model.getLineContent(position.lineNumber);
-        const wordSeparators = getMapForWordSeparators(this._context.configuration.options.get(110 /* wordSeparators */));
+        const wordSeparators = getMapForWordSeparators(this._context.configuration.options.get(114 /* wordSeparators */));
         let column = position.column;
         let distance = 0;
         while (column > 1) {
@@ -310,9 +310,8 @@ export class TextAreaHandler extends ViewPart {
         this._accessibilitySupport = options.get(2 /* accessibilitySupport */);
         const accessibilityPageSize = options.get(3 /* accessibilityPageSize */);
         if (this._accessibilitySupport === 2 /* Enabled */ && accessibilityPageSize === EditorOptions.accessibilityPageSize.defaultValue) {
-            // If a screen reader is attached and the default value is not set we shuold automatically increase the page size to 100 for a better experience
-            // If we put more than 100 lines the nvda can not handle this https://github.com/microsoft/vscode/issues/89717
-            this._accessibilityPageSize = 100;
+            // If a screen reader is attached and the default value is not set we shuold automatically increase the page size to 500 for a better experience
+            this._accessibilityPageSize = 500;
         }
         else {
             this._accessibilityPageSize = accessibilityPageSize;
@@ -321,19 +320,19 @@ export class TextAreaHandler extends ViewPart {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         this._setAccessibilityOptions(options);
         this._contentLeft = layoutInfo.contentLeft;
         this._contentWidth = layoutInfo.contentWidth;
         this._contentHeight = layoutInfo.height;
-        this._fontInfo = options.get(38 /* fontInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
-        this._emptySelectionClipboard = options.get(28 /* emptySelectionClipboard */);
-        this._copyWithSyntaxHighlighting = options.get(18 /* copyWithSyntaxHighlighting */);
+        this._fontInfo = options.get(40 /* fontInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
+        this._emptySelectionClipboard = options.get(30 /* emptySelectionClipboard */);
+        this._copyWithSyntaxHighlighting = options.get(19 /* copyWithSyntaxHighlighting */);
         this.textArea.setAttribute('aria-label', this._getAriaLabel(options));
-        this.textArea.setAttribute('tabindex', String(options.get(107 /* tabIndex */)));
-        if (platform.isWeb && e.hasChanged(75 /* readOnly */)) {
-            if (options.get(75 /* readOnly */)) {
+        this.textArea.setAttribute('tabindex', String(options.get(110 /* tabIndex */)));
+        if (e.hasChanged(28 /* domReadOnly */) || e.hasChanged(78 /* readOnly */)) {
+            if (options.get(28 /* domReadOnly */) && options.get(78 /* readOnly */)) {
                 this.textArea.setAttribute('readonly', 'true');
             }
             else {
@@ -478,11 +477,11 @@ export class TextAreaHandler extends ViewPart {
         tac.setWidth(1);
         tac.setHeight(1);
         const options = this._context.configuration.options;
-        if (options.get(44 /* glyphMargin */)) {
+        if (options.get(46 /* glyphMargin */)) {
             tac.setClassName('monaco-editor-background textAreaCover ' + Margin.OUTER_CLASS_NAME);
         }
         else {
-            if (options.get(54 /* lineNumbers */).renderType !== 0 /* Off */) {
+            if (options.get(57 /* lineNumbers */).renderType !== 0 /* Off */) {
                 tac.setClassName('monaco-editor-background textAreaCover ' + LineNumbersOverlay.CLASS_NAME);
             }
             else {

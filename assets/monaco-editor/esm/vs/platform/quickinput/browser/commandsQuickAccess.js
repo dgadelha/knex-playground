@@ -33,20 +33,21 @@ import { IKeybindingService } from '../../keybinding/common/keybinding.js';
 import { ICommandService } from '../../commands/common/commands.js';
 import { ITelemetryService } from '../../telemetry/common/telemetry.js';
 import { isPromiseCanceledError } from '../../../base/common/errors.js';
-import { INotificationService } from '../../notification/common/notification.js';
+import { IDialogService } from '../../dialogs/common/dialogs.js';
+import Severity from '../../../base/common/severity.js';
 import { toErrorMessage } from '../../../base/common/errorMessage.js';
 let AbstractCommandsQuickAccessProvider = class AbstractCommandsQuickAccessProvider extends PickerQuickAccessProvider {
-    constructor(options, instantiationService, keybindingService, commandService, telemetryService, notificationService) {
+    constructor(options, instantiationService, keybindingService, commandService, telemetryService, dialogService) {
         super(AbstractCommandsQuickAccessProvider.PREFIX, options);
-        this.options = options;
         this.instantiationService = instantiationService;
         this.keybindingService = keybindingService;
         this.commandService = commandService;
         this.telemetryService = telemetryService;
-        this.notificationService = notificationService;
+        this.dialogService = dialogService;
         this.commandsHistory = this._register(this.instantiationService.createInstance(CommandsHistory));
+        this.options = options;
     }
-    getPicks(filter, disposables, token) {
+    _getPicks(filter, disposables, token) {
         return __awaiter(this, void 0, void 0, function* () {
             // Ask subclass for all command picks
             const allCommandPicks = yield this.getCommandPicks(disposables, token);
@@ -132,7 +133,7 @@ let AbstractCommandsQuickAccessProvider = class AbstractCommandsQuickAccessProvi
                         }
                         catch (error) {
                             if (!isPromiseCanceledError(error)) {
-                                this.notificationService.error(localize('canNotRun', "Command '{0}' resulted in an error ({1})", commandPick.label, toErrorMessage(error)));
+                                this.dialogService.show(Severity.Error, localize('canNotRun', "Command '{0}' resulted in an error ({1})", commandPick.label, toErrorMessage(error)), [localize('ok', 'OK')]);
                             }
                         }
                     }) }));
@@ -148,7 +149,7 @@ AbstractCommandsQuickAccessProvider = __decorate([
     __param(2, IKeybindingService),
     __param(3, ICommandService),
     __param(4, ITelemetryService),
-    __param(5, INotificationService)
+    __param(5, IDialogService)
 ], AbstractCommandsQuickAccessProvider);
 export { AbstractCommandsQuickAccessProvider };
 let CommandsHistory = class CommandsHistory extends Disposable {

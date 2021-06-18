@@ -35,6 +35,7 @@ import { IClipboardService } from '../../../platform/clipboard/common/clipboardS
 import { IEditorProgressService } from '../../../platform/progress/common/progress.js';
 import { IModelService } from '../../common/services/modelService.js';
 import { IModeService } from '../../common/services/modeService.js';
+import { StandaloneCodeEditorServiceImpl } from './standaloneCodeServiceImpl.js';
 let LAST_GENERATED_COMMAND_ID = 0;
 let ariaDomNodeCreated = false;
 function createAriaDomNode() {
@@ -126,6 +127,21 @@ let StandaloneCodeEditor = class StandaloneCodeEditor extends CodeEditorWidget {
             delete this._actions[id];
         }));
         return toDispose;
+    }
+    _triggerCommand(handlerId, payload) {
+        if (this._codeEditorService instanceof StandaloneCodeEditorServiceImpl) {
+            // Help commands find this editor as the active editor
+            try {
+                this._codeEditorService.setActiveCodeEditor(this);
+                super._triggerCommand(handlerId, payload);
+            }
+            finally {
+                this._codeEditorService.setActiveCodeEditor(null);
+            }
+        }
+        else {
+            super._triggerCommand(handlerId, payload);
+        }
     }
 };
 StandaloneCodeEditor = __decorate([

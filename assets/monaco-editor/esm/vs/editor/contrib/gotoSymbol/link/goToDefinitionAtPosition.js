@@ -243,6 +243,7 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
         const newDecorations = {
             range: range,
             options: {
+                description: 'goto-definition-link',
                 inlineClassName: 'goto-definition-link',
                 hoverMessage
             }
@@ -271,7 +272,7 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
     gotoDefinition(position, openToSide) {
         this.editor.setPosition(position);
         return this.editor.invokeWithinContext((accessor) => {
-            const canPeek = !openToSide && this.editor.getOption(72 /* definitionLinkOpensInPeek */) && !this.isInPeekEditor(accessor);
+            const canPeek = !openToSide && this.editor.getOption(75 /* definitionLinkOpensInPeek */) && !this.isInPeekEditor(accessor);
             const action = new DefinitionAction({ openToSide, openInPeek: canPeek, muteMessage: true }, { alias: '', label: '', id: '', precondition: undefined });
             return action.run(accessor, this.editor);
         });

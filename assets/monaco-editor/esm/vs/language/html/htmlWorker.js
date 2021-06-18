@@ -55,16 +55,16 @@ var HTMLWorker = /** @class */ (function () {
         this._ctx = ctx;
         this._languageSettings = createData.languageSettings;
         this._languageId = createData.languageId;
-        this._languageService = htmlService.getLanguageService();
+        var data = this._languageSettings.data;
+        var useDefaultDataProvider = data === null || data === void 0 ? void 0 : data.useDefaultDataProvider;
+        var customDataProviders = [];
+        if (data === null || data === void 0 ? void 0 : data.dataProviders) {
+            for (var id in data.dataProviders) {
+                customDataProviders.push(htmlService.newHTMLDataProvider(id, data.dataProviders[id]));
+            }
+        }
+        this._languageService = htmlService.getLanguageService({ useDefaultDataProvider: useDefaultDataProvider, customDataProviders: customDataProviders });
     }
-    HTMLWorker.prototype.doValidation = function (uri) {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                // not yet suported
-                return [2 /*return*/, Promise.resolve([])];
-            });
-        });
-    };
     HTMLWorker.prototype.doComplete = function (uri, position) {
         return __awaiter(this, void 0, void 0, function () {
             var document, htmlDocument;

@@ -45,20 +45,20 @@ let MarkdownRenderer = class MarkdownRenderer {
         this._onDidRenderAsync.dispose();
     }
     render(markdown, options, markedOptions) {
-        const disposeables = new DisposableStore();
+        const disposables = new DisposableStore();
         let element;
         if (!markdown) {
             element = document.createElement('span');
         }
         else {
-            element = renderMarkdown(markdown, Object.assign(Object.assign({}, this._getRenderOptions(disposeables)), options), markedOptions);
+            element = renderMarkdown(markdown, Object.assign(Object.assign({}, this._getRenderOptions(markdown, disposables)), options), markedOptions);
         }
         return {
             element,
-            dispose: () => disposeables.dispose()
+            dispose: () => disposables.dispose()
         };
     }
-    _getRenderOptions(disposeables) {
+    _getRenderOptions(markdown, disposeables) {
         return {
             baseUrl: this._options.baseUrl,
             codeBlockRenderer: (languageAlias, value) => __awaiter(this, void 0, void 0, function* () {
@@ -83,7 +83,7 @@ let MarkdownRenderer = class MarkdownRenderer {
                 // use "good" font
                 let fontFamily = this._options.codeBlockFontFamily;
                 if (this._options.editor) {
-                    fontFamily = this._options.editor.getOption(38 /* fontInfo */).fontFamily;
+                    fontFamily = this._options.editor.getOption(40 /* fontInfo */).fontFamily;
                 }
                 if (fontFamily) {
                     element.style.fontFamily = fontFamily;
@@ -92,7 +92,7 @@ let MarkdownRenderer = class MarkdownRenderer {
             }),
             asyncRenderCallback: () => this._onDidRenderAsync.fire(),
             actionHandler: {
-                callback: (content) => this._openerService.open(content, { fromUserGesture: true, allowContributedOpeners: true }).catch(onUnexpectedError),
+                callback: (content) => this._openerService.open(content, { fromUserGesture: true, allowContributedOpeners: true, allowCommands: markdown.isTrusted }).catch(onUnexpectedError),
                 disposeables
             }
         };

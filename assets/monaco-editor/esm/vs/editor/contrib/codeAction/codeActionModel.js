@@ -2,20 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, privateMap) {
-    if (!privateMap.has(receiver)) {
-        throw new TypeError("attempted to get private field on non-instance");
-    }
-    return privateMap.get(receiver);
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, privateMap, value) {
-    if (!privateMap.has(receiver)) {
-        throw new TypeError("attempted to set private field on non-instance");
-    }
-    privateMap.set(receiver, value);
-    return value;
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _isDisposed;
+var _CodeActionModel_isDisposed;
 import { createCancelablePromise, TimeoutTimer } from '../../../base/common/async.js';
 import { isPromiseCanceledError } from '../../../base/common/errors.js';
 import { Emitter } from '../../../base/common/event.js';
@@ -49,13 +47,13 @@ class CodeActionOracle extends Disposable {
         }
         if (resources.some(resource => isEqual(resource, model.uri))) {
             this._autoTriggerTimer.cancelAndSet(() => {
-                this.trigger({ type: 1 /* Auto */ });
+                this.trigger({ type: 2 /* Auto */ });
             }, this._delay);
         }
     }
     _onCursorChange() {
         this._autoTriggerTimer.cancelAndSet(() => {
-            this.trigger({ type: 1 /* Auto */ });
+            this.trigger({ type: 2 /* Auto */ });
         }, this._delay);
     }
     _getRangeOfMarker(selection) {
@@ -77,7 +75,7 @@ class CodeActionOracle extends Disposable {
         }
         const model = this._editor.getModel();
         const selection = this._editor.getSelection();
-        if (selection.isEmpty() && trigger.type === 1 /* Auto */) {
+        if (selection.isEmpty() && trigger.type === 2 /* Auto */) {
             const { lineNumber, column } = selection.getPosition();
             const line = model.getLineContent(lineNumber);
             if (line.length === 0) {
@@ -163,7 +161,7 @@ export class CodeActionModel extends Disposable {
         this._state = CodeActionsState.Empty;
         this._onDidChangeState = this._register(new Emitter());
         this.onDidChangeState = this._onDidChangeState.event;
-        _isDisposed.set(this, false);
+        _CodeActionModel_isDisposed.set(this, false);
         this._supportedCodeActions = SUPPORTED_CODE_ACTIONS.bindTo(contextKeyService);
         this._register(this._editor.onDidChangeModel(() => this._update()));
         this._register(this._editor.onDidChangeModelLanguage(() => this._update()));
@@ -171,15 +169,15 @@ export class CodeActionModel extends Disposable {
         this._update();
     }
     dispose() {
-        if (__classPrivateFieldGet(this, _isDisposed)) {
+        if (__classPrivateFieldGet(this, _CodeActionModel_isDisposed, "f")) {
             return;
         }
-        __classPrivateFieldSet(this, _isDisposed, true);
+        __classPrivateFieldSet(this, _CodeActionModel_isDisposed, true, "f");
         super.dispose();
         this.setState(CodeActionsState.Empty, true);
     }
     _update() {
-        if (__classPrivateFieldGet(this, _isDisposed)) {
+        if (__classPrivateFieldGet(this, _CodeActionModel_isDisposed, "f")) {
             return;
         }
         this._codeActionOracle.value = undefined;
@@ -187,7 +185,7 @@ export class CodeActionModel extends Disposable {
         const model = this._editor.getModel();
         if (model
             && CodeActionProviderRegistry.has(model)
-            && !this._editor.getOption(75 /* readOnly */)) {
+            && !this._editor.getOption(78 /* readOnly */)) {
             const supportedActions = [];
             for (const provider of CodeActionProviderRegistry.all(model)) {
                 if (Array.isArray(provider.providedCodeActionKinds)) {
@@ -202,12 +200,12 @@ export class CodeActionModel extends Disposable {
                     return;
                 }
                 const actions = createCancelablePromise(token => getCodeActions(model, trigger.selection, trigger.trigger, Progress.None, token));
-                if (trigger.trigger.type === 2 /* Manual */) {
+                if (trigger.trigger.type === 1 /* Invoke */) {
                     (_a = this._progressService) === null || _a === void 0 ? void 0 : _a.showWhile(actions, 250);
                 }
                 this.setState(new CodeActionsState.Triggered(trigger.trigger, trigger.selection, trigger.position, actions));
             }, undefined);
-            this._codeActionOracle.value.trigger({ type: 1 /* Auto */ });
+            this._codeActionOracle.value.trigger({ type: 2 /* Auto */ });
         }
         else {
             this._supportedCodeActions.reset();
@@ -227,9 +225,9 @@ export class CodeActionModel extends Disposable {
             this._state.cancel();
         }
         this._state = newState;
-        if (!skipNotify && !__classPrivateFieldGet(this, _isDisposed)) {
+        if (!skipNotify && !__classPrivateFieldGet(this, _CodeActionModel_isDisposed, "f")) {
             this._onDidChangeState.fire(newState);
         }
     }
 }
-_isDisposed = new WeakMap();
+_CodeActionModel_isDisposed = new WeakMap();

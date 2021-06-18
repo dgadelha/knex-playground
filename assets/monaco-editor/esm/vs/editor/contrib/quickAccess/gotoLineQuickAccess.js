@@ -61,7 +61,7 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         const codeEditor = getCodeEditor(editor);
         if (codeEditor) {
             const options = codeEditor.getOptions();
-            const lineNumbers = options.get(54 /* lineNumbers */);
+            const lineNumbers = options.get(57 /* lineNumbers */);
             if (lineNumbers.renderType === 2 /* Relative */) {
                 codeEditor.updateOptions({ lineNumbers: 'on' });
                 disposables.add(toDisposable(() => codeEditor.updateOptions({ lineNumbers: 'relative' })));
@@ -90,7 +90,7 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         // Location valid: indicate this as picker label
         if (this.isValidLineNumber(editor, lineNumber)) {
             if (this.isValidColumn(editor, lineNumber, column)) {
-                return localize('gotoLineColumnLabel', "Go to line {0} and column {1}.", lineNumber, column);
+                return localize('gotoLineColumnLabel', "Go to line {0} and character {1}.", lineNumber, column);
             }
             return localize('gotoLineLabel', "Go to line {0}.", lineNumber);
         }

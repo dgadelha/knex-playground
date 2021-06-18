@@ -33,10 +33,14 @@ export class MenuId {
 MenuId._idPool = 0;
 MenuId.CommandPalette = new MenuId('CommandPalette');
 MenuId.EditorContext = new MenuId('EditorContext');
+MenuId.SimpleEditorContext = new MenuId('SimpleEditorContext');
+MenuId.EditorContextCopy = new MenuId('EditorContextCopy');
 MenuId.EditorContextPeek = new MenuId('EditorContextPeek');
 MenuId.MenubarEditMenu = new MenuId('MenubarEditMenu');
+MenuId.MenubarCopy = new MenuId('MenubarCopy');
 MenuId.MenubarGoMenu = new MenuId('MenubarGoMenu');
 MenuId.MenubarSelectionMenu = new MenuId('MenubarSelectionMenu');
+MenuId.InlineCompletionsActions = new MenuId('InlineCompletionsActions');
 export const IMenuService = createDecorator('menuService');
 export const MenuRegistry = new class {
     constructor() {
@@ -164,7 +168,9 @@ let MenuItemAction = class MenuItemAction {
         var _a;
         this._commandService = _commandService;
         this.id = item.id;
-        this.label = typeof item.title === 'string' ? item.title : item.title.value;
+        this.label = (options === null || options === void 0 ? void 0 : options.renderShortTitle) && item.shortTitle
+            ? (typeof item.shortTitle === 'string' ? item.shortTitle : item.shortTitle.value)
+            : (typeof item.title === 'string' ? item.title : item.title.value);
         this.tooltip = (_a = item.tooltip) !== null && _a !== void 0 ? _a : '';
         this.enabled = !item.precondition || contextKeyService.contextMatchesRules(item.precondition);
         this.checked = false;
@@ -173,6 +179,9 @@ let MenuItemAction = class MenuItemAction {
             this.checked = contextKeyService.contextMatchesRules(toggled.condition);
             if (this.checked && toggled.tooltip) {
                 this.tooltip = typeof toggled.tooltip === 'string' ? toggled.tooltip : toggled.tooltip.value;
+            }
+            if (toggled.title) {
+                this.label = typeof toggled.title === 'string' ? toggled.title : toggled.title.value;
             }
         }
         this.item = item;

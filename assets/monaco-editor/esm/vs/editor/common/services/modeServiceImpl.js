@@ -8,14 +8,20 @@ import { FrankensteinMode } from '../modes/abstractMode.js';
 import { NULL_LANGUAGE_IDENTIFIER } from '../modes/nullMode.js';
 import { LanguagesRegistry } from './languagesRegistry.js';
 import { firstOrDefault } from '../../../base/common/arrays.js';
-class LanguageSelection extends Disposable {
+class LanguageSelection {
     constructor(onLanguagesMaybeChanged, selector) {
-        super();
-        this._onDidChange = this._register(new Emitter());
-        this.onDidChange = this._onDidChange.event;
         this._selector = selector;
         this.languageIdentifier = this._selector();
-        this._register(onLanguagesMaybeChanged(() => this._evaluate()));
+        let listener;
+        this._onDidChange = new Emitter({
+            onFirstListenerAdd: () => {
+                listener = onLanguagesMaybeChanged(() => this._evaluate());
+            },
+            onLastListenerRemove: () => {
+                listener.dispose();
+            }
+        });
+        this.onDidChange = this._onDidChange.event;
     }
     _evaluate() {
         let languageIdentifier = this._selector();
@@ -32,7 +38,7 @@ export class ModeServiceImpl extends Disposable {
         super();
         this._onDidCreateMode = this._register(new Emitter());
         this.onDidCreateMode = this._onDidCreateMode.event;
-        this._onLanguagesMaybeChanged = this._register(new Emitter());
+        this._onLanguagesMaybeChanged = this._register(new Emitter({ leakWarningThreshold: 200 /* https://github.com/microsoft/vscode/issues/119968 */ }));
         this.onLanguagesMaybeChanged = this._onLanguagesMaybeChanged.event;
         this._instantiatedModes = {};
         this._registry = this._register(new LanguagesRegistry(true, warnOnOverwrite));

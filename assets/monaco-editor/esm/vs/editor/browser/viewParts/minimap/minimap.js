@@ -31,19 +31,19 @@ const GUTTER_DECORATION_WIDTH = 2;
 class MinimapOptions {
     constructor(configuration, theme, tokensColorTracker) {
         const options = configuration.options;
-        const pixelRatio = options.get(122 /* pixelRatio */);
-        const layoutInfo = options.get(124 /* layoutInfo */);
+        const pixelRatio = options.get(126 /* pixelRatio */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
         const minimapLayout = layoutInfo.minimap;
-        const fontInfo = options.get(38 /* fontInfo */);
-        const minimapOpts = options.get(59 /* minimap */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        const minimapOpts = options.get(62 /* minimap */);
         this.renderMinimap = minimapLayout.renderMinimap;
         this.size = minimapOpts.size;
         this.minimapHeightIsEditorHeight = minimapLayout.minimapHeightIsEditorHeight;
-        this.scrollBeyondLastLine = options.get(89 /* scrollBeyondLastLine */);
+        this.scrollBeyondLastLine = options.get(92 /* scrollBeyondLastLine */);
         this.showSlider = minimapOpts.showSlider;
         this.pixelRatio = pixelRatio;
         this.typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
-        this.lineHeight = options.get(53 /* lineHeight */);
+        this.lineHeight = options.get(56 /* lineHeight */);
         this.minimapLeft = minimapLayout.minimapLeft;
         this.minimapWidth = minimapLayout.minimapWidth;
         this.minimapHeight = layoutInfo.height;
@@ -796,7 +796,7 @@ class InnerMinimap extends Disposable {
             }
             if (this._model.options.size !== 'proportional') {
                 if (e.leftButton && this._lastRenderData) {
-                    // pretend the click occured in the center of the slider
+                    // pretend the click occurred in the center of the slider
                     const position = dom.getDomNodePagePosition(this._slider.domNode);
                     const initialPosY = position.top + position.height / 2;
                     this._startSliderDragging(e.buttons, e.posx, initialPosY, e.posy, this._lastRenderData.renderedLayout);

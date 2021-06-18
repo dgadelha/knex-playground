@@ -24,7 +24,7 @@ import { localize } from '../../../nls.js';
 import { IKeybindingService } from '../../../platform/keybinding/common/keybinding.js';
 import { INotificationService } from '../../../platform/notification/common/notification.js';
 import { isEqual } from '../../../base/common/resources.js';
-export const ctxHasSymbols = new RawContextKey('hasSymbols', false);
+export const ctxHasSymbols = new RawContextKey('hasSymbols', false, localize('hasSymbols', "Whether there are symbol locations that can be navigated via keyboard-only."));
 export const ISymbolNavigationService = createDecorator('ISymbolNavigationService');
 let SymbolNavigationService = class SymbolNavigationService {
     constructor(contextKeyService, _editorService, _notificationService, _keybindingService) {

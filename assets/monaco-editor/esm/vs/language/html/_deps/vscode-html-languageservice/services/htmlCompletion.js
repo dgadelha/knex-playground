@@ -41,7 +41,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 import { createScanner } from '../parser/htmlScanner.js';
 import { ScannerState, TokenType, Position, CompletionItemKind, Range, TextEdit, InsertTextFormat, MarkupKind } from '../htmlLanguageTypes.js';
 import { entities } from '../parser/htmlEntities.js';
-import * as nls from './../../../fillers/vscode-nls.js';
+import * as nls from '../../../fillers/vscode-nls.js';
 import { isLetterOrDigit, endsWith, startsWith } from '../utils/strings.js';
 import { isVoidElement } from '../languageFacts/fact.js';
 import { isDefined } from '../utils/object.js';
@@ -213,15 +213,25 @@ var HTMLCompletion = /** @class */ (function () {
             collectCloseTagSuggestions(tagStart, true, tagEnd);
             return result;
         }
+        function getExistingAttributes() {
+            var existingAttributes = Object.create(null);
+            node.attributeNames.forEach(function (attribute) {
+                existingAttributes[attribute] = true;
+            });
+            return existingAttributes;
+        }
         function collectAttributeNameSuggestions(nameStart, nameEnd) {
             if (nameEnd === void 0) { nameEnd = offset; }
             var replaceEnd = offset;
             while (replaceEnd < nameEnd && text[replaceEnd] !== '<') { // < is a valid attribute name character, but we rather assume the attribute name ends. See #23236.
                 replaceEnd++;
             }
+            var currentAttribute = text.substring(nameStart, nameEnd);
             var range = getReplaceRange(nameStart, replaceEnd);
             var value = isFollowedBy(text, nameEnd, ScannerState.AfterAttributeName, TokenType.DelimiterAssign) ? '' : '="$1"';
-            var seenAttributes = Object.create(null);
+            var seenAttributes = getExistingAttributes();
+            // include current typing attribute
+            seenAttributes[currentAttribute] = false;
             dataProviders.forEach(function (provider) {
                 provider.provideAttributes(currentTag).forEach(function (attr) {
                     if (seenAttributes[attr.name]) {
@@ -497,7 +507,7 @@ var HTMLCompletion = /** @class */ (function () {
         }
         else if (char === '/') {
             var node = htmlDocument.findNodeBefore(offset);
-            while (node && node.closed) {
+            while (node && node.closed && !(node.endTagStart && (node.endTagStart > offset))) {
                 node = node.parent;
             }
             if (node && node.tag) {

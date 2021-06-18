@@ -381,7 +381,7 @@ export var language = {
             ],
             [/\$\w+/, 'key'],
             [/\$\(/, 'key', '@paste'],
-            [/@@ident/, 'annotation'],
+            [/@@@ident/, 'annotation'],
             // whitespace
             { include: '@whitespace' },
             // characters

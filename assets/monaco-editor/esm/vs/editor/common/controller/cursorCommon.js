@@ -16,25 +16,26 @@ export class CursorConfiguration {
     constructor(languageIdentifier, modelOptions, configuration) {
         this._languageIdentifier = languageIdentifier;
         const options = configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
-        this.readOnly = options.get(75 /* readOnly */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
+        this.readOnly = options.get(78 /* readOnly */);
         this.tabSize = modelOptions.tabSize;
         this.indentSize = modelOptions.indentSize;
         this.insertSpaces = modelOptions.insertSpaces;
-        this.stickyTabStops = options.get(99 /* stickyTabStops */);
-        this.lineHeight = options.get(53 /* lineHeight */);
+        this.stickyTabStops = options.get(102 /* stickyTabStops */);
+        this.lineHeight = options.get(56 /* lineHeight */);
         this.pageSize = Math.max(1, Math.floor(layoutInfo.height / this.lineHeight) - 2);
-        this.useTabStops = options.get(109 /* useTabStops */);
-        this.wordSeparators = options.get(110 /* wordSeparators */);
-        this.emptySelectionClipboard = options.get(28 /* emptySelectionClipboard */);
-        this.copyWithSyntaxHighlighting = options.get(18 /* copyWithSyntaxHighlighting */);
-        this.multiCursorMergeOverlapping = options.get(63 /* multiCursorMergeOverlapping */);
-        this.multiCursorPaste = options.get(65 /* multiCursorPaste */);
+        this.useTabStops = options.get(113 /* useTabStops */);
+        this.wordSeparators = options.get(114 /* wordSeparators */);
+        this.emptySelectionClipboard = options.get(30 /* emptySelectionClipboard */);
+        this.copyWithSyntaxHighlighting = options.get(19 /* copyWithSyntaxHighlighting */);
+        this.multiCursorMergeOverlapping = options.get(66 /* multiCursorMergeOverlapping */);
+        this.multiCursorPaste = options.get(68 /* multiCursorPaste */);
         this.autoClosingBrackets = options.get(5 /* autoClosingBrackets */);
-        this.autoClosingQuotes = options.get(7 /* autoClosingQuotes */);
-        this.autoClosingOvertype = options.get(6 /* autoClosingOvertype */);
-        this.autoSurround = options.get(10 /* autoSurround */);
-        this.autoIndent = options.get(8 /* autoIndent */);
+        this.autoClosingQuotes = options.get(8 /* autoClosingQuotes */);
+        this.autoClosingDelete = options.get(6 /* autoClosingDelete */);
+        this.autoClosingOvertype = options.get(7 /* autoClosingOvertype */);
+        this.autoSurround = options.get(11 /* autoSurround */);
+        this.autoIndent = options.get(9 /* autoIndent */);
         this.surroundingPairs = {};
         this._electricChars = null;
         this.shouldAutoCloseBefore = {
@@ -50,18 +51,19 @@ export class CursorConfiguration {
         }
     }
     static shouldRecreate(e) {
-        return (e.hasChanged(124 /* layoutInfo */)
-            || e.hasChanged(110 /* wordSeparators */)
-            || e.hasChanged(28 /* emptySelectionClipboard */)
-            || e.hasChanged(63 /* multiCursorMergeOverlapping */)
-            || e.hasChanged(65 /* multiCursorPaste */)
+        return (e.hasChanged(128 /* layoutInfo */)
+            || e.hasChanged(114 /* wordSeparators */)
+            || e.hasChanged(30 /* emptySelectionClipboard */)
+            || e.hasChanged(66 /* multiCursorMergeOverlapping */)
+            || e.hasChanged(68 /* multiCursorPaste */)
             || e.hasChanged(5 /* autoClosingBrackets */)
-            || e.hasChanged(7 /* autoClosingQuotes */)
-            || e.hasChanged(6 /* autoClosingOvertype */)
-            || e.hasChanged(10 /* autoSurround */)
-            || e.hasChanged(109 /* useTabStops */)
-            || e.hasChanged(53 /* lineHeight */)
-            || e.hasChanged(75 /* readOnly */));
+            || e.hasChanged(8 /* autoClosingQuotes */)
+            || e.hasChanged(6 /* autoClosingDelete */)
+            || e.hasChanged(7 /* autoClosingOvertype */)
+            || e.hasChanged(11 /* autoSurround */)
+            || e.hasChanged(113 /* useTabStops */)
+            || e.hasChanged(56 /* lineHeight */)
+            || e.hasChanged(78 /* readOnly */));
     }
     get electricChars() {
         if (!this._electricChars) {
@@ -267,6 +269,51 @@ export class CursorColumns {
         }
         return result;
     }
+    /**
+     * Returns an array that maps one based columns to one based visible columns. The entry at position 0 is -1.
+    */
+    static visibleColumnsByColumns(lineContent, tabSize) {
+        const endOffset = lineContent.length;
+        let result = new Array();
+        result.push(-1);
+        let pos = 0;
+        let i = 0;
+        while (i < endOffset) {
+            const codePoint = strings.getNextCodePoint(lineContent, endOffset, i);
+            i += (codePoint >= 65536 /* UNICODE_SUPPLEMENTARY_PLANE_BEGIN */ ? 2 : 1);
+            result.push(pos);
+            if (codePoint >= 65536 /* UNICODE_SUPPLEMENTARY_PLANE_BEGIN */) {
+                result.push(pos);
+            }
+            if (codePoint === 9 /* Tab */) {
+                pos = CursorColumns.nextRenderTabStop(pos, tabSize);
+            }
+            else {
+                let graphemeBreakType = strings.getGraphemeBreakType(codePoint);
+                while (i < endOffset) {
+                    const nextCodePoint = strings.getNextCodePoint(lineContent, endOffset, i);
+                    const nextGraphemeBreakType = strings.getGraphemeBreakType(nextCodePoint);
+                    if (strings.breakBetweenGraphemeBreakType(graphemeBreakType, nextGraphemeBreakType)) {
+                        break;
+                    }
+                    i += (nextCodePoint >= 65536 /* UNICODE_SUPPLEMENTARY_PLANE_BEGIN */ ? 2 : 1);
+                    result.push(pos);
+                    if (codePoint >= 65536 /* UNICODE_SUPPLEMENTARY_PLANE_BEGIN */) {
+                        result.push(pos);
+                    }
+                    graphemeBreakType = nextGraphemeBreakType;
+                }
+                if (strings.isFullWidthCharacter(codePoint) || strings.isEmojiImprecise(codePoint)) {
+                    pos = pos + 2;
+                }
+                else {
+                    pos = pos + 1;
+                }
+            }
+        }
+        result.push(pos);
+        return result;
+    }
     static visibleColumnFromColumn2(config, model, position) {
         return this.visibleColumnFromColumn(model.getLineContent(position.lineNumber), position.column, config.tabSize);
     }
@@ -348,13 +395,13 @@ export class CursorColumns {
      * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
      */
     static prevRenderTabStop(column, tabSize) {
-        return column - 1 - (column - 1) % tabSize;
+        return Math.max(0, column - 1 - (column - 1) % tabSize);
     }
     /**
      * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
      */
     static prevIndentTabStop(column, indentSize) {
-        return column - 1 - (column - 1) % indentSize;
+        return Math.max(0, column - 1 - (column - 1) % indentSize);
     }
 }
 export function isQuote(ch) {

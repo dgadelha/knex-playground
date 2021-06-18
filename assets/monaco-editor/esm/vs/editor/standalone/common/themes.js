@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { editorActiveIndentGuides, editorIndentGuides } from '../../common/view/editorColorRegistry.js';
-import { editorBackground, editorForeground, editorInactiveSelection, editorSelectionHighlight } from '../../../platform/theme/common/colorRegistry.js';
+import { editorBackground, editorForeground, editorInactiveSelection, editorSelectionHighlight, listFocusHighlightForeground } from '../../../platform/theme/common/colorRegistry.js';
 /* -------------------------------- Begin vs theme -------------------------------- */
 export const vs = {
     base: 'vs',
@@ -62,7 +62,8 @@ export const vs = {
         [editorInactiveSelection]: '#E5EBF1',
         [editorIndentGuides]: '#D3D3D3',
         [editorActiveIndentGuides]: '#939393',
-        [editorSelectionHighlight]: '#ADD6FF4D'
+        [editorSelectionHighlight]: '#ADD6FF4D',
+        [listFocusHighlightForeground]: '#9DDDFF'
     }
 };
 /* -------------------------------- End vs theme -------------------------------- */

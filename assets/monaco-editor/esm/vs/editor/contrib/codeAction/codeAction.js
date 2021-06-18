@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { equals, flatten, isNonEmptyArray, mergeSort, coalesce } from '../../../base/common/arrays.js';
+import { equals, flatten, isNonEmptyArray, coalesce } from '../../../base/common/arrays.js';
 import { CancellationToken } from '../../../base/common/cancellation.js';
 import { illegalArgument, isPromiseCanceledError, onUnexpectedExternalError } from '../../../base/common/errors.js';
 import { Disposable, DisposableStore } from '../../../base/common/lifecycle.js';
@@ -58,7 +58,7 @@ class ManagedCodeActionSet extends Disposable {
         super();
         this.documentation = documentation;
         this._register(disposables);
-        this.allActions = mergeSort([...actions], ManagedCodeActionSet.codeActionsComparator);
+        this.allActions = [...actions].sort(ManagedCodeActionSet.codeActionsComparator);
         this.validActions = this.allActions.filter(({ action }) => !action.disabled);
     }
     static codeActionsComparator({ action: a }, { action: b }) {
@@ -205,7 +205,7 @@ CommandsRegistry.registerCommand('_executeCodeActionProvider', function (accesso
             throw illegalArgument();
         }
         const include = typeof kind === 'string' ? new CodeActionKind(kind) : undefined;
-        const codeActionSet = yield getCodeActions(model, validatedRangeOrSelection, { type: 2 /* Manual */, filter: { includeSourceActions: true, include } }, Progress.None, CancellationToken.None);
+        const codeActionSet = yield getCodeActions(model, validatedRangeOrSelection, { type: 1 /* Invoke */, filter: { includeSourceActions: true, include } }, Progress.None, CancellationToken.None);
         const resolving = [];
         const resolveCount = Math.min(codeActionSet.validActions.length, typeof itemResolveCount === 'number' ? itemResolveCount : 0);
         for (let i = 0; i < resolveCount; i++) {

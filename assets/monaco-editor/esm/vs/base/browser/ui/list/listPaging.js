@@ -89,9 +89,6 @@ export class PagedList {
     get onPointer() {
         return Event.map(this.list.onPointer, ({ element, index, browserEvent }) => ({ element: element === undefined ? undefined : this._model.get(element), index, browserEvent }));
     }
-    get onDidChangeFocus() {
-        return Event.map(this.list.onDidChangeFocus, ({ elements, indexes, browserEvent }) => ({ elements: elements.map(e => this._model.get(e)), indexes, browserEvent }));
-    }
     get onDidChangeSelection() {
         return Event.map(this.list.onDidChangeSelection, ({ elements, indexes, browserEvent }) => ({ elements: elements.map(e => this._model.get(e)), indexes, browserEvent }));
     }
@@ -104,9 +101,6 @@ export class PagedList {
     }
     getFocus() {
         return this.list.getFocus();
-    }
-    setSelection(indexes, browserEvent) {
-        this.list.setSelection(indexes, browserEvent);
     }
     getSelection() {
         return this.list.getSelection();

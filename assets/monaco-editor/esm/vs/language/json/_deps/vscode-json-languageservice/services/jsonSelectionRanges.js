@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Range, SelectionRange } from '../jsonLanguageTypes.js';
-import { createScanner } from './../../jsonc-parser/main.js';
+import { createScanner } from '../../jsonc-parser/main.js';
 export function getSelectionRanges(document, positions, doc) {
     function getSelectionRange(position) {
         var offset = document.offsetAt(position);

@@ -190,7 +190,7 @@ export class VisibleLinesCollection {
     }
     // ---- begin view event handlers
     onConfigurationChanged(e) {
-        if (e.hasChanged(124 /* layoutInfo */)) {
+        if (e.hasChanged(128 /* layoutInfo */)) {
             return true;
         }
         return false;

@@ -99,6 +99,7 @@ define('vs/basic-languages/css/css',["require", "exports"], function (require, e
                 { include: '@functioninvocation' },
                 { include: '@numbers' },
                 { include: '@name' },
+                { include: '@strings' },
                 ['([<>=\\+\\-\\*\\/\\^\\|\\~,])', 'delimiter'],
                 [',', 'delimiter']
             ],

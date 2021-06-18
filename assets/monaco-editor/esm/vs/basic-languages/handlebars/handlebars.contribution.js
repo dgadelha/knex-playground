@@ -6,7 +6,7 @@ import { registerLanguage } from '../_.contribution.js';
 registerLanguage({
     id: 'handlebars',
     extensions: ['.handlebars', '.hbs'],
-    aliases: ['Handlebars', 'handlebars'],
+    aliases: ['Handlebars', 'handlebars', 'hbs'],
     mimetypes: ['text/x-handlebars-template'],
     loader: function () { return import('./handlebars.js'); }
 });

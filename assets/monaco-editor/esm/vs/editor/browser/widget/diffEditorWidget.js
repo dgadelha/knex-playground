@@ -325,10 +325,10 @@ let DiffEditorWidget = class DiffEditorWidget extends Disposable {
             if (!editor.getModel()) {
                 return;
             }
-            if (e.hasChanged(38 /* fontInfo */)) {
+            if (e.hasChanged(40 /* fontInfo */)) {
                 this._updateDecorationsRunner.schedule();
             }
-            if (e.hasChanged(125 /* wrappingInfo */)) {
+            if (e.hasChanged(129 /* wrappingInfo */)) {
                 this._updateDecorationsRunner.cancel();
                 this._updateDecorations();
             }
@@ -377,10 +377,10 @@ let DiffEditorWidget = class DiffEditorWidget extends Disposable {
             if (!editor.getModel()) {
                 return;
             }
-            if (e.hasChanged(38 /* fontInfo */)) {
+            if (e.hasChanged(40 /* fontInfo */)) {
                 this._updateDecorationsRunner.schedule();
             }
-            if (e.hasChanged(125 /* wrappingInfo */)) {
+            if (e.hasChanged(129 /* wrappingInfo */)) {
                 this._updateDecorationsRunner.cancel();
                 this._updateDecorations();
             }
@@ -1101,10 +1101,10 @@ class ViewZonesComputer {
         return (endLineNumber - startLineNumber + 1);
     }
     getViewZones() {
-        const originalLineHeight = this._originalEditor.getOption(53 /* lineHeight */);
-        const modifiedLineHeight = this._modifiedEditor.getOption(53 /* lineHeight */);
-        const originalHasWrapping = (this._originalEditor.getOption(125 /* wrappingInfo */).wrappingColumn !== -1);
-        const modifiedHasWrapping = (this._modifiedEditor.getOption(125 /* wrappingInfo */).wrappingColumn !== -1);
+        const originalLineHeight = this._originalEditor.getOption(56 /* lineHeight */);
+        const modifiedLineHeight = this._modifiedEditor.getOption(56 /* lineHeight */);
+        const originalHasWrapping = (this._originalEditor.getOption(129 /* wrappingInfo */).wrappingColumn !== -1);
+        const modifiedHasWrapping = (this._modifiedEditor.getOption(129 /* wrappingInfo */).wrappingColumn !== -1);
         const hasWrapping = (originalHasWrapping || modifiedHasWrapping);
         const originalModel = this._originalEditor.getModel();
         const originalCoordinatesConverter = this._originalEditor._getViewModel().coordinatesConverter;
@@ -1323,42 +1323,51 @@ function createDecoration(startLineNumber, startColumn, endLineNumber, endColumn
 }
 const DECORATIONS = {
     charDelete: ModelDecorationOptions.register({
+        description: 'diff-editor-char-delete',
         className: 'char-delete'
     }),
     charDeleteWholeLine: ModelDecorationOptions.register({
+        description: 'diff-editor-char-delete-whole-line',
         className: 'char-delete',
         isWholeLine: true
     }),
     charInsert: ModelDecorationOptions.register({
+        description: 'diff-editor-char-insert',
         className: 'char-insert'
     }),
     charInsertWholeLine: ModelDecorationOptions.register({
+        description: 'diff-editor-char-insert-whole-line',
         className: 'char-insert',
         isWholeLine: true
     }),
     lineInsert: ModelDecorationOptions.register({
+        description: 'diff-editor-line-insert',
         className: 'line-insert',
         marginClassName: 'line-insert',
         isWholeLine: true
     }),
     lineInsertWithSign: ModelDecorationOptions.register({
+        description: 'diff-editor-line-insert-with-sign',
         className: 'line-insert',
         linesDecorationsClassName: 'insert-sign ' + ThemeIcon.asClassName(diffInsertIcon),
         marginClassName: 'line-insert',
         isWholeLine: true
     }),
     lineDelete: ModelDecorationOptions.register({
+        description: 'diff-editor-line-delete',
         className: 'line-delete',
         marginClassName: 'line-delete',
         isWholeLine: true
     }),
     lineDeleteWithSign: ModelDecorationOptions.register({
+        description: 'diff-editor-line-delete-with-sign',
         className: 'line-delete',
         linesDecorationsClassName: 'delete-sign ' + ThemeIcon.asClassName(diffRemoveIcon),
         marginClassName: 'line-delete',
         isWholeLine: true
     }),
     lineDeleteMargin: ModelDecorationOptions.register({
+        description: 'diff-editor-line-delete-margin',
         marginClassName: 'line-delete',
     })
 };
@@ -1735,19 +1744,19 @@ class InlineViewZonesComputer extends ViewZonesComputer {
     _finalize(result) {
         const modifiedEditorOptions = this._modifiedEditor.getOptions();
         const tabSize = this._modifiedEditor.getModel().getOptions().tabSize;
-        const fontInfo = modifiedEditorOptions.get(38 /* fontInfo */);
-        const disableMonospaceOptimizations = modifiedEditorOptions.get(26 /* disableMonospaceOptimizations */);
+        const fontInfo = modifiedEditorOptions.get(40 /* fontInfo */);
+        const disableMonospaceOptimizations = modifiedEditorOptions.get(27 /* disableMonospaceOptimizations */);
         const typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
-        const scrollBeyondLastColumn = modifiedEditorOptions.get(88 /* scrollBeyondLastColumn */);
+        const scrollBeyondLastColumn = modifiedEditorOptions.get(91 /* scrollBeyondLastColumn */);
         const mightContainNonBasicASCII = this._originalModel.mightContainNonBasicASCII();
         const mightContainRTL = this._originalModel.mightContainRTL();
-        const lineHeight = modifiedEditorOptions.get(53 /* lineHeight */);
-        const layoutInfo = modifiedEditorOptions.get(124 /* layoutInfo */);
+        const lineHeight = modifiedEditorOptions.get(56 /* lineHeight */);
+        const layoutInfo = modifiedEditorOptions.get(128 /* layoutInfo */);
         const lineDecorationsWidth = layoutInfo.decorationsWidth;
-        const stopRenderingLineAfter = modifiedEditorOptions.get(100 /* stopRenderingLineAfter */);
-        const renderWhitespace = modifiedEditorOptions.get(83 /* renderWhitespace */);
-        const renderControlCharacters = modifiedEditorOptions.get(77 /* renderControlCharacters */);
-        const fontLigatures = modifiedEditorOptions.get(39 /* fontLigatures */);
+        const stopRenderingLineAfter = modifiedEditorOptions.get(103 /* stopRenderingLineAfter */);
+        const renderWhitespace = modifiedEditorOptions.get(86 /* renderWhitespace */);
+        const renderControlCharacters = modifiedEditorOptions.get(80 /* renderControlCharacters */);
+        const fontLigatures = modifiedEditorOptions.get(41 /* fontLigatures */);
         const lineBreaks = this._lineBreaksComputer.finalize();
         let lineBreakIndex = 0;
         for (let i = 0; i < this._pendingLineChange.length; i++) {

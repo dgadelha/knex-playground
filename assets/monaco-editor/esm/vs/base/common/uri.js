@@ -259,7 +259,9 @@ export class URI {
         return new Uri('file', authority, path, _empty, _empty);
     }
     static from(components) {
-        return new Uri(components.scheme, components.authority, components.path, components.query, components.fragment);
+        const result = new Uri(components.scheme, components.authority, components.path, components.query, components.fragment);
+        _validateUri(result, true);
+        return result;
     }
     /**
      * Join a URI path with path fragments and normalizes the resulting path.

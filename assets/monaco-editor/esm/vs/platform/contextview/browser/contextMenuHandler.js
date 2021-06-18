@@ -10,6 +10,7 @@ import { EventType, $, isHTMLElement } from '../../../base/browser/dom.js';
 import { attachMenuStyler } from '../../theme/common/styler.js';
 import { domEvent } from '../../../base/browser/event.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
+import { isPromiseCanceledError } from '../../../base/common/errors.js';
 export class ContextMenuHandler {
     constructor(contextViewService, telemetryService, notificationService, keybindingService, themeService) {
         this.contextViewService = contextViewService;
@@ -108,9 +109,7 @@ export class ContextMenuHandler {
         }, shadowRootElement, !!shadowRootElement);
     }
     onActionRun(e) {
-        if (this.telemetryService) {
-            this.telemetryService.publicLog2('workbenchActionExecuted', { id: e.action.id, from: 'contextMenu' });
-        }
+        this.telemetryService.publicLog2('workbenchActionExecuted', { id: e.action.id, from: 'contextMenu' });
         this.contextViewService.hideContextView(false);
         // Restore focus here
         if (this.focusToReturn) {
@@ -118,7 +117,7 @@ export class ContextMenuHandler {
         }
     }
     onDidActionRun(e) {
-        if (e.error) {
+        if (e.error && !isPromiseCanceledError(e.error)) {
             this.notificationService.error(e.error);
         }
     }

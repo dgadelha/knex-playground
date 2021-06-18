@@ -42,10 +42,10 @@ export class ViewModel extends Disposable {
         }
         else {
             const options = this._configuration.options;
-            const fontInfo = options.get(38 /* fontInfo */);
-            const wrappingStrategy = options.get(118 /* wrappingStrategy */);
-            const wrappingInfo = options.get(125 /* wrappingInfo */);
-            const wrappingIndent = options.get(117 /* wrappingIndent */);
+            const fontInfo = options.get(40 /* fontInfo */);
+            const wrappingStrategy = options.get(122 /* wrappingStrategy */);
+            const wrappingInfo = options.get(129 /* wrappingInfo */);
+            const wrappingIndent = options.get(121 /* wrappingIndent */);
             this._lines = new SplitLinesCollection(this.model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, fontInfo, this.model.getOptions().tabSize, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent);
         }
         this.coordinatesConverter = this._lines.createCoordinatesConverter();
@@ -129,10 +129,10 @@ export class ViewModel extends Disposable {
         }
         let restorePreviousViewportStart = false;
         const options = this._configuration.options;
-        const fontInfo = options.get(38 /* fontInfo */);
-        const wrappingStrategy = options.get(118 /* wrappingStrategy */);
-        const wrappingInfo = options.get(125 /* wrappingInfo */);
-        const wrappingIndent = options.get(117 /* wrappingIndent */);
+        const fontInfo = options.get(40 /* fontInfo */);
+        const wrappingStrategy = options.get(122 /* wrappingStrategy */);
+        const wrappingInfo = options.get(129 /* wrappingInfo */);
+        const wrappingIndent = options.get(121 /* wrappingIndent */);
         if (this._lines.setWrappingSettings(fontInfo, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent)) {
             eventsCollector.emitViewEvent(new viewEvents.ViewFlushedEvent());
             eventsCollector.emitViewEvent(new viewEvents.ViewLineMappingChangedEvent());
@@ -146,7 +146,7 @@ export class ViewModel extends Disposable {
             }
             this._updateConfigurationViewLineCount.schedule();
         }
-        if (e.hasChanged(75 /* readOnly */)) {
+        if (e.hasChanged(78 /* readOnly */)) {
             // Must read again all decorations due to readOnly filtering
             this._decorations.reset();
             eventsCollector.emitViewEvent(new viewEvents.ViewDecorationsChangedEvent(null));
@@ -346,8 +346,8 @@ export class ViewModel extends Disposable {
         this._updateConfigurationViewLineCount.schedule();
     }
     getVisibleRangesPlusViewportAboveBelow() {
-        const layoutInfo = this._configuration.options.get(124 /* layoutInfo */);
-        const lineHeight = this._configuration.options.get(53 /* lineHeight */);
+        const layoutInfo = this._configuration.options.get(128 /* layoutInfo */);
+        const lineHeight = this._configuration.options.get(56 /* lineHeight */);
         const linesAround = Math.max(20, Math.round(layoutInfo.height / lineHeight));
         const partialData = this.viewLayout.getLinesViewportData();
         const startViewLineNumber = Math.max(1, partialData.completelyVisibleStartLineNumber - linesAround);
@@ -628,9 +628,26 @@ export class ViewModel extends Disposable {
             const lineNumber = range.startLineNumber;
             range = new Range(lineNumber, this.model.getLineMinColumn(lineNumber), lineNumber, this.model.getLineMaxColumn(lineNumber));
         }
-        const fontInfo = this._configuration.options.get(38 /* fontInfo */);
+        const fontInfo = this._configuration.options.get(40 /* fontInfo */);
         const colorMap = this._getColorMap();
-        const fontFamily = fontInfo.fontFamily === EDITOR_FONT_DEFAULTS.fontFamily ? fontInfo.fontFamily : `'${fontInfo.fontFamily}', ${EDITOR_FONT_DEFAULTS.fontFamily}`;
+        const hasBadChars = (/[:;\\\/<>]/.test(fontInfo.fontFamily));
+        const useDefaultFontFamily = (hasBadChars || fontInfo.fontFamily === EDITOR_FONT_DEFAULTS.fontFamily);
+        let fontFamily;
+        if (useDefaultFontFamily) {
+            fontFamily = EDITOR_FONT_DEFAULTS.fontFamily;
+        }
+        else {
+            fontFamily = fontInfo.fontFamily;
+            fontFamily = fontFamily.replace(/"/g, '\'');
+            const hasQuotesOrIsList = /[,']/.test(fontFamily);
+            if (!hasQuotesOrIsList) {
+                const needsQuotes = /[+ ]/.test(fontFamily);
+                if (needsQuotes) {
+                    fontFamily = `'${fontFamily}'`;
+                }
+            }
+            fontFamily = `${fontFamily}, ${EDITOR_FONT_DEFAULTS.fontFamily}`;
+        }
         return {
             mode: languageId.language,
             html: (`<div style="`
@@ -697,6 +714,9 @@ export class ViewModel extends Disposable {
     }
     getCursorColumnSelectData() {
         return this._cursor.getCursorColumnSelectData();
+    }
+    getCursorAutoClosedCharacters() {
+        return this._cursor.getAutoClosedCharacters();
     }
     setCursorColumnSelectData(columnSelectData) {
         this._cursor.setCursorColumnSelectData(columnSelectData);
@@ -814,5 +834,15 @@ export class ViewModel extends Disposable {
         finally {
             this._eventDispatcher.endEmitViewEvents();
         }
+    }
+    normalizePosition(position, affinity) {
+        return this._lines.normalizePosition(position, affinity);
+    }
+    /**
+     * Gets the column at which indentation stops at a given line.
+     * @internal
+    */
+    getLineIndentColumn(lineNumber) {
+        return this._lines.getLineIndentColumn(lineNumber);
     }
 }

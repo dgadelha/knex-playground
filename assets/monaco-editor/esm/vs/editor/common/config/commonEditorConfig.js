@@ -169,6 +169,7 @@ function migrateOptions(options) {
         mapping['method'] = 'showMethods';
         mapping['function'] = 'showFunctions';
         mapping['constructor'] = 'showConstructors';
+        mapping['deprecated'] = 'showDeprecated';
         mapping['field'] = 'showFields';
         mapping['variable'] = 'showVariables';
         mapping['class'] = 'showClasses';
@@ -430,7 +431,7 @@ const editorConfiguration = Object.assign(Object.assign({}, editorConfigurationB
                 nls.localize('wordBasedSuggestionsMode.matchingDocuments', 'Suggest words from all open documents of the same language.'),
                 nls.localize('wordBasedSuggestionsMode.allDocuments', 'Suggest words from all open documents.')
             ],
-            description: nls.localize('wordBasedSuggestionsMode', "Controls from what documents word based completions are computed.")
+            description: nls.localize('wordBasedSuggestionsMode', "Controls from which documents word based completions are computed.")
         },
         'editor.semanticHighlighting.enabled': {
             enum: [true, false, 'configuredByTheme'],

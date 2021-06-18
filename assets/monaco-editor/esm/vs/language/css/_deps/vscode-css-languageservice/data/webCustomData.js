@@ -81,7 +81,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | stretch | <baseline-position> | [ <overflow-position>? <self-position> ]",
-            "relevance": 83,
+            "relevance": 84,
             "description": "Aligns flex items along the cross axis of the current line of the flex container.",
             "restrictions": [
                 "enum"
@@ -255,7 +255,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | normal | stretch | <baseline-position> | <overflow-position>? <self-position>",
-            "relevance": 70,
+            "relevance": 71,
             "description": "Allows the default alignment along the cross axis to be overridden for individual flex items.",
             "restrictions": [
                 "enum"
@@ -344,7 +344,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<single-animation>#",
-            "relevance": 80,
+            "relevance": 81,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -363,7 +363,7 @@ export var cssData = {
         {
             "name": "animation-delay",
             "syntax": "<time>#",
-            "relevance": 62,
+            "relevance": 63,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -411,7 +411,7 @@ export var cssData = {
         {
             "name": "animation-duration",
             "syntax": "<time>#",
-            "relevance": 65,
+            "relevance": 67,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -444,7 +444,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<single-animation-fill-mode>#",
-            "relevance": 62,
+            "relevance": 63,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -465,7 +465,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<single-animation-iteration-count>#",
-            "relevance": 59,
+            "relevance": 60,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -487,7 +487,7 @@ export var cssData = {
                 }
             ],
             "syntax": "[ none | <keyframes-name> ]#",
-            "relevance": 65,
+            "relevance": 67,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -528,7 +528,7 @@ export var cssData = {
         {
             "name": "animation-timing-function",
             "syntax": "<easing-function>#",
-            "relevance": 68,
+            "relevance": 69,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -753,7 +753,7 @@ export var cssData = {
         {
             "name": "background-clip",
             "syntax": "<box>#",
-            "relevance": 67,
+            "relevance": 68,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -805,7 +805,7 @@ export var cssData = {
         {
             "name": "background-origin",
             "syntax": "<box>#",
-            "relevance": 53,
+            "relevance": 54,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -852,7 +852,7 @@ export var cssData = {
             ],
             "status": "experimental",
             "syntax": "[ center | [ [ left | right | x-start | x-end ]? <length-percentage>? ]! ]#",
-            "relevance": 53,
+            "relevance": 54,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1205,7 +1205,7 @@ export var cssData = {
         {
             "name": "border-bottom-color",
             "syntax": "<'border-top-color'>",
-            "relevance": 71,
+            "relevance": 72,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1236,7 +1236,7 @@ export var cssData = {
         {
             "name": "border-bottom-right-radius",
             "syntax": "<length-percentage>{1,2}",
-            "relevance": 74,
+            "relevance": 75,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1252,7 +1252,7 @@ export var cssData = {
         {
             "name": "border-bottom-style",
             "syntax": "<line-style>",
-            "relevance": 57,
+            "relevance": 59,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1293,7 +1293,7 @@ export var cssData = {
                 }
             ],
             "syntax": "collapse | separate",
-            "relevance": 75,
+            "relevance": 76,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1453,7 +1453,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | <image>",
-            "relevance": 50,
+            "relevance": 51,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1708,7 +1708,7 @@ export var cssData = {
         {
             "name": "border-left-style",
             "syntax": "<line-style>",
-            "relevance": 54,
+            "relevance": 53,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1835,7 +1835,7 @@ export var cssData = {
             "name": "border-style",
             "values": [],
             "syntax": "<line-style>{1,4}",
-            "relevance": 80,
+            "relevance": 81,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1899,7 +1899,7 @@ export var cssData = {
         {
             "name": "border-top-right-radius",
             "syntax": "<length-percentage>{1,2}",
-            "relevance": 73,
+            "relevance": 74,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1915,7 +1915,7 @@ export var cssData = {
         {
             "name": "border-top-style",
             "syntax": "<line-style>",
-            "relevance": 57,
+            "relevance": 59,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -1930,7 +1930,7 @@ export var cssData = {
         {
             "name": "border-top-width",
             "syntax": "<line-width>",
-            "relevance": 61,
+            "relevance": 62,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -2181,7 +2181,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | avoid | avoid-page | avoid-column | avoid-region",
-            "relevance": 50,
+            "relevance": 51,
             "description": "Describes the page/column/region break behavior inside the principal box.",
             "restrictions": [
                 "enum"
@@ -2287,7 +2287,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<shape> | auto",
-            "relevance": 73,
+            "relevance": 74,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -2312,7 +2312,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<clip-source> | [ <basic-shape> || <geometry-box> ] | none",
-            "relevance": 55,
+            "relevance": 56,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -2407,7 +2407,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<integer> | auto",
-            "relevance": 52,
+            "relevance": 53,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -2454,7 +2454,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | <length-percentage>",
-            "relevance": 52,
+            "relevance": 53,
             "description": "Sets the gap between columns. If there is a column rule between columns, it will appear in the middle of the gap.",
             "restrictions": [
                 "length",
@@ -2674,7 +2674,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | none | [ <content-replacement> | <content-list> ] [/ <string> ]?",
-            "relevance": 89,
+            "relevance": 90,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -2696,7 +2696,7 @@ export var cssData = {
                 }
             ],
             "syntax": "[ <custom-ident> <integer>? ]+ | none",
-            "relevance": 52,
+            "relevance": 53,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3211,7 +3211,7 @@ export var cssData = {
                     "description": "No paint is applied in this layer."
                 }
             ],
-            "relevance": 75,
+            "relevance": 76,
             "description": "Paints the interior of the given graphical element.",
             "restrictions": [
                 "color",
@@ -3342,7 +3342,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | [ <'flex-grow'> <'flex-shrink'>? || <'flex-basis'> ]",
-            "relevance": 78,
+            "relevance": 79,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3369,7 +3369,7 @@ export var cssData = {
                 }
             ],
             "syntax": "content | <'width'>",
-            "relevance": 63,
+            "relevance": 64,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3404,7 +3404,7 @@ export var cssData = {
                 }
             ],
             "syntax": "row | row-reverse | column | column-reverse",
-            "relevance": 80,
+            "relevance": 81,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3449,7 +3449,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<'flex-direction'> || <'flex-wrap'>",
-            "relevance": 59,
+            "relevance": 60,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3464,7 +3464,7 @@ export var cssData = {
         {
             "name": "flex-grow",
             "syntax": "<number>",
-            "relevance": 73,
+            "relevance": 74,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3479,7 +3479,7 @@ export var cssData = {
         {
             "name": "flex-shrink",
             "syntax": "<number>",
-            "relevance": 71,
+            "relevance": 72,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3508,7 +3508,7 @@ export var cssData = {
                 }
             ],
             "syntax": "nowrap | wrap | wrap-reverse",
-            "relevance": 76,
+            "relevance": 77,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -3710,7 +3710,7 @@ export var cssData = {
                 }
             ],
             "syntax": "[ [ <'font-style'> || <font-variant-css21> || <'font-weight'> || <'font-stretch'> ]? <'font-size'> [ / <'line-height'> ]? <'font-family'> ] | caption | icon | menu | message-box | small-caption | status-bar",
-            "relevance": 82,
+            "relevance": 84,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -4278,7 +4278,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | <feature-tag-value>#",
-            "relevance": 54,
+            "relevance": 56,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -4492,7 +4492,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | italic | oblique <angle>{0,2}",
-            "relevance": 83,
+            "relevance": 84,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -4565,7 +4565,8 @@ export var cssData = {
         {
             "name": "font-variant-alternates",
             "browsers": [
-                "FF34"
+                "FF34",
+                "S9.1"
             ],
             "values": [
                 {
@@ -4619,6 +4620,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF34",
+                "S9.1",
                 "C52",
                 "O39"
             ],
@@ -4670,6 +4672,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF34",
+                "S9.1",
                 "C63",
                 "O50"
             ],
@@ -4809,7 +4812,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | none | [ <common-lig-values> || <discretionary-lig-values> || <historical-lig-values> || <contextual-alt-values> ]",
-            "relevance": 51,
+            "relevance": 52,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -4884,7 +4887,8 @@ export var cssData = {
         {
             "name": "font-variant-position",
             "browsers": [
-                "FF34"
+                "FF34",
+                "S9.1"
             ],
             "values": [
                 {
@@ -5248,7 +5252,7 @@ export var cssData = {
             ],
             "status": "obsolete",
             "syntax": "<length-percentage>",
-            "relevance": 1,
+            "relevance": 2,
             "description": "Specifies the gutters between grid columns. Replaced by 'column-gap' property.",
             "restrictions": [
                 "length"
@@ -5494,7 +5498,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | <string>+",
-            "relevance": 50,
+            "relevance": 51,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -5539,7 +5543,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | <track-list> | <auto-track-list> | subgrid <line-name-list>?",
-            "relevance": 56,
+            "relevance": 57,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -5654,7 +5658,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | manual | auto",
-            "relevance": 53,
+            "relevance": 54,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -5740,7 +5744,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | crisp-edges | pixelated",
-            "relevance": 55,
+            "relevance": 56,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -5977,7 +5981,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | <length>",
-            "relevance": 80,
+            "relevance": 81,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6151,7 +6155,7 @@ export var cssData = {
                     "description": "The default contents of the of the list item’s marker are given by 'list-style-type' instead."
                 }
             ],
-            "syntax": "<url> | none",
+            "syntax": "<image> | none",
             "relevance": 52,
             "references": [
                 {
@@ -6279,7 +6283,7 @@ export var cssData = {
                 }
             ],
             "syntax": "[ <length> | <percentage> | auto ]{1,4}",
-            "relevance": 95,
+            "relevance": 96,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6307,7 +6311,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<'margin-left'>",
-            "relevance": 53,
+            "relevance": 54,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6335,7 +6339,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<'margin-left'>",
-            "relevance": 52,
+            "relevance": 53,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6356,7 +6360,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<length> | <percentage> | auto",
-            "relevance": 91,
+            "relevance": 92,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6384,7 +6388,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<'margin-left'>",
-            "relevance": 51,
+            "relevance": 52,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6412,7 +6416,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<'margin-left'>",
-            "relevance": 51,
+            "relevance": 52,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6433,7 +6437,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<length> | <percentage> | auto",
-            "relevance": 91,
+            "relevance": 92,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6817,7 +6821,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<viewport-length>",
-            "relevance": 85,
+            "relevance": 86,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -6880,7 +6884,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<viewport-length>",
-            "relevance": 90,
+            "relevance": 91,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11109,10 +11113,10 @@ export var cssData = {
         {
             "name": "object-fit",
             "browsers": [
-                "E16",
+                "E79",
                 "FF36",
                 "S10",
-                "C31",
+                "C32",
                 "O19"
             ],
             "values": [
@@ -11138,7 +11142,7 @@ export var cssData = {
                 }
             ],
             "syntax": "fill | contain | cover | none | scale-down",
-            "relevance": 64,
+            "relevance": 67,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11153,10 +11157,10 @@ export var cssData = {
         {
             "name": "object-position",
             "browsers": [
-                "E16",
+                "E79",
                 "FF36",
                 "S10",
-                "C31",
+                "C32",
                 "O19"
             ],
             "syntax": "<position>",
@@ -11282,7 +11286,7 @@ export var cssData = {
         {
             "name": "order",
             "syntax": "<integer>",
-            "relevance": 62,
+            "relevance": 63,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11717,7 +11721,7 @@ export var cssData = {
         {
             "name": "outline-width",
             "syntax": "<line-width>",
-            "relevance": 61,
+            "relevance": 62,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11780,7 +11784,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | break-word | anywhere",
-            "relevance": 63,
+            "relevance": 65,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11813,7 +11817,7 @@ export var cssData = {
                 }
             ],
             "syntax": "visible | hidden | clip | scroll | auto",
-            "relevance": 80,
+            "relevance": 81,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11846,7 +11850,7 @@ export var cssData = {
                 }
             ],
             "syntax": "visible | hidden | clip | scroll | auto",
-            "relevance": 81,
+            "relevance": 82,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -11985,7 +11989,7 @@ export var cssData = {
                 "O56"
             ],
             "syntax": "<'padding-left'>",
-            "relevance": 52,
+            "relevance": 53,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -12001,7 +12005,7 @@ export var cssData = {
         {
             "name": "padding-left",
             "syntax": "<length> | <percentage>",
-            "relevance": 90,
+            "relevance": 91,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -12017,7 +12021,7 @@ export var cssData = {
         {
             "name": "padding-right",
             "syntax": "<length> | <percentage>",
-            "relevance": 89,
+            "relevance": 90,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -12071,7 +12075,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | always | avoid | left | right | recto | verso",
-            "relevance": 51,
+            "relevance": 52,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -12262,7 +12266,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | none | visiblePainted | visibleFill | visibleStroke | visible | painted | fill | stroke | all | inherit",
-            "relevance": 81,
+            "relevance": 82,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -12581,7 +12585,7 @@ export var cssData = {
                 }
             ],
             "status": "experimental",
-            "syntax": "over | under | inter-character",
+            "syntax": "[ alternate || [ over | under ] ] | inter-character",
             "relevance": 50,
             "references": [
                 {
@@ -12765,7 +12769,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | smooth",
-            "relevance": 51,
+            "relevance": 52,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -12980,7 +12984,7 @@ export var cssData = {
                     "description": "The float area is unaffected."
                 }
             ],
-            "syntax": "none | <shape-box> || <basic-shape> | <image>",
+            "syntax": "none | [ <shape-box> || <basic-shape> ] | <image>",
             "relevance": 50,
             "references": [
                 {
@@ -13052,7 +13056,7 @@ export var cssData = {
                 }
             ],
             "syntax": "[ <url> [ format( <string># ) ]? | local( <family-name> ) ]#",
-            "relevance": 65,
+            "relevance": 64,
             "description": "@font-face descriptor. Specifies the resource containing font data. It is required, whether the font is downloadable or locally installed.",
             "restrictions": [
                 "enum",
@@ -13104,7 +13108,7 @@ export var cssData = {
                     "description": "Indicates that no dashing is used."
                 }
             ],
-            "relevance": 59,
+            "relevance": 58,
             "description": "Controls the pattern of dashes and gaps used to stroke paths.",
             "restrictions": [
                 "length",
@@ -13569,7 +13573,7 @@ export var cssData = {
                 }
             ],
             "syntax": "solid | double | dotted | dashed | wavy",
-            "relevance": 50,
+            "relevance": 51,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -13585,7 +13589,7 @@ export var cssData = {
             "name": "text-indent",
             "values": [],
             "syntax": "<length-percentage> && hanging? && each-line?",
-            "relevance": 68,
+            "relevance": 69,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -13810,7 +13814,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | capitalize | uppercase | lowercase | full-width | full-size-kana",
-            "relevance": 85,
+            "relevance": 86,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -13909,7 +13913,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | none | [ [ pan-x | pan-left | pan-right ] || [ pan-y | pan-up | pan-down ] || pinch-zoom ] | manipulation",
-            "relevance": 66,
+            "relevance": 67,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14013,7 +14017,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | <transform-list>",
-            "relevance": 89,
+            "relevance": 90,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14028,7 +14032,7 @@ export var cssData = {
         {
             "name": "transform-origin",
             "syntax": "[ <length-percentage> | left | center | right | top | bottom ] | [ [ <length-percentage> | left | center | right ] && [ <length-percentage> | top | center | bottom ] ] <length>?",
-            "relevance": 75,
+            "relevance": 77,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14127,7 +14131,7 @@ export var cssData = {
         {
             "name": "transition-duration",
             "syntax": "<time>#",
-            "relevance": 62,
+            "relevance": 63,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14152,7 +14156,7 @@ export var cssData = {
                 }
             ],
             "syntax": "none | <single-transition-property>#",
-            "relevance": 64,
+            "relevance": 65,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14167,7 +14171,7 @@ export var cssData = {
         {
             "name": "transition-timing-function",
             "syntax": "<easing-function>#",
-            "relevance": 61,
+            "relevance": 64,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14208,7 +14212,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | embed | isolate | bidi-override | isolate-override | plaintext",
-            "relevance": 58,
+            "relevance": 57,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -14533,7 +14537,7 @@ export var cssData = {
                 }
             ],
             "syntax": "<unicode-range>#",
-            "relevance": 58,
+            "relevance": 57,
             "description": "@font-face descriptor. Defines the set of Unicode codepoints that may be supported by the font face for which it is declared.",
             "restrictions": [
                 "unicode-range"
@@ -14563,7 +14567,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | text | none | contain | all",
-            "relevance": 75,
+            "relevance": 76,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -16928,7 +16932,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | <animateable-feature>#",
-            "relevance": 62,
+            "relevance": 64,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -16958,7 +16962,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | break-all | keep-all | break-word",
-            "relevance": 74,
+            "relevance": 75,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -16979,7 +16983,7 @@ export var cssData = {
                 }
             ],
             "syntax": "normal | <length-percentage>",
-            "relevance": 58,
+            "relevance": 57,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -17084,7 +17088,7 @@ export var cssData = {
                 }
             ],
             "syntax": "auto | <number> | <percentage>",
-            "relevance": 70,
+            "relevance": 68,
             "references": [
                 {
                     "name": "MDN Reference",
@@ -17561,11 +17565,12 @@ export var cssData = {
             "name": "aspect-ratio",
             "status": "experimental",
             "syntax": "auto | <ratio>",
-            "relevance": 52,
+            "relevance": 51,
             "browsers": [
                 "E88",
-                "FF83",
-                "C88"
+                "FF89",
+                "C88",
+                "O74"
             ],
             "references": [
                 {
@@ -17585,13 +17590,13 @@ export var cssData = {
         {
             "name": "backdrop-filter",
             "syntax": "none | <filter-function-list>",
-            "relevance": 51,
+            "relevance": 52,
             "browsers": [
                 "E17",
                 "FF70",
                 "S9",
                 "C76",
-                "O34"
+                "O63"
             ],
             "references": [
                 {
@@ -17608,6 +17613,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17626,6 +17632,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17644,6 +17651,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17662,6 +17670,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17678,8 +17687,10 @@ export var cssData = {
             "syntax": "<length-percentage>{1,2}",
             "relevance": 50,
             "browsers": [
+                "E89",
                 "FF66",
-                "C89"
+                "C89",
+                "O75"
             ],
             "references": [
                 {
@@ -17694,8 +17705,10 @@ export var cssData = {
             "syntax": "<length-percentage>{1,2}",
             "relevance": 50,
             "browsers": [
+                "E89",
                 "FF66",
-                "C89"
+                "C89",
+                "O75"
             ],
             "references": [
                 {
@@ -17712,6 +17725,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17730,6 +17744,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17748,6 +17763,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17766,6 +17782,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -17782,8 +17799,10 @@ export var cssData = {
             "syntax": "<length-percentage>{1,2}",
             "relevance": 50,
             "browsers": [
+                "E89",
                 "FF66",
-                "C89"
+                "C89",
+                "O75"
             ],
             "references": [
                 {
@@ -17798,8 +17817,10 @@ export var cssData = {
             "syntax": "<length-percentage>{1,2}",
             "relevance": 50,
             "browsers": [
+                "E89",
                 "FF66",
-                "C89"
+                "C89",
+                "O75"
             ],
             "references": [
                 {
@@ -17985,9 +18006,27 @@ export var cssData = {
             "description": "The color-adjust property is a non-standard CSS extension that can be used to force printing of background colors and images in browsers based on the WebKit engine."
         },
         {
+            "name": "color-scheme",
+            "syntax": "normal | [ light | dark | <custom-ident> ]+",
+            "relevance": 50,
+            "browsers": [
+                "E81",
+                "S13",
+                "C81",
+                "O68"
+            ],
+            "references": [
+                {
+                    "name": "MDN Reference",
+                    "url": "https://developer.mozilla.org/docs/Web/CSS/color-scheme"
+                }
+            ],
+            "description": "The color-scheme CSS property allows an element to indicate which color schemes it can comfortably be rendered in."
+        },
+        {
             "name": "content-visibility",
             "syntax": "visible | auto | hidden",
-            "relevance": 50,
+            "relevance": 51,
             "browsers": [
                 "E85",
                 "C85",
@@ -18081,10 +18120,10 @@ export var cssData = {
             "name": "forced-color-adjust",
             "status": "experimental",
             "syntax": "auto | none",
-            "relevance": 50,
+            "relevance": 51,
             "browsers": [
                 "E79",
-                "C79",
+                "C89",
                 "IE10"
             ],
             "references": [
@@ -18102,7 +18141,7 @@ export var cssData = {
             "browsers": [
                 "E84",
                 "FF63",
-                "S10.1",
+                "S14.1",
                 "C84",
                 "O70"
             ],
@@ -18166,6 +18205,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18184,6 +18224,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF63",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18202,6 +18243,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF63",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18220,6 +18262,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF63",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18238,6 +18281,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF63",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18256,6 +18300,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF63",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18274,6 +18319,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF63",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18333,6 +18379,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18351,6 +18398,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18562,6 +18610,7 @@ export var cssData = {
             "relevance": 50,
             "browsers": [
                 "FF83",
+                "S14.1",
                 "C83"
             ],
             "references": [
@@ -18731,6 +18780,22 @@ export var cssData = {
             "description": "The overflow-clip-box CSS property specifies relative to which box the clipping happens when there is an overflow. It is short hand for the overflow-clip-box-inline and overflow-clip-box-block properties."
         },
         {
+            "name": "overflow-clip-margin",
+            "syntax": "<visual-box> || <length [0,∞]>",
+            "relevance": 50,
+            "browsers": [
+                "E90",
+                "C90"
+            ],
+            "references": [
+                {
+                    "name": "MDN Reference",
+                    "url": "https://developer.mozilla.org/docs/Web/CSS/overflow-clip-margin"
+                }
+            ],
+            "description": "The overflow-clip-margin CSS property determines how far outside its bounds an element with overflow: clip may be painted before being clipped."
+        },
+        {
             "name": "overflow-inline",
             "syntax": "visible | hidden | clip | scroll | auto",
             "relevance": 50,
@@ -18842,6 +18907,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18860,6 +18926,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF66",
+                "S14.1",
                 "C87",
                 "O73"
             ],
@@ -18915,7 +18982,8 @@ export var cssData = {
             "syntax": "none | <angle> | [ x | y | z | <number>{3} ] && <angle>",
             "relevance": 50,
             "browsers": [
-                "FF72"
+                "FF72",
+                "S14.1"
             ],
             "references": [
                 {
@@ -18932,7 +19000,7 @@ export var cssData = {
             "browsers": [
                 "E84",
                 "FF63",
-                "S12.1",
+                "S14.1",
                 "C84",
                 "O70"
             ],
@@ -18950,7 +19018,8 @@ export var cssData = {
             "syntax": "none | <number>{1,3}",
             "relevance": 50,
             "browsers": [
-                "FF72"
+                "FF72",
+                "S14.1"
             ],
             "references": [
                 {
@@ -19011,8 +19080,8 @@ export var cssData = {
             "relevance": 50,
             "browsers": [
                 "E79",
-                "FF68",
-                "S11",
+                "FF90",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19031,6 +19100,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19049,6 +19119,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19067,6 +19138,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19085,7 +19157,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
-                "S11",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19102,7 +19174,8 @@ export var cssData = {
             "syntax": "<length>{1,2}",
             "relevance": 50,
             "browsers": [
-                "FF68"
+                "FF68",
+                "S14.1"
             ],
             "references": [
                 {
@@ -19119,6 +19192,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19137,6 +19211,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19155,7 +19230,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
-                "S11",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19174,7 +19249,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
-                "S11",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19193,7 +19268,7 @@ export var cssData = {
             "browsers": [
                 "E79",
                 "FF68",
-                "S11",
+                "S14.1",
                 "C69",
                 "O56"
             ],
@@ -19493,7 +19568,7 @@ export var cssData = {
             "name": "text-decoration-skip",
             "status": "experimental",
             "syntax": "none | [ objects || [ spaces | [ leading-spaces || trailing-spaces ] ] || edges || box-decoration ]",
-            "relevance": 53,
+            "relevance": 52,
             "browsers": [
                 "S12.1",
                 "C57",
@@ -19530,10 +19605,11 @@ export var cssData = {
             "syntax": "auto | from-font | <length> | <percentage> ",
             "relevance": 50,
             "browsers": [
-                "E87",
+                "E89",
                 "FF70",
                 "S12.1",
-                "C87"
+                "C89",
+                "O75"
             ],
             "references": [
                 {
@@ -19623,7 +19699,7 @@ export var cssData = {
             "name": "text-size-adjust",
             "status": "experimental",
             "syntax": "none | auto | <percentage>",
-            "relevance": 56,
+            "relevance": 57,
             "browsers": [
                 "E79",
                 "C54",
@@ -19645,7 +19721,8 @@ export var cssData = {
                 "E87",
                 "FF70",
                 "S12.1",
-                "C87"
+                "C87",
+                "O73"
             ],
             "references": [
                 {
@@ -19679,7 +19756,8 @@ export var cssData = {
             "syntax": "none | <length-percentage> [ <length-percentage> <length>? ]?",
             "relevance": 50,
             "browsers": [
-                "FF72"
+                "FF72",
+                "S14.1"
             ],
             "references": [
                 {
@@ -19699,7 +19777,7 @@ export var cssData = {
             "name": "font-display",
             "status": "experimental",
             "syntax": "[ auto | block | swap | fallback | optional ]",
-            "relevance": 54,
+            "relevance": 57,
             "description": "The font-display descriptor determines how a font face is displayed based on whether and when it is downloaded and ready to use."
         },
         {
@@ -19780,7 +19858,8 @@ export var cssData = {
         {
             "name": "@counter-style",
             "browsers": [
-                "FF33"
+                "FF33",
+                "C91"
             ],
             "references": [
                 {
@@ -20110,9 +20189,13 @@ export var cssData = {
         {
             "name": ":future",
             "browsers": [
-                "C",
-                "O16",
-                "S6"
+                "S6.1"
+            ],
+            "references": [
+                {
+                    "name": "MDN Reference",
+                    "url": "https://developer.mozilla.org/docs/Web/CSS/:future"
+                }
             ],
             "description": "Represents any element that is defined to occur entirely after a :current element."
         },
@@ -20370,7 +20453,7 @@ export var cssData = {
         {
             "name": ":-moz-submit-invalid",
             "browsers": [
-                "FF4"
+                "FF88"
             ],
             "references": [
                 {
@@ -20398,12 +20481,6 @@ export var cssData = {
             "name": ":-moz-ui-valid",
             "browsers": [
                 "FF4"
-            ],
-            "references": [
-                {
-                    "name": "MDN Reference",
-                    "url": "https://developer.mozilla.org/docs/Web/CSS/:-moz-ui-valid"
-                }
             ],
             "description": "Non-standard. Represents any validated form element whose value is valid "
         },
@@ -20574,9 +20651,13 @@ export var cssData = {
         {
             "name": ":past",
             "browsers": [
-                "C",
-                "O16",
-                "S6"
+                "S6.1"
+            ],
+            "references": [
+                {
+                    "name": "MDN Reference",
+                    "url": "https://developer.mozilla.org/docs/Web/CSS/:past"
+                }
             ],
             "description": "Represents any element that is defined to occur entirely prior to a :current element."
         },
@@ -20796,10 +20877,10 @@ export var cssData = {
         {
             "name": ":focus-visible",
             "browsers": [
-                "E79",
+                "E86",
                 "FF85",
                 "C86",
-                "O54"
+                "O72"
             ],
             "references": [
                 {
@@ -20844,7 +20925,7 @@ export var cssData = {
                 "E79",
                 "FF78",
                 "S14",
-                "C68",
+                "C88",
                 "O55"
             ],
             "references": [
@@ -20906,7 +20987,7 @@ export var cssData = {
             "name": ":user-invalid",
             "status": "experimental",
             "browsers": [
-                "FF4"
+                "FF88"
             ],
             "references": [
                 {
@@ -20917,12 +20998,28 @@ export var cssData = {
             "description": "The :user-invalid CSS pseudo-class represents any validated form element whose value isn't valid based on their validation constraints, after the user has interacted with it."
         },
         {
+            "name": ":user-valid",
+            "status": "experimental",
+            "browsers": [
+                "FF88"
+            ],
+            "references": [
+                {
+                    "name": "MDN Reference",
+                    "url": "https://developer.mozilla.org/docs/Web/CSS/:user-valid"
+                }
+            ],
+            "description": "The :user-valid CSS pseudo-class represents any validated form element whose value validates correctly based on its validation constraints. However, unlike :valid it only matches once the user has interacted with it."
+        },
+        {
             "name": ":where",
             "status": "experimental",
             "browsers": [
+                "E88",
                 "FF78",
                 "S14",
-                "C72"
+                "C88",
+                "O74"
             ],
             "references": [
                 {
@@ -21606,6 +21703,22 @@ export var cssData = {
             ]
         },
         {
+            "name": "::target-text",
+            "status": "experimental",
+            "browsers": [
+                "E89",
+                "C89",
+                "O75"
+            ],
+            "references": [
+                {
+                    "name": "MDN Reference",
+                    "url": "https://developer.mozilla.org/docs/Web/CSS/::target-text"
+                }
+            ],
+            "description": "The ::target-text CSS pseudo-element represents the text that has been scrolled to if the browser supports scroll-to-text fragments. It allows authors to choose how to highlight that section of text."
+        },
+        {
             "name": "::-moz-range-progress",
             "status": "nonstandard",
             "browsers": [
@@ -21669,7 +21782,8 @@ export var cssData = {
                 "E86",
                 "FF68",
                 "S11.1",
-                "C86"
+                "C86",
+                "O72"
             ],
             "references": [
                 {

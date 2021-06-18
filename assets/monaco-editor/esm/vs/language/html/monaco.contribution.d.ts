@@ -1,4 +1,4 @@
-import { IEvent } from './fillers/monaco-editor-core';
+import { IEvent, IDisposable } from './fillers/monaco-editor-core';
 export interface HTMLFormatConfiguration {
     readonly tabSize: number;
     readonly insertSpaces: boolean;
@@ -14,7 +14,7 @@ export interface HTMLFormatConfiguration {
     readonly wrapAttributes: 'auto' | 'force' | 'force-aligned' | 'force-expand-multiline';
 }
 export interface CompletionConfiguration {
-    [provider: string]: boolean;
+    readonly [providerId: string]: boolean;
 }
 export interface Options {
     /**
@@ -25,6 +25,10 @@ export interface Options {
      * A list of known schemas and/or associations of schemas to file names.
      */
     readonly suggest?: CompletionConfiguration;
+    /**
+     * Configures the HTML data types known by the HTML langauge service.
+     */
+    readonly data?: HTMLDataConfiguration;
 }
 export interface ModeConfiguration {
     /**
@@ -82,7 +86,75 @@ export interface LanguageServiceDefaults {
     readonly onDidChange: IEvent<LanguageServiceDefaults>;
     readonly options: Options;
     setOptions(options: Options): void;
+    setModeConfiguration(modeConfiguration: ModeConfiguration): void;
 }
+export declare const htmlLanguageService: LanguageServiceRegistration;
 export declare const htmlDefaults: LanguageServiceDefaults;
+export declare const handlebarLanguageService: LanguageServiceRegistration;
 export declare const handlebarDefaults: LanguageServiceDefaults;
+export declare const razorLanguageService: LanguageServiceRegistration;
 export declare const razorDefaults: LanguageServiceDefaults;
+export interface LanguageServiceRegistration extends IDisposable {
+    readonly defaults: LanguageServiceDefaults;
+}
+/**
+ * Registers a new HTML language service for the languageId.
+ * Note: 'html', 'handlebar' and 'razor' are registered by default.
+ *
+ * Use this method to register additional language ids with a HTML service.
+ * The language server has to be registered before an editor model is opened.
+ */
+export declare function registerHTMLLanguageService(languageId: string, options?: Options, modeConfiguration?: ModeConfiguration): LanguageServiceRegistration;
+export interface HTMLDataConfiguration {
+    /**
+     * Defines whether the standard HTML tags and attributes are shown
+     */
+    readonly useDefaultDataProvider?: boolean;
+    /**
+     * Provides a set of custom data providers.
+     */
+    readonly dataProviders?: {
+        [providerId: string]: HTMLDataV1;
+    };
+}
+/**
+ * Custom HTML tags attributes and attribute values
+ * https://github.com/microsoft/vscode-html-languageservice/blob/main/docs/customData.md
+ */
+export interface HTMLDataV1 {
+    readonly version: 1 | 1.1;
+    readonly tags?: ITagData[];
+    readonly globalAttributes?: IAttributeData[];
+    readonly valueSets?: IValueSet[];
+}
+export interface IReference {
+    readonly name: string;
+    readonly url: string;
+}
+export interface ITagData {
+    readonly name: string;
+    readonly description?: string | MarkupContent;
+    readonly attributes: IAttributeData[];
+    readonly references?: IReference[];
+}
+export interface IAttributeData {
+    readonly name: string;
+    readonly description?: string | MarkupContent;
+    readonly valueSet?: string;
+    readonly values?: IValueData[];
+    readonly references?: IReference[];
+}
+export interface IValueData {
+    readonly name: string;
+    readonly description?: string | MarkupContent;
+    readonly references?: IReference[];
+}
+export interface IValueSet {
+    readonly name: string;
+    readonly values: IValueData[];
+}
+export interface MarkupContent {
+    readonly kind: MarkupKind;
+    readonly value: string;
+}
+export declare type MarkupKind = 'plaintext' | 'markdown';

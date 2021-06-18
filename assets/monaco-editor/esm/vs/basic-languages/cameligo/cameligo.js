@@ -18,14 +18,18 @@ export var conf = {
         { open: '[', close: ']' },
         { open: '(', close: ')' },
         { open: '<', close: '>' },
-        { open: "'", close: "'" }
+        { open: "'", close: "'" },
+        { open: "\"", close: "\"" },
+        { open: "(*", close: "*)" },
     ],
     surroundingPairs: [
         { open: '{', close: '}' },
         { open: '[', close: ']' },
         { open: '(', close: ')' },
         { open: '<', close: '>' },
-        { open: "'", close: "'" }
+        { open: "'", close: "'" },
+        { open: "\"", close: "\"" },
+        { open: "(*", close: "*)" },
     ]
 };
 export var language = {
@@ -40,14 +44,16 @@ export var language = {
     ],
     keywords: [
         'abs',
-        'begin',
+        'assert',
+        'block',
         'Bytes',
+        'case',
         'Crypto',
         'Current',
         'else',
-        'end',
         'failwith',
         'false',
+        'for',
         'fun',
         'if',
         'in',
@@ -65,17 +71,20 @@ export var language = {
         'operation',
         'Operation',
         'of',
+        'record',
         'Set',
         'set',
         'sender',
+        'skip',
         'source',
         'String',
         'then',
+        'to',
         'true',
         'type',
-        'with'
+        'with',
     ],
-    typeKeywords: ['int', 'unit', 'string', 'tz'],
+    typeKeywords: ['int', 'unit', 'string', 'tz', 'nat', 'bool'],
     operators: [
         '=',
         '>',
@@ -97,7 +106,9 @@ export var language = {
         '^',
         '%',
         '->',
-        '<-'
+        '<-',
+        '&&',
+        '||',
     ],
     // we include these common regular expressions
     symbols: /[=><:@\^&|+\-*\/\^%]+/,

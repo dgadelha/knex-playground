@@ -20,20 +20,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, privateMap, value) {
-    if (!privateMap.has(receiver)) {
-        throw new TypeError("attempted to set private field on non-instance");
-    }
-    privateMap.set(receiver, value);
-    return value;
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, privateMap) {
-    if (!privateMap.has(receiver)) {
-        throw new TypeError("attempted to get private field on non-instance");
-    }
-    return privateMap.get(receiver);
+var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var _disposed;
+var _CodeActionUi_disposed;
 import { onUnexpectedError } from '../../../base/common/errors.js';
 import { Lazy } from '../../../base/common/lazy.js';
 import { Disposable, MutableDisposable } from '../../../base/common/lifecycle.js';
@@ -47,7 +45,7 @@ let CodeActionUi = class CodeActionUi extends Disposable {
         this._editor = _editor;
         this.delegate = delegate;
         this._activeCodeActions = this._register(new MutableDisposable());
-        _disposed.set(this, false);
+        _CodeActionUi_disposed.set(this, false);
         this._codeActionWidget = new Lazy(() => {
             return this._register(instantiationService.createInstance(CodeActionMenu, this._editor, {
                 onSelectCodeAction: (action) => __awaiter(this, void 0, void 0, function* () {
@@ -62,7 +60,7 @@ let CodeActionUi = class CodeActionUi extends Disposable {
         });
     }
     dispose() {
-        __classPrivateFieldSet(this, _disposed, true);
+        __classPrivateFieldSet(this, _CodeActionUi_disposed, true, "f");
         super.dispose();
     }
     update(newState) {
@@ -80,11 +78,11 @@ let CodeActionUi = class CodeActionUi extends Disposable {
                 onUnexpectedError(e);
                 return;
             }
-            if (__classPrivateFieldGet(this, _disposed)) {
+            if (__classPrivateFieldGet(this, _CodeActionUi_disposed, "f")) {
                 return;
             }
             this._lightBulbWidget.getValue().update(actions, newState.trigger, newState.position);
-            if (newState.trigger.type === 2 /* Manual */) {
+            if (newState.trigger.type === 1 /* Invoke */) {
                 if ((_b = newState.trigger.filter) === null || _b === void 0 ? void 0 : _b.include) { // Triggered for specific scope
                     // Check to see if we want to auto apply.
                     const validActionToApply = this.tryGetValidActionToApply(newState.trigger, actions);
@@ -157,7 +155,7 @@ let CodeActionUi = class CodeActionUi extends Disposable {
         });
     }
 };
-_disposed = new WeakMap();
+_CodeActionUi_disposed = new WeakMap();
 CodeActionUi = __decorate([
     __param(4, IInstantiationService)
 ], CodeActionUi);

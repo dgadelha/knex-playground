@@ -12,8 +12,9 @@ import { IdleValue } from '../../../base/common/async.js';
 const _enableTracing = false;
 class CyclicDependencyError extends Error {
     constructor(graph) {
+        var _a;
         super('cyclic dependency between services');
-        this.message = graph.toString();
+        this.message = (_a = graph.findCycleSlow()) !== null && _a !== void 0 ? _a : `UNABLE to detect cycle, dumping graph: \n${graph.toString()}`;
     }
 }
 export class InstantiationService {

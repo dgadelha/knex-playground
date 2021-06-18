@@ -36,7 +36,7 @@ export class Menu extends ActionBar {
         menuElement.classList.add('monaco-menu');
         menuElement.setAttribute('role', 'presentation');
         super(menuElement, {
-            orientation: 2 /* VERTICAL */,
+            orientation: 1 /* VERTICAL */,
             actionViewItemProvider: action => this.doGetActionViewItem(action, options, parentData),
             context: options.context,
             actionRunner: options.actionRunner,

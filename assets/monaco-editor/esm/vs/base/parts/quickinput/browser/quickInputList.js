@@ -35,6 +35,7 @@ import { getIconClass } from './quickInputUtils.js';
 import { withNullAsUndefined } from '../../../common/types.js';
 import { KeybindingLabel } from '../../../browser/ui/keybindingLabel/keybindingLabel.js';
 import { localize } from '../../../../nls.js';
+import { getCodiconAriaLabel } from '../../../common/codicons.js';
 const $ = dom.$;
 class ListElement {
     constructor(init) {
@@ -340,7 +341,7 @@ export class QuickInputList {
                 const saneDescription = item.description && item.description.replace(/\r?\n/g, ' ');
                 const saneDetail = item.detail && item.detail.replace(/\r?\n/g, ' ');
                 const saneAriaLabel = item.ariaLabel || [saneLabel, saneDescription, saneDetail]
-                    .map(s => s && parseLabelWithIcons(s).text)
+                    .map(s => getCodiconAriaLabel(s))
                     .filter(s => !!s)
                     .join(', ');
                 result.push(new ListElement({
@@ -487,6 +488,7 @@ export class QuickInputList {
         }
         // Filter by value (since we support icons in labels, use $(..) aware fuzzy matching)
         else {
+            let currentSeparator;
             this.elements.forEach(element => {
                 const labelHighlights = this.matchOnLabel ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneLabel))) : undefined;
                 const descriptionHighlights = this.matchOnDescription ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDescription || ''))) : undefined;
@@ -505,6 +507,15 @@ export class QuickInputList {
                     element.hidden = !element.item.alwaysShow;
                 }
                 element.separator = undefined;
+                // we can show the separator unless the list gets sorted by match
+                if (!this.sortByLabel) {
+                    const previous = element.index && this.inputElements[element.index - 1];
+                    currentSeparator = previous && previous.type === 'separator' ? previous : currentSeparator;
+                    if (currentSeparator && !element.hidden) {
+                        element.separator = currentSeparator;
+                        currentSeparator = undefined;
+                    }
+                }
             });
         }
         const shownElements = this.elements.filter(element => !element.hidden);

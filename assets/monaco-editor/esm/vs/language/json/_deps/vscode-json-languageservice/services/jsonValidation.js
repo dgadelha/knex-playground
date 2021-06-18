@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { UnresolvedSchema } from './jsonSchemaService.js';
 import { ErrorCode, Diagnostic, DiagnosticSeverity, Range } from '../jsonLanguageTypes.js';
-import * as nls from './../../../fillers/vscode-nls.js';
+import * as nls from '../../../fillers/vscode-nls.js';
 import { isBoolean } from '../utils/objects.js';
 var localize = nls.loadMessageBundle();
 var JSONValidation = /** @class */ (function () {

@@ -152,6 +152,22 @@ export let completionKindFromString = (function () {
         return res;
     };
 })();
+/**
+ * How an {@link InlineCompletionsProvider inline completion provider} was triggered.
+ */
+export var InlineCompletionTriggerKind;
+(function (InlineCompletionTriggerKind) {
+    /**
+     * Completion was triggered automatically while editing.
+     * It is sufficient to return a single completion item in this case.
+     */
+    InlineCompletionTriggerKind[InlineCompletionTriggerKind["Automatic"] = 0] = "Automatic";
+    /**
+     * Completion was triggered explicitly by a user gesture.
+     * Return multiple completion items to enable cycling through them.
+     */
+    InlineCompletionTriggerKind[InlineCompletionTriggerKind["Explicit"] = 1] = "Explicit";
+})(InlineCompletionTriggerKind || (InlineCompletionTriggerKind = {}));
 export var SignatureHelpTriggerKind;
 (function (SignatureHelpTriggerKind) {
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["Invoke"] = 1] = "Invoke";
@@ -274,7 +290,7 @@ export var SymbolKinds;
 })(SymbolKinds || (SymbolKinds = {}));
 export class FoldingRangeKind {
     /**
-     * Creates a new [FoldingRangeKind](#FoldingRangeKind).
+     * Creates a new {@link FoldingRangeKind}.
      *
      * @param value of the kind.
      */
@@ -295,12 +311,12 @@ FoldingRangeKind.Imports = new FoldingRangeKind('imports');
  * The value of the kind is 'region'.
  */
 FoldingRangeKind.Region = new FoldingRangeKind('region');
-export var InlineHintKind;
-(function (InlineHintKind) {
-    InlineHintKind[InlineHintKind["Other"] = 0] = "Other";
-    InlineHintKind[InlineHintKind["Type"] = 1] = "Type";
-    InlineHintKind[InlineHintKind["Parameter"] = 2] = "Parameter";
-})(InlineHintKind || (InlineHintKind = {}));
+export var InlayHintKind;
+(function (InlayHintKind) {
+    InlayHintKind[InlayHintKind["Other"] = 0] = "Other";
+    InlayHintKind[InlayHintKind["Type"] = 1] = "Type";
+    InlayHintKind[InlayHintKind["Parameter"] = 2] = "Parameter";
+})(InlayHintKind || (InlayHintKind = {}));
 // --- feature registries ------
 /**
  * @internal
@@ -314,6 +330,10 @@ export const RenameProviderRegistry = new LanguageFeatureRegistry();
  * @internal
  */
 export const CompletionProviderRegistry = new LanguageFeatureRegistry();
+/**
+ * @internal
+ */
+export const InlineCompletionsProviderRegistry = new LanguageFeatureRegistry();
 /**
  * @internal
  */
@@ -357,7 +377,7 @@ export const CodeLensProviderRegistry = new LanguageFeatureRegistry();
 /**
  * @internal
  */
-export const InlineHintsProviderRegistry = new LanguageFeatureRegistry();
+export const InlayHintsProviderRegistry = new LanguageFeatureRegistry();
 /**
  * @internal
  */

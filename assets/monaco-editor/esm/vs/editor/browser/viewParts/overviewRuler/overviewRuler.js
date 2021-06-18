@@ -19,8 +19,8 @@ export class OverviewRuler extends ViewEventHandler {
         this._zoneManager.setDOMWidth(0);
         this._zoneManager.setDOMHeight(0);
         this._zoneManager.setOuterHeight(this._context.viewLayout.getScrollHeight());
-        this._zoneManager.setLineHeight(options.get(53 /* lineHeight */));
-        this._zoneManager.setPixelRatio(options.get(122 /* pixelRatio */));
+        this._zoneManager.setLineHeight(options.get(56 /* lineHeight */));
+        this._zoneManager.setPixelRatio(options.get(126 /* pixelRatio */));
         this._context.addEventHandler(this);
     }
     dispose() {
@@ -30,12 +30,12 @@ export class OverviewRuler extends ViewEventHandler {
     // ---- begin view event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        if (e.hasChanged(53 /* lineHeight */)) {
-            this._zoneManager.setLineHeight(options.get(53 /* lineHeight */));
+        if (e.hasChanged(56 /* lineHeight */)) {
+            this._zoneManager.setLineHeight(options.get(56 /* lineHeight */));
             this._render();
         }
-        if (e.hasChanged(122 /* pixelRatio */)) {
-            this._zoneManager.setPixelRatio(options.get(122 /* pixelRatio */));
+        if (e.hasChanged(126 /* pixelRatio */)) {
+            this._zoneManager.setPixelRatio(options.get(126 /* pixelRatio */));
             this._domNode.setWidth(this._zoneManager.getDOMWidth());
             this._domNode.setHeight(this._zoneManager.getDOMHeight());
             this._domNode.domNode.width = this._zoneManager.getCanvasWidth();

@@ -30,13 +30,13 @@ import { IInstantiationService } from '../../../../platform/instantiation/common
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { ITelemetryService } from '../../../../platform/telemetry/common/telemetry.js';
-import { INotificationService } from '../../../../platform/notification/common/notification.js';
+import { IDialogService } from '../../../../platform/dialogs/common/dialogs.js';
 import { EditorAction, registerEditorAction } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 let StandaloneCommandsQuickAccessProvider = class StandaloneCommandsQuickAccessProvider extends AbstractEditorCommandsQuickAccessProvider {
-    constructor(instantiationService, codeEditorService, keybindingService, commandService, telemetryService, notificationService) {
-        super({ showAlias: false }, instantiationService, keybindingService, commandService, telemetryService, notificationService);
+    constructor(instantiationService, codeEditorService, keybindingService, commandService, telemetryService, dialogService) {
+        super({ showAlias: false }, instantiationService, keybindingService, commandService, telemetryService, dialogService);
         this.codeEditorService = codeEditorService;
     }
     get activeTextEditorControl() { return withNullAsUndefined(this.codeEditorService.getFocusedCodeEditor()); }
@@ -52,7 +52,7 @@ StandaloneCommandsQuickAccessProvider = __decorate([
     __param(2, IKeybindingService),
     __param(3, ICommandService),
     __param(4, ITelemetryService),
-    __param(5, INotificationService)
+    __param(5, IDialogService)
 ], StandaloneCommandsQuickAccessProvider);
 export { StandaloneCommandsQuickAccessProvider };
 Registry.as(Extensions.Quickaccess).registerQuickAccessProvider({

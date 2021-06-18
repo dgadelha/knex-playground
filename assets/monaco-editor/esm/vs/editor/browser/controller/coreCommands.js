@@ -5,6 +5,7 @@
 import * as nls from '../../../nls.js';
 import { isFirefox } from '../../../base/browser/browser.js';
 import * as types from '../../../base/common/types.js';
+import { status } from '../../../base/browser/ui/aria/aria.js';
 import { Command, EditorCommand, registerEditorCommand, UndoCommand, RedoCommand, SelectAllCommand } from '../editorExtensions.js';
 import { ICodeEditorService } from '../services/codeEditorService.js';
 import { ColumnSelection } from '../../common/controller/cursorColumnSelection.js';
@@ -205,7 +206,7 @@ export var RevealLine_;
 class EditorOrNativeTextInputCommand {
     constructor(target) {
         // 1. handle case when focus is in editor.
-        target.addImplementation(10000, (accessor, args) => {
+        target.addImplementation(10000, 'code-editor', (accessor, args) => {
             // Only if editor text focus (i.e. not if editor has widget focus).
             const focusedEditor = accessor.get(ICodeEditorService).getFocusedCodeEditor();
             if (focusedEditor && focusedEditor.hasTextFocus()) {
@@ -214,7 +215,7 @@ class EditorOrNativeTextInputCommand {
             return false;
         });
         // 2. handle case when focus is in some other `input` / `textarea`.
-        target.addImplementation(1000, (accessor, args) => {
+        target.addImplementation(1000, 'generic-dom-input-textarea', (accessor, args) => {
             // Only if focused on an element that allows for entering text
             const activeElement = document.activeElement;
             if (activeElement && ['input', 'textarea'].indexOf(activeElement.tagName.toLowerCase()) >= 0) {
@@ -224,7 +225,7 @@ class EditorOrNativeTextInputCommand {
             return false;
         });
         // 3. (default) handle case when focus is somewhere else.
-        target.addImplementation(0, (accessor, args) => {
+        target.addImplementation(0, 'generic-dom', (accessor, args) => {
             // Redirecting to active editor
             const activeEditor = accessor.get(ICodeEditorService).getActiveCodeEditor();
             if (activeEditor) {
@@ -1266,6 +1267,7 @@ export var CoreNavigationCommands;
                 viewModel.getPrimaryCursorState()
             ]);
             viewModel.revealPrimaryCursor(args.source, true);
+            status(nls.localize('removedCursor', "Removed secondary cursors"));
         }
     });
     CoreNavigationCommands.RevealLine = registerEditorCommand(new class extends CoreEditorCommand {
@@ -1450,7 +1452,7 @@ export var CoreEditingCommands;
             });
         }
         runCoreEditingCommand(editor, viewModel, args) {
-            const [shouldPushStackElementBefore, commands] = DeleteOperations.deleteLeft(viewModel.getPrevEditOperationType(), viewModel.cursorConfig, viewModel.model, viewModel.getCursorStates().map(s => s.modelState.selection));
+            const [shouldPushStackElementBefore, commands] = DeleteOperations.deleteLeft(viewModel.getPrevEditOperationType(), viewModel.cursorConfig, viewModel.model, viewModel.getCursorStates().map(s => s.modelState.selection), viewModel.getCursorAutoClosedCharacters());
             if (shouldPushStackElementBefore) {
                 editor.pushUndoStop();
             }
@@ -1488,7 +1490,7 @@ export var CoreEditingCommands;
             document.execCommand('undo');
         }
         runEditorCommand(accessor, editor, args) {
-            if (!editor.hasModel() || editor.getOption(75 /* readOnly */) === true) {
+            if (!editor.hasModel() || editor.getOption(78 /* readOnly */) === true) {
                 return;
             }
             return editor.getModel().undo();
@@ -1502,7 +1504,7 @@ export var CoreEditingCommands;
             document.execCommand('redo');
         }
         runEditorCommand(accessor, editor, args) {
-            if (!editor.hasModel() || editor.getOption(75 /* readOnly */) === true) {
+            if (!editor.hasModel() || editor.getOption(78 /* readOnly */) === true) {
                 return;
             }
             return editor.getModel().redo();

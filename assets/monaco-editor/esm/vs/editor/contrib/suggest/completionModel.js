@@ -114,7 +114,6 @@ export class CompletionModel {
                 word = wordLen === 0 ? '' : leadingLineContent.slice(-wordLen);
                 wordLow = word.toLowerCase();
             }
-            const textLabel = typeof item.completion.label === 'string' ? item.completion.label : item.completion.label.name;
             // remember the word against which this item was
             // scored
             item.word = word;
@@ -153,20 +152,20 @@ export class CompletionModel {
                     if (!match) {
                         continue; // NO match
                     }
-                    if (compareIgnoreCase(item.completion.filterText, textLabel) === 0) {
+                    if (compareIgnoreCase(item.completion.filterText, item.textLabel) === 0) {
                         // filterText and label are actually the same -> use good highlights
                         item.score = match;
                     }
                     else {
                         // re-run the scorer on the label in the hope of a result BUT use the rank
                         // of the filterText-match
-                        item.score = anyScore(word, wordLow, wordPos, textLabel, item.labelLow, 0);
+                        item.score = anyScore(word, wordLow, wordPos, item.textLabel, item.labelLow, 0);
                         item.score[0] = match[0]; // use score from filterText
                     }
                 }
                 else {
                     // by default match `word` against the `label`
-                    let match = scoreFn(word, wordLow, wordPos, textLabel, item.labelLow, 0, false);
+                    let match = scoreFn(word, wordLow, wordPos, item.textLabel, item.labelLow, 0, false);
                     if (!match) {
                         continue; // NO match
                     }
@@ -177,7 +176,7 @@ export class CompletionModel {
             item.distance = this._wordDistance.distance(item.position, item.completion);
             target.push(item);
             // update stats
-            labelLengths.push(textLabel.length);
+            labelLengths.push(item.textLabel.length);
         }
         this._filteredItems = target.sort(this._snippetCompareFn);
         this._refilterKind = 0 /* Nothing */;

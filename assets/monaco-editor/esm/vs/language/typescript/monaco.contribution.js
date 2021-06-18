@@ -193,8 +193,8 @@ var LanguageServiceDefaultsImpl = /** @class */ (function () {
     return LanguageServiceDefaultsImpl;
 }());
 export var typescriptVersion = tsversion;
-export var typescriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, target: ScriptTarget.Latest }, { noSemanticValidation: false, noSyntaxValidation: false }, {});
-export var javascriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, allowJs: true, target: ScriptTarget.Latest }, { noSemanticValidation: true, noSyntaxValidation: false }, {});
+export var typescriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, target: ScriptTarget.Latest }, { noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: false }, {});
+export var javascriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, allowJs: true, target: ScriptTarget.Latest }, { noSemanticValidation: true, noSyntaxValidation: false, onlyVisible: false }, {});
 export var getTypeScriptWorker = function () {
     return getMode().then(function (mode) { return mode.getTypeScriptWorker(); });
 };

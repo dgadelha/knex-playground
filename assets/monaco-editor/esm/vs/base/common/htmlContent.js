@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { equals } from './arrays.js';
 import { escapeIcons } from './iconLabels.js';
 import { illegalArgument } from './errors.js';
 export class MarkdownString {
@@ -62,34 +61,6 @@ export function isMarkdownString(thing) {
             && (typeof thing.supportThemeIcons === 'boolean' || thing.supportThemeIcons === undefined);
     }
     return false;
-}
-export function markedStringsEquals(a, b) {
-    if (!a && !b) {
-        return true;
-    }
-    else if (!a || !b) {
-        return false;
-    }
-    else if (Array.isArray(a) && Array.isArray(b)) {
-        return equals(a, b, markdownStringEqual);
-    }
-    else if (isMarkdownString(a) && isMarkdownString(b)) {
-        return markdownStringEqual(a, b);
-    }
-    else {
-        return false;
-    }
-}
-function markdownStringEqual(a, b) {
-    if (a === b) {
-        return true;
-    }
-    else if (!a || !b) {
-        return false;
-    }
-    else {
-        return a.value === b.value && a.isTrusted === b.isTrusted && a.supportThemeIcons === b.supportThemeIcons;
-    }
 }
 export function escapeMarkdownSyntaxTokens(text) {
     // escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash

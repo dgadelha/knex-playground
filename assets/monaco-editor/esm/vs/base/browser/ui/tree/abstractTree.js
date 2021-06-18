@@ -489,6 +489,7 @@ class TypeFilterController {
         if (typeof options.filterOnType !== 'undefined') {
             this._filterOnType = !!options.filterOnType;
             this.filterOnTypeDomNode.checked = this._filterOnType;
+            this.updateFilterOnTypeTitleAndIcon();
         }
         if (typeof options.automaticKeyboardNavigation !== 'undefined') {
             this.automaticKeyboardNavigation = options.automaticKeyboardNavigation;
@@ -843,10 +844,11 @@ class TreeNodeListMouseController extends MouseController {
  * get rendered in the list, possibly due to a node expand() call.
  */
 class TreeNodeList extends List {
-    constructor(user, container, virtualDelegate, renderers, focusTrait, selectionTrait, options) {
+    constructor(user, container, virtualDelegate, renderers, focusTrait, selectionTrait, anchorTrait, options) {
         super(user, container, virtualDelegate, renderers, options);
         this.focusTrait = focusTrait;
         this.selectionTrait = selectionTrait;
+        this.anchorTrait = anchorTrait;
     }
     createMouseController(options) {
         return new TreeNodeListMouseController(this, options.tree);
@@ -858,6 +860,7 @@ class TreeNodeList extends List {
         }
         const additionalFocus = [];
         const additionalSelection = [];
+        let anchor;
         elements.forEach((node, index) => {
             if (this.focusTrait.has(node)) {
                 additionalFocus.push(start + index);
@@ -865,12 +868,18 @@ class TreeNodeList extends List {
             if (this.selectionTrait.has(node)) {
                 additionalSelection.push(start + index);
             }
+            if (this.anchorTrait.has(node)) {
+                anchor = start + index;
+            }
         });
         if (additionalFocus.length > 0) {
             super.setFocus(distinctES6([...super.getFocus(), ...additionalFocus]));
         }
         if (additionalSelection.length > 0) {
             super.setSelection(distinctES6([...super.getSelection(), ...additionalSelection]));
+        }
+        if (typeof anchor === 'number') {
+            super.setAnchor(anchor);
         }
     }
     setFocus(indexes, browserEvent, fromAPI = false) {
@@ -883,6 +892,17 @@ class TreeNodeList extends List {
         super.setSelection(indexes, browserEvent);
         if (!fromAPI) {
             this.selectionTrait.set(indexes.map(i => this.element(i)), browserEvent);
+        }
+    }
+    setAnchor(index, fromAPI = false) {
+        super.setAnchor(index);
+        if (!fromAPI) {
+            if (typeof index === 'undefined') {
+                this.anchorTrait.set([]);
+            }
+            else {
+                this.anchorTrait.set([this.element(index)]);
+            }
         }
     }
 }
@@ -910,7 +930,8 @@ export class AbstractTree {
         }
         this.focus = new Trait(_options.identityProvider);
         this.selection = new Trait(_options.identityProvider);
-        this.view = new TreeNodeList(user, container, treeDelegate, this.renderers, this.focus, this.selection, Object.assign(Object.assign({}, asListOptions(() => this.model, _options)), { tree: this }));
+        this.anchor = new Trait(_options.identityProvider);
+        this.view = new TreeNodeList(user, container, treeDelegate, this.renderers, this.focus, this.selection, this.anchor, Object.assign(Object.assign({}, asListOptions(() => this.model, _options)), { tree: this }));
         this.model = this.createModel(user, this.view, _options);
         onDidChangeCollapseStateRelay.input = this.model.onDidChangeCollapseState;
         const onDidModelSplice = Event.forEach(this.model.onDidSplice, e => {

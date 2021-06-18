@@ -222,8 +222,8 @@ export class TypeOperations {
     }
     static compositionType(prevEditOperationType, config, model, selections, text, replacePrevCharCnt, replaceNextCharCnt, positionDelta) {
         const commands = selections.map(selection => this._compositionType(model, selection, text, replacePrevCharCnt, replaceNextCharCnt, positionDelta));
-        return new EditOperationResult(1 /* Typing */, commands, {
-            shouldPushStackElementBefore: (prevEditOperationType !== 1 /* Typing */),
+        return new EditOperationResult(4 /* TypingOther */, commands, {
+            shouldPushStackElementBefore: shouldPushStackElementBetween(prevEditOperationType, 4 /* TypingOther */),
             shouldPushStackElementAfter: false
         });
     }
@@ -416,8 +416,8 @@ export class TypeOperations {
             const typeSelection = new Range(position.lineNumber, position.column, position.lineNumber, position.column + 1);
             commands[i] = new ReplaceCommand(typeSelection, ch);
         }
-        return new EditOperationResult(1 /* Typing */, commands, {
-            shouldPushStackElementBefore: (prevEditOperationType !== 1 /* Typing */),
+        return new EditOperationResult(4 /* TypingOther */, commands, {
+            shouldPushStackElementBefore: shouldPushStackElementBetween(prevEditOperationType, 4 /* TypingOther */),
             shouldPushStackElementAfter: false
         });
     }
@@ -548,7 +548,7 @@ export class TypeOperations {
             const selection = selections[i];
             commands[i] = new TypeWithAutoClosingCommand(selection, ch, insertOpenCharacter, autoClosingPairClose);
         }
-        return new EditOperationResult(1 /* Typing */, commands, {
+        return new EditOperationResult(4 /* TypingOther */, commands, {
             shouldPushStackElementBefore: true,
             shouldPushStackElementAfter: false
         });
@@ -654,7 +654,7 @@ export class TypeOperations {
                 let typeText = newIndentation + prefix + ch;
                 let typeSelection = new Range(position.lineNumber, 1, position.lineNumber, position.column);
                 const command = new ReplaceCommand(typeSelection, typeText);
-                return new EditOperationResult(1 /* Typing */, [command], {
+                return new EditOperationResult(getTypingOperation(typeText, prevEditOperationType), [command], {
                     shouldPushStackElementBefore: false,
                     shouldPushStackElementAfter: true
                 });
@@ -691,7 +691,7 @@ export class TypeOperations {
         if (this._isAutoClosingOvertype(config, model, selections, autoClosedCharacters, ch)) {
             // Unfortunately, the close character is at this point "doubled", so we need to delete it...
             const commands = selections.map(s => new ReplaceCommand(new Range(s.positionLineNumber, s.positionColumn, s.positionLineNumber, s.positionColumn + 1), '', false));
-            return new EditOperationResult(1 /* Typing */, commands, {
+            return new EditOperationResult(4 /* TypingOther */, commands, {
                 shouldPushStackElementBefore: true,
                 shouldPushStackElementAfter: false
             });
@@ -708,7 +708,7 @@ export class TypeOperations {
             for (let i = 0, len = selections.length; i < len; i++) {
                 commands[i] = TypeOperations._enter(config, model, false, selections[i]);
             }
-            return new EditOperationResult(1 /* Typing */, commands, {
+            return new EditOperationResult(4 /* TypingOther */, commands, {
                 shouldPushStackElementBefore: true,
                 shouldPushStackElementAfter: false,
             });
@@ -724,7 +724,7 @@ export class TypeOperations {
                 }
             }
             if (!autoIndentFails) {
-                return new EditOperationResult(1 /* Typing */, commands, {
+                return new EditOperationResult(4 /* TypingOther */, commands, {
                     shouldPushStackElementBefore: true,
                     shouldPushStackElementAfter: false,
                 });
@@ -755,12 +755,9 @@ export class TypeOperations {
         for (let i = 0, len = selections.length; i < len; i++) {
             commands[i] = new ReplaceCommand(selections[i], ch);
         }
-        let shouldPushStackElementBefore = (prevEditOperationType !== 1 /* Typing */);
-        if (ch === ' ') {
-            shouldPushStackElementBefore = true;
-        }
-        return new EditOperationResult(1 /* Typing */, commands, {
-            shouldPushStackElementBefore: shouldPushStackElementBefore,
+        const opType = getTypingOperation(ch, prevEditOperationType);
+        return new EditOperationResult(opType, commands, {
+            shouldPushStackElementBefore: shouldPushStackElementBetween(prevEditOperationType, opType),
             shouldPushStackElementAfter: false
         });
     }
@@ -769,8 +766,9 @@ export class TypeOperations {
         for (let i = 0, len = selections.length; i < len; i++) {
             commands[i] = new ReplaceCommand(selections[i], str);
         }
-        return new EditOperationResult(1 /* Typing */, commands, {
-            shouldPushStackElementBefore: (prevEditOperationType !== 1 /* Typing */),
+        const opType = getTypingOperation(str, prevEditOperationType);
+        return new EditOperationResult(opType, commands, {
+            shouldPushStackElementBefore: shouldPushStackElementBetween(prevEditOperationType, opType),
             shouldPushStackElementAfter: false
         });
     }
@@ -827,4 +825,36 @@ export class TypeWithAutoClosingCommand extends ReplaceCommandWithOffsetCursorSt
         this.enclosingRange = new Range(range.startLineNumber, range.endColumn - this._openCharacter.length - this._closeCharacter.length, range.endLineNumber, range.endColumn);
         return super.computeCursorState(model, helper);
     }
+}
+function getTypingOperation(typedText, previousTypingOperation) {
+    if (typedText === ' ') {
+        return previousTypingOperation === 5 /* TypingFirstSpace */
+            || previousTypingOperation === 6 /* TypingConsecutiveSpace */
+            ? 6 /* TypingConsecutiveSpace */
+            : 5 /* TypingFirstSpace */;
+    }
+    return 4 /* TypingOther */;
+}
+function shouldPushStackElementBetween(previousTypingOperation, typingOperation) {
+    if (isTypingOperation(previousTypingOperation) && !isTypingOperation(typingOperation)) {
+        // Always set an undo stop before non-type operations
+        return true;
+    }
+    if (previousTypingOperation === 5 /* TypingFirstSpace */) {
+        // `abc |d`: No undo stop
+        // `abc  |d`: Undo stop
+        return false;
+    }
+    // Insert undo stop between different operation types
+    return normalizeOperationType(previousTypingOperation) !== normalizeOperationType(typingOperation);
+}
+function normalizeOperationType(type) {
+    return (type === 6 /* TypingConsecutiveSpace */ || type === 5 /* TypingFirstSpace */)
+        ? 'space'
+        : type;
+}
+function isTypingOperation(type) {
+    return type === 4 /* TypingOther */
+        || type === 5 /* TypingFirstSpace */
+        || type === 6 /* TypingConsecutiveSpace */;
 }

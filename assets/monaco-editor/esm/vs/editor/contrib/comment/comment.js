@@ -22,7 +22,7 @@ class CommentLineAction extends EditorAction {
         const model = editor.getModel();
         const commands = [];
         const modelOptions = model.getOptions();
-        const commentsOptions = editor.getOption(16 /* comments */);
+        const commentsOptions = editor.getOption(17 /* comments */);
         const selections = editor.getSelections().map((selection, index) => ({ selection, index, ignoreFirstLine: false }));
         selections.sort((a, b) => Range.compareRangesUsingStarts(a.selection, b.selection));
         // Remove selections that would result in copying the same line
@@ -126,7 +126,7 @@ class BlockCommentAction extends EditorAction {
         if (!editor.hasModel()) {
             return;
         }
-        const commentsOptions = editor.getOption(16 /* comments */);
+        const commentsOptions = editor.getOption(17 /* comments */);
         const commands = [];
         const selections = editor.getSelections();
         for (const selection of selections) {

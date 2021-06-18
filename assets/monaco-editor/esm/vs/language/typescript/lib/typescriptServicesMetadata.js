@@ -1,4 +1,4 @@
 //
 // **NOTE**: Do not edit directly! This file is generated using `npm run import-typescript`
 //
-export var typescriptVersion = "4.2.3";
+export var typescriptVersion = "4.3.2";

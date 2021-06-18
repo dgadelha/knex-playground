@@ -34,7 +34,6 @@ export class ResourceTextEdit extends ResourceEdit {
         this.resource = resource;
         this.textEdit = textEdit;
         this.versionId = versionId;
-        this.metadata = metadata;
     }
 }
 export class ResourceFileEdit extends ResourceEdit {
@@ -43,6 +42,5 @@ export class ResourceFileEdit extends ResourceEdit {
         this.oldResource = oldResource;
         this.newResource = newResource;
         this.options = options;
-        this.metadata = metadata;
     }
 }

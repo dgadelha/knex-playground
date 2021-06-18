@@ -8,10 +8,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import './list.css';
 import { dispose, DisposableStore } from '../../../common/lifecycle.js';
 import { isNumber } from '../../../common/types.js';
-import { range, binarySearch } from '../../../common/arrays.js';
+import { range, binarySearch, firstOrDefault } from '../../../common/arrays.js';
 import { memoize } from '../../../common/decorators.js';
 import * as platform from '../../../common/platform.js';
 import { Gesture } from '../../touch.js';
@@ -27,6 +36,7 @@ import { clamp } from '../../../common/numbers.js';
 import { matchesPrefix } from '../../../common/filters.js';
 import { alert } from '../aria/aria.js';
 import { createStyleSheet } from '../../dom.js';
+import { timeout } from '../../../common/async.js';
 class TraitRenderer {
     constructor(trait) {
         this.trait = trait;
@@ -484,22 +494,21 @@ export class MouseController {
         if (isInputElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
             return;
         }
-        let reference = this.list.getFocus()[0];
-        const selection = this.list.getSelection();
-        reference = reference === undefined ? selection[0] : reference;
         const focus = e.index;
         if (typeof focus === 'undefined') {
             this.list.setFocus([], e.browserEvent);
             this.list.setSelection([], e.browserEvent);
+            this.list.setAnchor(undefined);
             return;
         }
         if (this.multipleSelectionSupport && this.isSelectionRangeChangeEvent(e)) {
-            return this.changeSelection(e, reference);
+            return this.changeSelection(e);
         }
         if (this.multipleSelectionSupport && this.isSelectionChangeEvent(e)) {
-            return this.changeSelection(e, reference);
+            return this.changeSelection(e);
         }
         this.list.setFocus([focus], e.browserEvent);
+        this.list.setAnchor(focus);
         if (!isMouseRightClick(e.browserEvent)) {
             this.list.setSelection([focus], e.browserEvent);
         }
@@ -515,24 +524,32 @@ export class MouseController {
         const focus = this.list.getFocus();
         this.list.setSelection(focus, e.browserEvent);
     }
-    changeSelection(e, reference) {
+    changeSelection(e) {
         const focus = e.index;
-        if (this.isSelectionRangeChangeEvent(e) && reference !== undefined) {
-            const min = Math.min(reference, focus);
-            const max = Math.max(reference, focus);
+        let anchor = this.list.getAnchor();
+        if (this.isSelectionRangeChangeEvent(e)) {
+            if (typeof anchor === 'undefined') {
+                const currentFocus = this.list.getFocus()[0];
+                anchor = currentFocus !== null && currentFocus !== void 0 ? currentFocus : focus;
+                this.list.setAnchor(anchor);
+            }
+            const min = Math.min(anchor, focus);
+            const max = Math.max(anchor, focus);
             const rangeSelection = range(min, max + 1);
             const selection = this.list.getSelection();
-            const contiguousRange = getContiguousRangeContaining(disjunction(selection, [reference]), reference);
+            const contiguousRange = getContiguousRangeContaining(disjunction(selection, [anchor]), anchor);
             if (contiguousRange.length === 0) {
                 return;
             }
             const newSelection = disjunction(rangeSelection, relativeComplement(selection, contiguousRange));
             this.list.setSelection(newSelection, e.browserEvent);
+            this.list.setFocus([focus], e.browserEvent);
         }
         else if (this.isSelectionSingleChangeEvent(e)) {
             const selection = this.list.getSelection();
             const newSelection = selection.filter(i => i !== focus);
             this.list.setFocus([focus]);
+            this.list.setAnchor(focus);
             if (selection.length === newSelection.length) {
                 this.list.setSelection([...newSelection, focus], e.browserEvent);
             }
@@ -853,6 +870,8 @@ export class List {
         var _a;
         this.user = user;
         this._options = _options;
+        this.focus = new Trait('focused');
+        this.anchor = new Trait('anchor');
         this.eventBufferer = new EventBufferer();
         this._ariaLabel = '';
         this.disposables = new DisposableStore();
@@ -860,7 +879,6 @@ export class List {
         this.onDidDispose = this._onDidDispose.event;
         const role = this._options.accessibilityProvider && this._options.accessibilityProvider.getWidgetRole ? (_a = this._options.accessibilityProvider) === null || _a === void 0 ? void 0 : _a.getWidgetRole() : 'list';
         this.selection = new SelectionTrait(role !== 'listbox');
-        this.focus = new Trait('focused');
         mixin(_options, defaultStyles, false);
         const baseRenderers = [this.focus.renderer, this.selection.renderer];
         this.accessibilityProvider = _options.accessibilityProvider;
@@ -884,10 +902,12 @@ export class List {
         this.spliceable = new CombinedSpliceable([
             new TraitSpliceable(this.focus, this.view, _options.identityProvider),
             new TraitSpliceable(this.selection, this.view, _options.identityProvider),
+            new TraitSpliceable(this.anchor, this.view, _options.identityProvider),
             this.view
         ]);
         this.disposables.add(this.focus);
         this.disposables.add(this.selection);
+        this.disposables.add(this.anchor);
         this.disposables.add(this.view);
         this.disposables.add(this._onDidDispose);
         this.onDidFocus = Event.map(domEvent(this.view.domNode, 'focus', true), () => null);
@@ -957,7 +977,7 @@ export class List {
             .event;
         const fromMouse = Event.chain(this.view.onContextMenu)
             .filter(_ => !didJustPressContextMenuKey)
-            .map(({ element, index, browserEvent }) => ({ element, index, anchor: { x: browserEvent.clientX + 1, y: browserEvent.clientY }, browserEvent }))
+            .map(({ element, index, browserEvent }) => ({ element, index, anchor: { x: browserEvent.pageX + 1, y: browserEvent.pageY }, browserEvent }))
             .event;
         return Event.any(fromKeyDown, fromKeyUp, fromMouse);
     }
@@ -1032,6 +1052,19 @@ export class List {
     getSelectedElements() {
         return this.getSelection().map(i => this.view.element(i));
     }
+    setAnchor(index) {
+        if (typeof index === 'undefined') {
+            this.anchor.set([]);
+            return;
+        }
+        if (index < 0 || index >= this.length) {
+            throw new ListError(this.user, `Invalid index ${index}`);
+        }
+        this.anchor.set([index]);
+    }
+    getAnchor() {
+        return firstOrDefault(this.anchor.get(), undefined);
+    }
     setFocus(indexes, browserEvent) {
         for (const index of indexes) {
             if (index < 0 || index >= this.length) {
@@ -1061,58 +1094,64 @@ export class List {
         }
     }
     focusNextPage(browserEvent, filter) {
-        let lastPageIndex = this.view.indexAt(this.view.getScrollTop() + this.view.renderHeight);
-        lastPageIndex = lastPageIndex === 0 ? 0 : lastPageIndex - 1;
-        const lastPageElement = this.view.element(lastPageIndex);
-        const currentlyFocusedElement = this.getFocusedElements()[0];
-        if (currentlyFocusedElement !== lastPageElement) {
-            const lastGoodPageIndex = this.findPreviousIndex(lastPageIndex, false, filter);
-            if (lastGoodPageIndex > -1 && currentlyFocusedElement !== this.view.element(lastGoodPageIndex)) {
-                this.setFocus([lastGoodPageIndex], browserEvent);
+        return __awaiter(this, void 0, void 0, function* () {
+            let lastPageIndex = this.view.indexAt(this.view.getScrollTop() + this.view.renderHeight);
+            lastPageIndex = lastPageIndex === 0 ? 0 : lastPageIndex - 1;
+            const lastPageElement = this.view.element(lastPageIndex);
+            const currentlyFocusedElement = this.getFocusedElements()[0];
+            if (currentlyFocusedElement !== lastPageElement) {
+                const lastGoodPageIndex = this.findPreviousIndex(lastPageIndex, false, filter);
+                if (lastGoodPageIndex > -1 && currentlyFocusedElement !== this.view.element(lastGoodPageIndex)) {
+                    this.setFocus([lastGoodPageIndex], browserEvent);
+                }
+                else {
+                    this.setFocus([lastPageIndex], browserEvent);
+                }
             }
             else {
-                this.setFocus([lastPageIndex], browserEvent);
+                const previousScrollTop = this.view.getScrollTop();
+                this.view.setScrollTop(previousScrollTop + this.view.renderHeight - this.view.elementHeight(lastPageIndex));
+                if (this.view.getScrollTop() !== previousScrollTop) {
+                    this.setFocus([]);
+                    // Let the scroll event listener run
+                    yield timeout(0);
+                    yield this.focusNextPage(browserEvent, filter);
+                }
             }
-        }
-        else {
-            const previousScrollTop = this.view.getScrollTop();
-            this.view.setScrollTop(previousScrollTop + this.view.renderHeight - this.view.elementHeight(lastPageIndex));
-            if (this.view.getScrollTop() !== previousScrollTop) {
-                this.setFocus([]);
-                // Let the scroll event listener run
-                setTimeout(() => this.focusNextPage(browserEvent, filter), 0);
-            }
-        }
+        });
     }
     focusPreviousPage(browserEvent, filter) {
-        let firstPageIndex;
-        const scrollTop = this.view.getScrollTop();
-        if (scrollTop === 0) {
-            firstPageIndex = this.view.indexAt(scrollTop);
-        }
-        else {
-            firstPageIndex = this.view.indexAfter(scrollTop - 1);
-        }
-        const firstPageElement = this.view.element(firstPageIndex);
-        const currentlyFocusedElement = this.getFocusedElements()[0];
-        if (currentlyFocusedElement !== firstPageElement) {
-            const firstGoodPageIndex = this.findNextIndex(firstPageIndex, false, filter);
-            if (firstGoodPageIndex > -1 && currentlyFocusedElement !== this.view.element(firstGoodPageIndex)) {
-                this.setFocus([firstGoodPageIndex], browserEvent);
+        return __awaiter(this, void 0, void 0, function* () {
+            let firstPageIndex;
+            const scrollTop = this.view.getScrollTop();
+            if (scrollTop === 0) {
+                firstPageIndex = this.view.indexAt(scrollTop);
             }
             else {
-                this.setFocus([firstPageIndex], browserEvent);
+                firstPageIndex = this.view.indexAfter(scrollTop - 1);
             }
-        }
-        else {
-            const previousScrollTop = scrollTop;
-            this.view.setScrollTop(scrollTop - this.view.renderHeight);
-            if (this.view.getScrollTop() !== previousScrollTop) {
-                this.setFocus([]);
-                // Let the scroll event listener run
-                setTimeout(() => this.focusPreviousPage(browserEvent, filter), 0);
+            const firstPageElement = this.view.element(firstPageIndex);
+            const currentlyFocusedElement = this.getFocusedElements()[0];
+            if (currentlyFocusedElement !== firstPageElement) {
+                const firstGoodPageIndex = this.findNextIndex(firstPageIndex, false, filter);
+                if (firstGoodPageIndex > -1 && currentlyFocusedElement !== this.view.element(firstGoodPageIndex)) {
+                    this.setFocus([firstGoodPageIndex], browserEvent);
+                }
+                else {
+                    this.setFocus([firstPageIndex], browserEvent);
+                }
             }
-        }
+            else {
+                const previousScrollTop = scrollTop;
+                this.view.setScrollTop(scrollTop - this.view.renderHeight);
+                if (this.view.getScrollTop() !== previousScrollTop) {
+                    this.setFocus([]);
+                    // Let the scroll event listener run
+                    yield timeout(0);
+                    yield this.focusPreviousPage(browserEvent, filter);
+                }
+            }
+        });
     }
     focusLast(browserEvent, filter) {
         if (this.length === 0) {
@@ -1181,14 +1220,14 @@ export class List {
         }
         else {
             const viewItemBottom = elementTop + elementHeight;
-            const wrapperBottom = scrollTop + this.view.renderHeight;
-            if (elementTop < scrollTop && viewItemBottom >= wrapperBottom) {
+            const scrollBottom = scrollTop + this.view.renderHeight;
+            if (elementTop < scrollTop && viewItemBottom >= scrollBottom) {
                 // The element is already overflowing the viewport, no-op
             }
-            else if (elementTop < scrollTop) {
+            else if (elementTop < scrollTop || (viewItemBottom >= scrollBottom && elementHeight >= this.view.renderHeight)) {
                 this.view.setScrollTop(elementTop);
             }
-            else if (viewItemBottom >= wrapperBottom) {
+            else if (viewItemBottom >= scrollBottom) {
                 this.view.setScrollTop(viewItemBottom - this.view.renderHeight);
             }
         }

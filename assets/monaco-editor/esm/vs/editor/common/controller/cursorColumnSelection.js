@@ -57,7 +57,7 @@ export class ColumnSelection {
     }
     static columnSelectLeft(config, model, prevColumnSelectData) {
         let toViewVisualColumn = prevColumnSelectData.toViewVisualColumn;
-        if (toViewVisualColumn > 1) {
+        if (toViewVisualColumn > 0) {
             toViewVisualColumn--;
         }
         return ColumnSelection.columnSelect(config, model, prevColumnSelectData.fromViewLineNumber, prevColumnSelectData.fromViewVisualColumn, prevColumnSelectData.toViewLineNumber, toViewVisualColumn);

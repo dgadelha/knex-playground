@@ -68,7 +68,7 @@ define('vs/basic-languages/razor/razor',["require", "exports", "../fillers/monac
         // The main tokenizer for our languages
         tokenizer: {
             root: [
-                [/@@/],
+                [/@@@@/],
                 [/@[^@]/, { token: '@rematch', switchTo: '@razorInSimpleState.root' }],
                 [/<!DOCTYPE/, 'metatag.html', '@doctype'],
                 [/<!--/, 'comment.html', '@comment'],

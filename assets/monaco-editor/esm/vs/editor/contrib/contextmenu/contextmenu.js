@@ -22,6 +22,7 @@ import { IContextKeyService } from '../../../platform/contextkey/common/contextk
 import { IContextMenuService, IContextViewService } from '../../../platform/contextview/browser/contextView.js';
 import { IKeybindingService } from '../../../platform/keybinding/common/keybinding.js';
 import { ActionViewItem } from '../../../base/browser/ui/actionbar/actionViewItems.js';
+import { isIOS } from '../../../base/common/platform.js';
 let ContextMenuController = class ContextMenuController {
     constructor(editor, _contextMenuService, _contextViewService, _contextKeyService, _keybindingService, _menuService) {
         this._contextMenuService = _contextMenuService;
@@ -60,7 +61,7 @@ let ContextMenuController = class ContextMenuController {
         if (!this._editor.hasModel()) {
             return;
         }
-        if (!this._editor.getOption(17 /* contextmenu */)) {
+        if (!this._editor.getOption(18 /* contextmenu */)) {
             this._editor.focus();
             // Ensure the cursor is at the position of the mouse click
             if (e.target.position && !this._editor.getSelection().containsPosition(e.target.position)) {
@@ -99,7 +100,7 @@ let ContextMenuController = class ContextMenuController {
         this.showContextMenu(anchor);
     }
     showContextMenu(anchor) {
-        if (!this._editor.getOption(17 /* contextmenu */)) {
+        if (!this._editor.getOption(18 /* contextmenu */)) {
             return; // Context menu is turned off through configuration
         }
         if (!this._editor.hasModel()) {
@@ -110,7 +111,7 @@ let ContextMenuController = class ContextMenuController {
             return; // We need the context menu service to function
         }
         // Find actions available for menu
-        const menuActions = this._getMenuActions(this._editor.getModel(), MenuId.EditorContext);
+        const menuActions = this._getMenuActions(this._editor.getModel(), this._editor.isSimpleWidget ? MenuId.SimpleEditorContext : MenuId.EditorContext);
         // Show menu if we have actions to show
         if (menuActions.length > 0) {
             this._doShowContextMenu(menuActions, anchor);
@@ -153,7 +154,7 @@ let ContextMenuController = class ContextMenuController {
             return;
         }
         // Disable hover
-        const oldHoverSetting = this._editor.getOption(48 /* hover */);
+        const oldHoverSetting = this._editor.getOption(50 /* hover */);
         this._editor.updateOptions({
             hover: {
                 enabled: false
@@ -170,10 +171,11 @@ let ContextMenuController = class ContextMenuController {
             const posy = editorCoords.top + cursorCoords.top + cursorCoords.height;
             anchor = { x: posx, y: posy };
         }
+        const useShadowDOM = this._editor.getOption(112 /* useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         // Show menu
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
-            domForShadowRoot: this._editor.getDomNode(),
+            domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,
             getAnchor: () => anchor,
             getActions: () => actions,
             getActionViewItem: (action) => {

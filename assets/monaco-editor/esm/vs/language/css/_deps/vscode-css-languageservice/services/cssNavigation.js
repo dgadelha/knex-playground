@@ -114,34 +114,39 @@ var CSSNavigation = /** @class */ (function () {
         return node.type === nodes.NodeType.Import;
     };
     CSSNavigation.prototype.findDocumentLinks = function (document, stylesheet, documentContext) {
-        var links = this.findUnresolvedLinks(document, stylesheet);
-        for (var i = 0; i < links.length; i++) {
-            var target = links[i].target;
+        var linkData = this.findUnresolvedLinks(document, stylesheet);
+        var resolvedLinks = [];
+        for (var _i = 0, linkData_1 = linkData; _i < linkData_1.length; _i++) {
+            var data = linkData_1[_i];
+            var link = data.link;
+            var target = link.target;
             if (target && !(/^\w+:\/\//g.test(target))) {
                 var resolved = documentContext.resolveReference(target, document.uri);
                 if (resolved) {
-                    links[i].target = resolved;
+                    link.target = resolved;
                 }
             }
+            resolvedLinks.push(link);
         }
-        return links;
+        return resolvedLinks;
     };
     CSSNavigation.prototype.findDocumentLinks2 = function (document, stylesheet, documentContext) {
         return __awaiter(this, void 0, void 0, function () {
-            var links, resolvedLinks, _i, links_1, link, target, resolvedTarget;
+            var linkData, resolvedLinks, _i, linkData_2, data, link, target, resolvedTarget;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        links = this.findUnresolvedLinks(document, stylesheet);
+                        linkData = this.findUnresolvedLinks(document, stylesheet);
                         resolvedLinks = [];
-                        _i = 0, links_1 = links;
+                        _i = 0, linkData_2 = linkData;
                         _a.label = 1;
                     case 1:
-                        if (!(_i < links_1.length)) return [3 /*break*/, 5];
-                        link = links_1[_i];
+                        if (!(_i < linkData_2.length)) return [3 /*break*/, 5];
+                        data = linkData_2[_i];
+                        link = data.link;
                         target = link.target;
                         if (!(target && !(/^\w+:\/\//g.test(target)))) return [3 /*break*/, 3];
-                        return [4 /*yield*/, this.resolveRelativeReference(target, document.uri, documentContext)];
+                        return [4 /*yield*/, this.resolveRelativeReference(target, document.uri, documentContext, data.isRawLink)];
                     case 2:
                         resolvedTarget = _a.sent();
                         if (resolvedTarget !== undefined) {
@@ -173,7 +178,8 @@ var CSSNavigation = /** @class */ (function () {
             if (startsWith(rawUri, "'") || startsWith(rawUri, "\"")) {
                 rawUri = rawUri.slice(1, -1);
             }
-            result.push({ target: rawUri, range: range });
+            var isRawLink = uriStringNode.parent ? _this.isRawStringDocumentLinkNode(uriStringNode.parent) : false;
+            result.push({ link: { target: rawUri, range: range }, isRawLink: isRawLink });
         };
         stylesheet.accept(function (candidate) {
             if (candidate.type === nodes.NodeType.URILiteral) {
@@ -296,7 +302,7 @@ var CSSNavigation = /** @class */ (function () {
             changes: (_a = {}, _a[document.uri] = edits, _a)
         };
     };
-    CSSNavigation.prototype.resolveRelativeReference = function (ref, documentUri, documentContext) {
+    CSSNavigation.prototype.resolveRelativeReference = function (ref, documentUri, documentContext, isRawLink) {
         return __awaiter(this, void 0, void 0, function () {
             var moduleName, rootFolderUri, documentFolderUri, modulePath, pathWithinModule;
             return __generator(this, function (_a) {

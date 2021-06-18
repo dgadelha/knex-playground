@@ -132,7 +132,8 @@ export class SplitView extends Disposable {
             vertical: this.orientation === 0 /* VERTICAL */ ? ((_a = options.scrollbarVisibility) !== null && _a !== void 0 ? _a : 1 /* Auto */) : 2 /* Hidden */,
             horizontal: this.orientation === 1 /* HORIZONTAL */ ? ((_b = options.scrollbarVisibility) !== null && _b !== void 0 ? _b : 1 /* Auto */) : 2 /* Hidden */
         }, this.scrollable));
-        this._register(this.scrollableElement.onScroll(e => {
+        this.onDidScroll = this.scrollableElement.onScroll;
+        this._register(this.onDidScroll(e => {
             this.viewContainer.scrollTop = e.scrollTop;
             this.viewContainer.scrollLeft = e.scrollLeft;
         }));

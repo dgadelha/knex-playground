@@ -12,7 +12,7 @@ import { basename } from '../../../base/common/resources.js';
 function uriGetComparisonKey(resource) {
     return resource.toString();
 }
-class SingleModelEditStackData {
+export class SingleModelEditStackData {
     constructor(beforeVersionId, afterVersionId, beforeEOL, afterEOL, beforeCursorState, afterCursorState, changes) {
         this.beforeVersionId = beforeVersionId;
         this.afterVersionId = afterVersionId;

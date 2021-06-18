@@ -11,8 +11,8 @@ export class ViewZones extends ViewPart {
     constructor(context) {
         super(context);
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._contentWidth = layoutInfo.contentWidth;
         this._contentLeft = layoutInfo.contentLeft;
         this.domNode = createFastDomNode(document.createElement('div'));
@@ -57,11 +57,11 @@ export class ViewZones extends ViewPart {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(124 /* layoutInfo */);
-        this._lineHeight = options.get(53 /* lineHeight */);
+        const layoutInfo = options.get(128 /* layoutInfo */);
+        this._lineHeight = options.get(56 /* lineHeight */);
         this._contentWidth = layoutInfo.contentWidth;
         this._contentLeft = layoutInfo.contentLeft;
-        if (e.hasChanged(53 /* lineHeight */)) {
+        if (e.hasChanged(56 /* lineHeight */)) {
             this._recomputeWhitespacesProps();
         }
         return true;
