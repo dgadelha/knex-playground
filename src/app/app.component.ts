@@ -66,7 +66,11 @@ export class AppComponent implements OnInit {
     this.onCodeChange(this.code);
   }
 
-  onPrettify() {
+  @HostListener("window:keydown.control.shift.p", ["$event"])
+  onPrettify(event?: KeyboardEvent) {
+    if (event) {
+      event.preventDefault();
+    }
     this.code = format(this.code, {
       parser: "typescript",
       plugins: [parserTypescript],
