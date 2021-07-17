@@ -1,3 +1,3 @@
-<ngx-monaco-editor #knexEditor [options]="knexEditorOptions" [(ngModel)]="code" (ngModelChange)="onCodeChange($event)"></ngx-monaco-editor>
+<ngx-monaco-editor #knexEditor [options]="knexEditorOptions" [(ngModel)]="code" (ngModelChange)="onCodeChange($event)" (init)="editorInit($event)"></ngx-monaco-editor>
 <ngx-monaco-editor #sqlEditor [options]="sqlEditorOptions" [(ngModel)]="sql"></ngx-monaco-editor>
 <app-footer [(client)]="client" (clientChange)="onClientChange($event)" (prettify)="onPrettify()" [knexVersion]="knexVersion"></app-footer>

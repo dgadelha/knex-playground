@@ -5,6 +5,7 @@ import { version as knexVersion } from "../../node_modules/knex/package.json";
 import { MonacoService } from "./monaco.service";
 import { format } from "prettier/standalone";
 import * as parserTypescript from "prettier/parser-typescript";
+import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
 
 @Component({
   selector: "app-root",
@@ -13,6 +14,8 @@ import * as parserTypescript from "prettier/parser-typescript";
 })
 export class AppComponent implements OnInit {
   client = "pg";
+
+  editor!: MonacoStandaloneCodeEditor;
 
   knex = Knex({ client: this.client });
   knexVersion = knexVersion;
@@ -36,6 +39,10 @@ export class AppComponent implements OnInit {
   sql: string = `--- generated SQL code\nselect\n  *\nfrom\n  "table"\n`;
 
   constructor(private monacoService: MonacoService) {}
+
+  editorInit(editor: MonacoStandaloneCodeEditor) {
+    this.editor = editor;
+  }
 
   ngOnInit() {
     this.hashChangeHandler();
@@ -71,11 +78,19 @@ export class AppComponent implements OnInit {
     if (event) {
       event.preventDefault();
     }
+    // To restore cursor state after code change, save current state before modifying the code.
+    const state = this.editor.saveViewState();
     this.code = format(this.code, {
       parser: "typescript",
       plugins: [parserTypescript],
       trailingComma: "all",
       semi: false,
     });
+    // Add delay because the code will be changed in an async way.
+    setTimeout(() => {
+      if (state) {
+        this.editor.restoreViewState(state);
+      }
+    }, 0);
   }
 }
