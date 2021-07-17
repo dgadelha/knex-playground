@@ -42,6 +42,7 @@ export class AppComponent implements OnInit {
 
   editorInit(editor: MonacoStandaloneCodeEditor) {
     this.editor = editor;
+    editor.focus();
   }
 
   ngOnInit() {
