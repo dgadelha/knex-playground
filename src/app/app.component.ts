@@ -3,6 +3,8 @@ import Knex from "knex";
 import * as sqlFormatter from "sql-formatter";
 import { version as knexVersion } from "../../node_modules/knex/package.json";
 import { MonacoService } from "./monaco.service";
+import { format } from "prettier/standalone";
+import * as parserTypescript from "prettier/parser-typescript";
 
 @Component({
   selector: "app-root",
@@ -62,5 +64,14 @@ export class AppComponent implements OnInit {
   onClientChange(client: string) {
     this.knex = Knex({ client });
     this.onCodeChange(this.code);
+  }
+
+  onPrettify() {
+    this.code = format(this.code, {
+      parser: "typescript",
+      plugins: [parserTypescript],
+      trailingComma: "all",
+      semi: false,
+    });
   }
 }
