@@ -15,6 +15,9 @@ export class FooterComponent {
   @Output()
   clientChange: EventEmitter<string> = new EventEmitter<string>();
 
+  @Output()
+  prettify: EventEmitter<void> = new EventEmitter<void>();
+
   clients = [
     { id: "mysql", name: "MySQL / MariaDB" },
     { id: "pg", name: "PostgreSQL" },
