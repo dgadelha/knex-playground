@@ -3,8 +3,7 @@ import Knex from "knex";
 import * as sqlFormatter from "sql-formatter";
 import { version as knexVersion } from "../../node_modules/knex/package.json";
 import { MonacoService } from "./monaco.service";
-import { format } from "prettier/standalone";
-import * as parserTypescript from "prettier/parser-typescript";
+import { js_beautify } from "js-beautify";
 import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
 
 @Component({
@@ -14,8 +13,6 @@ import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
 })
 export class AppComponent implements OnInit {
   client = "pg";
-
-  editor!: MonacoStandaloneCodeEditor;
 
   knex = Knex({ client: this.client });
   knexVersion = knexVersion;
@@ -41,7 +38,6 @@ export class AppComponent implements OnInit {
   constructor(private monacoService: MonacoService) {}
 
   editorInit(editor: MonacoStandaloneCodeEditor) {
-    this.editor = editor;
     editor.focus();
   }
 
@@ -75,23 +71,9 @@ export class AppComponent implements OnInit {
   }
 
   @HostListener("window:keydown.control.shift.p", ["$event"])
+  @HostListener("window:keydown.shift.alt.f", ["$event"])
   onPrettify(event?: KeyboardEvent) {
-    if (event) {
-      event.preventDefault();
-    }
-    // To restore cursor state after code change, save current state before modifying the code.
-    const state = this.editor.saveViewState();
-    this.code = format(this.code, {
-      parser: "typescript",
-      plugins: [parserTypescript],
-      trailingComma: "all",
-      semi: false,
-    });
-    // Add delay because the code will be changed in an async way.
-    setTimeout(() => {
-      if (state) {
-        this.editor.restoreViewState(state);
-      }
-    }, 0);
+    event?.preventDefault();
+    this.code = js_beautify(this.code);
   }
 }
