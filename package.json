@@ -19,7 +19,7 @@
     "@materia-ui/ngx-monaco-editor": "^5.0.0",
     "fs-browser-stub": "^1.0.1",
     "js-beautify": "^1.14.0",
-    "knex": "^0.95.6",
+    "knex": "^0.95.12",
     "monaco-editor": "^0.25.2",
     "mssql": "^6.3.1",
     "rxjs": "~6.6.6",
@@ -44,6 +44,7 @@
     "os": false,
     "path": false,
     "stream": false,
-    "timers": false
+    "timers": false,
+    "tty": false
   }
 }

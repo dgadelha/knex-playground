@@ -59,7 +59,16 @@ export class AppComponent implements OnInit {
     const knex = this.knex;
 
     try {
-      this.sql = "--- generated SQL code\n" + sqlFormatter.format(eval(newCode).toQuery()) + "\n";
+      let sql = "--- generated SQL code\n";
+      let generatedCode = eval(newCode).toQuery();
+
+      try {
+        generatedCode = sqlFormatter.format(generatedCode);
+      } catch (e) {
+        sql += `--- sqlFormatter failed to run: ${e?.toString() ?? e}\n`;
+      }
+
+      this.sql = sql + generatedCode + "\n";
     } catch (err) {
       this.sql = `--- ${err?.toString() ?? err}\n`;
     }

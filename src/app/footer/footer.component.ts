@@ -20,6 +20,7 @@ export class FooterComponent {
 
   clients = [
     { id: "mysql", name: "MySQL / MariaDB" },
+    { id: "cockroachdb", name: "CockroachDB" },
     { id: "pg", name: "PostgreSQL" },
     { id: "redshift", name: "Amazon Redshift" },
     { id: "sqlite3", name: "SQLite3" },
