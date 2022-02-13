@@ -35,8 +35,4 @@
     "vinyl": "^2.2.1",
     "yaserver": "^0.3.0"
   }
-
-,"_resolved": "https://registry.npmjs.org/monaco-editor/-/monaco-editor-0.25.2.tgz"
-,"_integrity": "sha512-5iylzSJevCnzJn9UVsW8yOZ3yHjmAs4TfvH3zsbftKiFKmHG0xirGN6DK9Kk04VSWxYCZZAIafYJoNJJMAU1KA=="
-,"_from": "monaco-editor@0.25.2"
 }
