@@ -1,16 +1,12 @@
-ngx-monaco-editor {
-  float: left;
-  width: 50%;
+as-split {
+  width: 100%;
+  height: 100%;
+}
 
+ngx-monaco-editor {
+  width: 100%;
   margin: 0;
   padding: 0;
   display: block;
   height: calc(100vh - 22px);
-}
-
-@media (max-width: 767px) {
-  ngx-monaco-editor {
-    width: 100%;
-    height: 50%;
-  }
 }

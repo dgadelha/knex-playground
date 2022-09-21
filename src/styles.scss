@@ -1,10 +1,16 @@
 /* You can add global styles to this file, and also import other style files */
+$color-primary: #1E1E1E;
+
 html, body, app-root, ngx-monaco-editor {
-  background: #1E1E1E;
+  background: $color-primary;
   margin: 0;
   padding: 0;
   display: block;
   width: 100%;
   height: 100%;
   overflow: hidden;
+}
+
+.as-split-gutter {
+  background-color: lighten($color-primary, 15%) !important;
 }

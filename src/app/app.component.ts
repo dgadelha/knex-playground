@@ -1,17 +1,21 @@
-import { Component, HostListener, OnInit } from "@angular/core";
+import { Component, HostListener, OnDestroy, OnInit } from "@angular/core";
 import Knex from "knex";
 import * as sqlFormatter from "sql-formatter";
 import knexInfo from "../../node_modules/knex/package.json";
 import { MonacoService } from "./monaco.service";
 import { js_beautify } from "js-beautify";
 import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
+import { Subscription } from "rxjs";
+import { ResponsiveService } from "./responsive.service";
 
 @Component({
   selector: "app-root",
   templateUrl: "app.component.html",
   styleUrls: ["app.component.scss"],
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
+  private _responsive$?: Subscription;
+
   client = "pg";
 
   knex = Knex({ client: this.client });
@@ -35,7 +39,9 @@ export class AppComponent implements OnInit {
   code: string = `// Knex code\nknex("table").select()\n`;
   sql: string = `--- generated SQL code\nselect\n  *\nfrom\n  "table"\n`;
 
-  constructor(private monacoService: MonacoService) {}
+  isBelowMd = false;
+
+  constructor(private monacoService: MonacoService, private responsiveService: ResponsiveService) {}
 
   editorInit(editor: MonacoStandaloneCodeEditor) {
     editor.focus();
@@ -43,6 +49,13 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     this.hashChangeHandler();
+    this._responsive$ = this.responsiveService.isBelowMd().subscribe(isBelowMd => {
+      this.isBelowMd = isBelowMd.matches;
+    });
+  }
+
+  ngOnDestroy() {
+    this._responsive$?.unsubscribe();
   }
 
   @HostListener("window:hashchange")

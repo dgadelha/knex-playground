@@ -1,3 +1,11 @@
-<ngx-monaco-editor #knexEditor [options]="knexEditorOptions" [(ngModel)]="code" (ngModelChange)="onCodeChange($event)" (init)="editorInit($event)"></ngx-monaco-editor>
-<ngx-monaco-editor #sqlEditor [options]="sqlEditorOptions" [(ngModel)]="sql"></ngx-monaco-editor>
+<as-split [direction]="isBelowMd ? 'vertical' : 'horizontal'">
+  <as-split-area [size]="50">
+    <ngx-monaco-editor #knexEditor [options]="knexEditorOptions" [(ngModel)]="code" (ngModelChange)="onCodeChange($event)" (init)="editorInit($event)"></ngx-monaco-editor>
+  </as-split-area>
+
+  <as-split-area [size]="50">
+    <ngx-monaco-editor #sqlEditor [options]="sqlEditorOptions" [(ngModel)]="sql"></ngx-monaco-editor>
+  </as-split-area>
+</as-split>
+
 <app-footer [(client)]="client" (clientChange)="onClientChange($event)" (prettify)="onPrettify()" [knexVersion]="knexVersion"></app-footer>
