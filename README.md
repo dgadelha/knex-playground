@@ -1,4 +1,4 @@
-# Knex Playground
+# [Knex Playground](https://wirekang.github.io/knex-playground)
 
 ## Difference from original [knex-playground](https://github.com/dgadelha/knex-playground)
 
