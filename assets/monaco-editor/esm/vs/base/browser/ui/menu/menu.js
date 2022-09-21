@@ -2,27 +2,25 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as nls from '../../../../nls.js';
-import * as strings from '../../../common/strings.js';
-import { SubmenuAction, Separator, EmptySubmenuAction } from '../../../common/actions.js';
-import { ActionBar } from '../actionbar/actionbar.js';
-import { EventType, EventHelper, isAncestor, addDisposableListener, append, $, clearNode, createStyleSheet, isInShadowDOM, getActiveElement, Dimension } from '../../dom.js';
-import { StandardKeyboardEvent } from '../../keyboardEvent.js';
-import { RunOnceScheduler } from '../../../common/async.js';
-import { DisposableStore } from '../../../common/lifecycle.js';
-import { DomScrollableElement } from '../scrollbar/scrollableElement.js';
-import { layout } from '../contextview/contextview.js';
-import { isLinux, isMacintosh } from '../../../common/platform.js';
-import { Codicon, registerCodicon } from '../../../common/codicons.js';
-import { BaseActionViewItem, ActionViewItem } from '../actionbar/actionViewItems.js';
-import { formatRule } from '../codicons/codiconStyles.js';
 import { isFirefox } from '../../browser.js';
+import { EventType as TouchEventType, Gesture } from '../../touch.js';
+import { $, addDisposableListener, append, clearNode, createStyleSheet, Dimension, EventHelper, EventType, getActiveElement, isAncestor, isInShadowDOM } from '../../dom.js';
+import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { StandardMouseEvent } from '../../mouseEvent.js';
+import { ActionBar } from '../actionbar/actionbar.js';
+import { ActionViewItem, BaseActionViewItem } from '../actionbar/actionViewItems.js';
+import { formatRule } from '../codicons/codiconStyles.js';
+import { layout } from '../contextview/contextview.js';
+import { DomScrollableElement } from '../scrollbar/scrollableElement.js';
+import { EmptySubmenuAction, Separator, SubmenuAction } from '../../../common/actions.js';
+import { RunOnceScheduler } from '../../../common/async.js';
+import { Codicon } from '../../../common/codicons.js';
 import { stripIcons } from '../../../common/iconLabels.js';
+import { DisposableStore } from '../../../common/lifecycle.js';
+import { isLinux, isMacintosh } from '../../../common/platform.js';
+import * as strings from '../../../common/strings.js';
 export const MENU_MNEMONIC_REGEX = /\(&([^\s&])\)|(^|[^&])&([^\s&])/;
 export const MENU_ESCAPED_MNEMONIC_REGEX = /(&amp;)?(&amp;)([^\s&])/g;
-const menuSelectionIcon = registerCodicon('menu-selection', Codicon.check);
-const menuSubmenuIcon = registerCodicon('menu-submenu', Codicon.chevronRight);
 export var Direction;
 (function (Direction) {
     Direction[Direction["Right"] = 0] = "Right";
@@ -36,23 +34,24 @@ export class Menu extends ActionBar {
         menuElement.classList.add('monaco-menu');
         menuElement.setAttribute('role', 'presentation');
         super(menuElement, {
-            orientation: 1 /* VERTICAL */,
+            orientation: 1 /* ActionsOrientation.VERTICAL */,
             actionViewItemProvider: action => this.doGetActionViewItem(action, options, parentData),
             context: options.context,
             actionRunner: options.actionRunner,
             ariaLabel: options.ariaLabel,
+            ariaRole: 'menu',
             focusOnlyEnabledItems: true,
-            triggerKeys: { keys: [3 /* Enter */, ...(isMacintosh || isLinux ? [10 /* Space */] : [])], keyDown: true }
+            triggerKeys: { keys: [3 /* KeyCode.Enter */, ...(isMacintosh || isLinux ? [10 /* KeyCode.Space */] : [])], keyDown: true }
         });
         this.menuElement = menuElement;
-        this.actionsList.setAttribute('role', 'menu');
         this.actionsList.tabIndex = 0;
         this.menuDisposables = this._register(new DisposableStore());
-        this.initializeStyleSheet(container);
+        this.initializeOrUpdateStyleSheet(container, {});
+        this._register(Gesture.addTarget(menuElement));
         addDisposableListener(menuElement, EventType.KEY_DOWN, (e) => {
             const event = new StandardKeyboardEvent(e);
             // Stop tab navigation of menus
-            if (event.equals(2 /* Tab */)) {
+            if (event.equals(2 /* KeyCode.Tab */)) {
                 e.preventDefault();
             }
         });
@@ -82,12 +81,12 @@ export class Menu extends ActionBar {
         if (isLinux) {
             this._register(addDisposableListener(menuElement, EventType.KEY_DOWN, e => {
                 const event = new StandardKeyboardEvent(e);
-                if (event.equals(14 /* Home */) || event.equals(11 /* PageUp */)) {
+                if (event.equals(14 /* KeyCode.Home */) || event.equals(11 /* KeyCode.PageUp */)) {
                     this.focusedItem = this.viewItems.length - 1;
                     this.focusNext();
                     EventHelper.stop(e, true);
                 }
-                else if (event.equals(13 /* End */) || event.equals(12 /* PageDown */)) {
+                else if (event.equals(13 /* KeyCode.End */) || event.equals(12 /* KeyCode.PageDown */)) {
                     this.focusedItem = 0;
                     this.focusPrevious();
                     EventHelper.stop(e, true);
@@ -95,7 +94,7 @@ export class Menu extends ActionBar {
             }));
         }
         this._register(addDisposableListener(this.domNode, EventType.MOUSE_OUT, e => {
-            let relatedTarget = e.relatedTarget;
+            const relatedTarget = e.relatedTarget;
             if (!isAncestor(relatedTarget, this.domNode)) {
                 this.focusedItem = undefined;
                 this.updateFocus();
@@ -118,21 +117,45 @@ export class Menu extends ActionBar {
                 }
             }
         }));
-        let parentData = {
+        // Support touch on actions list to focus items (needed for submenus)
+        this._register(Gesture.addTarget(this.actionsList));
+        this._register(addDisposableListener(this.actionsList, TouchEventType.Tap, e => {
+            let target = e.initialTarget;
+            if (!target || !isAncestor(target, this.actionsList) || target === this.actionsList) {
+                return;
+            }
+            while (target.parentElement !== this.actionsList && target.parentElement !== null) {
+                target = target.parentElement;
+            }
+            if (target.classList.contains('action-item')) {
+                const lastFocusedItem = this.focusedItem;
+                this.setFocusedItem(target);
+                if (lastFocusedItem !== this.focusedItem) {
+                    this.updateFocus();
+                }
+            }
+        }));
+        const parentData = {
             parent: this
         };
         this.mnemonics = new Map();
         // Scroll Logic
         this.scrollableElement = this._register(new DomScrollableElement(menuElement, {
             alwaysConsumeMouseWheel: true,
-            horizontal: 2 /* Hidden */,
-            vertical: 3 /* Visible */,
+            horizontal: 2 /* ScrollbarVisibility.Hidden */,
+            vertical: 3 /* ScrollbarVisibility.Visible */,
             verticalScrollbarSize: 7,
             handleMouseWheel: true,
             useShadows: true
         }));
         const scrollElement = this.scrollableElement.getDomNode();
         scrollElement.style.position = '';
+        // Support scroll on menu drag
+        this._register(addDisposableListener(menuElement, TouchEventType.Change, e => {
+            EventHelper.stop(e, true);
+            const scrollTop = this.scrollableElement.getScrollPosition().scrollTop;
+            this.scrollableElement.setScrollPosition({ scrollTop: scrollTop - e.translationY });
+        }));
         this._register(addDisposableListener(scrollElement, EventType.MOUSE_UP, e => {
             // Absorb clicks in menu dead space https://github.com/microsoft/vscode/issues/63575
             // We do this on the scroll element so the scroll bar doesn't dismiss the menu either
@@ -154,28 +177,32 @@ export class Menu extends ActionBar {
             item.updatePositionInSet(index + 1, array.length);
         });
     }
-    initializeStyleSheet(container) {
-        if (isInShadowDOM(container)) {
-            this.styleSheet = createStyleSheet(container);
-            this.styleSheet.textContent = MENU_WIDGET_CSS;
-        }
-        else {
-            if (!Menu.globalStyleSheet) {
-                Menu.globalStyleSheet = createStyleSheet();
-                Menu.globalStyleSheet.textContent = MENU_WIDGET_CSS;
+    initializeOrUpdateStyleSheet(container, style) {
+        if (!this.styleSheet) {
+            if (isInShadowDOM(container)) {
+                this.styleSheet = createStyleSheet(container);
             }
-            this.styleSheet = Menu.globalStyleSheet;
+            else {
+                if (!Menu.globalStyleSheet) {
+                    Menu.globalStyleSheet = createStyleSheet();
+                }
+                this.styleSheet = Menu.globalStyleSheet;
+            }
         }
+        this.styleSheet.textContent = getMenuWidgetCSS(style, isInShadowDOM(container));
     }
     style(style) {
         const container = this.getContainer();
+        this.initializeOrUpdateStyleSheet(container, style);
         const fgColor = style.foregroundColor ? `${style.foregroundColor}` : '';
         const bgColor = style.backgroundColor ? `${style.backgroundColor}` : '';
         const border = style.borderColor ? `1px solid ${style.borderColor}` : '';
-        const shadow = style.shadowColor ? `0 2px 4px ${style.shadowColor}` : '';
-        container.style.border = border;
-        this.domNode.style.color = fgColor;
-        this.domNode.style.backgroundColor = bgColor;
+        const borderRadius = '5px';
+        const shadow = style.shadowColor ? `0 2px 8px ${style.shadowColor}` : '';
+        container.style.outline = border;
+        container.style.borderRadius = borderRadius;
+        container.style.color = fgColor;
+        container.style.backgroundColor = bgColor;
         container.style.boxShadow = shadow;
         if (this.viewItems) {
             this.viewItems.forEach(item => {
@@ -200,7 +227,7 @@ export class Menu extends ActionBar {
     }
     setFocusedItem(element) {
         for (let i = 0; i < this.actionsList.children.length; i++) {
-            let elem = this.actionsList.children[i];
+            const elem = this.actionsList.children[i];
             if (element === elem) {
                 this.focusedItem = i;
                 break;
@@ -208,7 +235,7 @@ export class Menu extends ActionBar {
         }
     }
     updateFocus(fromRight) {
-        super.updateFocus(fromRight, true);
+        super.updateFocus(fromRight, true, true);
         if (typeof this.focusedItem !== 'undefined') {
             // Workaround for #80047 caused by an issue in chromium
             // https://bugs.chromium.org/p/chromium/issues/detail?id=414283
@@ -274,9 +301,9 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         this.cssClass = '';
         // Set mnemonic
         if (this.options.label && options.enableMnemonics) {
-            let label = this.getAction().label;
+            const label = this.getAction().label;
             if (label) {
-                let matches = MENU_MNEMONIC_REGEX.exec(label);
+                const matches = MENU_MNEMONIC_REGEX.exec(label);
                 if (matches) {
                     this.mnemonic = (!!matches[1] ? matches[1] : matches[3]).toLocaleLowerCase();
                 }
@@ -308,7 +335,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
                     }
                     this.onClick(e);
                 }
-                // In all other cases, set timout to allow context menu cancellation to trigger
+                // In all other cases, set timeout to allow context menu cancellation to trigger
                 // otherwise the action will destroy the menu and a second context menu
                 // will still trigger for right click.
                 else {
@@ -340,7 +367,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
                 this.item.setAttribute('aria-keyshortcuts', `${this.mnemonic}`);
             }
         }
-        this.check = append(this.item, $('span.menu-item-check' + menuSelectionIcon.cssSelector));
+        this.check = append(this.item, $('span.menu-item-check' + Codicon.menuSelection.cssSelector));
         this.check.setAttribute('role', 'none');
         this.label = append(this.item, $('span.action-label'));
         if (this.options.label && this.options.keybinding) {
@@ -372,6 +399,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         }
     }
     updateLabel() {
+        var _a;
         if (!this.label) {
             return;
         }
@@ -401,9 +429,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
                     else {
                         this.label.innerText = replaceDoubleEscapes(label).trim();
                     }
-                    if (this.item) {
-                        this.item.setAttribute('aria-keyshortcuts', (!!matches[1] ? matches[1] : matches[3]).toLocaleLowerCase());
-                    }
+                    (_a = this.item) === null || _a === void 0 ? void 0 : _a.setAttribute('aria-keyshortcuts', (!!matches[1] ? matches[1] : matches[3]).toLocaleLowerCase());
                 }
                 else {
                     this.label.innerText = label.replace(/&&/g, '&').trim();
@@ -412,19 +438,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         }
     }
     updateTooltip() {
-        let title = null;
-        if (this.getAction().tooltip) {
-            title = this.getAction().tooltip;
-        }
-        else if (!this.options.label && this.getAction().label && this.options.icon) {
-            title = this.getAction().label;
-            if (this.options.keybinding) {
-                title = nls.localize({ key: 'titleLabel', comment: ['action title', 'action keybinding'] }, "{0} ({1})", title, this.options.keybinding);
-            }
-        }
-        if (title && this.item) {
-            this.item.title = title;
-        }
+        // menus should function like native menus and they do not have tooltips
     }
     updateClass() {
         if (this.cssClass && this.item) {
@@ -469,15 +483,15 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         if (!this.item) {
             return;
         }
-        if (this.getAction().checked) {
-            this.item.classList.add('checked');
+        const checked = this.getAction().checked;
+        this.item.classList.toggle('checked', !!checked);
+        if (checked !== undefined) {
             this.item.setAttribute('role', 'menuitemcheckbox');
-            this.item.setAttribute('aria-checked', 'true');
+            this.item.setAttribute('aria-checked', checked ? 'true' : 'false');
         }
         else {
-            this.item.classList.remove('checked');
             this.item.setAttribute('role', 'menuitem');
-            this.item.setAttribute('aria-checked', 'false');
+            this.item.setAttribute('aria-checked', '');
         }
     }
     getMnemonic() {
@@ -490,16 +504,16 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         const isSelected = this.element && this.element.classList.contains('focused');
         const fgColor = isSelected && this.menuStyle.selectionForegroundColor ? this.menuStyle.selectionForegroundColor : this.menuStyle.foregroundColor;
         const bgColor = isSelected && this.menuStyle.selectionBackgroundColor ? this.menuStyle.selectionBackgroundColor : undefined;
-        const border = isSelected && this.menuStyle.selectionBorderColor ? `thin solid ${this.menuStyle.selectionBorderColor}` : '';
+        const outline = isSelected && this.menuStyle.selectionBorderColor ? `1px solid ${this.menuStyle.selectionBorderColor}` : '';
+        const outlineOffset = isSelected && this.menuStyle.selectionBorderColor ? `-1px` : '';
         if (this.item) {
             this.item.style.color = fgColor ? fgColor.toString() : '';
             this.item.style.backgroundColor = bgColor ? bgColor.toString() : '';
+            this.item.style.outline = outline;
+            this.item.style.outlineOffset = outlineOffset;
         }
         if (this.check) {
             this.check.style.color = fgColor ? fgColor.toString() : '';
-        }
-        if (this.container) {
-            this.container.style.border = border;
         }
     }
     style(style) {
@@ -540,20 +554,20 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             this.item.tabIndex = 0;
             this.item.setAttribute('aria-haspopup', 'true');
             this.updateAriaExpanded('false');
-            this.submenuIndicator = append(this.item, $('span.submenu-indicator' + menuSubmenuIcon.cssSelector));
+            this.submenuIndicator = append(this.item, $('span.submenu-indicator' + Codicon.menuSubmenu.cssSelector));
             this.submenuIndicator.setAttribute('aria-hidden', 'true');
         }
         this._register(addDisposableListener(this.element, EventType.KEY_UP, e => {
-            let event = new StandardKeyboardEvent(e);
-            if (event.equals(17 /* RightArrow */) || event.equals(3 /* Enter */)) {
+            const event = new StandardKeyboardEvent(e);
+            if (event.equals(17 /* KeyCode.RightArrow */) || event.equals(3 /* KeyCode.Enter */)) {
                 EventHelper.stop(e, true);
                 this.createSubmenu(true);
             }
         }));
         this._register(addDisposableListener(this.element, EventType.KEY_DOWN, e => {
-            let event = new StandardKeyboardEvent(e);
+            const event = new StandardKeyboardEvent(e);
             if (getActiveElement() === this.item) {
-                if (event.equals(17 /* RightArrow */) || event.equals(3 /* Enter */)) {
+                if (event.equals(17 /* KeyCode.RightArrow */) || event.equals(3 /* KeyCode.Enter */)) {
                     EventHelper.stop(e, true);
                 }
             }
@@ -573,8 +587,10 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             }
         }));
         this._register(this.parentData.parent.onScroll(() => {
-            this.parentData.parent.focus(false);
-            this.cleanupExistingSubmenu(false);
+            if (this.parentData.submenu === this.mysubmenu) {
+                this.parentData.parent.focus(false);
+                this.cleanupExistingSubmenu(true);
+            }
         }));
     }
     updateEnabled() {
@@ -606,7 +622,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
     calculateSubmenuMenuLayout(windowDimensions, submenu, entry, expandDirection) {
         const ret = { top: 0, left: 0 };
         // Start with horizontal
-        ret.left = layout(windowDimensions.width, submenu.width, { position: expandDirection === Direction.Right ? 0 /* Before */ : 1 /* After */, offset: entry.left, size: entry.width });
+        ret.left = layout(windowDimensions.width, submenu.width, { position: expandDirection === Direction.Right ? 0 /* LayoutAnchorPosition.Before */ : 1 /* LayoutAnchorPosition.After */, offset: entry.left, size: entry.width });
         // We don't have enough room to layout the menu fully, so we are overlapping the menu
         if (ret.left >= entry.left && ret.left < entry.left + entry.width) {
             if (entry.left + 10 + submenu.width <= windowDimensions.width) {
@@ -616,7 +632,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             entry.height = 0;
         }
         // Now that we have a horizontal position, try layout vertically
-        ret.top = layout(windowDimensions.height, submenu.height, { position: 0 /* Before */, offset: entry.top, size: 0 });
+        ret.top = layout(windowDimensions.height, submenu.height, { position: 0 /* LayoutAnchorPosition.Before */, offset: entry.top, size: 0 });
         // We didn't have enough room below, but we did above, so we shift down to align the menu
         if (ret.top + submenu.height === entry.top && ret.top + entry.height + submenu.height <= windowDimensions.height) {
             ret.top += entry.height;
@@ -654,19 +670,20 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             };
             const viewBox = this.submenuContainer.getBoundingClientRect();
             const { top, left } = this.calculateSubmenuMenuLayout(new Dimension(window.innerWidth, window.innerHeight), Dimension.lift(viewBox), entryBoxUpdated, this.expandDirection);
-            this.submenuContainer.style.left = `${left}px`;
-            this.submenuContainer.style.top = `${top}px`;
+            // subtract offsets caused by transform parent
+            this.submenuContainer.style.left = `${left - viewBox.left}px`;
+            this.submenuContainer.style.top = `${top - viewBox.top}px`;
             this.submenuDisposables.add(addDisposableListener(this.submenuContainer, EventType.KEY_UP, e => {
-                let event = new StandardKeyboardEvent(e);
-                if (event.equals(15 /* LeftArrow */)) {
+                const event = new StandardKeyboardEvent(e);
+                if (event.equals(15 /* KeyCode.LeftArrow */)) {
                     EventHelper.stop(e, true);
                     this.parentData.parent.focus();
                     this.cleanupExistingSubmenu(true);
                 }
             }));
             this.submenuDisposables.add(addDisposableListener(this.submenuContainer, EventType.KEY_DOWN, e => {
-                let event = new StandardKeyboardEvent(e);
-                if (event.equals(15 /* LeftArrow */)) {
+                const event = new StandardKeyboardEvent(e);
+                if (event.equals(15 /* KeyCode.LeftArrow */)) {
                     EventHelper.stop(e, true);
                 }
             }));
@@ -688,6 +705,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
         }
     }
     applyStyle() {
+        var _a;
         super.applyStyle();
         if (!this.menuStyle) {
             return;
@@ -697,9 +715,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
         if (this.submenuIndicator) {
             this.submenuIndicator.style.color = fgColor ? `${fgColor}` : '';
         }
-        if (this.parentData.submenu) {
-            this.parentData.submenu.style(this.menuStyle);
-        }
+        (_a = this.parentData.submenu) === null || _a === void 0 ? void 0 : _a.style(this.menuStyle);
     }
     dispose() {
         super.dispose();
@@ -729,14 +745,16 @@ export function cleanMnemonic(label) {
     const mnemonicInText = !matches[1];
     return label.replace(regex, mnemonicInText ? '$2$3' : '').trim();
 }
-let MENU_WIDGET_CSS = `
+function getMenuWidgetCSS(style, isForShadowDom) {
+    let result = /* css */ `
 .monaco-menu {
 	font-size: 13px;
-
+	border-radius: 5px;
+	min-width: 160px;
 }
 
-${formatRule(menuSelectionIcon)}
-${formatRule(menuSubmenuIcon)}
+${formatRule(Codicon.menuSelection)}
+${formatRule(Codicon.menuSubmenu)}
 
 .monaco-menu .monaco-action-bar {
 	text-align: right;
@@ -792,7 +810,7 @@ ${formatRule(menuSubmenuIcon)}
 
 .monaco-menu .monaco-action-bar .action-item.disabled .action-label,
 .monaco-menu .monaco-action-bar .action-item.disabled .action-label:hover {
-	opacity: 0.4;
+	color: var(--vscode-disabledForeground);
 }
 
 /* Vertical actions */
@@ -807,10 +825,9 @@ ${formatRule(menuSubmenuIcon)}
 
 .monaco-menu .monaco-action-bar.vertical .action-label.separator {
 	display: block;
-	border-bottom: 1px solid #bbb;
+	border-bottom: 1px solid var(--vscode-menu-separatorBackground);
 	padding-top: 1px;
-	margin-left: .8em;
-	margin-right: .8em;
+	padding: 30px;
 }
 
 .monaco-menu .secondary-actions .monaco-action-bar .action-label {
@@ -854,6 +871,11 @@ ${formatRule(menuSubmenuIcon)}
 	height: 2em;
 	align-items: center;
 	position: relative;
+}
+
+.monaco-menu .monaco-action-bar.vertical .action-menu-item:hover .keybinding,
+.monaco-menu .monaco-action-bar.vertical .action-menu-item:focus .keybinding {
+	opacity: unset;
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-label {
@@ -911,12 +933,9 @@ ${formatRule(menuSubmenuIcon)}
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-label.separator {
-	padding: 0.5em 0 0 0;
-	margin-bottom: 0.5em;
 	width: 100%;
 	height: 0px !important;
-	margin-left: .8em !important;
-	margin-right: .8em !important;
+	opacity: 1;
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-label.separator.text {
@@ -958,28 +977,28 @@ ${formatRule(menuSubmenuIcon)}
 	outline: 0;
 }
 
-.monaco-menu .monaco-action-bar.vertical .action-item {
-	border: thin solid transparent; /* prevents jumping behaviour on hover or focus */
-}
-
-
-/* High Contrast Theming */
-:host-context(.hc-black) .context-view.monaco-menu-container {
+.hc-black .context-view.monaco-menu-container,
+.hc-light .context-view.monaco-menu-container,
+:host-context(.hc-black) .context-view.monaco-menu-container,
+:host-context(.hc-light) .context-view.monaco-menu-container {
 	box-shadow: none;
 }
 
-:host-context(.hc-black) .monaco-menu .monaco-action-bar.vertical .action-item.focused {
+.hc-black .monaco-menu .monaco-action-bar.vertical .action-item.focused,
+.hc-light .monaco-menu .monaco-action-bar.vertical .action-item.focused,
+:host-context(.hc-black) .monaco-menu .monaco-action-bar.vertical .action-item.focused,
+:host-context(.hc-light) .monaco-menu .monaco-action-bar.vertical .action-item.focused {
 	background: none;
 }
 
 /* Vertical Action Bar Styles */
 
 .monaco-menu .monaco-action-bar.vertical {
-	padding: .5em 0;
+	padding: .6em 0;
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-menu-item {
-	height: 1.8em;
+	height: 2em;
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-label:not(.separator),
@@ -995,10 +1014,12 @@ ${formatRule(menuSubmenuIcon)}
 
 .monaco-menu .monaco-action-bar.vertical .action-label.separator {
 	font-size: inherit;
-	padding: 0.2em 0 0 0;
-	margin-bottom: 0.2em;
+	margin: 5px 0 !important;
+	padding: 0;
+	border-radius: 0;
 }
 
+.linux .monaco-menu .monaco-action-bar.vertical .action-label.separator,
 :host-context(.linux) .monaco-menu .monaco-action-bar.vertical .action-label.separator {
 	margin-left: 0;
 	margin-right: 0;
@@ -1009,6 +1030,7 @@ ${formatRule(menuSubmenuIcon)}
 	padding: 0 1.8em;
 }
 
+.linux .monaco-menu .monaco-action-bar.vertical .submenu-indicator {
 :host-context(.linux) .monaco-menu .monaco-action-bar.vertical .submenu-indicator {
 	height: 100%;
 	mask-size: 10px 10px;
@@ -1017,112 +1039,101 @@ ${formatRule(menuSubmenuIcon)}
 
 .monaco-menu .action-item {
 	cursor: default;
-}
+}`;
+    if (isForShadowDom) {
+        // Only define scrollbar styles when used inside shadow dom,
+        // otherwise leave their styling to the global workbench styling.
+        result += `
+			/* Arrows */
+			.monaco-scrollable-element > .scrollbar > .scra {
+				cursor: pointer;
+				font-size: 11px !important;
+			}
 
-/* Arrows */
-.monaco-scrollable-element > .scrollbar > .scra {
-	cursor: pointer;
-	font-size: 11px !important;
-}
+			.monaco-scrollable-element > .visible {
+				opacity: 1;
 
-.monaco-scrollable-element > .visible {
-	opacity: 1;
+				/* Background rule added for IE9 - to allow clicks on dom node */
+				background:rgba(0,0,0,0);
 
-	/* Background rule added for IE9 - to allow clicks on dom node */
-	background:rgba(0,0,0,0);
+				transition: opacity 100ms linear;
+			}
+			.monaco-scrollable-element > .invisible {
+				opacity: 0;
+				pointer-events: none;
+			}
+			.monaco-scrollable-element > .invisible.fade {
+				transition: opacity 800ms linear;
+			}
 
-	transition: opacity 100ms linear;
-}
-.monaco-scrollable-element > .invisible {
-	opacity: 0;
-	pointer-events: none;
-}
-.monaco-scrollable-element > .invisible.fade {
-	transition: opacity 800ms linear;
-}
+			/* Scrollable Content Inset Shadow */
+			.monaco-scrollable-element > .shadow {
+				position: absolute;
+				display: none;
+			}
+			.monaco-scrollable-element > .shadow.top {
+				display: block;
+				top: 0;
+				left: 3px;
+				height: 3px;
+				width: 100%;
+			}
+			.monaco-scrollable-element > .shadow.left {
+				display: block;
+				top: 3px;
+				left: 0;
+				height: 100%;
+				width: 3px;
+			}
+			.monaco-scrollable-element > .shadow.top-left-corner {
+				display: block;
+				top: 0;
+				left: 0;
+				height: 3px;
+				width: 3px;
+			}
+		`;
+        // Scrollbars
+        const scrollbarShadowColor = style.scrollbarShadow;
+        if (scrollbarShadowColor) {
+            result += `
+				.monaco-scrollable-element > .shadow.top {
+					box-shadow: ${scrollbarShadowColor} 0 6px 6px -6px inset;
+				}
 
-/* Scrollable Content Inset Shadow */
-.monaco-scrollable-element > .shadow {
-	position: absolute;
-	display: none;
-}
-.monaco-scrollable-element > .shadow.top {
-	display: block;
-	top: 0;
-	left: 3px;
-	height: 3px;
-	width: 100%;
-	box-shadow: #DDD 0 6px 6px -6px inset;
-}
-.monaco-scrollable-element > .shadow.left {
-	display: block;
-	top: 3px;
-	left: 0;
-	height: 100%;
-	width: 3px;
-	box-shadow: #DDD 6px 0 6px -6px inset;
-}
-.monaco-scrollable-element > .shadow.top-left-corner {
-	display: block;
-	top: 0;
-	left: 0;
-	height: 3px;
-	width: 3px;
-}
-.monaco-scrollable-element > .shadow.top.left {
-	box-shadow: #DDD 6px 6px 6px -6px inset;
-}
+				.monaco-scrollable-element > .shadow.left {
+					box-shadow: ${scrollbarShadowColor} 6px 0 6px -6px inset;
+				}
 
-/* ---------- Default Style ---------- */
-
-:host-context(.vs) .monaco-scrollable-element > .scrollbar > .slider {
-	background: rgba(100, 100, 100, .4);
+				.monaco-scrollable-element > .shadow.top.left {
+					box-shadow: ${scrollbarShadowColor} 6px 6px 6px -6px inset;
+				}
+			`;
+        }
+        const scrollbarSliderBackgroundColor = style.scrollbarSliderBackground;
+        if (scrollbarSliderBackgroundColor) {
+            result += `
+				.monaco-scrollable-element > .scrollbar > .slider {
+					background: ${scrollbarSliderBackgroundColor};
+				}
+			`;
+        }
+        const scrollbarSliderHoverBackgroundColor = style.scrollbarSliderHoverBackground;
+        if (scrollbarSliderHoverBackgroundColor) {
+            result += `
+				.monaco-scrollable-element > .scrollbar > .slider:hover {
+					background: ${scrollbarSliderHoverBackgroundColor};
+				}
+			`;
+        }
+        const scrollbarSliderActiveBackgroundColor = style.scrollbarSliderActiveBackground;
+        if (scrollbarSliderActiveBackgroundColor) {
+            result += `
+				.monaco-scrollable-element > .scrollbar > .slider.active {
+					background: ${scrollbarSliderActiveBackgroundColor};
+				}
+			`;
+        }
+    }
+    return result;
 }
-:host-context(.vs-dark) .monaco-scrollable-element > .scrollbar > .slider {
-	background: rgba(121, 121, 121, .4);
-}
-:host-context(.hc-black) .monaco-scrollable-element > .scrollbar > .slider {
-	background: rgba(111, 195, 223, .6);
-}
-
-.monaco-scrollable-element > .scrollbar > .slider:hover {
-	background: rgba(100, 100, 100, .7);
-}
-:host-context(.hc-black) .monaco-scrollable-element > .scrollbar > .slider:hover {
-	background: rgba(111, 195, 223, .8);
-}
-
-.monaco-scrollable-element > .scrollbar > .slider.active {
-	background: rgba(0, 0, 0, .6);
-}
-:host-context(.vs-dark) .monaco-scrollable-element > .scrollbar > .slider.active {
-	background: rgba(191, 191, 191, .4);
-}
-:host-context(.hc-black) .monaco-scrollable-element > .scrollbar > .slider.active {
-	background: rgba(111, 195, 223, 1);
-}
-
-:host-context(.vs-dark) .monaco-scrollable-element .shadow.top {
-	box-shadow: none;
-}
-
-:host-context(.vs-dark) .monaco-scrollable-element .shadow.left {
-	box-shadow: #000 6px 0 6px -6px inset;
-}
-
-:host-context(.vs-dark) .monaco-scrollable-element .shadow.top.left {
-	box-shadow: #000 6px 6px 6px -6px inset;
-}
-
-:host-context(.hc-black) .monaco-scrollable-element .shadow.top {
-	box-shadow: none;
-}
-
-:host-context(.hc-black) .monaco-scrollable-element .shadow.left {
-	box-shadow: none;
-}
-
-:host-context(.hc-black) .monaco-scrollable-element .shadow.top.left {
-	box-shadow: none;
-}
-`;

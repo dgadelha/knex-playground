@@ -5,13 +5,17 @@
 import { Emitter } from './event.js';
 import { Disposable } from './lifecycle.js';
 export class ScrollState {
-    constructor(width, scrollWidth, scrollLeft, height, scrollHeight, scrollTop) {
-        width = width | 0;
-        scrollWidth = scrollWidth | 0;
-        scrollLeft = scrollLeft | 0;
-        height = height | 0;
-        scrollHeight = scrollHeight | 0;
-        scrollTop = scrollTop | 0;
+    constructor(_forceIntegerValues, width, scrollWidth, scrollLeft, height, scrollHeight, scrollTop) {
+        this._forceIntegerValues = _forceIntegerValues;
+        this._scrollStateBrand = undefined;
+        if (this._forceIntegerValues) {
+            width = width | 0;
+            scrollWidth = scrollWidth | 0;
+            scrollLeft = scrollLeft | 0;
+            height = height | 0;
+            scrollHeight = scrollHeight | 0;
+            scrollTop = scrollTop | 0;
+        }
         this.rawScrollLeft = scrollLeft; // before validation
         this.rawScrollTop = scrollTop; // before validation
         if (width < 0) {
@@ -50,10 +54,10 @@ export class ScrollState {
             && this.scrollTop === other.scrollTop);
     }
     withScrollDimensions(update, useRawScrollPositions) {
-        return new ScrollState((typeof update.width !== 'undefined' ? update.width : this.width), (typeof update.scrollWidth !== 'undefined' ? update.scrollWidth : this.scrollWidth), useRawScrollPositions ? this.rawScrollLeft : this.scrollLeft, (typeof update.height !== 'undefined' ? update.height : this.height), (typeof update.scrollHeight !== 'undefined' ? update.scrollHeight : this.scrollHeight), useRawScrollPositions ? this.rawScrollTop : this.scrollTop);
+        return new ScrollState(this._forceIntegerValues, (typeof update.width !== 'undefined' ? update.width : this.width), (typeof update.scrollWidth !== 'undefined' ? update.scrollWidth : this.scrollWidth), useRawScrollPositions ? this.rawScrollLeft : this.scrollLeft, (typeof update.height !== 'undefined' ? update.height : this.height), (typeof update.scrollHeight !== 'undefined' ? update.scrollHeight : this.scrollHeight), useRawScrollPositions ? this.rawScrollTop : this.scrollTop);
     }
     withScrollPosition(update) {
-        return new ScrollState(this.width, this.scrollWidth, (typeof update.scrollLeft !== 'undefined' ? update.scrollLeft : this.rawScrollLeft), this.height, this.scrollHeight, (typeof update.scrollTop !== 'undefined' ? update.scrollTop : this.rawScrollTop));
+        return new ScrollState(this._forceIntegerValues, this.width, this.scrollWidth, (typeof update.scrollLeft !== 'undefined' ? update.scrollLeft : this.rawScrollLeft), this.height, this.scrollHeight, (typeof update.scrollTop !== 'undefined' ? update.scrollTop : this.rawScrollTop));
     }
     createScrollEvent(previous, inSmoothScrolling) {
         const widthChanged = (this.width !== previous.width);
@@ -86,13 +90,14 @@ export class ScrollState {
     }
 }
 export class Scrollable extends Disposable {
-    constructor(smoothScrollDuration, scheduleAtNextAnimationFrame) {
+    constructor(options) {
         super();
+        this._scrollableBrand = undefined;
         this._onScroll = this._register(new Emitter());
         this.onScroll = this._onScroll.event;
-        this._smoothScrollDuration = smoothScrollDuration;
-        this._scheduleAtNextAnimationFrame = scheduleAtNextAnimationFrame;
-        this._state = new ScrollState(0, 0, 0, 0, 0, 0);
+        this._smoothScrollDuration = options.smoothScrollDuration;
+        this._scheduleAtNextAnimationFrame = options.scheduleAtNextAnimationFrame;
+        this._state = new ScrollState(options.forceIntegerValues, 0, 0, 0, 0, 0, 0);
         this._smoothScrolling = null;
     }
     dispose() {
@@ -112,12 +117,11 @@ export class Scrollable extends Disposable {
         return this._state;
     }
     setScrollDimensions(dimensions, useRawScrollPositions) {
+        var _a;
         const newState = this._state.withScrollDimensions(dimensions, useRawScrollPositions);
         this._setState(newState, Boolean(this._smoothScrolling));
         // Validate outstanding animated scroll position target
-        if (this._smoothScrolling) {
-            this._smoothScrolling.acceptScrollDimensions(this._state);
-        }
+        (_a = this._smoothScrolling) === null || _a === void 0 ? void 0 : _a.acceptScrollDimensions(this._state);
     }
     /**
      * Returns the final scroll position that the instance will have once the smooth scroll animation concludes.

@@ -30,8 +30,8 @@ import { normalizePath } from '../../../base/common/resources.js';
 import { URI } from '../../../base/common/uri.js';
 import { ICodeEditorService } from './codeEditorService.js';
 import { ICommandService } from '../../../platform/commands/common/commands.js';
-import { EditorOpenContext } from '../../../platform/editor/common/editor.js';
-import { matchesScheme } from '../../../platform/opener/common/opener.js';
+import { EditorOpenSource } from '../../../platform/editor/common/editor.js';
+import { extractSelection, matchesScheme, matchesSomeScheme } from '../../../platform/opener/common/opener.js';
 let CommandOpener = class CommandOpener {
     constructor(_commandService) {
         this._commandService = _commandService;
@@ -84,24 +84,14 @@ let EditorOpener = class EditorOpener {
             if (typeof target === 'string') {
                 target = URI.parse(target);
             }
-            let selection = undefined;
-            const match = /^L?(\d+)(?:,(\d+))?/.exec(target.fragment);
-            if (match) {
-                // support file:///some/file.js#73,84
-                // support file:///some/file.js#L73
-                selection = {
-                    startLineNumber: parseInt(match[1]),
-                    startColumn: match[2] ? parseInt(match[2]) : 1
-                };
-                // remove fragment
-                target = target.with({ fragment: '' });
-            }
+            const { selection, uri } = extractSelection(target);
+            target = uri;
             if (target.scheme === Schemas.file) {
                 target = normalizePath(target); // workaround for non-normalized paths (https://github.com/microsoft/vscode/issues/12954)
             }
             yield this._editorService.openCodeEditor({
                 resource: target,
-                options: Object.assign({ selection, context: (options === null || options === void 0 ? void 0 : options.fromUserGesture) ? EditorOpenContext.USER : EditorOpenContext.API }, options === null || options === void 0 ? void 0 : options.editorOptions)
+                options: Object.assign({ selection, source: (options === null || options === void 0 ? void 0 : options.fromUserGesture) ? EditorOpenSource.USER : EditorOpenSource.API }, options === null || options === void 0 ? void 0 : options.editorOptions)
             }, this._editorService.getFocusedCodeEditor(), options === null || options === void 0 ? void 0 : options.openToSide);
             return true;
         });
@@ -124,7 +114,7 @@ let OpenerService = class OpenerService {
                 // to not trigger a navigation. Any other link is
                 // safe to be set as HREF to prevent a blank window
                 // from opening.
-                if (matchesScheme(href, Schemas.http) || matchesScheme(href, Schemas.https)) {
+                if (matchesSomeScheme(href, Schemas.http, Schemas.https)) {
                     dom.windowOpenNoOpener(href);
                 }
                 else {
@@ -136,7 +126,7 @@ let OpenerService = class OpenerService {
         // Default opener: any external, maito, http(s), command, and catch-all-editors
         this._openers.push({
             open: (target, options) => __awaiter(this, void 0, void 0, function* () {
-                if ((options === null || options === void 0 ? void 0 : options.openExternal) || matchesScheme(target, Schemas.mailto) || matchesScheme(target, Schemas.http) || matchesScheme(target, Schemas.https)) {
+                if ((options === null || options === void 0 ? void 0 : options.openExternal) || matchesSomeScheme(target, Schemas.mailto, Schemas.http, Schemas.https, Schemas.vsls)) {
                     // open externally
                     yield this._doOpenExternal(target, options);
                     return true;
@@ -174,7 +164,7 @@ let OpenerService = class OpenerService {
             // validate against the original URI that this URI resolves to, if one exists
             const validationTarget = (_a = this._resolvedUriTargets.get(targetURI)) !== null && _a !== void 0 ? _a : target;
             for (const validator of this._validators) {
-                if (!(yield validator.shouldOpen(validationTarget))) {
+                if (!(yield validator.shouldOpen(validationTarget, options))) {
                     return false;
                 }
             }

@@ -17,25 +17,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import './media/quickInput.css';
 import * as dom from '../../../browser/dom.js';
-import { dispose } from '../../../common/lifecycle.js';
-import { matchesFuzzyIconAware, parseLabelWithIcons } from '../../../common/iconLabels.js';
-import { compareAnything } from '../../../common/comparers.js';
-import { Emitter, Event } from '../../../common/event.js';
 import { StandardKeyboardEvent } from '../../../browser/keyboardEvent.js';
-import { IconLabel } from '../../../browser/ui/iconLabel/iconLabel.js';
-import { HighlightedLabel } from '../../../browser/ui/highlightedlabel/highlightedLabel.js';
-import { memoize } from '../../../common/decorators.js';
-import { range } from '../../../common/arrays.js';
-import * as platform from '../../../common/platform.js';
 import { ActionBar } from '../../../browser/ui/actionbar/actionbar.js';
-import { Action } from '../../../common/actions.js';
-import { getIconClass } from './quickInputUtils.js';
-import { withNullAsUndefined } from '../../../common/types.js';
+import { IconLabel } from '../../../browser/ui/iconLabel/iconLabel.js';
 import { KeybindingLabel } from '../../../browser/ui/keybindingLabel/keybindingLabel.js';
-import { localize } from '../../../../nls.js';
+import { Action } from '../../../common/actions.js';
+import { range } from '../../../common/arrays.js';
 import { getCodiconAriaLabel } from '../../../common/codicons.js';
+import { compareAnything } from '../../../common/comparers.js';
+import { memoize } from '../../../common/decorators.js';
+import { Emitter, Event } from '../../../common/event.js';
+import { matchesFuzzyIconAware, parseLabelWithIcons } from '../../../common/iconLabels.js';
+import { dispose } from '../../../common/lifecycle.js';
+import * as platform from '../../../common/platform.js';
+import { ltrim } from '../../../common/strings.js';
+import { withNullAsUndefined } from '../../../common/types.js';
+import { getIconClass } from './quickInputUtils.js';
+import './media/quickInput.css';
+import { localize } from '../../../../nls.js';
 const $ = dom.$;
 class ListElement {
     constructor(init) {
@@ -89,7 +89,7 @@ class ListElementRenderer {
         data.keybinding = new KeybindingLabel(keybindingContainer, platform.OS);
         // Detail
         const detailContainer = dom.append(row2, $('.quick-input-list-label-meta'));
-        data.detail = new HighlightedLabel(detailContainer, true);
+        data.detail = new IconLabel(detailContainer, { supportHighlights: true, supportIcons: true });
         // Separator
         data.separator = dom.append(data.entry, $('.quick-input-list-separator'));
         // Actions
@@ -116,7 +116,12 @@ class ListElementRenderer {
         // Keybinding
         data.keybinding.set(element.item.keybinding);
         // Meta
-        data.detail.set(element.saneDetail, detailHighlights);
+        if (element.saneDetail) {
+            data.detail.setLabel(element.saneDetail, undefined, {
+                matches: detailHighlights,
+                title: element.saneDetail
+            });
+        }
         // Separator
         if (element.separator && element.separator.label) {
             data.separator.textContent = element.separator.label;
@@ -186,6 +191,7 @@ export class QuickInputList {
         this.matchOnDescription = false;
         this.matchOnDetail = false;
         this.matchOnLabel = true;
+        this.matchOnLabelMode = 'fuzzy';
         this.matchOnMeta = true;
         this.sortByLabel = true;
         this._onChangedAllVisibleChecked = new Emitter();
@@ -221,26 +227,28 @@ export class QuickInputList {
         this.disposables.push(this.list.onKeyDown(e => {
             const event = new StandardKeyboardEvent(e);
             switch (event.keyCode) {
-                case 10 /* Space */:
+                case 10 /* KeyCode.Space */:
                     this.toggleCheckbox();
                     break;
-                case 31 /* KEY_A */:
+                case 31 /* KeyCode.KeyA */:
                     if (platform.isMacintosh ? e.metaKey : e.ctrlKey) {
                         this.list.setFocus(range(this.list.length));
                     }
                     break;
-                case 16 /* UpArrow */:
+                case 16 /* KeyCode.UpArrow */: {
                     const focus1 = this.list.getFocus();
                     if (focus1.length === 1 && focus1[0] === 0) {
                         this._onLeave.fire();
                     }
                     break;
-                case 18 /* DownArrow */:
+                }
+                case 18 /* KeyCode.DownArrow */: {
                     const focus2 = this.list.getFocus();
                     if (focus2.length === 1 && focus2[0] === this.list.length - 1) {
                         this._onLeave.fire();
                     }
                     break;
+                }
             }
             this._onKeyDown.fire(event);
         }));
@@ -276,6 +284,12 @@ export class QuickInputList {
     }
     get onDidChangeSelection() {
         return Event.map(this.list.onDidChangeSelection, e => ({ items: e.elements.map(e => e.item), event: e.browserEvent }));
+    }
+    get scrollTop() {
+        return this.list.scrollTop;
+    }
+    set scrollTop(scrollTop) {
+        this.list.scrollTop = scrollTop;
     }
     getAllVisibleChecked() {
         return this.allVisibleChecked(this.elements, false);
@@ -337,6 +351,7 @@ export class QuickInputList {
             if (item.type !== 'separator') {
                 const previous = index && inputElements[index - 1];
                 const saneLabel = item.label && item.label.replace(/\r?\n/g, ' ');
+                const saneSortLabel = parseLabelWithIcons(saneLabel).text.trim();
                 const saneMeta = item.meta && item.meta.replace(/\r?\n/g, ' ');
                 const saneDescription = item.description && item.description.replace(/\r?\n/g, ' ');
                 const saneDetail = item.detail && item.detail.replace(/\r?\n/g, ' ');
@@ -344,10 +359,13 @@ export class QuickInputList {
                     .map(s => getCodiconAriaLabel(s))
                     .filter(s => !!s)
                     .join(', ');
+                const hasCheckbox = this.parent.classList.contains('show-checkboxes');
                 result.push(new ListElement({
+                    hasCheckbox,
                     index,
                     item,
                     saneLabel,
+                    saneSortLabel,
                     saneMeta,
                     saneAriaLabel,
                     saneDescription,
@@ -474,6 +492,7 @@ export class QuickInputList {
             this.list.layout();
             return false;
         }
+        const queryWithWhitespace = query;
         query = query.trim();
         // Reset filtering
         if (!query || !(this.matchOnLabel || this.matchOnDescription || this.matchOnDetail)) {
@@ -490,7 +509,13 @@ export class QuickInputList {
         else {
             let currentSeparator;
             this.elements.forEach(element => {
-                const labelHighlights = this.matchOnLabel ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneLabel))) : undefined;
+                let labelHighlights;
+                if (this.matchOnLabelMode === 'fuzzy') {
+                    labelHighlights = this.matchOnLabel ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneLabel))) : undefined;
+                }
+                else {
+                    labelHighlights = this.matchOnLabel ? withNullAsUndefined(matchesContiguousIconAware(queryWithWhitespace, parseLabelWithIcons(element.saneLabel))) : undefined;
+                }
                 const descriptionHighlights = this.matchOnDescription ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDescription || ''))) : undefined;
                 const detailHighlights = this.matchOnDetail ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDetail || ''))) : undefined;
                 const metaHighlights = this.matchOnMeta ? withNullAsUndefined(matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneMeta || ''))) : undefined;
@@ -581,6 +606,35 @@ __decorate([
 __decorate([
     memoize
 ], QuickInputList.prototype, "onDidChangeSelection", null);
+export function matchesContiguousIconAware(query, target) {
+    const { text, iconOffsets } = target;
+    // Return early if there are no icon markers in the word to match against
+    if (!iconOffsets || iconOffsets.length === 0) {
+        return matchesContiguous(query, text);
+    }
+    // Trim the word to match against because it could have leading
+    // whitespace now if the word started with an icon
+    const wordToMatchAgainstWithoutIconsTrimmed = ltrim(text, ' ');
+    const leadingWhitespaceOffset = text.length - wordToMatchAgainstWithoutIconsTrimmed.length;
+    // match on value without icon
+    const matches = matchesContiguous(query, wordToMatchAgainstWithoutIconsTrimmed);
+    // Map matches back to offsets with icon and trimming
+    if (matches) {
+        for (const match of matches) {
+            const iconOffset = iconOffsets[match.start + leadingWhitespaceOffset] /* icon offsets at index */ + leadingWhitespaceOffset /* overall leading whitespace offset */;
+            match.start += iconOffset;
+            match.end += iconOffset;
+        }
+    }
+    return matches;
+}
+function matchesContiguous(word, wordToMatchAgainst) {
+    const matchIndex = wordToMatchAgainst.toLowerCase().indexOf(word.toLowerCase());
+    if (matchIndex !== -1) {
+        return [{ start: matchIndex, end: matchIndex + word.length }];
+    }
+    return null;
+}
 function compareEntries(elementA, elementB, lookFor) {
     const labelHighlightsA = elementA.labelHighlights || [];
     const labelHighlightsB = elementB.labelHighlights || [];
@@ -593,19 +647,31 @@ function compareEntries(elementA, elementB, lookFor) {
     if (labelHighlightsA.length === 0 && labelHighlightsB.length === 0) {
         return 0;
     }
-    return compareAnything(elementA.saneLabel, elementB.saneLabel, lookFor);
+    return compareAnything(elementA.saneSortLabel, elementB.saneSortLabel, lookFor);
 }
 class QuickInputAccessibilityProvider {
     getWidgetAriaLabel() {
         return localize('quickInput', "Quick Input");
     }
     getAriaLabel(element) {
-        return element.saneAriaLabel;
+        var _a;
+        return ((_a = element.separator) === null || _a === void 0 ? void 0 : _a.label)
+            ? `${element.saneAriaLabel}, ${element.separator.label}`
+            : element.saneAriaLabel;
     }
     getWidgetRole() {
         return 'listbox';
     }
-    getRole() {
-        return 'option';
+    getRole(element) {
+        return element.hasCheckbox ? 'checkbox' : 'option';
+    }
+    isChecked(element) {
+        if (!element.hasCheckbox) {
+            return undefined;
+        }
+        return {
+            value: element.checked,
+            onDidChange: element.onChecked
+        };
     }
 }

@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { CoreNavigationCommands } from '../controller/coreCommands.js';
+import { CoreNavigationCommands } from '../coreCommands.js';
 import { Position } from '../../common/core/position.js';
 import * as platform from '../../../base/common/platform.js';
 export class ViewController {
@@ -44,7 +44,7 @@ export class ViewController {
         return viewPosition;
     }
     _hasMulticursorModifier(data) {
-        switch (this.configuration.options.get(67 /* multiCursorModifier */)) {
+        switch (this.configuration.options.get(72 /* EditorOption.multiCursorModifier */)) {
             case 'altKey':
                 return data.altKey;
             case 'ctrlKey':
@@ -56,7 +56,7 @@ export class ViewController {
         }
     }
     _hasNonMulticursorModifier(data) {
-        switch (this.configuration.options.get(67 /* multiCursorModifier */)) {
+        switch (this.configuration.options.get(72 /* EditorOption.multiCursorModifier */)) {
             case 'altKey':
                 return data.ctrlKey || data.metaKey;
             case 'ctrlKey':
@@ -69,8 +69,8 @@ export class ViewController {
     }
     dispatchMouse(data) {
         const options = this.configuration.options;
-        const selectionClipboardIsOn = (platform.isLinux && options.get(94 /* selectionClipboard */));
-        const columnSelection = options.get(16 /* columnSelection */);
+        const selectionClipboardIsOn = (platform.isLinux && options.get(98 /* EditorOption.selectionClipboard */));
+        const columnSelection = options.get(18 /* EditorOption.columnSelection */);
         if (data.middleButton && !selectionClipboardIsOn) {
             this._columnSelect(data.position, data.mouseColumn, data.inSelectionMode);
         }
@@ -115,15 +115,17 @@ export class ViewController {
             }
         }
         else if (data.mouseDownCount === 2) {
-            if (this._hasMulticursorModifier(data)) {
-                this._lastCursorWordSelect(data.position);
-            }
-            else {
-                if (data.inSelectionMode) {
-                    this._wordSelectDrag(data.position);
+            if (!data.onInjectedText) {
+                if (this._hasMulticursorModifier(data)) {
+                    this._lastCursorWordSelect(data.position);
                 }
                 else {
-                    this._wordSelect(data.position);
+                    if (data.inSelectionMode) {
+                        this._wordSelectDrag(data.position);
+                    }
+                    else {
+                        this._wordSelect(data.position);
+                    }
                 }
             }
         }

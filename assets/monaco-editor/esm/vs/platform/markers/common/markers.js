@@ -2,9 +2,9 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { localize } from '../../../nls.js';
 import Severity from '../../../base/common/severity.js';
+import { localize } from '../../../nls.js';
+import { createDecorator } from '../../instantiation/common/instantiation.js';
 export var MarkerSeverity;
 (function (MarkerSeverity) {
     MarkerSeverity[MarkerSeverity["Hint"] = 1] = "Hint";
@@ -52,7 +52,7 @@ export var IMarkerData;
     }
     IMarkerData.makeKey = makeKey;
     function makeKeyOptionalMessage(markerData, useMessage) {
-        let result = [emptyString];
+        const result = [emptyString];
         if (markerData.source) {
             result.push(markerData.source.replace('¦', '\\¦'));
         }

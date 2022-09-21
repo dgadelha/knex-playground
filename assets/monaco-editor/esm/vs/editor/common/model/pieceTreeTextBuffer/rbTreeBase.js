@@ -54,11 +54,11 @@ export class TreeNode {
         this.right = null;
     }
 }
-export const SENTINEL = new TreeNode(null, 0 /* Black */);
+export const SENTINEL = new TreeNode(null, 0 /* NodeColor.Black */);
 SENTINEL.parent = SENTINEL;
 SENTINEL.left = SENTINEL;
 SENTINEL.right = SENTINEL;
-SENTINEL.color = 0 /* Black */;
+SENTINEL.color = 0 /* NodeColor.Black */;
 export function leftest(node) {
     while (node.left !== SENTINEL) {
         node = node.left;
@@ -87,7 +87,7 @@ export function resetSentinel() {
     SENTINEL.parent = SENTINEL;
 }
 export function leftRotate(tree, x) {
-    let y = x.right;
+    const y = x.right;
     // fix size_left
     y.size_left += x.size_left + (x.piece ? x.piece.length : 0);
     y.lf_left += x.lf_left + (x.piece ? x.piece.lineFeedCnt : 0);
@@ -109,7 +109,7 @@ export function leftRotate(tree, x) {
     x.parent = y;
 }
 export function rightRotate(tree, y) {
-    let x = y.left;
+    const x = y.left;
     y.left = x.right;
     if (x.right !== SENTINEL) {
         x.right.parent = y;
@@ -148,13 +148,13 @@ export function rbDelete(tree, z) {
     if (y === tree.root) {
         tree.root = x;
         // if x is null, we are removing the only node
-        x.color = 0 /* Black */;
+        x.color = 0 /* NodeColor.Black */;
         z.detach();
         resetSentinel();
         tree.root.parent = SENTINEL;
         return;
     }
-    let yWasRed = (y.color === 1 /* Red */);
+    const yWasRed = (y.color === 1 /* NodeColor.Red */);
     if (y === y.parent.left) {
         y.parent.left = x;
     }
@@ -203,11 +203,11 @@ export function rbDelete(tree, z) {
     }
     z.detach();
     if (x.parent.left === x) {
-        let newSizeLeft = calculateSize(x);
-        let newLFLeft = calculateLF(x);
+        const newSizeLeft = calculateSize(x);
+        const newLFLeft = calculateLF(x);
         if (newSizeLeft !== x.parent.size_left || newLFLeft !== x.parent.lf_left) {
-            let delta = newSizeLeft - x.parent.size_left;
-            let lf_delta = newLFLeft - x.parent.lf_left;
+            const delta = newSizeLeft - x.parent.size_left;
+            const lf_delta = newLFLeft - x.parent.lf_left;
             x.parent.size_left = newSizeLeft;
             x.parent.lf_left = newLFLeft;
             updateTreeMetadata(tree, x.parent, delta, lf_delta);
@@ -220,72 +220,72 @@ export function rbDelete(tree, z) {
     }
     // RB-DELETE-FIXUP
     let w;
-    while (x !== tree.root && x.color === 0 /* Black */) {
+    while (x !== tree.root && x.color === 0 /* NodeColor.Black */) {
         if (x === x.parent.left) {
             w = x.parent.right;
-            if (w.color === 1 /* Red */) {
-                w.color = 0 /* Black */;
-                x.parent.color = 1 /* Red */;
+            if (w.color === 1 /* NodeColor.Red */) {
+                w.color = 0 /* NodeColor.Black */;
+                x.parent.color = 1 /* NodeColor.Red */;
                 leftRotate(tree, x.parent);
                 w = x.parent.right;
             }
-            if (w.left.color === 0 /* Black */ && w.right.color === 0 /* Black */) {
-                w.color = 1 /* Red */;
+            if (w.left.color === 0 /* NodeColor.Black */ && w.right.color === 0 /* NodeColor.Black */) {
+                w.color = 1 /* NodeColor.Red */;
                 x = x.parent;
             }
             else {
-                if (w.right.color === 0 /* Black */) {
-                    w.left.color = 0 /* Black */;
-                    w.color = 1 /* Red */;
+                if (w.right.color === 0 /* NodeColor.Black */) {
+                    w.left.color = 0 /* NodeColor.Black */;
+                    w.color = 1 /* NodeColor.Red */;
                     rightRotate(tree, w);
                     w = x.parent.right;
                 }
                 w.color = x.parent.color;
-                x.parent.color = 0 /* Black */;
-                w.right.color = 0 /* Black */;
+                x.parent.color = 0 /* NodeColor.Black */;
+                w.right.color = 0 /* NodeColor.Black */;
                 leftRotate(tree, x.parent);
                 x = tree.root;
             }
         }
         else {
             w = x.parent.left;
-            if (w.color === 1 /* Red */) {
-                w.color = 0 /* Black */;
-                x.parent.color = 1 /* Red */;
+            if (w.color === 1 /* NodeColor.Red */) {
+                w.color = 0 /* NodeColor.Black */;
+                x.parent.color = 1 /* NodeColor.Red */;
                 rightRotate(tree, x.parent);
                 w = x.parent.left;
             }
-            if (w.left.color === 0 /* Black */ && w.right.color === 0 /* Black */) {
-                w.color = 1 /* Red */;
+            if (w.left.color === 0 /* NodeColor.Black */ && w.right.color === 0 /* NodeColor.Black */) {
+                w.color = 1 /* NodeColor.Red */;
                 x = x.parent;
             }
             else {
-                if (w.left.color === 0 /* Black */) {
-                    w.right.color = 0 /* Black */;
-                    w.color = 1 /* Red */;
+                if (w.left.color === 0 /* NodeColor.Black */) {
+                    w.right.color = 0 /* NodeColor.Black */;
+                    w.color = 1 /* NodeColor.Red */;
                     leftRotate(tree, w);
                     w = x.parent.left;
                 }
                 w.color = x.parent.color;
-                x.parent.color = 0 /* Black */;
-                w.left.color = 0 /* Black */;
+                x.parent.color = 0 /* NodeColor.Black */;
+                w.left.color = 0 /* NodeColor.Black */;
                 rightRotate(tree, x.parent);
                 x = tree.root;
             }
         }
     }
-    x.color = 0 /* Black */;
+    x.color = 0 /* NodeColor.Black */;
     resetSentinel();
 }
 export function fixInsert(tree, x) {
     recomputeTreeMetadata(tree, x);
-    while (x !== tree.root && x.parent.color === 1 /* Red */) {
+    while (x !== tree.root && x.parent.color === 1 /* NodeColor.Red */) {
         if (x.parent === x.parent.parent.left) {
             const y = x.parent.parent.right;
-            if (y.color === 1 /* Red */) {
-                x.parent.color = 0 /* Black */;
-                y.color = 0 /* Black */;
-                x.parent.parent.color = 1 /* Red */;
+            if (y.color === 1 /* NodeColor.Red */) {
+                x.parent.color = 0 /* NodeColor.Black */;
+                y.color = 0 /* NodeColor.Black */;
+                x.parent.parent.color = 1 /* NodeColor.Red */;
                 x = x.parent.parent;
             }
             else {
@@ -293,17 +293,17 @@ export function fixInsert(tree, x) {
                     x = x.parent;
                     leftRotate(tree, x);
                 }
-                x.parent.color = 0 /* Black */;
-                x.parent.parent.color = 1 /* Red */;
+                x.parent.color = 0 /* NodeColor.Black */;
+                x.parent.parent.color = 1 /* NodeColor.Red */;
                 rightRotate(tree, x.parent.parent);
             }
         }
         else {
             const y = x.parent.parent.left;
-            if (y.color === 1 /* Red */) {
-                x.parent.color = 0 /* Black */;
-                y.color = 0 /* Black */;
-                x.parent.parent.color = 1 /* Red */;
+            if (y.color === 1 /* NodeColor.Red */) {
+                x.parent.color = 0 /* NodeColor.Black */;
+                y.color = 0 /* NodeColor.Black */;
+                x.parent.parent.color = 1 /* NodeColor.Red */;
                 x = x.parent.parent;
             }
             else {
@@ -311,13 +311,13 @@ export function fixInsert(tree, x) {
                     x = x.parent;
                     rightRotate(tree, x);
                 }
-                x.parent.color = 0 /* Black */;
-                x.parent.parent.color = 1 /* Red */;
+                x.parent.color = 0 /* NodeColor.Black */;
+                x.parent.parent.color = 1 /* NodeColor.Red */;
                 leftRotate(tree, x.parent.parent);
             }
         }
     }
-    tree.root.color = 0 /* Black */;
+    tree.root.color = 0 /* NodeColor.Black */;
 }
 export function updateTreeMetadata(tree, x, delta, lineFeedCntDelta) {
     // node length change or line feed count change
@@ -335,22 +335,20 @@ export function recomputeTreeMetadata(tree, x) {
     if (x === tree.root) {
         return;
     }
-    if (delta === 0) {
-        // go upwards till the node whose left subtree is changed.
-        while (x !== tree.root && x === x.parent.right) {
-            x = x.parent;
-        }
-        if (x === tree.root) {
-            // well, it means we add a node to the end (inorder)
-            return;
-        }
-        // x is the node whose right subtree is changed.
+    // go upwards till the node whose left subtree is changed.
+    while (x !== tree.root && x === x.parent.right) {
         x = x.parent;
-        delta = calculateSize(x.left) - x.size_left;
-        lf_delta = calculateLF(x.left) - x.lf_left;
-        x.size_left += delta;
-        x.lf_left += lf_delta;
     }
+    if (x === tree.root) {
+        // well, it means we add a node to the end (inorder)
+        return;
+    }
+    // x is the node whose right subtree is changed.
+    x = x.parent;
+    delta = calculateSize(x.left) - x.size_left;
+    lf_delta = calculateLF(x.left) - x.lf_left;
+    x.size_left += delta;
+    x.lf_left += lf_delta;
     // go upwards till root. O(logN)
     while (x !== tree.root && (delta !== 0 || lf_delta !== 0)) {
         if (x.parent.left === x) {

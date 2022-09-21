@@ -2,10 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { contrastBorder, listFocusBackground, listFocusForeground, listActiveSelectionBackground, listActiveSelectionForeground, listInactiveSelectionForeground, listInactiveSelectionBackground, listInactiveFocusBackground, listHoverBackground, listHoverForeground, listDropBackground, widgetShadow, activeContrastBorder, badgeBackground, badgeForeground, menuForeground, menuBackground, menuSelectionForeground, menuSelectionBackground, menuSelectionBorder, menuBorder, menuSeparatorBackground, listFilterWidgetOutline, listFilterWidgetNoMatchesOutline, listFilterWidgetBackground, treeIndentGuidesStroke, resolveColorValue, listFocusOutline, listInactiveFocusOutline, tableColumnsBorder } from './colorRegistry.js';
+import { activeContrastBorder, badgeBackground, badgeForeground, contrastBorder, inputActiveOptionBackground, inputActiveOptionBorder, inputActiveOptionForeground, inputBackground, inputBorder, inputForeground, inputValidationErrorBackground, inputValidationErrorBorder, inputValidationErrorForeground, inputValidationInfoBackground, inputValidationInfoBorder, inputValidationInfoForeground, inputValidationWarningBackground, inputValidationWarningBorder, inputValidationWarningForeground, listActiveSelectionBackground, listActiveSelectionForeground, listActiveSelectionIconForeground, listDropBackground, listFilterWidgetBackground, listFilterWidgetNoMatchesOutline, listFilterWidgetOutline, listFocusBackground, listFocusForeground, listFocusOutline, listHoverBackground, listHoverForeground, listInactiveFocusBackground, listInactiveFocusOutline, listInactiveSelectionBackground, listInactiveSelectionForeground, listInactiveSelectionIconForeground, menuBackground, menuBorder, menuForeground, menuSelectionBackground, menuSelectionBorder, menuSelectionForeground, menuSeparatorBackground, resolveColorValue, scrollbarShadow, scrollbarSliderActiveBackground, scrollbarSliderBackground, scrollbarSliderHoverBackground, tableColumnsBorder, tableOddRowsBackgroundColor, treeIndentGuidesStroke, widgetShadow, listFocusAndSelectionOutline, listFilterWidgetShadow } from './colorRegistry.js';
 export function computeStyles(theme, styleMap) {
     const styles = Object.create(null);
-    for (let key in styleMap) {
+    for (const key in styleMap) {
         const value = styleMap[key];
         if (value) {
             styles[key] = resolveColorValue(value, theme);
@@ -42,9 +42,12 @@ export const defaultListStyles = {
     listFocusOutline,
     listActiveSelectionBackground,
     listActiveSelectionForeground,
+    listActiveSelectionIconForeground,
+    listFocusAndSelectionOutline,
     listFocusAndSelectionBackground: listActiveSelectionBackground,
     listFocusAndSelectionForeground: listActiveSelectionForeground,
     listInactiveSelectionBackground,
+    listInactiveSelectionIconForeground,
     listInactiveSelectionForeground,
     listInactiveFocusBackground,
     listInactiveFocusOutline,
@@ -56,9 +59,25 @@ export const defaultListStyles = {
     listFilterWidgetBackground,
     listFilterWidgetOutline,
     listFilterWidgetNoMatchesOutline,
-    listMatchesShadow: widgetShadow,
+    listFilterWidgetShadow,
     treeIndentGuidesStroke,
-    tableColumnsBorder
+    tableColumnsBorder,
+    tableOddRowsBackgroundColor,
+    inputActiveOptionBorder,
+    inputActiveOptionForeground,
+    inputActiveOptionBackground,
+    inputBackground,
+    inputForeground,
+    inputBorder,
+    inputValidationInfoBackground,
+    inputValidationInfoForeground,
+    inputValidationInfoBorder,
+    inputValidationWarningBackground,
+    inputValidationWarningForeground,
+    inputValidationWarningBorder,
+    inputValidationErrorBackground,
+    inputValidationErrorForeground,
+    inputValidationErrorBorder,
 };
 export const defaultMenuStyles = {
     shadowColor: widgetShadow,
@@ -68,7 +87,11 @@ export const defaultMenuStyles = {
     selectionForegroundColor: menuSelectionForeground,
     selectionBackgroundColor: menuSelectionBackground,
     selectionBorderColor: menuSelectionBorder,
-    separatorColor: menuSeparatorBackground
+    separatorColor: menuSeparatorBackground,
+    scrollbarShadow: scrollbarShadow,
+    scrollbarSliderBackground: scrollbarSliderBackground,
+    scrollbarSliderHoverBackground: scrollbarSliderHoverBackground,
+    scrollbarSliderActiveBackground: scrollbarSliderActiveBackground
 };
 export function attachMenuStyler(widget, themeService, style) {
     return attachStyler(themeService, Object.assign(Object.assign({}, defaultMenuStyles), style), widget);

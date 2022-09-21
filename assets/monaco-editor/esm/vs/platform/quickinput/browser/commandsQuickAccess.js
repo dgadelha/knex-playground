@@ -20,22 +20,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { localize } from '../../../nls.js';
-import { PickerQuickAccessProvider } from './pickerQuickAccess.js';
+import { toErrorMessage } from '../../../base/common/errorMessage.js';
+import { isCancellationError } from '../../../base/common/errors.js';
+import { matchesContiguousSubString, matchesPrefix, matchesWords, or } from '../../../base/common/filters.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
-import { or, matchesPrefix, matchesWords, matchesContiguousSubString } from '../../../base/common/filters.js';
-import { withNullAsUndefined } from '../../../base/common/types.js';
 import { LRUCache } from '../../../base/common/map.js';
-import { IStorageService } from '../../storage/common/storage.js';
+import Severity from '../../../base/common/severity.js';
+import { withNullAsUndefined } from '../../../base/common/types.js';
+import { localize } from '../../../nls.js';
+import { ICommandService } from '../../commands/common/commands.js';
 import { IConfigurationService } from '../../configuration/common/configuration.js';
+import { IDialogService } from '../../dialogs/common/dialogs.js';
 import { IInstantiationService } from '../../instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
-import { ICommandService } from '../../commands/common/commands.js';
+import { PickerQuickAccessProvider } from './pickerQuickAccess.js';
+import { IStorageService } from '../../storage/common/storage.js';
 import { ITelemetryService } from '../../telemetry/common/telemetry.js';
-import { isPromiseCanceledError } from '../../../base/common/errors.js';
-import { IDialogService } from '../../dialogs/common/dialogs.js';
-import Severity from '../../../base/common/severity.js';
-import { toErrorMessage } from '../../../base/common/errorMessage.js';
 let AbstractCommandsQuickAccessProvider = class AbstractCommandsQuickAccessProvider extends PickerQuickAccessProvider {
     constructor(options, instantiationService, keybindingService, commandService, telemetryService, dialogService) {
         super(AbstractCommandsQuickAccessProvider.PREFIX, options);
@@ -132,8 +132,8 @@ let AbstractCommandsQuickAccessProvider = class AbstractCommandsQuickAccessProvi
                             yield this.commandService.executeCommand(commandPick.commandId);
                         }
                         catch (error) {
-                            if (!isPromiseCanceledError(error)) {
-                                this.dialogService.show(Severity.Error, localize('canNotRun', "Command '{0}' resulted in an error ({1})", commandPick.label, toErrorMessage(error)), [localize('ok', 'OK')]);
+                            if (!isCancellationError(error)) {
+                                this.dialogService.show(Severity.Error, localize('canNotRun', "Command '{0}' resulted in an error ({1})", commandPick.label, toErrorMessage(error)));
                             }
                         }
                     }) }));
@@ -173,7 +173,7 @@ let CommandsHistory = class CommandsHistory extends Disposable {
         }
     }
     load() {
-        const raw = this.storageService.get(CommandsHistory.PREF_KEY_CACHE, 0 /* GLOBAL */);
+        const raw = this.storageService.get(CommandsHistory.PREF_KEY_CACHE, 0 /* StorageScope.PROFILE */);
         let serializedCache;
         if (raw) {
             try {
@@ -194,7 +194,7 @@ let CommandsHistory = class CommandsHistory extends Disposable {
             }
             entries.forEach(entry => cache.set(entry.key, entry.value));
         }
-        CommandsHistory.counter = this.storageService.getNumber(CommandsHistory.PREF_KEY_COUNTER, 0 /* GLOBAL */, CommandsHistory.counter);
+        CommandsHistory.counter = this.storageService.getNumber(CommandsHistory.PREF_KEY_COUNTER, 0 /* StorageScope.PROFILE */, CommandsHistory.counter);
     }
     push(commandId) {
         if (!CommandsHistory.cache) {
@@ -213,8 +213,8 @@ let CommandsHistory = class CommandsHistory extends Disposable {
         }
         const serializedCache = { usesLRU: true, entries: [] };
         CommandsHistory.cache.forEach((value, key) => serializedCache.entries.push({ key, value }));
-        storageService.store(CommandsHistory.PREF_KEY_CACHE, JSON.stringify(serializedCache), 0 /* GLOBAL */, 0 /* USER */);
-        storageService.store(CommandsHistory.PREF_KEY_COUNTER, CommandsHistory.counter, 0 /* GLOBAL */, 0 /* USER */);
+        storageService.store(CommandsHistory.PREF_KEY_CACHE, JSON.stringify(serializedCache), 0 /* StorageScope.PROFILE */, 0 /* StorageTarget.USER */);
+        storageService.store(CommandsHistory.PREF_KEY_COUNTER, CommandsHistory.counter, 0 /* StorageScope.PROFILE */, 0 /* StorageTarget.USER */);
     }
     static getConfiguredCommandHistoryLength(configurationService) {
         var _a, _b;

@@ -2,8 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { URI } from './uri.js';
 import * as platform from './platform.js';
+import { URI } from './uri.js';
 export var Schemas;
 (function (Schemas) {
     /**
@@ -36,15 +36,20 @@ export var Schemas;
     Schemas.command = 'command';
     Schemas.vscodeRemote = 'vscode-remote';
     Schemas.vscodeRemoteResource = 'vscode-remote-resource';
-    Schemas.userData = 'vscode-userdata';
+    Schemas.vscodeUserData = 'vscode-userdata';
     Schemas.vscodeCustomEditor = 'vscode-custom-editor';
     Schemas.vscodeNotebook = 'vscode-notebook';
     Schemas.vscodeNotebookCell = 'vscode-notebook-cell';
     Schemas.vscodeNotebookCellMetadata = 'vscode-notebook-cell-metadata';
     Schemas.vscodeNotebookCellOutput = 'vscode-notebook-cell-output';
+    Schemas.vscodeInteractive = 'vscode-interactive';
+    Schemas.vscodeInteractiveInput = 'vscode-interactive-input';
     Schemas.vscodeSettings = 'vscode-settings';
     Schemas.vscodeWorkspaceTrust = 'vscode-workspace-trust';
     Schemas.vscodeTerminal = 'vscode-terminal';
+    /**
+     * Scheme used internally for webviews that aren't linked to a resource (i.e. not custom editors)
+     */
     Schemas.webviewPanel = 'webview-panel';
     /**
      * Scheme used for loading the wrapper html and script in webviews.
@@ -63,7 +68,16 @@ export var Schemas;
      * Scheme used for temporary resources
      */
     Schemas.tmp = 'tmp';
+    /**
+     * Scheme used vs live share
+     */
+    Schemas.vsls = 'vsls';
+    /**
+     * Scheme used for the Source Control commit input's text document
+     */
+    Schemas.vscodeSourceControl = 'vscode-scm';
 })(Schemas || (Schemas = {}));
+export const connectionTokenQueryName = 'tkn';
 class RemoteAuthoritiesImpl {
     constructor() {
         this._hosts = Object.create(null);
@@ -71,6 +85,7 @@ class RemoteAuthoritiesImpl {
         this._connectionTokens = Object.create(null);
         this._preferredWebSchema = 'http';
         this._delegate = null;
+        this._remoteResourcesPath = `/${Schemas.vscodeRemoteResource}`;
     }
     setPreferredWebSchema(schema) {
         this._preferredWebSchema = schema;
@@ -88,37 +103,40 @@ class RemoteAuthoritiesImpl {
         const connectionToken = this._connectionTokens[authority];
         let query = `path=${encodeURIComponent(uri.path)}`;
         if (typeof connectionToken === 'string') {
-            query += `&tkn=${encodeURIComponent(connectionToken)}`;
+            query += `&${connectionTokenQueryName}=${encodeURIComponent(connectionToken)}`;
         }
         return URI.from({
             scheme: platform.isWeb ? this._preferredWebSchema : Schemas.vscodeRemoteResource,
             authority: `${host}:${port}`,
-            path: `/vscode-remote-resource`,
+            path: this._remoteResourcesPath,
             query
         });
     }
 }
 export const RemoteAuthorities = new RemoteAuthoritiesImpl();
 class FileAccessImpl {
-    constructor() {
-        this.FALLBACK_AUTHORITY = 'vscode-app';
-    }
-    asBrowserUri(uriOrModule, moduleIdToUrl, __forceCodeFileUri) {
+    asBrowserUri(uriOrModule, moduleIdToUrl) {
         const uri = this.toUri(uriOrModule, moduleIdToUrl);
         // Handle remote URIs via `RemoteAuthorities`
         if (uri.scheme === Schemas.vscodeRemote) {
             return RemoteAuthorities.rewrite(uri);
         }
-        // Only convert the URI if we are in a native context and it has `file:` scheme
-        // and we have explicitly enabled the conversion (sandbox, or VSCODE_BROWSER_CODE_LOADING)
-        if (platform.isNative && (__forceCodeFileUri || platform.isPreferringBrowserCodeLoad) && uri.scheme === Schemas.file) {
+        // Convert to `vscode-file` resource..
+        if (
+        // ...only ever for `file` resources
+        uri.scheme === Schemas.file &&
+            (
+            // ...and we run in native environments
+            platform.isNative ||
+                // ...or web worker extensions on desktop
+                (platform.isWebWorker && platform.globals.origin === `${Schemas.vscodeFileResource}://${FileAccessImpl.FALLBACK_AUTHORITY}`))) {
             return uri.with({
                 scheme: Schemas.vscodeFileResource,
                 // We need to provide an authority here so that it can serve
                 // as origin for network and loading matters in chromium.
                 // If the URI is not coming with an authority already, we
                 // add our own
-                authority: uri.authority || this.FALLBACK_AUTHORITY,
+                authority: uri.authority || FileAccessImpl.FALLBACK_AUTHORITY,
                 query: null,
                 fragment: null
             });
@@ -132,4 +150,5 @@ class FileAccessImpl {
         return URI.parse(moduleIdToUrl.toUrl(uriOrModule));
     }
 }
+FileAccessImpl.FALLBACK_AUTHORITY = 'vscode-app';
 export const FileAccess = new FileAccessImpl();

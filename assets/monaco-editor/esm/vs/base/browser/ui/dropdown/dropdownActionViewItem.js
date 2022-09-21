@@ -2,11 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './dropdown.css';
-import { append, $ } from '../../dom.js';
-import { Emitter } from '../../../common/event.js';
+import { $, append } from '../../dom.js';
 import { BaseActionViewItem } from '../actionbar/actionViewItems.js';
 import { DropdownMenu } from './dropdown.js';
+import { Emitter } from '../../../common/event.js';
+import './dropdown.css';
 export class DropdownMenuActionViewItem extends BaseActionViewItem {
     constructor(action, menuActionsOrProvider, contextMenuProvider, options = Object.create(null)) {
         super(null, action, options);
@@ -39,6 +39,7 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
             this.element.setAttribute('aria-haspopup', 'true');
             this.element.setAttribute('aria-expanded', 'false');
             this.element.title = this._action.label || '';
+            this.element.ariaLabel = this._action.label || '';
             return null;
         };
         const isActionsArray = Array.isArray(this.menuActionsOrProvider);
@@ -67,7 +68,18 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
                     return that.options.anchorAlignmentProvider();
                 } });
         }
+        this.updateTooltip();
         this.updateEnabled();
+    }
+    getTooltip() {
+        let title = null;
+        if (this.getAction().tooltip) {
+            title = this.getAction().tooltip;
+        }
+        else if (this.getAction().label) {
+            title = this.getAction().label;
+        }
+        return title !== null && title !== void 0 ? title : undefined;
     }
     setActionContext(newContext) {
         super.setActionContext(newContext);

@@ -2,10 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as nls from '../../../nls.js';
 import { IntervalTimer, TimeoutTimer } from '../../../base/common/async.js';
 import { Emitter, Event } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
+import * as nls from '../../../nls.js';
+const HIGH_FREQ_COMMANDS = /^(cursor|delete)/;
 export class AbstractKeybindingService extends Disposable {
     constructor(_contextKeyService, _commandService, _telemetryService, _notificationService, _logService) {
         super();
@@ -18,6 +19,7 @@ export class AbstractKeybindingService extends Disposable {
         this._currentChord = null;
         this._currentChordChecker = new IntervalTimer();
         this._currentChordStatusMessage = null;
+        this._ignoreSingleModifiers = KeybindingModifierSet.EMPTY;
         this._currentSingleModifier = null;
         this._currentSingleModifierClearTimeout = new TimeoutTimer();
         this._logging = false;
@@ -37,7 +39,7 @@ export class AbstractKeybindingService extends Disposable {
         return this._getResolver().getKeybindings();
     }
     lookupKeybinding(commandId, context) {
-        const result = this._getResolver().lookupPrimaryKeybinding(commandId, context);
+        const result = this._getResolver().lookupPrimaryKeybinding(commandId, context || this._contextKeyService);
         if (!result) {
             return undefined;
         }
@@ -47,6 +49,7 @@ export class AbstractKeybindingService extends Disposable {
         return this._dispatch(e, target);
     }
     softDispatch(e, target) {
+        this._log(`/ Soft dispatching keyboard event`);
         const keybinding = this.resolveKeyboardEvent(e);
         if (keybinding.isChord()) {
             console.warn('Unexpected keyboard event mapped to a chord');
@@ -55,6 +58,7 @@ export class AbstractKeybindingService extends Disposable {
         const [firstPart,] = keybinding.getDispatchParts();
         if (firstPart === null) {
             // cannot be dispatched, probably only modifier keys
+            this._log(`\\ Keyboard event cannot be dispatched`);
             return null;
         }
         const contextValue = this._contextKeyService.getContext(target);
@@ -94,22 +98,43 @@ export class AbstractKeybindingService extends Disposable {
     _singleModifierDispatch(e, target) {
         const keybinding = this.resolveKeyboardEvent(e);
         const [singleModifier,] = keybinding.getSingleModifierDispatchParts();
-        if (singleModifier !== null && this._currentSingleModifier === null) {
-            // we have a valid `singleModifier`, store it for the next keyup, but clear it in 300ms
-            this._log(`+ Storing single modifier for possible chord ${singleModifier}.`);
-            this._currentSingleModifier = singleModifier;
-            this._currentSingleModifierClearTimeout.cancelAndSet(() => {
-                this._log(`+ Clearing single modifier due to 300ms elapsed.`);
+        if (singleModifier) {
+            if (this._ignoreSingleModifiers.has(singleModifier)) {
+                this._log(`+ Ignoring single modifier ${singleModifier} due to it being pressed together with other keys.`);
+                this._ignoreSingleModifiers = KeybindingModifierSet.EMPTY;
+                this._currentSingleModifierClearTimeout.cancel();
                 this._currentSingleModifier = null;
-            }, 300);
-            return false;
-        }
-        if (singleModifier !== null && singleModifier === this._currentSingleModifier) {
-            // bingo!
-            this._log(`/ Dispatching single modifier chord ${singleModifier} ${singleModifier}`);
+                return false;
+            }
+            this._ignoreSingleModifiers = KeybindingModifierSet.EMPTY;
+            if (this._currentSingleModifier === null) {
+                // we have a valid `singleModifier`, store it for the next keyup, but clear it in 300ms
+                this._log(`+ Storing single modifier for possible chord ${singleModifier}.`);
+                this._currentSingleModifier = singleModifier;
+                this._currentSingleModifierClearTimeout.cancelAndSet(() => {
+                    this._log(`+ Clearing single modifier due to 300ms elapsed.`);
+                    this._currentSingleModifier = null;
+                }, 300);
+                return false;
+            }
+            if (singleModifier === this._currentSingleModifier) {
+                // bingo!
+                this._log(`/ Dispatching single modifier chord ${singleModifier} ${singleModifier}`);
+                this._currentSingleModifierClearTimeout.cancel();
+                this._currentSingleModifier = null;
+                return this._doDispatch(keybinding, target, /*isSingleModiferChord*/ true);
+            }
+            this._log(`+ Clearing single modifier due to modifier mismatch: ${this._currentSingleModifier} ${singleModifier}`);
             this._currentSingleModifierClearTimeout.cancel();
             this._currentSingleModifier = null;
-            return this._doDispatch(keybinding, target, /*isSingleModiferChord*/ true);
+            return false;
+        }
+        // When pressing a modifier and holding it pressed with any other modifier or key combination,
+        // the pressed modifiers should no longer be considered for single modifier dispatch.
+        const [firstPart,] = keybinding.getParts();
+        this._ignoreSingleModifiers = new KeybindingModifierSet(firstPart);
+        if (this._currentSingleModifier !== null) {
+            this._log(`+ Clearing single modifier due to other key up.`);
         }
         this._currentSingleModifierClearTimeout.cancel();
         this._currentSingleModifier = null;
@@ -144,10 +169,12 @@ export class AbstractKeybindingService extends Disposable {
         if (resolveResult && resolveResult.enterChord) {
             shouldPreventDefault = true;
             this._enterChordMode(firstPart, keypressLabel);
+            this._log(`+ Entering chord mode...`);
             return shouldPreventDefault;
         }
         if (this._currentChord) {
             if (!resolveResult || !resolveResult.commandId) {
+                this._log(`+ Leaving chord mode: Nothing bound to "${this._currentChord.label} ${keypressLabel}".`);
                 this._notificationService.status(nls.localize('missing.chord', "The key combination ({0}, {1}) is not a command.", this._currentChord.label, keypressLabel), { hideAfter: 10 * 1000 /* 10s */ });
                 shouldPreventDefault = true;
             }
@@ -157,13 +184,16 @@ export class AbstractKeybindingService extends Disposable {
             if (!resolveResult.bubble) {
                 shouldPreventDefault = true;
             }
+            this._log(`+ Invoking command ${resolveResult.commandId}.`);
             if (typeof resolveResult.commandArgs === 'undefined') {
                 this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
             }
             else {
                 this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
             }
-            this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding' });
+            if (!HIGH_FREQ_COMMANDS.test(resolveResult.commandId)) {
+                this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding' });
+            }
         }
         return shouldPreventDefault;
     }
@@ -174,10 +204,27 @@ export class AbstractKeybindingService extends Disposable {
         }
         // weak check for certain ranges. this is properly implemented in a subclass
         // with access to the KeyboardMapperFactory.
-        if ((event.keyCode >= 31 /* KEY_A */ && event.keyCode <= 56 /* KEY_Z */)
-            || (event.keyCode >= 21 /* KEY_0 */ && event.keyCode <= 30 /* KEY_9 */)) {
+        if ((event.keyCode >= 31 /* KeyCode.KeyA */ && event.keyCode <= 56 /* KeyCode.KeyZ */)
+            || (event.keyCode >= 21 /* KeyCode.Digit0 */ && event.keyCode <= 30 /* KeyCode.Digit9 */)) {
             return true;
         }
         return false;
     }
 }
+class KeybindingModifierSet {
+    constructor(source) {
+        this._ctrlKey = source ? source.ctrlKey : false;
+        this._shiftKey = source ? source.shiftKey : false;
+        this._altKey = source ? source.altKey : false;
+        this._metaKey = source ? source.metaKey : false;
+    }
+    has(modifier) {
+        switch (modifier) {
+            case 'ctrl': return this._ctrlKey;
+            case 'shift': return this._shiftKey;
+            case 'alt': return this._altKey;
+            case 'meta': return this._metaKey;
+        }
+    }
+}
+KeybindingModifierSet.EMPTY = new KeybindingModifierSet(null);

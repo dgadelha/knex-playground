@@ -98,7 +98,8 @@ export class RenderedLinesCollection {
         const deleted = this._lines.splice(deleteStartIndex, deleteCount);
         return deleted;
     }
-    onLinesChanged(changeFromLineNumber, changeToLineNumber) {
+    onLinesChanged(changeFromLineNumber, changeCount) {
+        const changeToLineNumber = changeFromLineNumber + changeCount - 1;
         if (this.getCount() === 0) {
             // no lines
             return false;
@@ -190,7 +191,7 @@ export class VisibleLinesCollection {
     }
     // ---- begin view event handlers
     onConfigurationChanged(e) {
-        if (e.hasChanged(128 /* layoutInfo */)) {
+        if (e.hasChanged(133 /* EditorOption.layoutInfo */)) {
             return true;
         }
         return false;
@@ -201,7 +202,7 @@ export class VisibleLinesCollection {
         return true;
     }
     onLinesChanged(e) {
-        return this._linesCollection.onLinesChanged(e.fromLineNumber, e.toLineNumber);
+        return this._linesCollection.onLinesChanged(e.fromLineNumber, e.count);
     }
     onLinesDeleted(e) {
         const deleted = this._linesCollection.onLinesDeleted(e.fromLineNumber, e.toLineNumber);

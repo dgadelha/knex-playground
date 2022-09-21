@@ -86,6 +86,13 @@ export var Iterable;
         return value;
     }
     Iterable.reduce = reduce;
+    function forEach(iterable, fn) {
+        let index = 0;
+        for (const element of iterable) {
+            fn(element, index++);
+        }
+    }
+    Iterable.forEach = forEach;
     /**
      * Returns an iterable slice of the array, with the same semantics as `array.slice()`.
      */
@@ -124,6 +131,14 @@ export var Iterable;
         return [consumed, { [Symbol.iterator]() { return iterator; } }];
     }
     Iterable.consume = consume;
+    /**
+     * Consumes `atMost` elements from iterable and returns the consumed elements,
+     * and an iterable for the rest of the elements.
+     */
+    function collect(iterable) {
+        return consume(iterable)[0];
+    }
+    Iterable.collect = collect;
     /**
      * Returns whether the iterables are the same length and all items are
      * equal using the comparator function.

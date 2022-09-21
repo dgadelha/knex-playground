@@ -2,15 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './contextMenuHandler.css';
-import { ActionRunner } from '../../../base/common/actions.js';
-import { combinedDisposable, DisposableStore } from '../../../base/common/lifecycle.js';
-import { Menu } from '../../../base/browser/ui/menu/menu.js';
-import { EventType, $, isHTMLElement } from '../../../base/browser/dom.js';
-import { attachMenuStyler } from '../../theme/common/styler.js';
-import { domEvent } from '../../../base/browser/event.js';
+import { $, addDisposableListener, EventType, isHTMLElement } from '../../../base/browser/dom.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
-import { isPromiseCanceledError } from '../../../base/common/errors.js';
+import { Menu } from '../../../base/browser/ui/menu/menu.js';
+import { ActionRunner } from '../../../base/common/actions.js';
+import { isCancellationError } from '../../../base/common/errors.js';
+import { combinedDisposable, DisposableStore } from '../../../base/common/lifecycle.js';
+import { attachMenuStyler } from '../../theme/common/styler.js';
 export class ContextMenuHandler {
     constructor(contextViewService, telemetryService, notificationService, keybindingService, themeService) {
         this.contextViewService = contextViewService;
@@ -32,14 +30,14 @@ export class ContextMenuHandler {
         }
         this.focusToReturn = document.activeElement;
         let menu;
-        let shadowRootElement = isHTMLElement(delegate.domForShadowRoot) ? delegate.domForShadowRoot : undefined;
+        const shadowRootElement = isHTMLElement(delegate.domForShadowRoot) ? delegate.domForShadowRoot : undefined;
         this.contextViewService.showContextView({
             getAnchor: () => delegate.getAnchor(),
             canRelayout: false,
             anchorAlignment: delegate.anchorAlignment,
             anchorAxisAlignment: delegate.anchorAxisAlignment,
             render: (container) => {
-                let className = delegate.getMenuClassName ? delegate.getMenuClassName() : '';
+                const className = delegate.getMenuClassName ? delegate.getMenuClassName() : '';
                 if (className) {
                     container.className += ' ' + className;
                 }
@@ -53,7 +51,8 @@ export class ContextMenuHandler {
                     this.block.style.width = '100%';
                     this.block.style.height = '100%';
                     this.block.style.zIndex = '-1';
-                    domEvent(this.block, EventType.MOUSE_DOWN)((e) => e.stopPropagation());
+                    // TODO@Steven: this is never getting disposed
+                    addDisposableListener(this.block, EventType.MOUSE_DOWN, e => e.stopPropagation());
                 }
                 const menuDisposables = new DisposableStore();
                 const actionRunner = delegate.actionRunner || new ActionRunner();
@@ -68,12 +67,12 @@ export class ContextMenuHandler {
                 menuDisposables.add(attachMenuStyler(menu, this.themeService));
                 menu.onDidCancel(() => this.contextViewService.hideContextView(true), null, menuDisposables);
                 menu.onDidBlur(() => this.contextViewService.hideContextView(true), null, menuDisposables);
-                domEvent(window, EventType.BLUR)(() => { this.contextViewService.hideContextView(true); }, null, menuDisposables);
-                domEvent(window, EventType.MOUSE_DOWN)((e) => {
+                menuDisposables.add(addDisposableListener(window, EventType.BLUR, () => this.contextViewService.hideContextView(true)));
+                menuDisposables.add(addDisposableListener(window, EventType.MOUSE_DOWN, (e) => {
                     if (e.defaultPrevented) {
                         return;
                     }
-                    let event = new StandardMouseEvent(e);
+                    const event = new StandardMouseEvent(e);
                     let element = event.target;
                     // Don't do anything as we are likely creating a context menu
                     if (event.rightButton) {
@@ -86,18 +85,15 @@ export class ContextMenuHandler {
                         element = element.parentElement;
                     }
                     this.contextViewService.hideContextView(true);
-                }, null, menuDisposables);
+                }));
                 return combinedDisposable(menuDisposables, menu);
             },
             focus: () => {
-                if (menu) {
-                    menu.focus(!!delegate.autoSelectFirstItem);
-                }
+                menu === null || menu === void 0 ? void 0 : menu.focus(!!delegate.autoSelectFirstItem);
             },
             onHide: (didCancel) => {
-                if (delegate.onHide) {
-                    delegate.onHide(!!didCancel);
-                }
+                var _a;
+                (_a = delegate.onHide) === null || _a === void 0 ? void 0 : _a.call(delegate, !!didCancel);
                 if (this.block) {
                     this.block.remove();
                     this.block = null;
@@ -117,7 +113,7 @@ export class ContextMenuHandler {
         }
     }
     onDidActionRun(e) {
-        if (e.error && !isPromiseCanceledError(e.error)) {
+        if (e.error && !isCancellationError(e.error)) {
             this.notificationService.error(e.error);
         }
     }

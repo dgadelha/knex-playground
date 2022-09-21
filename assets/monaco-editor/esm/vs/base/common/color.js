@@ -8,6 +8,7 @@ function roundFloat(number, decimalPoints) {
 }
 export class RGBA {
     constructor(r, g, b, a = 1) {
+        this._rgbaBrand = undefined;
         this.r = Math.min(255, Math.max(0, r)) | 0;
         this.g = Math.min(255, Math.max(0, g)) | 0;
         this.b = Math.min(255, Math.max(0, b)) | 0;
@@ -19,6 +20,7 @@ export class RGBA {
 }
 export class HSLA {
     constructor(h, s, l, a) {
+        this._hslaBrand = undefined;
         this.h = Math.max(Math.min(360, h), 0) | 0;
         this.s = roundFloat(Math.max(Math.min(1, s), 0), 3);
         this.l = roundFloat(Math.max(Math.min(1, l), 0), 3);
@@ -105,6 +107,7 @@ export class HSLA {
 }
 export class HSVA {
     constructor(h, s, v, a) {
+        this._hsvaBrand = undefined;
         this.h = Math.max(Math.min(360, h), 0) | 0;
         this.s = roundFloat(Math.max(Math.min(1, s), 0), 3);
         this.v = roundFloat(Math.max(Math.min(1, v), 0), 3);
@@ -267,7 +270,10 @@ export class Color {
         return new Color(new RGBA(255 - this.rgba.r, 255 - this.rgba.g, 255 - this.rgba.b, this.rgba.a));
     }
     toString() {
-        return '' + Color.Format.CSS.format(this);
+        if (!this._toString) {
+            this._toString = Color.Format.CSS.format(this);
+        }
+        return this._toString;
     }
     static getLighterColor(of, relative, factor) {
         if (of.isLighterThan(relative)) {
@@ -294,6 +300,7 @@ Color.white = new Color(new RGBA(255, 255, 255, 1));
 Color.black = new Color(new RGBA(0, 0, 0, 1));
 Color.red = new Color(new RGBA(255, 0, 0, 1));
 Color.blue = new Color(new RGBA(0, 0, 255, 1));
+Color.green = new Color(new RGBA(0, 255, 0, 1));
 Color.cyan = new Color(new RGBA(0, 255, 255, 1));
 Color.lightgrey = new Color(new RGBA(211, 211, 211, 1));
 Color.transparent = new Color(new RGBA(0, 0, 0, 0));
@@ -367,7 +374,7 @@ Color.transparent = new Color(new RGBA(0, 0, 0, 0));
                     // Invalid color
                     return null;
                 }
-                if (hex.charCodeAt(0) !== 35 /* Hash */) {
+                if (hex.charCodeAt(0) !== 35 /* CharCode.Hash */) {
                     // Does not begin with a #
                     return null;
                 }
@@ -407,28 +414,28 @@ Color.transparent = new Color(new RGBA(0, 0, 0, 0));
             CSS.parseHex = parseHex;
             function _parseHexDigit(charCode) {
                 switch (charCode) {
-                    case 48 /* Digit0 */: return 0;
-                    case 49 /* Digit1 */: return 1;
-                    case 50 /* Digit2 */: return 2;
-                    case 51 /* Digit3 */: return 3;
-                    case 52 /* Digit4 */: return 4;
-                    case 53 /* Digit5 */: return 5;
-                    case 54 /* Digit6 */: return 6;
-                    case 55 /* Digit7 */: return 7;
-                    case 56 /* Digit8 */: return 8;
-                    case 57 /* Digit9 */: return 9;
-                    case 97 /* a */: return 10;
-                    case 65 /* A */: return 10;
-                    case 98 /* b */: return 11;
-                    case 66 /* B */: return 11;
-                    case 99 /* c */: return 12;
-                    case 67 /* C */: return 12;
-                    case 100 /* d */: return 13;
-                    case 68 /* D */: return 13;
-                    case 101 /* e */: return 14;
-                    case 69 /* E */: return 14;
-                    case 102 /* f */: return 15;
-                    case 70 /* F */: return 15;
+                    case 48 /* CharCode.Digit0 */: return 0;
+                    case 49 /* CharCode.Digit1 */: return 1;
+                    case 50 /* CharCode.Digit2 */: return 2;
+                    case 51 /* CharCode.Digit3 */: return 3;
+                    case 52 /* CharCode.Digit4 */: return 4;
+                    case 53 /* CharCode.Digit5 */: return 5;
+                    case 54 /* CharCode.Digit6 */: return 6;
+                    case 55 /* CharCode.Digit7 */: return 7;
+                    case 56 /* CharCode.Digit8 */: return 8;
+                    case 57 /* CharCode.Digit9 */: return 9;
+                    case 97 /* CharCode.a */: return 10;
+                    case 65 /* CharCode.A */: return 10;
+                    case 98 /* CharCode.b */: return 11;
+                    case 66 /* CharCode.B */: return 11;
+                    case 99 /* CharCode.c */: return 12;
+                    case 67 /* CharCode.C */: return 12;
+                    case 100 /* CharCode.d */: return 13;
+                    case 68 /* CharCode.D */: return 13;
+                    case 101 /* CharCode.e */: return 14;
+                    case 69 /* CharCode.E */: return 14;
+                    case 102 /* CharCode.f */: return 15;
+                    case 70 /* CharCode.F */: return 15;
                 }
                 return 0;
             }

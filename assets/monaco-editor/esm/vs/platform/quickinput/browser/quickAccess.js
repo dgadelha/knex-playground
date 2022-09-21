@@ -11,13 +11,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { IQuickInputService, ItemActivation } from '../common/quickInput.js';
-import { Disposable, DisposableStore, toDisposable } from '../../../base/common/lifecycle.js';
-import { Extensions, DefaultQuickAccessFilterValue } from '../common/quickAccess.js';
-import { Registry } from '../../registry/common/platform.js';
+import { DeferredPromise } from '../../../base/common/async.js';
 import { CancellationTokenSource } from '../../../base/common/cancellation.js';
-import { IInstantiationService } from '../../instantiation/common/instantiation.js';
 import { once } from '../../../base/common/functional.js';
+import { Disposable, DisposableStore, toDisposable } from '../../../base/common/lifecycle.js';
+import { IInstantiationService } from '../../instantiation/common/instantiation.js';
+import { DefaultQuickAccessFilterValue, Extensions } from '../common/quickAccess.js';
+import { IQuickInputService, ItemActivation } from '../common/quickInput.js';
+import { Registry } from '../../registry/common/platform.js';
 let QuickAccessController = class QuickAccessController extends Disposable {
     constructor(quickInputService, instantiationService) {
         super();
@@ -93,9 +94,8 @@ let QuickAccessController = class QuickAccessController extends Disposable {
         // Pick mode: setup a promise that can be resolved
         // with the selected items and prevent execution
         let pickPromise = undefined;
-        let pickResolve = undefined;
         if (pick) {
-            pickPromise = new Promise(resolve => pickResolve = resolve);
+            pickPromise = new DeferredPromise();
             disposables.add(once(picker.onWillAccept)(e => {
                 e.veto();
                 picker.hide();
@@ -119,7 +119,7 @@ let QuickAccessController = class QuickAccessController extends Disposable {
             // Start to dispose once picker hides
             disposables.dispose();
             // Resolve pick promise with selected items
-            pickResolve === null || pickResolve === void 0 ? void 0 : pickResolve(picker.selectedItems);
+            pickPromise === null || pickPromise === void 0 ? void 0 : pickPromise.complete(picker.selectedItems.slice(0));
         });
         // Finally, show the picker. This is important because a provider
         // may not call this and then our disposables would leak that rely
@@ -127,7 +127,7 @@ let QuickAccessController = class QuickAccessController extends Disposable {
         picker.show();
         // Pick mode: return with promise
         if (pick) {
-            return pickPromise;
+            return pickPromise === null || pickPromise === void 0 ? void 0 : pickPromise.p;
         }
     }
     adjustValueSelection(picker, descriptor, options) {

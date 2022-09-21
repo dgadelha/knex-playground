@@ -1,10 +1,12 @@
-import { Registry } from '../../registry/common/platform.js';
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import { createDecorator } from '../../instantiation/common/instantiation.js';
-import { Extensions } from './configurationRegistry.js';
 export const IConfigurationService = createDecorator('configurationService');
 export function toValuesTree(properties, conflictReporter) {
     const root = Object.create(null);
-    for (let key in properties) {
+    for (const key in properties) {
         addToValueTree(root, key, properties[key], conflictReporter);
     }
     return root;
@@ -14,7 +16,7 @@ export function addToValueTree(settingsTreeRoot, key, value, conflictReporter) {
     const last = segments.pop();
     let curr = settingsTreeRoot;
     for (let i = 0; i < segments.length; i++) {
-        let s = segments[i];
+        const s = segments[i];
         let obj = curr[s];
         switch (typeof obj) {
             case 'undefined':
@@ -79,16 +81,6 @@ export function getConfigurationValue(config, settingPath, defaultValue) {
     const result = accessSetting(config, path);
     return typeof result === 'undefined' ? defaultValue : result;
 }
-export function getConfigurationKeys() {
-    const properties = Registry.as(Extensions.Configuration).getConfigurationProperties();
-    return Object.keys(properties);
-}
-export function getDefaultValues() {
-    const valueTreeRoot = Object.create(null);
-    const properties = Registry.as(Extensions.Configuration).getConfigurationProperties();
-    for (let key in properties) {
-        let value = properties[key].default;
-        addToValueTree(valueTreeRoot, key, value, message => console.error(`Conflict in default settings: ${message}`));
-    }
-    return valueTreeRoot;
+export function getLanguageTagSettingPlainKey(settingKey) {
+    return settingKey.replace(/[\[\]]/g, '');
 }

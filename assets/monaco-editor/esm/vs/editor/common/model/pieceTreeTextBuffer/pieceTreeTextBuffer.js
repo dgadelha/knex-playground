@@ -7,8 +7,8 @@ import * as strings from '../../../../base/common/strings.js';
 import { Range } from '../../core/range.js';
 import { ApplyEditsResult } from '../../model.js';
 import { PieceTreeBase } from './pieceTreeBase.js';
-import { countEOL } from '../tokensStore.js';
-import { TextChange } from '../textChange.js';
+import { countEOL } from '../../core/eolCounter.js';
+import { TextChange } from '../../core/textChange.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 export class PieceTreeTextBuffer extends Disposable {
     constructor(chunks, BOM, eol, containsRTL, containsUnusualLineTerminators, isBasicASCII, eolNormalized) {
@@ -48,30 +48,30 @@ export class PieceTreeTextBuffer extends Disposable {
         return this._pieceTree.getPositionAt(offset);
     }
     getRangeAt(start, length) {
-        let end = start + length;
+        const end = start + length;
         const startPosition = this.getPositionAt(start);
         const endPosition = this.getPositionAt(end);
         return new Range(startPosition.lineNumber, startPosition.column, endPosition.lineNumber, endPosition.column);
     }
-    getValueInRange(range, eol = 0 /* TextDefined */) {
+    getValueInRange(range, eol = 0 /* EndOfLinePreference.TextDefined */) {
         if (range.isEmpty()) {
             return '';
         }
         const lineEnding = this._getEndOfLine(eol);
         return this._pieceTree.getValueInRange(range, lineEnding);
     }
-    getValueLengthInRange(range, eol = 0 /* TextDefined */) {
+    getValueLengthInRange(range, eol = 0 /* EndOfLinePreference.TextDefined */) {
         if (range.isEmpty()) {
             return 0;
         }
         if (range.startLineNumber === range.endLineNumber) {
             return (range.endColumn - range.startColumn);
         }
-        let startOffset = this.getOffsetAt(range.startLineNumber, range.startColumn);
-        let endOffset = this.getOffsetAt(range.endLineNumber, range.endColumn);
+        const startOffset = this.getOffsetAt(range.startLineNumber, range.startColumn);
+        const endOffset = this.getOffsetAt(range.endLineNumber, range.endColumn);
         return endOffset - startOffset;
     }
-    getCharacterCountInRange(range, eol = 0 /* TextDefined */) {
+    getCharacterCountInRange(range, eol = 0 /* EndOfLinePreference.TextDefined */) {
         if (this._mightContainNonBasicASCII) {
             // we must count by iterating
             let result = 0;
@@ -130,11 +130,11 @@ export class PieceTreeTextBuffer extends Disposable {
     }
     _getEndOfLine(eol) {
         switch (eol) {
-            case 1 /* LF */:
+            case 1 /* EndOfLinePreference.LF */:
                 return '\n';
-            case 2 /* CRLF */:
+            case 2 /* EndOfLinePreference.CRLF */:
                 return '\r\n';
-            case 0 /* TextDefined */:
+            case 0 /* EndOfLinePreference.TextDefined */:
                 return this.getEOL();
             default:
                 throw new Error('Unknown EOL preference');
@@ -150,11 +150,11 @@ export class PieceTreeTextBuffer extends Disposable {
         let canReduceOperations = true;
         let operations = [];
         for (let i = 0; i < rawOperations.length; i++) {
-            let op = rawOperations[i];
+            const op = rawOperations[i];
             if (canReduceOperations && op._isTracked) {
                 canReduceOperations = false;
             }
-            let validatedRange = op.range;
+            const validatedRange = op.range;
             if (op.text) {
                 let textMightContainNonBasicASCII = true;
                 if (!mightContainNonBasicASCII) {
@@ -178,8 +178,8 @@ export class PieceTreeTextBuffer extends Disposable {
                 let strEOL;
                 [eolCount, firstLineLength, lastLineLength, strEOL] = countEOL(op.text);
                 const bufferEOL = this.getEOL();
-                const expectedStrEOL = (bufferEOL === '\r\n' ? 2 /* CRLF */ : 1 /* LF */);
-                if (strEOL === 0 /* Unknown */ || strEOL === expectedStrEOL) {
+                const expectedStrEOL = (bufferEOL === '\r\n' ? 2 /* StringEOL.CRLF */ : 1 /* StringEOL.LF */);
+                if (strEOL === 0 /* StringEOL.Unknown */ || strEOL === expectedStrEOL) {
                     validText = op.text;
                 }
                 else {
@@ -204,8 +204,8 @@ export class PieceTreeTextBuffer extends Disposable {
         operations.sort(PieceTreeTextBuffer._sortOpsAscending);
         let hasTouchingRanges = false;
         for (let i = 0, count = operations.length - 1; i < count; i++) {
-            let rangeEnd = operations[i].range.getEndPosition();
-            let nextRangeStart = operations[i + 1].range.getStartPosition();
+            const rangeEnd = operations[i].range.getEndPosition();
+            const nextRangeStart = operations[i + 1].range.getStartPosition();
             if (nextRangeStart.isBeforeOrEqual(rangeEnd)) {
                 if (nextRangeStart.isBefore(rangeEnd)) {
                     // overlapping ranges
@@ -218,12 +218,12 @@ export class PieceTreeTextBuffer extends Disposable {
             operations = this._reduceOperations(operations);
         }
         // Delta encode operations
-        let reverseRanges = (computeUndoEdits || recordTrimAutoWhitespace ? PieceTreeTextBuffer._getInverseEditRanges(operations) : []);
-        let newTrimAutoWhitespaceCandidates = [];
+        const reverseRanges = (computeUndoEdits || recordTrimAutoWhitespace ? PieceTreeTextBuffer._getInverseEditRanges(operations) : []);
+        const newTrimAutoWhitespaceCandidates = [];
         if (recordTrimAutoWhitespace) {
             for (let i = 0; i < operations.length; i++) {
-                let op = operations[i];
-                let reverseRange = reverseRanges[i];
+                const op = operations[i];
+                const reverseRange = reverseRanges[i];
                 if (op.isAutoWhitespaceEdit && op.range.isEmpty()) {
                     // Record already the future line numbers that might be auto whitespace removal candidates on next edit
                     for (let lineNumber = reverseRange.startLineNumber; lineNumber <= reverseRange.endLineNumber; lineNumber++) {
@@ -272,13 +272,13 @@ export class PieceTreeTextBuffer extends Disposable {
             newTrimAutoWhitespaceCandidates.sort((a, b) => b.lineNumber - a.lineNumber);
             trimAutoWhitespaceLineNumbers = [];
             for (let i = 0, len = newTrimAutoWhitespaceCandidates.length; i < len; i++) {
-                let lineNumber = newTrimAutoWhitespaceCandidates[i].lineNumber;
+                const lineNumber = newTrimAutoWhitespaceCandidates[i].lineNumber;
                 if (i > 0 && newTrimAutoWhitespaceCandidates[i - 1].lineNumber === lineNumber) {
                     // Do not have the same line number twice
                     continue;
                 }
-                let prevContent = newTrimAutoWhitespaceCandidates[i].oldContent;
-                let lineContent = this.getLineContent(lineNumber);
+                const prevContent = newTrimAutoWhitespaceCandidates[i].oldContent;
+                const lineContent = this.getLineContent(lineNumber);
                 if (lineContent.length === 0 || lineContent === prevContent || strings.firstNonWhitespaceIndex(lineContent) !== -1) {
                     continue;
                 }
@@ -332,7 +332,7 @@ export class PieceTreeTextBuffer extends Disposable {
             identifier: operations[0].identifier,
             range: entireEditRange,
             rangeOffset: this.getOffsetAt(entireEditRange.startLineNumber, entireEditRange.startColumn),
-            rangeLength: this.getValueLengthInRange(entireEditRange, 0 /* TextDefined */),
+            rangeLength: this.getValueLengthInRange(entireEditRange, 0 /* EndOfLinePreference.TextDefined */),
             text: text,
             eolCount: eolCount,
             firstLineLength: firstLineLength,
@@ -343,10 +343,10 @@ export class PieceTreeTextBuffer extends Disposable {
     }
     _doApplyEdits(operations) {
         operations.sort(PieceTreeTextBuffer._sortOpsDescending);
-        let contentChanges = [];
+        const contentChanges = [];
         // operations are from bottom to top
         for (let i = 0; i < operations.length; i++) {
-            let op = operations[i];
+            const op = operations[i];
             const startLineNumber = op.range.startLineNumber;
             const startColumn = op.range.startColumn;
             const endLineNumber = op.range.endLineNumber;
@@ -382,12 +382,12 @@ export class PieceTreeTextBuffer extends Disposable {
      * Assumes `operations` are validated and sorted ascending
      */
     static _getInverseEditRanges(operations) {
-        let result = [];
+        const result = [];
         let prevOpEndLineNumber = 0;
         let prevOpEndColumn = 0;
         let prevOp = null;
         for (let i = 0, len = operations.length; i < len; i++) {
-            let op = operations[i];
+            const op = operations[i];
             let startLineNumber;
             let startColumn;
             if (prevOp) {
@@ -429,14 +429,14 @@ export class PieceTreeTextBuffer extends Disposable {
         return result;
     }
     static _sortOpsAscending(a, b) {
-        let r = Range.compareRangesUsingEnds(a.range, b.range);
+        const r = Range.compareRangesUsingEnds(a.range, b.range);
         if (r === 0) {
             return a.sortIndex - b.sortIndex;
         }
         return r;
     }
     static _sortOpsDescending(a, b) {
-        let r = Range.compareRangesUsingEnds(a.range, b.range);
+        const r = Range.compareRangesUsingEnds(a.range, b.range);
         if (r === 0) {
             return b.sortIndex - a.sortIndex;
         }

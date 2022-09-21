@@ -11,11 +11,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { Disposable } from '../../../common/lifecycle.js';
-import { Emitter, Event } from '../../../common/event.js';
 import { ThrottledDelayer } from '../../../common/async.js';
+import { Emitter, Event } from '../../../common/event.js';
+import { Disposable } from '../../../common/lifecycle.js';
 import { isUndefinedOrNull } from '../../../common/types.js';
-var StorageState;
+export var StorageState;
 (function (StorageState) {
     StorageState[StorageState["None"] = 0] = "None";
     StorageState[StorageState["Initialized"] = 1] = "Initialized";
@@ -113,7 +113,7 @@ export class Storage extends Disposable {
             // Event
             this._onDidChangeStorage.fire(key);
             // Accumulate work by scheduling after timeout
-            return this.flushDelayer.trigger(() => this.flushPending());
+            return this.doFlush();
         });
     }
     delete(key) {
@@ -133,7 +133,7 @@ export class Storage extends Disposable {
             // Event
             this._onDidChangeStorage.fire(key);
             // Accumulate work by scheduling after timeout
-            return this.flushDelayer.trigger(() => this.flushPending());
+            return this.doFlush();
         });
     }
     get hasPending() {
@@ -161,8 +161,12 @@ export class Storage extends Disposable {
             });
         });
     }
+    doFlush(delay) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.flushDelayer.trigger(() => this.flushPending(), delay);
+        });
+    }
     dispose() {
-        this.flushDelayer.cancel(); // workaround https://github.com/microsoft/vscode/issues/116777
         this.flushDelayer.dispose();
         super.dispose();
     }
@@ -174,13 +178,10 @@ export class InMemoryStorageDatabase {
         this.items = new Map();
     }
     updateItems(request) {
+        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
-            if (request.insert) {
-                request.insert.forEach((value, key) => this.items.set(key, value));
-            }
-            if (request.delete) {
-                request.delete.forEach(key => this.items.delete(key));
-            }
+            (_a = request.insert) === null || _a === void 0 ? void 0 : _a.forEach((value, key) => this.items.set(key, value));
+            (_b = request.delete) === null || _b === void 0 ? void 0 : _b.forEach(key => this.items.delete(key));
         });
     }
 }

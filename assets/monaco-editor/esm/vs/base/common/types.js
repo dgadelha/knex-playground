@@ -26,11 +26,26 @@ export function isObject(obj) {
         && !(obj instanceof Date);
 }
 /**
+ *
+ * @returns whether the provided parameter is of type `Buffer` or Uint8Array dervived type
+ */
+export function isTypedArray(obj) {
+    const TypedArray = Object.getPrototypeOf(Uint8Array);
+    return typeof obj === 'object'
+        && obj instanceof TypedArray;
+}
+/**
  * In **contrast** to just checking `typeof` this will return `false` for `NaN`.
  * @returns whether the provided parameter is a JavaScript Number or not.
  */
 export function isNumber(obj) {
     return (typeof obj === 'number' && !isNaN(obj));
+}
+/**
+ * @returns whether the provided parameter is an Iterable, casting to the given generic
+ */
+export function isIterable(obj) {
+    return !!obj && typeof obj[Symbol.iterator] === 'function';
 }
 /**
  * @returns whether the provided parameter is a JavaScript Boolean or not.
@@ -43,6 +58,12 @@ export function isBoolean(obj) {
  */
 export function isUndefined(obj) {
     return (typeof obj === 'undefined');
+}
+/**
+ * @returns whether the provided parameter is defined.
+ */
+export function isDefined(arg) {
+    return !isUndefinedOrNull(arg);
 }
 /**
  * @returns whether the provided parameter is undefined or null.
@@ -125,7 +146,7 @@ export function createProxyObject(methodNames, invoke) {
             return invoke(method, args);
         };
     };
-    let result = {};
+    const result = {};
     for (const methodName of methodNames) {
         result[methodName] = createProxyMethod(methodName);
     }
@@ -137,6 +158,6 @@ export function createProxyObject(methodNames, invoke) {
 export function withNullAsUndefined(x) {
     return x === null ? undefined : x;
 }
-export function assertNever(value) {
-    throw new Error('Unreachable');
+export function assertNever(value, message = 'Unreachable') {
+    throw new Error(message);
 }

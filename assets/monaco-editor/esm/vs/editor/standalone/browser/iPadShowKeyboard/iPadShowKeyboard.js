@@ -18,7 +18,7 @@ export class IPadShowKeyboard extends Disposable {
         }
     }
     update() {
-        const shouldHaveWidget = (!this.editor.getOption(78 /* readOnly */));
+        const shouldHaveWidget = (!this.editor.getOption(83 /* EditorOption.readOnly */));
         if (!this.widget && shouldHaveWidget) {
             this.widget = new ShowKeyboardWidget(this.editor);
         }
@@ -63,7 +63,7 @@ class ShowKeyboardWidget extends Disposable {
     }
     getPosition() {
         return {
-            preference: 1 /* BOTTOM_RIGHT_CORNER */
+            preference: 1 /* OverlayWidgetPositionPreference.BOTTOM_RIGHT_CORNER */
         };
     }
 }

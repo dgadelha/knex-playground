@@ -55,6 +55,22 @@ export class Range {
         return true;
     }
     /**
+     * Test if `position` is in `range`. If the position is at the edges, will return false.
+     * @internal
+     */
+    static strictContainsPosition(range, position) {
+        if (position.lineNumber < range.startLineNumber || position.lineNumber > range.endLineNumber) {
+            return false;
+        }
+        if (position.lineNumber === range.startLineNumber && position.column <= range.startColumn) {
+            return false;
+        }
+        if (position.lineNumber === range.endLineNumber && position.column >= range.endColumn) {
+            return false;
+        }
+        return true;
+    }
+    /**
      * Test if range is in this range. If the range is equal to this range, will return true.
      */
     containsRange(range) {
@@ -85,7 +101,7 @@ export class Range {
         return Range.strictContainsRange(this, range);
     }
     /**
-     * Test if `otherRange` is strinctly in `range` (must start after, and end before). If the ranges are equal, will return false.
+     * Test if `otherRange` is strictly in `range` (must start after, and end before). If the ranges are equal, will return false.
      */
     static strictContainsRange(range, otherRange) {
         if (otherRange.startLineNumber < range.startLineNumber || otherRange.endLineNumber < range.startLineNumber) {
@@ -158,10 +174,10 @@ export class Range {
         let resultStartColumn = a.startColumn;
         let resultEndLineNumber = a.endLineNumber;
         let resultEndColumn = a.endColumn;
-        let otherStartLineNumber = b.startLineNumber;
-        let otherStartColumn = b.startColumn;
-        let otherEndLineNumber = b.endLineNumber;
-        let otherEndColumn = b.endColumn;
+        const otherStartLineNumber = b.startLineNumber;
+        const otherStartColumn = b.startColumn;
+        const otherEndLineNumber = b.endLineNumber;
+        const otherEndColumn = b.endColumn;
         if (resultStartLineNumber < otherStartLineNumber) {
             resultStartLineNumber = otherStartLineNumber;
             resultStartColumn = otherStartColumn;
@@ -356,5 +372,8 @@ export class Range {
      */
     static spansMultipleLines(range) {
         return range.endLineNumber > range.startLineNumber;
+    }
+    toJSON() {
+        return this;
     }
 }

@@ -4,15 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 var _a;
 import { EditorOptions } from './common/config/editorOptions.js';
-import { createMonacoBaseAPI } from './common/standalone/standaloneBase.js';
+import { createMonacoBaseAPI } from './common/services/editorBaseApi.js';
 import { createMonacoEditorAPI } from './standalone/browser/standaloneEditor.js';
 import { createMonacoLanguagesAPI } from './standalone/browser/standaloneLanguages.js';
 import { globals } from '../base/common/platform.js';
-import { FormattingConflicts } from './contrib/format/format.js';
+import { FormattingConflicts } from './contrib/format/browser/format.js';
 // Set defaults for standalone editor
-EditorOptions.wrappingIndent.defaultValue = 0 /* None */;
+EditorOptions.wrappingIndent.defaultValue = 0 /* WrappingIndent.None */;
 EditorOptions.glyphMargin.defaultValue = false;
-EditorOptions.autoIndent.defaultValue = 3 /* Advanced */;
+EditorOptions.autoIndent.defaultValue = 3 /* EditorAutoIndentStrategy.Advanced */;
 EditorOptions.overviewRulerLanes.defaultValue = 2;
 // We need to register a formatter selector which simply picks the first available formatter.
 // See https://github.com/microsoft/monaco-editor/issues/2327

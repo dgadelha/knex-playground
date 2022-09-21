@@ -11,9 +11,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { CancellationTokenSource } from '../../../base/common/cancellation.js';
-import { DisposableStore, Disposable, MutableDisposable } from '../../../base/common/lifecycle.js';
 import { timeout } from '../../../base/common/async.js';
+import { CancellationTokenSource } from '../../../base/common/cancellation.js';
+import { Disposable, DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
 export var TriggerAction;
 (function (TriggerAction) {
     /**
@@ -225,14 +225,22 @@ export class PickerQuickAccessProvider extends Disposable {
                         case TriggerAction.REFRESH_PICKER:
                             updatePickerItems();
                             break;
-                        case TriggerAction.REMOVE_ITEM:
+                        case TriggerAction.REMOVE_ITEM: {
                             const index = picker.items.indexOf(item);
                             if (index !== -1) {
                                 const items = picker.items.slice();
-                                items.splice(index, 1);
+                                const removed = items.splice(index, 1);
+                                const activeItems = picker.activeItems.filter(activeItem => activeItem !== removed[0]);
+                                const keepScrollPositionBefore = picker.keepScrollPosition;
+                                picker.keepScrollPosition = true;
                                 picker.items = items;
+                                if (activeItems) {
+                                    picker.activeItems = activeItems;
+                                }
+                                picker.keepScrollPosition = keepScrollPositionBefore;
                             }
                             break;
+                        }
                     }
                 }
             }

@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import { IdleValue } from './async.js';
 // When comparing large numbers of strings it's better for performance to create an
 // Intl.Collator object and use the function provided by its compare property
@@ -8,6 +12,20 @@ const intlFileNameCollatorBaseNumeric = new IdleValue(() => {
     return {
         collator: collator,
         collatorIsNumeric: collator.resolvedOptions().numeric
+    };
+});
+// A collator with numeric sorting enabled.
+const intlFileNameCollatorNumeric = new IdleValue(() => {
+    const collator = new Intl.Collator(undefined, { numeric: true });
+    return {
+        collator: collator
+    };
+});
+// A collator with numeric sorting enabled, and sensitivity to accents and diacritics but not case.
+const intlFileNameCollatorNumericCaseInsensitive = new IdleValue(() => {
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'accent' });
+    return {
+        collator: collator
     };
 });
 /** Compares filenames without distinguishing the name from the extension. Disambiguates by unicode comparison. */

@@ -6,9 +6,7 @@ import { StandardWheelEvent } from '../../mouseEvent.js';
 import { AbstractScrollbar } from './abstractScrollbar.js';
 import { ARROW_IMG_SIZE } from './scrollbarArrow.js';
 import { ScrollbarState } from './scrollbarState.js';
-import { Codicon, registerCodicon } from '../../../common/codicons.js';
-const scrollbarButtonLeftIcon = registerCodicon('scrollbar-button-left', Codicon.triangleLeft);
-const scrollbarButtonRightIcon = registerCodicon('scrollbar-button-right', Codicon.triangleRight);
+import { Codicon } from '../../../common/codicons.js';
 export class HorizontalScrollbar extends AbstractScrollbar {
     constructor(scrollable, options, host) {
         const scrollDimensions = scrollable.getScrollDimensions();
@@ -16,7 +14,7 @@ export class HorizontalScrollbar extends AbstractScrollbar {
         super({
             lazyRender: options.lazyRender,
             host: host,
-            scrollbarState: new ScrollbarState((options.horizontalHasArrows ? options.arrowSize : 0), (options.horizontal === 2 /* Hidden */ ? 0 : options.horizontalScrollbarSize), (options.vertical === 2 /* Hidden */ ? 0 : options.verticalScrollbarSize), scrollDimensions.width, scrollDimensions.scrollWidth, scrollPosition.scrollLeft),
+            scrollbarState: new ScrollbarState((options.horizontalHasArrows ? options.arrowSize : 0), (options.horizontal === 2 /* ScrollbarVisibility.Hidden */ ? 0 : options.horizontalScrollbarSize), (options.vertical === 2 /* ScrollbarVisibility.Hidden */ ? 0 : options.verticalScrollbarSize), scrollDimensions.width, scrollDimensions.scrollWidth, scrollPosition.scrollLeft),
             visibility: options.horizontal,
             extraScrollbarClassName: 'horizontal',
             scrollable: scrollable,
@@ -27,7 +25,7 @@ export class HorizontalScrollbar extends AbstractScrollbar {
             const scrollbarDelta = (options.horizontalScrollbarSize - ARROW_IMG_SIZE) / 2;
             this._createArrow({
                 className: 'scra',
-                icon: scrollbarButtonLeftIcon,
+                icon: Codicon.scrollbarButtonLeft,
                 top: scrollbarDelta,
                 left: arrowDelta,
                 bottom: undefined,
@@ -38,7 +36,7 @@ export class HorizontalScrollbar extends AbstractScrollbar {
             });
             this._createArrow({
                 className: 'scra',
-                icon: scrollbarButtonRightIcon,
+                icon: Codicon.scrollbarButtonRight,
                 top: scrollbarDelta,
                 left: undefined,
                 bottom: undefined,
@@ -66,19 +64,25 @@ export class HorizontalScrollbar extends AbstractScrollbar {
         this._shouldRender = this._onElementSize(e.width) || this._shouldRender;
         return this._shouldRender;
     }
-    _mouseDownRelativePosition(offsetX, offsetY) {
+    _pointerDownRelativePosition(offsetX, offsetY) {
         return offsetX;
     }
-    _sliderMousePosition(e) {
-        return e.posx;
+    _sliderPointerPosition(e) {
+        return e.pageX;
     }
-    _sliderOrthogonalMousePosition(e) {
-        return e.posy;
+    _sliderOrthogonalPointerPosition(e) {
+        return e.pageY;
     }
     _updateScrollbarSize(size) {
         this.slider.setHeight(size);
     }
     writeScrollPosition(target, scrollPosition) {
         target.scrollLeft = scrollPosition;
+    }
+    updateOptions(options) {
+        this.updateScrollbarSize(options.horizontal === 2 /* ScrollbarVisibility.Hidden */ ? 0 : options.horizontalScrollbarSize);
+        this._scrollbarState.setOppositeScrollbarSize(options.vertical === 2 /* ScrollbarVisibility.Hidden */ ? 0 : options.verticalScrollbarSize);
+        this._visibilityController.setVisibility(options.horizontal);
+        this._scrollByPage = options.scrollByPage;
     }
 }

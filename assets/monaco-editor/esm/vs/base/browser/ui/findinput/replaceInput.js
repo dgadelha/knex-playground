@@ -2,17 +2,17 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './findInput.css';
-import * as nls from '../../../../nls.js';
 import * as dom from '../../dom.js';
+import { Toggle } from '../toggle/toggle.js';
 import { HistoryInputBox } from '../inputbox/inputBox.js';
 import { Widget } from '../widget.js';
-import { Emitter } from '../../../common/event.js';
-import { Checkbox } from '../checkbox/checkbox.js';
 import { Codicon } from '../../../common/codicons.js';
+import { Emitter } from '../../../common/event.js';
+import './findInput.css';
+import * as nls from '../../../../nls.js';
 const NLS_DEFAULT_LABEL = nls.localize('defaultLabel', "input");
-const NLS_PRESERVE_CASE_LABEL = nls.localize('label.preserveCaseCheckbox', "Preserve Case");
-export class PreserveCaseCheckbox extends Checkbox {
+const NLS_PRESERVE_CASE_LABEL = nls.localize('label.preserveCaseToggle', "Preserve Case");
+export class PreserveCaseToggle extends Toggle {
     constructor(opts) {
         super({
             // TODO: does this need its own icon?
@@ -85,11 +85,12 @@ export class ReplaceInput extends Widget {
             inputValidationErrorForeground: this.inputValidationErrorForeground,
             inputValidationErrorBorder: this.inputValidationErrorBorder,
             history,
+            showHistoryHint: options.showHistoryHint,
             flexibleHeight,
             flexibleWidth,
             flexibleMaxHeight
         }));
-        this.preserveCase = this._register(new PreserveCaseCheckbox({
+        this.preserveCase = this._register(new PreserveCaseToggle({
             appendTitle: appendPreserveCaseLabel,
             isChecked: false,
             inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -113,16 +114,16 @@ export class ReplaceInput extends Widget {
             this.cachedOptionsWidth = 0;
         }
         // Arrow-Key support to navigate between options
-        let indexes = [this.preserveCase.domNode];
+        const indexes = [this.preserveCase.domNode];
         this.onkeydown(this.domNode, (event) => {
-            if (event.equals(15 /* LeftArrow */) || event.equals(17 /* RightArrow */) || event.equals(9 /* Escape */)) {
-                let index = indexes.indexOf(document.activeElement);
+            if (event.equals(15 /* KeyCode.LeftArrow */) || event.equals(17 /* KeyCode.RightArrow */) || event.equals(9 /* KeyCode.Escape */)) {
+                const index = indexes.indexOf(document.activeElement);
                 if (index >= 0) {
                     let newIndex = -1;
-                    if (event.equals(17 /* RightArrow */)) {
+                    if (event.equals(17 /* KeyCode.RightArrow */)) {
                         newIndex = (index + 1) % indexes.length;
                     }
-                    else if (event.equals(15 /* LeftArrow */)) {
+                    else if (event.equals(15 /* KeyCode.LeftArrow */)) {
                         if (index === 0) {
                             newIndex = indexes.length - 1;
                         }
@@ -130,7 +131,7 @@ export class ReplaceInput extends Widget {
                             newIndex = index - 1;
                         }
                     }
-                    if (event.equals(9 /* Escape */)) {
+                    if (event.equals(9 /* KeyCode.Escape */)) {
                         indexes[index].blur();
                         this.inputBox.focus();
                     }
@@ -141,14 +142,12 @@ export class ReplaceInput extends Widget {
                 }
             }
         });
-        let controls = document.createElement('div');
+        const controls = document.createElement('div');
         controls.className = 'controls';
         controls.style.display = this._showOptionButtons ? 'block' : 'none';
         controls.appendChild(this.preserveCase.domNode);
         this.domNode.appendChild(controls);
-        if (parent) {
-            parent.appendChild(this.domNode);
-        }
+        parent === null || parent === void 0 ? void 0 : parent.appendChild(this.domNode);
         this.onkeydown(this.inputBox.inputElement, (e) => this._onKeyDown.fire(e));
         this.onkeyup(this.inputBox.inputElement, (e) => this._onKeyUp.fire(e));
         this.oninput(this.inputBox.inputElement, (e) => this._onInput.fire());
@@ -192,12 +191,12 @@ export class ReplaceInput extends Widget {
     }
     applyStyles() {
         if (this.domNode) {
-            const checkBoxStyles = {
+            const toggleStyles = {
                 inputActiveOptionBorder: this.inputActiveOptionBorder,
                 inputActiveOptionForeground: this.inputActiveOptionForeground,
                 inputActiveOptionBackground: this.inputActiveOptionBackground,
             };
-            this.preserveCase.style(checkBoxStyles);
+            this.preserveCase.style(toggleStyles);
             const inputBoxStyles = {
                 inputBackground: this.inputBackground,
                 inputForeground: this.inputForeground,

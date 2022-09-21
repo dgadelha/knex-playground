@@ -23,7 +23,7 @@ import * as strings from '../../../../base/common/strings.js';
 import { URI } from '../../../../base/common/uri.js';
 import { EditorAction, EditorCommand, registerEditorAction, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
-import { ToggleTabFocusModeAction } from '../../../contrib/toggleTabFocusMode/toggleTabFocusMode.js';
+import { ToggleTabFocusModeAction } from '../../../contrib/toggleTabFocusMode/browser/toggleTabFocusMode.js';
 import { IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
@@ -97,7 +97,7 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
             if (!this._isVisible) {
                 return;
             }
-            if (e.equals(2048 /* CtrlCmd */ | 35 /* KEY_E */)) {
+            if (e.equals(2048 /* KeyMod.CtrlCmd */ | 35 /* KeyCode.KeyE */)) {
                 alert(AccessibilityHelpNLS.emergencyConfOn);
                 this._editor.updateOptions({
                     accessibilitySupport: 'on'
@@ -108,7 +108,7 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            if (e.equals(2048 /* CtrlCmd */ | 38 /* KEY_H */)) {
+            if (e.equals(2048 /* KeyMod.CtrlCmd */ | 38 /* KeyCode.KeyH */)) {
                 alert(AccessibilityHelpNLS.openingDocs);
                 let url = this._editor.getRawOptions().accessibilityHelpUrl;
                 if (typeof url === 'undefined') {
@@ -153,7 +153,7 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
         this._contentDomNode.domNode.focus();
     }
     _descriptionForCommand(commandId, msg, noKbMsg) {
-        let kb = this._keybindingService.lookupKeybinding(commandId);
+        const kb = this._keybindingService.lookupKeybinding(commandId);
         if (kb) {
             return strings.format(msg, kb.getAriaLabel());
         }
@@ -172,8 +172,8 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
             }
         }
         let text = getSelectionLabel(selections, charactersSelected);
-        if (options.get(51 /* inDiffEditor */)) {
-            if (options.get(78 /* readOnly */)) {
+        if (options.get(56 /* EditorOption.inDiffEditor */)) {
+            if (options.get(83 /* EditorOption.readOnly */)) {
                 text += AccessibilityHelpNLS.readonlyDiffEditor;
             }
             else {
@@ -181,7 +181,7 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
             }
         }
         else {
-            if (options.get(78 /* readOnly */)) {
+            if (options.get(83 /* EditorOption.readOnly */)) {
                 text += AccessibilityHelpNLS.readonlyEditor;
             }
             else {
@@ -191,19 +191,19 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
         const turnOnMessage = (platform.isMacintosh
             ? AccessibilityHelpNLS.changeConfigToOnMac
             : AccessibilityHelpNLS.changeConfigToOnWinLinux);
-        switch (options.get(2 /* accessibilitySupport */)) {
-            case 0 /* Unknown */:
+        switch (options.get(2 /* EditorOption.accessibilitySupport */)) {
+            case 0 /* AccessibilitySupport.Unknown */:
                 text += '\n\n - ' + turnOnMessage;
                 break;
-            case 2 /* Enabled */:
+            case 2 /* AccessibilitySupport.Enabled */:
                 text += '\n\n - ' + AccessibilityHelpNLS.auto_on;
                 break;
-            case 1 /* Disabled */:
+            case 1 /* AccessibilitySupport.Disabled */:
                 text += '\n\n - ' + AccessibilityHelpNLS.auto_off;
                 text += ' ' + turnOnMessage;
                 break;
         }
-        if (options.get(127 /* tabFocusMode */)) {
+        if (options.get(132 /* EditorOption.tabFocusMode */)) {
             text += '\n\n - ' + this._descriptionForCommand(ToggleTabFocusModeAction.ID, AccessibilityHelpNLS.tabFocusModeOnMsg, AccessibilityHelpNLS.tabFocusModeOnMsgNoKb);
         }
         else {
@@ -231,14 +231,14 @@ let AccessibilityHelpWidget = class AccessibilityHelpWidget extends Widget {
         this._editor.focus();
     }
     _layout() {
-        let editorLayout = this._editor.getLayoutInfo();
-        let w = Math.max(5, Math.min(AccessibilityHelpWidget.WIDTH, editorLayout.width - 40));
-        let h = Math.max(5, Math.min(AccessibilityHelpWidget.HEIGHT, editorLayout.height - 40));
+        const editorLayout = this._editor.getLayoutInfo();
+        const w = Math.max(5, Math.min(AccessibilityHelpWidget.WIDTH, editorLayout.width - 40));
+        const h = Math.max(5, Math.min(AccessibilityHelpWidget.HEIGHT, editorLayout.height - 40));
         this._domNode.setWidth(w);
         this._domNode.setHeight(h);
-        let top = Math.round((editorLayout.height - h) / 2);
+        const top = Math.round((editorLayout.height - h) / 2);
         this._domNode.setTop(top);
-        let left = Math.round((editorLayout.width - w) / 2);
+        const left = Math.round((editorLayout.width - w) / 2);
         this._domNode.setLeft(left);
     }
 };
@@ -258,17 +258,17 @@ class ShowAccessibilityHelpAction extends EditorAction {
             alias: 'Show Accessibility Help',
             precondition: undefined,
             kbOpts: {
-                primary: 512 /* Alt */ | 59 /* F1 */,
-                weight: 100 /* EditorContrib */,
+                primary: 512 /* KeyMod.Alt */ | 59 /* KeyCode.F1 */,
+                weight: 100 /* KeybindingWeight.EditorContrib */,
                 linux: {
-                    primary: 512 /* Alt */ | 1024 /* Shift */ | 59 /* F1 */,
-                    secondary: [512 /* Alt */ | 59 /* F1 */]
+                    primary: 512 /* KeyMod.Alt */ | 1024 /* KeyMod.Shift */ | 59 /* KeyCode.F1 */,
+                    secondary: [512 /* KeyMod.Alt */ | 59 /* KeyCode.F1 */]
                 }
             }
         });
     }
     run(accessor, editor) {
-        let controller = AccessibilityHelpController.get(editor);
+        const controller = AccessibilityHelpController.get(editor);
         if (controller) {
             controller.show();
         }
@@ -282,10 +282,10 @@ registerEditorCommand(new AccessibilityHelpCommand({
     precondition: CONTEXT_ACCESSIBILITY_WIDGET_VISIBLE,
     handler: x => x.hide(),
     kbOpts: {
-        weight: 100 /* EditorContrib */ + 100,
+        weight: 100 /* KeybindingWeight.EditorContrib */ + 100,
         kbExpr: EditorContextKeys.focus,
-        primary: 9 /* Escape */,
-        secondary: [1024 /* Shift */ | 9 /* Escape */]
+        primary: 9 /* KeyCode.Escape */,
+        secondary: [1024 /* KeyMod.Shift */ | 9 /* KeyCode.Escape */]
     }
 }));
 registerThemingParticipant((theme, collector) => {

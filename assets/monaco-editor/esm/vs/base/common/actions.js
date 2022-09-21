@@ -11,16 +11,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import * as nls from '../../nls.js';
-import { Disposable } from './lifecycle.js';
 import { Emitter } from './event.js';
+import { Disposable } from './lifecycle.js';
+import * as nls from '../../nls.js';
 export class Action extends Disposable {
     constructor(id, label = '', cssClass = '', enabled = true, actionCallback) {
         super();
         this._onDidChange = this._register(new Emitter());
         this.onDidChange = this._onDidChange.event;
         this._enabled = true;
-        this._checked = false;
         this._id = id;
         this._label = label;
         this._cssClass = cssClass;
@@ -140,7 +139,7 @@ export class SubmenuAction {
     constructor(id, label, actions, cssClass) {
         this.tooltip = '';
         this.enabled = true;
-        this.checked = false;
+        this.checked = undefined;
         this.id = id;
         this.label = label;
         this.class = cssClass;
@@ -162,3 +161,16 @@ export class EmptySubmenuAction extends Action {
     }
 }
 EmptySubmenuAction.ID = 'vs.actions.empty';
+export function toAction(props) {
+    var _a, _b;
+    return {
+        id: props.id,
+        label: props.label,
+        class: undefined,
+        enabled: (_a = props.enabled) !== null && _a !== void 0 ? _a : true,
+        checked: (_b = props.checked) !== null && _b !== void 0 ? _b : false,
+        run: () => __awaiter(this, void 0, void 0, function* () { return props.run(); }),
+        tooltip: props.label,
+        dispose: () => { }
+    };
+}

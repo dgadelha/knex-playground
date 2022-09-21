@@ -28,6 +28,9 @@ class LineSequence {
         }
         return elements;
     }
+    getStrictElement(index) {
+        return this.lines[index];
+    }
     getStartLineNumber(i) {
         return i + 1;
     }
@@ -49,6 +52,13 @@ class LineSequence {
                 columns[len] = col;
                 len++;
             }
+            if (!shouldIgnoreTrimWhitespace && index < endIndex) {
+                // Add \n if trim whitespace is not ignored
+                charCodes[len] = 10 /* CharCode.LineFeed */;
+                lineNumbers[len] = index + 1;
+                columns[len] = lineContent.length + 1;
+                len++;
+            }
         }
         return new CharSequence(charCodes, lineNumbers, columns);
     }
@@ -59,19 +69,57 @@ class CharSequence {
         this._lineNumbers = lineNumbers;
         this._columns = columns;
     }
+    toString() {
+        return ('[' + this._charCodes.map((s, idx) => (s === 10 /* CharCode.LineFeed */ ? '\\n' : String.fromCharCode(s)) + `-(${this._lineNumbers[idx]},${this._columns[idx]})`).join(', ') + ']');
+    }
+    _assertIndex(index, arr) {
+        if (index < 0 || index >= arr.length) {
+            throw new Error(`Illegal index`);
+        }
+    }
     getElements() {
         return this._charCodes;
     }
     getStartLineNumber(i) {
+        if (i > 0 && i === this._lineNumbers.length) {
+            // the start line number of the element after the last element
+            // is the end line number of the last element
+            return this.getEndLineNumber(i - 1);
+        }
+        this._assertIndex(i, this._lineNumbers);
+        return this._lineNumbers[i];
+    }
+    getEndLineNumber(i) {
+        if (i === -1) {
+            // the end line number of the element before the first element
+            // is the start line number of the first element
+            return this.getStartLineNumber(i + 1);
+        }
+        this._assertIndex(i, this._lineNumbers);
+        if (this._charCodes[i] === 10 /* CharCode.LineFeed */) {
+            return this._lineNumbers[i] + 1;
+        }
         return this._lineNumbers[i];
     }
     getStartColumn(i) {
+        if (i > 0 && i === this._columns.length) {
+            // the start column of the element after the last element
+            // is the end column of the last element
+            return this.getEndColumn(i - 1);
+        }
+        this._assertIndex(i, this._columns);
         return this._columns[i];
     }
-    getEndLineNumber(i) {
-        return this._lineNumbers[i];
-    }
     getEndColumn(i) {
+        if (i === -1) {
+            // the end column of the element before the first element
+            // is the start column of the first element
+            return this.getStartColumn(i + 1);
+        }
+        this._assertIndex(i, this._columns);
+        if (this._charCodes[i] === 10 /* CharCode.LineFeed */) {
+            return 1;
+        }
         return this._columns[i] + 1;
     }
 }
@@ -87,38 +135,14 @@ class CharChange {
         this.modifiedEndColumn = modifiedEndColumn;
     }
     static createFromDiffChange(diffChange, originalCharSequence, modifiedCharSequence) {
-        let originalStartLineNumber;
-        let originalStartColumn;
-        let originalEndLineNumber;
-        let originalEndColumn;
-        let modifiedStartLineNumber;
-        let modifiedStartColumn;
-        let modifiedEndLineNumber;
-        let modifiedEndColumn;
-        if (diffChange.originalLength === 0) {
-            originalStartLineNumber = 0;
-            originalStartColumn = 0;
-            originalEndLineNumber = 0;
-            originalEndColumn = 0;
-        }
-        else {
-            originalStartLineNumber = originalCharSequence.getStartLineNumber(diffChange.originalStart);
-            originalStartColumn = originalCharSequence.getStartColumn(diffChange.originalStart);
-            originalEndLineNumber = originalCharSequence.getEndLineNumber(diffChange.originalStart + diffChange.originalLength - 1);
-            originalEndColumn = originalCharSequence.getEndColumn(diffChange.originalStart + diffChange.originalLength - 1);
-        }
-        if (diffChange.modifiedLength === 0) {
-            modifiedStartLineNumber = 0;
-            modifiedStartColumn = 0;
-            modifiedEndLineNumber = 0;
-            modifiedEndColumn = 0;
-        }
-        else {
-            modifiedStartLineNumber = modifiedCharSequence.getStartLineNumber(diffChange.modifiedStart);
-            modifiedStartColumn = modifiedCharSequence.getStartColumn(diffChange.modifiedStart);
-            modifiedEndLineNumber = modifiedCharSequence.getEndLineNumber(diffChange.modifiedStart + diffChange.modifiedLength - 1);
-            modifiedEndColumn = modifiedCharSequence.getEndColumn(diffChange.modifiedStart + diffChange.modifiedLength - 1);
-        }
+        const originalStartLineNumber = originalCharSequence.getStartLineNumber(diffChange.originalStart);
+        const originalStartColumn = originalCharSequence.getStartColumn(diffChange.originalStart);
+        const originalEndLineNumber = originalCharSequence.getEndLineNumber(diffChange.originalStart + diffChange.originalLength - 1);
+        const originalEndColumn = originalCharSequence.getEndColumn(diffChange.originalStart + diffChange.originalLength - 1);
+        const modifiedStartLineNumber = modifiedCharSequence.getStartLineNumber(diffChange.modifiedStart);
+        const modifiedStartColumn = modifiedCharSequence.getStartColumn(diffChange.modifiedStart);
+        const modifiedEndLineNumber = modifiedCharSequence.getEndLineNumber(diffChange.modifiedStart + diffChange.modifiedLength - 1);
+        const modifiedEndColumn = modifiedCharSequence.getEndColumn(diffChange.modifiedStart + diffChange.modifiedLength - 1);
         return new CharChange(originalStartLineNumber, originalStartColumn, originalEndLineNumber, originalEndColumn, modifiedStartLineNumber, modifiedStartColumn, modifiedEndLineNumber, modifiedEndColumn);
     }
 }
@@ -181,13 +205,15 @@ class LineChange {
             // Compute character changes for diff chunks of at most 20 lines...
             const originalCharSequence = originalLineSequence.createCharSequence(shouldIgnoreTrimWhitespace, diffChange.originalStart, diffChange.originalStart + diffChange.originalLength - 1);
             const modifiedCharSequence = modifiedLineSequence.createCharSequence(shouldIgnoreTrimWhitespace, diffChange.modifiedStart, diffChange.modifiedStart + diffChange.modifiedLength - 1);
-            let rawChanges = computeDiff(originalCharSequence, modifiedCharSequence, continueCharDiff, true).changes;
-            if (shouldPostProcessCharChanges) {
-                rawChanges = postProcessCharChanges(rawChanges);
-            }
-            charChanges = [];
-            for (let i = 0, length = rawChanges.length; i < length; i++) {
-                charChanges.push(CharChange.createFromDiffChange(rawChanges[i], originalCharSequence, modifiedCharSequence));
+            if (originalCharSequence.getElements().length > 0 && modifiedCharSequence.getElements().length > 0) {
+                let rawChanges = computeDiff(originalCharSequence, modifiedCharSequence, continueCharDiff, true).changes;
+                if (shouldPostProcessCharChanges) {
+                    rawChanges = postProcessCharChanges(rawChanges);
+                }
+                charChanges = [];
+                for (let i = 0, length = rawChanges.length; i < length; i++) {
+                    charChanges.push(CharChange.createFromDiffChange(rawChanges[i], originalCharSequence, modifiedCharSequence));
+                }
             }
         }
         return new LineChange(originalStartLineNumber, originalEndLineNumber, modifiedStartLineNumber, modifiedEndLineNumber, charChanges);

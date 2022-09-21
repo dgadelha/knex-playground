@@ -2,19 +2,22 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import './findInput.css';
-import * as nls from '../../../../nls.js';
 import * as dom from '../../dom.js';
+import { CaseSensitiveToggle, RegexToggle, WholeWordsToggle } from './findInputToggles.js';
 import { HistoryInputBox } from '../inputbox/inputBox.js';
 import { Widget } from '../widget.js';
 import { Emitter } from '../../../common/event.js';
-import { CaseSensitiveCheckbox, WholeWordsCheckbox, RegexCheckbox } from './findInputCheckboxes.js';
+import './findInput.css';
+import * as nls from '../../../../nls.js';
 const NLS_DEFAULT_LABEL = nls.localize('defaultLabel', "input");
 export class FindInput extends Widget {
     constructor(parent, contextViewProvider, _showOptionButtons, options) {
+        var _a;
         super();
         this._showOptionButtons = _showOptionButtons;
         this.fixFocusOnOptionClickEnabled = true;
+        this.imeSessionInProgress = false;
+        this.additionalToggles = [];
         this._onDidOptionChange = this._register(new Emitter());
         this.onDidOptionChange = this._onDidOptionChange.event;
         this._onKeyDown = this._register(new Emitter());
@@ -75,11 +78,12 @@ export class FindInput extends Widget {
             inputValidationErrorForeground: this.inputValidationErrorForeground,
             inputValidationErrorBorder: this.inputValidationErrorBorder,
             history,
+            showHistoryHint: options.showHistoryHint,
             flexibleHeight,
             flexibleWidth,
             flexibleMaxHeight
         }));
-        this.regex = this._register(new RegexCheckbox({
+        this.regex = this._register(new RegexToggle({
             appendTitle: appendRegexLabel,
             isChecked: false,
             inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -96,7 +100,7 @@ export class FindInput extends Widget {
         this._register(this.regex.onKeyDown(e => {
             this._onRegexKeyDown.fire(e);
         }));
-        this.wholeWords = this._register(new WholeWordsCheckbox({
+        this.wholeWords = this._register(new WholeWordsToggle({
             appendTitle: appendWholeWordsLabel,
             isChecked: false,
             inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -110,7 +114,7 @@ export class FindInput extends Widget {
             }
             this.validate();
         }));
-        this.caseSensitive = this._register(new CaseSensitiveCheckbox({
+        this.caseSensitive = this._register(new CaseSensitiveToggle({
             appendTitle: appendCaseSensitiveLabel,
             isChecked: false,
             inputActiveOptionBorder: this.inputActiveOptionBorder,
@@ -127,20 +131,17 @@ export class FindInput extends Widget {
         this._register(this.caseSensitive.onKeyDown(e => {
             this._onCaseSensitiveKeyDown.fire(e);
         }));
-        if (this._showOptionButtons) {
-            this.inputBox.paddingRight = this.caseSensitive.width() + this.wholeWords.width() + this.regex.width();
-        }
         // Arrow-Key support to navigate between options
-        let indexes = [this.caseSensitive.domNode, this.wholeWords.domNode, this.regex.domNode];
+        const indexes = [this.caseSensitive.domNode, this.wholeWords.domNode, this.regex.domNode];
         this.onkeydown(this.domNode, (event) => {
-            if (event.equals(15 /* LeftArrow */) || event.equals(17 /* RightArrow */) || event.equals(9 /* Escape */)) {
-                let index = indexes.indexOf(document.activeElement);
+            if (event.equals(15 /* KeyCode.LeftArrow */) || event.equals(17 /* KeyCode.RightArrow */) || event.equals(9 /* KeyCode.Escape */)) {
+                const index = indexes.indexOf(document.activeElement);
                 if (index >= 0) {
                     let newIndex = -1;
-                    if (event.equals(17 /* RightArrow */)) {
+                    if (event.equals(17 /* KeyCode.RightArrow */)) {
                         newIndex = (index + 1) % indexes.length;
                     }
-                    else if (event.equals(15 /* LeftArrow */)) {
+                    else if (event.equals(15 /* KeyCode.LeftArrow */)) {
                         if (index === 0) {
                             newIndex = indexes.length - 1;
                         }
@@ -148,7 +149,7 @@ export class FindInput extends Widget {
                             newIndex = index - 1;
                         }
                     }
-                    if (event.equals(9 /* Escape */)) {
+                    if (event.equals(9 /* KeyCode.Escape */)) {
                         indexes[index].blur();
                         this.inputBox.focus();
                     }
@@ -159,20 +160,50 @@ export class FindInput extends Widget {
                 }
             }
         });
-        let controls = document.createElement('div');
-        controls.className = 'controls';
-        controls.style.display = this._showOptionButtons ? 'block' : 'none';
-        controls.appendChild(this.caseSensitive.domNode);
-        controls.appendChild(this.wholeWords.domNode);
-        controls.appendChild(this.regex.domNode);
-        this.domNode.appendChild(controls);
-        if (parent) {
-            parent.appendChild(this.domNode);
+        this.controls = document.createElement('div');
+        this.controls.className = 'controls';
+        this.controls.style.display = this._showOptionButtons ? 'block' : 'none';
+        this.controls.appendChild(this.caseSensitive.domNode);
+        this.controls.appendChild(this.wholeWords.domNode);
+        this.controls.appendChild(this.regex.domNode);
+        if (!this._showOptionButtons) {
+            this.caseSensitive.domNode.style.display = 'none';
+            this.wholeWords.domNode.style.display = 'none';
+            this.regex.domNode.style.display = 'none';
         }
+        for (const toggle of (_a = options === null || options === void 0 ? void 0 : options.additionalToggles) !== null && _a !== void 0 ? _a : []) {
+            this._register(toggle);
+            this.controls.appendChild(toggle.domNode);
+            this._register(toggle.onChange(viaKeyboard => {
+                this._onDidOptionChange.fire(viaKeyboard);
+                if (!viaKeyboard && this.fixFocusOnOptionClickEnabled) {
+                    this.inputBox.focus();
+                }
+            }));
+            this.additionalToggles.push(toggle);
+        }
+        if (this.additionalToggles.length > 0) {
+            this.controls.style.display = 'block';
+        }
+        this.inputBox.paddingRight =
+            (this._showOptionButtons ? this.caseSensitive.width() + this.wholeWords.width() + this.regex.width() : 0)
+                + this.additionalToggles.reduce((r, t) => r + t.width(), 0);
+        this.domNode.appendChild(this.controls);
+        parent === null || parent === void 0 ? void 0 : parent.appendChild(this.domNode);
+        this._register(dom.addDisposableListener(this.inputBox.inputElement, 'compositionstart', (e) => {
+            this.imeSessionInProgress = true;
+        }));
+        this._register(dom.addDisposableListener(this.inputBox.inputElement, 'compositionend', (e) => {
+            this.imeSessionInProgress = false;
+            this._onInput.fire();
+        }));
         this.onkeydown(this.inputBox.inputElement, (e) => this._onKeyDown.fire(e));
         this.onkeyup(this.inputBox.inputElement, (e) => this._onKeyUp.fire(e));
         this.oninput(this.inputBox.inputElement, (e) => this._onInput.fire());
         this.onmousedown(this.inputBox.inputElement, (e) => this._onMouseDown.fire(e));
+    }
+    get onDidChange() {
+        return this.inputBox.onDidChange;
     }
     enable() {
         this.domNode.classList.remove('disabled');
@@ -180,6 +211,9 @@ export class FindInput extends Widget {
         this.regex.enable();
         this.wholeWords.enable();
         this.caseSensitive.enable();
+        for (const toggle of this.additionalToggles) {
+            toggle.enable();
+        }
     }
     disable() {
         this.domNode.classList.add('disabled');
@@ -187,6 +221,9 @@ export class FindInput extends Widget {
         this.regex.disable();
         this.wholeWords.disable();
         this.caseSensitive.disable();
+        for (const toggle of this.additionalToggles) {
+            toggle.disable();
+        }
     }
     setFocusInputOnOptionClick(value) {
         this.fixFocusOnOptionClickEnabled = value;
@@ -227,14 +264,17 @@ export class FindInput extends Widget {
     }
     applyStyles() {
         if (this.domNode) {
-            const checkBoxStyles = {
+            const toggleStyles = {
                 inputActiveOptionBorder: this.inputActiveOptionBorder,
                 inputActiveOptionForeground: this.inputActiveOptionForeground,
                 inputActiveOptionBackground: this.inputActiveOptionBackground,
             };
-            this.regex.style(checkBoxStyles);
-            this.wholeWords.style(checkBoxStyles);
-            this.caseSensitive.style(checkBoxStyles);
+            this.regex.style(toggleStyles);
+            this.wholeWords.style(toggleStyles);
+            this.caseSensitive.style(toggleStyles);
+            for (const toggle of this.additionalToggles) {
+                toggle.style(toggleStyles);
+            }
             const inputBoxStyles = {
                 inputBackground: this.inputBackground,
                 inputForeground: this.inputForeground,
@@ -287,6 +327,9 @@ export class FindInput extends Widget {
     }
     validate() {
         this.inputBox.validate();
+    }
+    showMessage(message) {
+        this.inputBox.showMessage(message);
     }
     clearMessage() {
         this.inputBox.hideMessage();

@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { createKeybinding } from '../../../base/common/keyCodes.js';
+import { createKeybinding } from '../../../base/common/keybindings.js';
 import { OS } from '../../../base/common/platform.js';
 import { CommandsRegistry } from '../../commands/common/commands.js';
 import { Registry } from '../../registry/common/platform.js';
@@ -16,12 +16,12 @@ class KeybindingsRegistryImpl {
      * Take current platform into account and reduce to primary & secondary.
      */
     static bindToCurrentPlatform(kb) {
-        if (OS === 1 /* Windows */) {
+        if (OS === 1 /* OperatingSystem.Windows */) {
             if (kb && kb.win) {
                 return kb.win;
             }
         }
-        else if (OS === 2 /* Macintosh */) {
+        else if (OS === 2 /* OperatingSystem.Macintosh */) {
             if (kb && kb.mac) {
                 return kb.mac;
             }
@@ -56,27 +56,27 @@ class KeybindingsRegistryImpl {
         CommandsRegistry.registerCommand(desc);
     }
     static _mightProduceChar(keyCode) {
-        if (keyCode >= 21 /* KEY_0 */ && keyCode <= 30 /* KEY_9 */) {
+        if (keyCode >= 21 /* KeyCode.Digit0 */ && keyCode <= 30 /* KeyCode.Digit9 */) {
             return true;
         }
-        if (keyCode >= 31 /* KEY_A */ && keyCode <= 56 /* KEY_Z */) {
+        if (keyCode >= 31 /* KeyCode.KeyA */ && keyCode <= 56 /* KeyCode.KeyZ */) {
             return true;
         }
-        return (keyCode === 80 /* US_SEMICOLON */
-            || keyCode === 81 /* US_EQUAL */
-            || keyCode === 82 /* US_COMMA */
-            || keyCode === 83 /* US_MINUS */
-            || keyCode === 84 /* US_DOT */
-            || keyCode === 85 /* US_SLASH */
-            || keyCode === 86 /* US_BACKTICK */
-            || keyCode === 110 /* ABNT_C1 */
-            || keyCode === 111 /* ABNT_C2 */
-            || keyCode === 87 /* US_OPEN_SQUARE_BRACKET */
-            || keyCode === 88 /* US_BACKSLASH */
-            || keyCode === 89 /* US_CLOSE_SQUARE_BRACKET */
-            || keyCode === 90 /* US_QUOTE */
-            || keyCode === 91 /* OEM_8 */
-            || keyCode === 92 /* OEM_102 */);
+        return (keyCode === 80 /* KeyCode.Semicolon */
+            || keyCode === 81 /* KeyCode.Equal */
+            || keyCode === 82 /* KeyCode.Comma */
+            || keyCode === 83 /* KeyCode.Minus */
+            || keyCode === 84 /* KeyCode.Period */
+            || keyCode === 85 /* KeyCode.Slash */
+            || keyCode === 86 /* KeyCode.Backquote */
+            || keyCode === 110 /* KeyCode.ABNT_C1 */
+            || keyCode === 111 /* KeyCode.ABNT_C2 */
+            || keyCode === 87 /* KeyCode.BracketLeft */
+            || keyCode === 88 /* KeyCode.Backslash */
+            || keyCode === 89 /* KeyCode.BracketRight */
+            || keyCode === 90 /* KeyCode.Quote */
+            || keyCode === 91 /* KeyCode.OEM_8 */
+            || keyCode === 92 /* KeyCode.IntlBackslash */);
     }
     _assertNoCtrlAlt(keybinding, commandId) {
         if (keybinding.ctrlKey && keybinding.altKey && !keybinding.metaKey) {
@@ -86,11 +86,11 @@ class KeybindingsRegistryImpl {
         }
     }
     _registerDefaultKeybinding(keybinding, commandId, commandArgs, weight1, weight2, when) {
-        if (OS === 1 /* Windows */) {
+        if (OS === 1 /* OperatingSystem.Windows */) {
             this._assertNoCtrlAlt(keybinding.parts[0], commandId);
         }
         this._coreKeybindings.push({
-            keybinding: keybinding,
+            keybinding: keybinding.parts,
             command: commandId,
             commandArgs: commandArgs,
             when: when,

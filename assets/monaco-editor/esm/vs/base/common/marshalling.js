@@ -15,8 +15,9 @@ export function revive(obj, depth = 0) {
     }
     if (typeof obj === 'object') {
         switch (obj.$mid) {
-            case 1: return URI.revive(obj);
-            case 2: return new RegExp(obj.source, obj.flags);
+            case 1 /* MarshalledId.Uri */: return URI.revive(obj);
+            case 2 /* MarshalledId.Regexp */: return new RegExp(obj.source, obj.flags);
+            case 14 /* MarshalledId.Date */: return new Date(obj.source);
         }
         if (obj instanceof VSBuffer
             || obj instanceof Uint8Array) {

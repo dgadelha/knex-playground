@@ -17,7 +17,7 @@ export class Graph {
     }
     roots() {
         const ret = [];
-        for (let node of this._nodes.values()) {
+        for (const node of this._nodes.values()) {
             if (node.outgoing.size === 0) {
                 ret.push(node);
             }
@@ -33,7 +33,7 @@ export class Graph {
     removeNode(data) {
         const key = this._hashFn(data);
         this._nodes.delete(key);
-        for (let node of this._nodes.values()) {
+        for (const node of this._nodes.values()) {
             node.outgoing.delete(key);
             node.incoming.delete(key);
         }
@@ -51,8 +51,8 @@ export class Graph {
         return this._nodes.size === 0;
     }
     toString() {
-        let data = [];
-        for (let [key, value] of this._nodes) {
+        const data = [];
+        for (const [key, value] of this._nodes) {
             data.push(`${key}, (incoming)[${[...value.incoming.keys()].join(', ')}], (outgoing)[${[...value.outgoing.keys()].join(',')}]`);
         }
         return data.join('\n');
@@ -62,7 +62,7 @@ export class Graph {
      * to trouble shoot.
      */
     findCycleSlow() {
-        for (let [id, node] of this._nodes) {
+        for (const [id, node] of this._nodes) {
             const seen = new Set([id]);
             const res = this._findCycle(node, seen);
             if (res) {
@@ -72,7 +72,7 @@ export class Graph {
         return undefined;
     }
     _findCycle(node, seen) {
-        for (let [id, outgoing] of node.outgoing) {
+        for (const [id, outgoing] of node.outgoing) {
             if (seen.has(id)) {
                 return [...seen, id].join(' -> ');
             }

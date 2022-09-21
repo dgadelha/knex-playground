@@ -1,19 +1,16 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-import './button.css';
+import { addDisposableListener, EventHelper, EventType, reset, trackFocus } from '../../dom.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
+import { EventType as TouchEventType, Gesture } from '../../touch.js';
+import { renderLabelWithIcons } from '../iconLabel/iconLabels.js';
 import { Color } from '../../../common/color.js';
-import { mixin } from '../../../common/objects.js';
 import { Emitter } from '../../../common/event.js';
 import { Disposable } from '../../../common/lifecycle.js';
-import { Gesture, EventType as TouchEventType } from '../../touch.js';
-import { renderLabelWithIcons } from '../iconLabel/iconLabels.js';
-import { addDisposableListener, EventType, EventHelper, trackFocus, reset } from '../../dom.js';
+import { mixin } from '../../../common/objects.js';
+import './button.css';
 const defaultOptions = {
     buttonBackground: Color.fromHex('#0E639C'),
     buttonHoverBackground: Color.fromHex('#006BB3'),
+    buttonSeparator: Color.white,
     buttonForeground: Color.white
 };
 export class Button extends Disposable {
@@ -47,11 +44,11 @@ export class Button extends Disposable {
         this._register(addDisposableListener(this._element, EventType.KEY_DOWN, e => {
             const event = new StandardKeyboardEvent(e);
             let eventHandled = false;
-            if (this.enabled && (event.equals(3 /* Enter */) || event.equals(10 /* Space */))) {
+            if (this.enabled && (event.equals(3 /* KeyCode.Enter */) || event.equals(10 /* KeyCode.Space */))) {
                 this._onDidClick.fire(e);
                 eventHandled = true;
             }
-            else if (event.equals(9 /* Escape */)) {
+            else if (event.equals(9 /* KeyCode.Escape */)) {
                 this._element.blur();
                 eventHandled = true;
             }
@@ -69,8 +66,12 @@ export class Button extends Disposable {
         }));
         // Also set hover background when button is focused for feedback
         this.focusTracker = this._register(trackFocus(this._element));
-        this._register(this.focusTracker.onDidFocus(() => this.setHoverBackground()));
-        this._register(this.focusTracker.onDidBlur(() => this.applyStyles())); // restore standard styles
+        this._register(this.focusTracker.onDidFocus(() => { if (this.enabled) {
+            this.setHoverBackground();
+        } }));
+        this._register(this.focusTracker.onDidBlur(() => { if (this.enabled) {
+            this.applyStyles();
+        } }));
         this.applyStyles();
     }
     get onDidClick() { return this._onDidClick.event; }

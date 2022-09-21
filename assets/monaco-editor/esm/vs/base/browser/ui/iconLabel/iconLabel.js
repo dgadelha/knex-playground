@@ -5,10 +5,10 @@
 import './iconlabel.css';
 import * as dom from '../../dom.js';
 import { HighlightedLabel } from '../highlightedlabel/highlightedLabel.js';
-import { Disposable } from '../../../common/lifecycle.js';
-import { Range } from '../../../common/range.js';
-import { equals } from '../../../common/objects.js';
 import { setupCustomHover, setupNativeHover } from './iconLabelHover.js';
+import { Disposable } from '../../../common/lifecycle.js';
+import { equals } from '../../../common/objects.js';
+import { Range } from '../../../common/range.js';
 class FastLabelNode {
     constructor(_element) {
         this._element = _element;
@@ -56,12 +56,15 @@ export class IconLabel extends Disposable {
             this.nameNode = new Label(nameContainer);
         }
         if (options === null || options === void 0 ? void 0 : options.supportDescriptionHighlights) {
-            this.descriptionNodeFactory = () => new HighlightedLabel(dom.append(this.descriptionContainer.element, dom.$('span.label-description')), !!options.supportIcons);
+            this.descriptionNodeFactory = () => new HighlightedLabel(dom.append(this.descriptionContainer.element, dom.$('span.label-description')), { supportIcons: !!options.supportIcons });
         }
         else {
             this.descriptionNodeFactory = () => this._register(new FastLabelNode(dom.append(this.descriptionContainer.element, dom.$('span.label-description'))));
         }
         this.hoverDelegate = options === null || options === void 0 ? void 0 : options.hoverDelegate;
+    }
+    get element() {
+        return this.domNode.element;
     }
     setLabel(label, description, options) {
         const classes = ['monaco-icon-label'];
@@ -77,7 +80,7 @@ export class IconLabel extends Disposable {
             }
         }
         this.domNode.className = classes.join(' ');
-        this.setupHover(this.labelContainer, options === null || options === void 0 ? void 0 : options.title);
+        this.setupHover((options === null || options === void 0 ? void 0 : options.descriptionTitle) ? this.labelContainer : this.element, options === null || options === void 0 ? void 0 : options.title);
         this.nameNode.setLabel(label, options);
         if (description || this.descriptionNode) {
             if (!this.descriptionNode) {
@@ -189,7 +192,7 @@ class LabelWithHighlights {
             if (!this.singleLabel) {
                 this.container.innerText = '';
                 this.container.classList.remove('multiple');
-                this.singleLabel = new HighlightedLabel(dom.append(this.container, dom.$('a.label-name', { id: options === null || options === void 0 ? void 0 : options.domId })), this.supportIcons);
+                this.singleLabel = new HighlightedLabel(dom.append(this.container, dom.$('a.label-name', { id: options === null || options === void 0 ? void 0 : options.domId })), { supportIcons: this.supportIcons });
             }
             this.singleLabel.set(label, options === null || options === void 0 ? void 0 : options.matches, undefined, options === null || options === void 0 ? void 0 : options.labelEscapeNewLines);
         }
@@ -204,7 +207,7 @@ class LabelWithHighlights {
                 const m = matches ? matches[i] : undefined;
                 const id = (options === null || options === void 0 ? void 0 : options.domId) && `${options === null || options === void 0 ? void 0 : options.domId}_${i}`;
                 const name = dom.$('a.label-name', { id, 'data-icon-label-count': label.length, 'data-icon-label-index': i, 'role': 'treeitem' });
-                const highlightedLabel = new HighlightedLabel(dom.append(this.container, name), this.supportIcons);
+                const highlightedLabel = new HighlightedLabel(dom.append(this.container, name), { supportIcons: this.supportIcons });
                 highlightedLabel.set(l, m, undefined, options === null || options === void 0 ? void 0 : options.labelEscapeNewLines);
                 if (i < label.length - 1) {
                     dom.append(name, dom.$('span.label-separator', undefined, separator));
