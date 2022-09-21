@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit } from "@angular/core";
 import Knex from "knex";
 import * as sqlFormatter from "sql-formatter";
-import { version as knexVersion } from "../../node_modules/knex/package.json";
+import knexInfo from "../../node_modules/knex/package.json";
 import { MonacoService } from "./monaco.service";
 import { js_beautify } from "js-beautify";
 import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
@@ -15,7 +15,7 @@ export class AppComponent implements OnInit {
   client = "pg";
 
   knex = Knex({ client: this.client });
-  knexVersion = knexVersion;
+  knexVersion = knexInfo.version;
 
   knexEditorOptions = {
     language: "typescript",
