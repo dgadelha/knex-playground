@@ -20,6 +20,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var EditorContribution_1;
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { FuzzyScore } from '../../../../base/common/filters.js';
 import { Iterable } from '../../../../base/common/iterator.js';
@@ -28,7 +29,6 @@ import { registerEditorContribution } from '../../../browser/editorExtensions.js
 import { ICodeEditorService } from '../../../browser/services/codeEditorService.js';
 import { Range } from '../../../common/core/range.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
-import { CompletionItemInsertTextRule } from '../../../common/standalone/standaloneEnums.js';
 import { CompletionModel, LineContext } from './completionModel.js';
 import { CompletionOptions, provideSuggestionItems, QuickSuggestionsOptions } from './suggest.js';
 import { ISuggestMemoryService } from './suggestMemory.js';
@@ -59,7 +59,7 @@ let InlineCompletionResults = class InlineCompletionResults extends RefCountedDi
             && this.line === line
             && this.word.word.length > 0
             && this.word.startColumn === word.startColumn && this.word.endColumn < word.endColumn // same word
-            && this.completionModel.incomplete.size === 0; // no incomplete results
+            && this.completionModel.getIncompleteProvider().size === 0; // no incomplete results
     }
     get items() {
         var _a;
@@ -78,7 +78,7 @@ let InlineCompletionResults = class InlineCompletionResults extends RefCountedDi
             }
             const range = new Range(item.editStart.lineNumber, item.editStart.column, item.editInsertEnd.lineNumber, item.editInsertEnd.column + this.completionModel.lineContext.characterCountDelta // end PLUS character delta
             );
-            const insertText = item.completion.insertTextRules && (item.completion.insertTextRules & CompletionItemInsertTextRule.InsertAsSnippet)
+            const insertText = item.completion.insertTextRules && (item.completion.insertTextRules & 4 /* CompletionItemInsertTextRule.InsertAsSnippet */)
                 ? { snippet: item.completion.insertText }
                 : item.completion.insertText;
             result.push(new SuggestInlineCompletion(range, insertText, (_a = item.filterTextLow) !== null && _a !== void 0 ? _a : item.labelLow, item.completion.additionalTextEdits, item.completion.command, item));
@@ -106,7 +106,7 @@ let SuggestInlineCompletions = class SuggestInlineCompletions {
             if (context.selectedSuggestionInfo) {
                 return;
             }
-            const config = this._getEditorOption(81 /* EditorOption.quickSuggestions */, model);
+            const config = this._getEditorOption(88 /* EditorOption.quickSuggestions */, model);
             if (QuickSuggestionsOptions.isAllOff(config)) {
                 // quick suggest is off (for this model/language)
                 return;
@@ -155,7 +155,7 @@ let SuggestInlineCompletions = class SuggestInlineCompletions {
                 if (completions.needsClipboard) {
                     clipboardText = yield this._clipboardService.readText();
                 }
-                const completionModel = new CompletionModel(completions.items, position.column, new LineContext(leadingLineContents, 0), WordDistance.None, this._getEditorOption(108 /* EditorOption.suggest */, model), this._getEditorOption(103 /* EditorOption.snippetSuggestions */, model), { boostFullMatch: false, firstMatchCanBeWeak: false }, clipboardText);
+                const completionModel = new CompletionModel(completions.items, position.column, new LineContext(leadingLineContents, 0), WordDistance.None, this._getEditorOption(117 /* EditorOption.suggest */, model), this._getEditorOption(111 /* EditorOption.snippetSuggestions */, model), { boostFullMatch: false, firstMatchCanBeWeak: false }, clipboardText);
                 result = new InlineCompletionResults(model, position.lineNumber, wordInfo, completionModel, completions, this._suggestMemoryService);
             }
             this._lastResult = result;
@@ -189,31 +189,31 @@ SuggestInlineCompletions = __decorate([
     __param(3, ISuggestMemoryService)
 ], SuggestInlineCompletions);
 export { SuggestInlineCompletions };
-let EditorContribution = class EditorContribution {
+let EditorContribution = EditorContribution_1 = class EditorContribution {
     constructor(_editor, languageFeatureService, editorService, instaService) {
         // HACK - way to contribute something only once
-        if (++EditorContribution._counter === 1) {
+        if (++EditorContribution_1._counter === 1) {
             const provider = instaService.createInstance(SuggestInlineCompletions, (id, model) => {
                 var _a;
                 // HACK - reuse the editor options world outside from a "normal" contribution
                 const editor = (_a = editorService.listCodeEditors().find(editor => editor.getModel() === model)) !== null && _a !== void 0 ? _a : _editor;
                 return editor.getOption(id);
             });
-            EditorContribution._disposable = languageFeatureService.inlineCompletionsProvider.register('*', provider);
+            EditorContribution_1._disposable = languageFeatureService.inlineCompletionsProvider.register('*', provider);
         }
     }
     dispose() {
         var _a;
-        if (--EditorContribution._counter === 0) {
-            (_a = EditorContribution._disposable) === null || _a === void 0 ? void 0 : _a.dispose();
-            EditorContribution._disposable = undefined;
+        if (--EditorContribution_1._counter === 0) {
+            (_a = EditorContribution_1._disposable) === null || _a === void 0 ? void 0 : _a.dispose();
+            EditorContribution_1._disposable = undefined;
         }
     }
 };
 EditorContribution._counter = 0;
-EditorContribution = __decorate([
+EditorContribution = EditorContribution_1 = __decorate([
     __param(1, ILanguageFeaturesService),
     __param(2, ICodeEditorService),
     __param(3, IInstantiationService)
 ], EditorContribution);
-registerEditorContribution('suggest.inlineCompletionsProvider', EditorContribution);
+registerEditorContribution('suggest.inlineCompletionsProvider', EditorContribution, 0 /* EditorContributionInstantiation.Eager */); // eager because the contribution is used as a way to ONCE access a service to which a provider is registered

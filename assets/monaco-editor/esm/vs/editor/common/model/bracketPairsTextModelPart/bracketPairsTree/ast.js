@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import { BugIndicatingError } from '../../../../../base/common/errors.js';
 import { CursorColumns } from '../../../core/cursorColumns.js';
 import { lengthAdd, lengthGetLineCount, lengthToObj, lengthZero } from './length.js';
 import { SmallImmutableSet } from './smallImmutableSet.js';
@@ -9,14 +10,14 @@ import { SmallImmutableSet } from './smallImmutableSet.js';
  * The base implementation for all AST nodes.
 */
 class BaseAstNode {
-    constructor(length) {
-        this._length = length;
-    }
     /**
      * The length of the entire node, which should equal the sum of lengths of all children.
     */
     get length() {
         return this._length;
+    }
+    constructor(length) {
+        this._length = length;
     }
 }
 /**
@@ -25,13 +26,6 @@ class BaseAstNode {
  * Immutable, if all children are immutable.
 */
 export class PairAstNode extends BaseAstNode {
-    constructor(length, openingBracket, child, closingBracket, missingOpeningBracketIds) {
-        super(length);
-        this.openingBracket = openingBracket;
-        this.child = child;
-        this.closingBracket = closingBracket;
-        this.missingOpeningBracketIds = missingOpeningBracketIds;
-    }
     static create(openingBracket, child, closingBracket) {
         let length = openingBracket.length;
         if (child) {
@@ -63,7 +57,7 @@ export class PairAstNode extends BaseAstNode {
      * Avoid using this property, it allocates an array!
     */
     get children() {
-        const result = new Array();
+        const result = [];
         result.push(this.openingBracket);
         if (this.child) {
             result.push(this.child);
@@ -72,6 +66,13 @@ export class PairAstNode extends BaseAstNode {
             result.push(this.closingBracket);
         }
         return result;
+    }
+    constructor(length, openingBracket, child, closingBracket, missingOpeningBracketIds) {
+        super(length);
+        this.openingBracket = openingBracket;
+        this.child = child;
+        this.closingBracket = closingBracket;
+        this.missingOpeningBracketIds = missingOpeningBracketIds;
     }
     canBeReused(openBracketIds) {
         if (this.closingBracket === null) {
@@ -95,15 +96,6 @@ export class PairAstNode extends BaseAstNode {
     }
 }
 export class ListAstNode extends BaseAstNode {
-    /**
-     * Use ListAstNode.create.
-    */
-    constructor(length, listHeight, _missingOpeningBracketIds) {
-        super(length);
-        this.listHeight = listHeight;
-        this._missingOpeningBracketIds = _missingOpeningBracketIds;
-        this.cachedMinIndentation = -1;
-    }
     /**
      * This method uses more memory-efficient list nodes that can only store 2 or 3 children.
     */
@@ -134,6 +126,15 @@ export class ListAstNode extends BaseAstNode {
     }
     get missingOpeningBracketIds() {
         return this._missingOpeningBracketIds;
+    }
+    /**
+     * Use ListAstNode.create.
+    */
+    constructor(length, listHeight, _missingOpeningBracketIds) {
+        super(length);
+        this.listHeight = listHeight;
+        this._missingOpeningBracketIds = _missingOpeningBracketIds;
+        this.cachedMinIndentation = -1;
     }
     throwIfImmutable() {
         // NOOP
@@ -168,9 +169,17 @@ export class ListAstNode extends BaseAstNode {
         if (openBracketIds.intersects(this.missingOpeningBracketIds)) {
             return false;
         }
+        if (this.childrenLength === 0) {
+            // Don't reuse empty lists.
+            return false;
+        }
         let lastChild = this;
-        let lastLength;
-        while (lastChild.kind === 4 /* AstNodeKind.List */ && (lastLength = lastChild.childrenLength) > 0) {
+        while (lastChild.kind === 4 /* AstNodeKind.List */) {
+            const lastLength = lastChild.childrenLength;
+            if (lastLength === 0) {
+                // Empty lists should never be contained in other lists.
+                throw new BugIndicatingError();
+            }
             lastChild = lastChild.getChild(lastLength - 1);
         }
         return lastChild.canBeReused(openBracketIds);
@@ -207,12 +216,6 @@ export class ListAstNode extends BaseAstNode {
     }
 }
 class TwoThreeListAstNode extends ListAstNode {
-    constructor(length, listHeight, _item1, _item2, _item3, missingOpeningBracketIds) {
-        super(length, listHeight, missingOpeningBracketIds);
-        this._item1 = _item1;
-        this._item2 = _item2;
-        this._item3 = _item3;
-    }
     get childrenLength() {
         return this._item3 !== null ? 3 : 2;
     }
@@ -249,6 +252,12 @@ class TwoThreeListAstNode extends ListAstNode {
     }
     get item3() {
         return this._item3;
+    }
+    constructor(length, listHeight, _item1, _item2, _item3, missingOpeningBracketIds) {
+        super(length, listHeight, missingOpeningBracketIds);
+        this._item1 = _item1;
+        this._item2 = _item2;
+        this._item3 = _item3;
     }
     deepClone() {
         return new TwoThreeListAstNode(this.length, this.listHeight, this._item1.deepClone(), this._item2.deepClone(), this._item3 ? this._item3.deepClone() : null, this.missingOpeningBracketIds);
@@ -312,10 +321,6 @@ class Immutable23ListAstNode extends TwoThreeListAstNode {
  * For debugging.
 */
 class ArrayListAstNode extends ListAstNode {
-    constructor(length, listHeight, _children, missingOpeningBracketIds) {
-        super(length, listHeight, missingOpeningBracketIds);
-        this._children = _children;
-    }
     get childrenLength() {
         return this._children.length;
     }
@@ -327,6 +332,10 @@ class ArrayListAstNode extends ListAstNode {
     }
     get children() {
         return this._children;
+    }
+    constructor(length, listHeight, _children, missingOpeningBracketIds) {
+        super(length, listHeight, missingOpeningBracketIds);
+        this._children = _children;
     }
     deepClone() {
         const children = new Array(this._children.length);
@@ -420,16 +429,6 @@ export class TextAstNode extends ImmutableLeafAstNode {
     }
 }
 export class BracketAstNode extends ImmutableLeafAstNode {
-    constructor(length, bracketInfo, 
-    /**
-     * In case of a opening bracket, this is the id of the opening bracket.
-     * In case of a closing bracket, this contains the ids of all opening brackets it can close.
-    */
-    bracketIds) {
-        super(length);
-        this.bracketInfo = bracketInfo;
-        this.bracketIds = bracketIds;
-    }
     static create(length, bracketInfo, bracketIds) {
         const node = new BracketAstNode(length, bracketInfo, bracketIds);
         return node;
@@ -439,6 +438,16 @@ export class BracketAstNode extends ImmutableLeafAstNode {
     }
     get missingOpeningBracketIds() {
         return SmallImmutableSet.getEmpty();
+    }
+    constructor(length, bracketInfo, 
+    /**
+     * In case of a opening bracket, this is the id of the opening bracket.
+     * In case of a closing bracket, this contains the ids of all opening brackets it can close.
+    */
+    bracketIds) {
+        super(length);
+        this.bracketInfo = bracketInfo;
+        this.bracketIds = bracketIds;
     }
     get text() {
         return this.bracketInfo.bracketText;
@@ -457,12 +466,12 @@ export class BracketAstNode extends ImmutableLeafAstNode {
     }
 }
 export class InvalidBracketAstNode extends ImmutableLeafAstNode {
+    get kind() {
+        return 3 /* AstNodeKind.UnexpectedClosingBracket */;
+    }
     constructor(closingBrackets, length) {
         super(length);
         this.missingOpeningBracketIds = closingBrackets;
-    }
-    get kind() {
-        return 3 /* AstNodeKind.UnexpectedClosingBracket */;
     }
     canBeReused(openedBracketIds) {
         return !openedBracketIds.intersects(this.missingOpeningBracketIds);

@@ -2,22 +2,23 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { $, addDisposableListener, EventType, isHTMLElement } from '../../../base/browser/dom.js';
+import { $, addDisposableListener, EventType, getActiveElement, isAncestor, isHTMLElement } from '../../../base/browser/dom.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
 import { Menu } from '../../../base/browser/ui/menu/menu.js';
 import { ActionRunner } from '../../../base/common/actions.js';
 import { isCancellationError } from '../../../base/common/errors.js';
 import { combinedDisposable, DisposableStore } from '../../../base/common/lifecycle.js';
-import { attachMenuStyler } from '../../theme/common/styler.js';
+import { defaultMenuStyles } from '../../theme/browser/defaultStyles.js';
 export class ContextMenuHandler {
-    constructor(contextViewService, telemetryService, notificationService, keybindingService, themeService) {
+    constructor(contextViewService, telemetryService, notificationService, keybindingService) {
         this.contextViewService = contextViewService;
         this.telemetryService = telemetryService;
         this.notificationService = notificationService;
         this.keybindingService = keybindingService;
-        this.themeService = themeService;
         this.focusToReturn = null;
+        this.lastContainer = null;
         this.block = null;
+        this.blockDisposable = null;
         this.options = { blockMouse: true };
     }
     configure(options) {
@@ -37,6 +38,8 @@ export class ContextMenuHandler {
             anchorAlignment: delegate.anchorAlignment,
             anchorAxisAlignment: delegate.anchorAxisAlignment,
             render: (container) => {
+                var _a;
+                this.lastContainer = container;
                 const className = delegate.getMenuClassName ? delegate.getMenuClassName() : '';
                 if (className) {
                     container.className += ' ' + className;
@@ -51,20 +54,19 @@ export class ContextMenuHandler {
                     this.block.style.width = '100%';
                     this.block.style.height = '100%';
                     this.block.style.zIndex = '-1';
-                    // TODO@Steven: this is never getting disposed
-                    addDisposableListener(this.block, EventType.MOUSE_DOWN, e => e.stopPropagation());
+                    (_a = this.blockDisposable) === null || _a === void 0 ? void 0 : _a.dispose();
+                    this.blockDisposable = addDisposableListener(this.block, EventType.MOUSE_DOWN, e => e.stopPropagation());
                 }
                 const menuDisposables = new DisposableStore();
                 const actionRunner = delegate.actionRunner || new ActionRunner();
-                actionRunner.onBeforeRun(this.onActionRun, this, menuDisposables);
+                actionRunner.onWillRun(evt => this.onActionRun(evt, !delegate.skipTelemetry), this, menuDisposables);
                 actionRunner.onDidRun(this.onDidActionRun, this, menuDisposables);
                 menu = new Menu(container, actions, {
                     actionViewItemProvider: delegate.getActionViewItem,
                     context: delegate.getActionsContext ? delegate.getActionsContext() : null,
                     actionRunner,
                     getKeyBinding: delegate.getKeyBinding ? delegate.getKeyBinding : action => this.keybindingService.lookupKeybinding(action.id)
-                });
-                menuDisposables.add(attachMenuStyler(menu, this.themeService));
+                }, defaultMenuStyles);
                 menu.onDidCancel(() => this.contextViewService.hideContextView(true), null, menuDisposables);
                 menu.onDidBlur(() => this.contextViewService.hideContextView(true), null, menuDisposables);
                 menuDisposables.add(addDisposableListener(window, EventType.BLUR, () => this.contextViewService.hideContextView(true)));
@@ -92,25 +94,26 @@ export class ContextMenuHandler {
                 menu === null || menu === void 0 ? void 0 : menu.focus(!!delegate.autoSelectFirstItem);
             },
             onHide: (didCancel) => {
-                var _a;
+                var _a, _b, _c;
                 (_a = delegate.onHide) === null || _a === void 0 ? void 0 : _a.call(delegate, !!didCancel);
                 if (this.block) {
                     this.block.remove();
                     this.block = null;
                 }
-                if (this.focusToReturn) {
-                    this.focusToReturn.focus();
+                (_b = this.blockDisposable) === null || _b === void 0 ? void 0 : _b.dispose();
+                this.blockDisposable = null;
+                if (!!this.lastContainer && (getActiveElement() === this.lastContainer || isAncestor(getActiveElement(), this.lastContainer))) {
+                    (_c = this.focusToReturn) === null || _c === void 0 ? void 0 : _c.focus();
                 }
+                this.lastContainer = null;
             }
         }, shadowRootElement, !!shadowRootElement);
     }
-    onActionRun(e) {
-        this.telemetryService.publicLog2('workbenchActionExecuted', { id: e.action.id, from: 'contextMenu' });
-        this.contextViewService.hideContextView(false);
-        // Restore focus here
-        if (this.focusToReturn) {
-            this.focusToReturn.focus();
+    onActionRun(e, logTelemetry) {
+        if (logTelemetry) {
+            this.telemetryService.publicLog2('workbenchActionExecuted', { id: e.action.id, from: 'contextMenu' });
         }
+        this.contextViewService.hideContextView(false);
     }
     onDidActionRun(e) {
         if (e.error && !isCancellationError(e.error)) {

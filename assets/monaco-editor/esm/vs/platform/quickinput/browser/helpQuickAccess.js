@@ -11,13 +11,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var HelpQuickAccessProvider_1;
 import { localize } from '../../../nls.js';
 import { Registry } from '../../registry/common/platform.js';
 import { DisposableStore } from '../../../base/common/lifecycle.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
 import { Extensions } from '../common/quickAccess.js';
 import { IQuickInputService } from '../common/quickInput.js';
-let HelpQuickAccessProvider = class HelpQuickAccessProvider {
+let HelpQuickAccessProvider = HelpQuickAccessProvider_1 = class HelpQuickAccessProvider {
     constructor(quickInputService, keybindingService) {
         this.quickInputService = quickInputService;
         this.keybindingService = keybindingService;
@@ -35,38 +36,38 @@ let HelpQuickAccessProvider = class HelpQuickAccessProvider {
         // Also open a picker when we detect the user typed the exact
         // name of a provider (e.g. `?term` for terminals)
         disposables.add(picker.onDidChangeValue(value => {
-            const providerDescriptor = this.registry.getQuickAccessProvider(value.substr(HelpQuickAccessProvider.PREFIX.length));
-            if (providerDescriptor && providerDescriptor.prefix && providerDescriptor.prefix !== HelpQuickAccessProvider.PREFIX) {
+            const providerDescriptor = this.registry.getQuickAccessProvider(value.substr(HelpQuickAccessProvider_1.PREFIX.length));
+            if (providerDescriptor && providerDescriptor.prefix && providerDescriptor.prefix !== HelpQuickAccessProvider_1.PREFIX) {
                 this.quickInputService.quickAccess.show(providerDescriptor.prefix, { preserveValue: true });
             }
         }));
         // Fill in all providers
-        picker.items = this.getQuickAccessProviders();
+        picker.items = this.getQuickAccessProviders().filter(p => p.prefix !== HelpQuickAccessProvider_1.PREFIX);
         return disposables;
     }
     getQuickAccessProviders() {
-        const providers = [];
-        for (const provider of this.registry.getQuickAccessProviders().sort((providerA, providerB) => providerA.prefix.localeCompare(providerB.prefix))) {
-            if (provider.prefix === HelpQuickAccessProvider.PREFIX) {
-                continue; // exclude help which is already active
-            }
-            for (const helpEntry of provider.helpEntries) {
-                const prefix = helpEntry.prefix || provider.prefix;
-                const label = prefix || '\u2026' /* ... */;
-                providers.push({
-                    prefix,
-                    label,
-                    keybinding: helpEntry.commandId ? this.keybindingService.lookupKeybinding(helpEntry.commandId) : undefined,
-                    ariaLabel: localize('helpPickAriaLabel', "{0}, {1}", label, helpEntry.description),
-                    description: helpEntry.description
-                });
-            }
-        }
+        const providers = this.registry
+            .getQuickAccessProviders()
+            .sort((providerA, providerB) => providerA.prefix.localeCompare(providerB.prefix))
+            .flatMap(provider => this.createPicks(provider));
         return providers;
+    }
+    createPicks(provider) {
+        return provider.helpEntries.map(helpEntry => {
+            const prefix = helpEntry.prefix || provider.prefix;
+            const label = prefix || '\u2026' /* ... */;
+            return {
+                prefix,
+                label,
+                keybinding: helpEntry.commandId ? this.keybindingService.lookupKeybinding(helpEntry.commandId) : undefined,
+                ariaLabel: localize('helpPickAriaLabel', "{0}, {1}", label, helpEntry.description),
+                description: helpEntry.description
+            };
+        });
     }
 };
 HelpQuickAccessProvider.PREFIX = '?';
-HelpQuickAccessProvider = __decorate([
+HelpQuickAccessProvider = HelpQuickAccessProvider_1 = __decorate([
     __param(0, IQuickInputService),
     __param(1, IKeybindingService)
 ], HelpQuickAccessProvider);

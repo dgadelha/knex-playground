@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { KeyCodeUtils, IMMUTABLE_CODE_TO_KEY_CODE } from '../../../base/common/keyCodes.js';
-import { ChordKeybinding, SimpleKeybinding } from '../../../base/common/keybindings.js';
+import { KeyCodeChord } from '../../../base/common/keybindings.js';
 import { BaseResolvedKeybinding } from './baseResolvedKeybinding.js';
-import { removeElementsAfterNulls } from './resolvedKeybindingItem.js';
+import { toEmptyArrayIfContainsNull } from './resolvedKeybindingItem.js';
 /**
  * Do not instantiate. Use KeybindingService to get a ResolvedKeybinding seeded with information about the current kb layout.
  */
 export class USLayoutResolvedKeybinding extends BaseResolvedKeybinding {
-    constructor(actual, os) {
-        super(os, actual.parts);
+    constructor(chords, os) {
+        super(os, chords);
     }
     _keyCodeToUILabel(keyCode) {
         if (this._os === 2 /* OperatingSystem.Macintosh */) {
@@ -28,45 +28,52 @@ export class USLayoutResolvedKeybinding extends BaseResolvedKeybinding {
         }
         return KeyCodeUtils.toString(keyCode);
     }
-    _getLabel(keybinding) {
-        if (keybinding.isDuplicateModifierCase()) {
+    _getLabel(chord) {
+        if (chord.isDuplicateModifierCase()) {
             return '';
         }
-        return this._keyCodeToUILabel(keybinding.keyCode);
+        return this._keyCodeToUILabel(chord.keyCode);
     }
-    _getAriaLabel(keybinding) {
-        if (keybinding.isDuplicateModifierCase()) {
+    _getAriaLabel(chord) {
+        if (chord.isDuplicateModifierCase()) {
             return '';
         }
-        return KeyCodeUtils.toString(keybinding.keyCode);
+        return KeyCodeUtils.toString(chord.keyCode);
     }
-    _getElectronAccelerator(keybinding) {
-        return KeyCodeUtils.toElectronAccelerator(keybinding.keyCode);
+    _getElectronAccelerator(chord) {
+        return KeyCodeUtils.toElectronAccelerator(chord.keyCode);
     }
-    _getDispatchPart(keybinding) {
-        return USLayoutResolvedKeybinding.getDispatchStr(keybinding);
+    _getUserSettingsLabel(chord) {
+        if (chord.isDuplicateModifierCase()) {
+            return '';
+        }
+        const result = KeyCodeUtils.toUserSettingsUS(chord.keyCode);
+        return (result ? result.toLowerCase() : result);
     }
-    static getDispatchStr(keybinding) {
-        if (keybinding.isModifierKey()) {
+    _getChordDispatch(chord) {
+        return USLayoutResolvedKeybinding.getDispatchStr(chord);
+    }
+    static getDispatchStr(chord) {
+        if (chord.isModifierKey()) {
             return null;
         }
         let result = '';
-        if (keybinding.ctrlKey) {
+        if (chord.ctrlKey) {
             result += 'ctrl+';
         }
-        if (keybinding.shiftKey) {
+        if (chord.shiftKey) {
             result += 'shift+';
         }
-        if (keybinding.altKey) {
+        if (chord.altKey) {
             result += 'alt+';
         }
-        if (keybinding.metaKey) {
+        if (chord.metaKey) {
             result += 'meta+';
         }
-        result += KeyCodeUtils.toString(keybinding.keyCode);
+        result += KeyCodeUtils.toString(chord.keyCode);
         return result;
     }
-    _getSingleModifierDispatchPart(keybinding) {
+    _getSingleModifierChordDispatch(keybinding) {
         if (keybinding.keyCode === 5 /* KeyCode.Ctrl */ && !keybinding.shiftKey && !keybinding.altKey && !keybinding.metaKey) {
             return 'ctrl';
         }
@@ -126,39 +133,39 @@ export class USLayoutResolvedKeybinding extends BaseResolvedKeybinding {
             case 43 /* ScanCode.Digit8 */: return 29 /* KeyCode.Digit8 */;
             case 44 /* ScanCode.Digit9 */: return 30 /* KeyCode.Digit9 */;
             case 45 /* ScanCode.Digit0 */: return 21 /* KeyCode.Digit0 */;
-            case 51 /* ScanCode.Minus */: return 83 /* KeyCode.Minus */;
-            case 52 /* ScanCode.Equal */: return 81 /* KeyCode.Equal */;
-            case 53 /* ScanCode.BracketLeft */: return 87 /* KeyCode.BracketLeft */;
-            case 54 /* ScanCode.BracketRight */: return 89 /* KeyCode.BracketRight */;
-            case 55 /* ScanCode.Backslash */: return 88 /* KeyCode.Backslash */;
+            case 51 /* ScanCode.Minus */: return 88 /* KeyCode.Minus */;
+            case 52 /* ScanCode.Equal */: return 86 /* KeyCode.Equal */;
+            case 53 /* ScanCode.BracketLeft */: return 92 /* KeyCode.BracketLeft */;
+            case 54 /* ScanCode.BracketRight */: return 94 /* KeyCode.BracketRight */;
+            case 55 /* ScanCode.Backslash */: return 93 /* KeyCode.Backslash */;
             case 56 /* ScanCode.IntlHash */: return 0 /* KeyCode.Unknown */; // missing
-            case 57 /* ScanCode.Semicolon */: return 80 /* KeyCode.Semicolon */;
-            case 58 /* ScanCode.Quote */: return 90 /* KeyCode.Quote */;
-            case 59 /* ScanCode.Backquote */: return 86 /* KeyCode.Backquote */;
-            case 60 /* ScanCode.Comma */: return 82 /* KeyCode.Comma */;
-            case 61 /* ScanCode.Period */: return 84 /* KeyCode.Period */;
-            case 62 /* ScanCode.Slash */: return 85 /* KeyCode.Slash */;
-            case 106 /* ScanCode.IntlBackslash */: return 92 /* KeyCode.IntlBackslash */;
+            case 57 /* ScanCode.Semicolon */: return 85 /* KeyCode.Semicolon */;
+            case 58 /* ScanCode.Quote */: return 95 /* KeyCode.Quote */;
+            case 59 /* ScanCode.Backquote */: return 91 /* KeyCode.Backquote */;
+            case 60 /* ScanCode.Comma */: return 87 /* KeyCode.Comma */;
+            case 61 /* ScanCode.Period */: return 89 /* KeyCode.Period */;
+            case 62 /* ScanCode.Slash */: return 90 /* KeyCode.Slash */;
+            case 106 /* ScanCode.IntlBackslash */: return 97 /* KeyCode.IntlBackslash */;
         }
         return 0 /* KeyCode.Unknown */;
     }
-    static _resolveSimpleUserBinding(binding) {
-        if (!binding) {
+    static _toKeyCodeChord(chord) {
+        if (!chord) {
             return null;
         }
-        if (binding instanceof SimpleKeybinding) {
-            return binding;
+        if (chord instanceof KeyCodeChord) {
+            return chord;
         }
-        const keyCode = this._scanCodeToKeyCode(binding.scanCode);
+        const keyCode = this._scanCodeToKeyCode(chord.scanCode);
         if (keyCode === 0 /* KeyCode.Unknown */) {
             return null;
         }
-        return new SimpleKeybinding(binding.ctrlKey, binding.shiftKey, binding.altKey, binding.metaKey, keyCode);
+        return new KeyCodeChord(chord.ctrlKey, chord.shiftKey, chord.altKey, chord.metaKey, keyCode);
     }
-    static resolveUserBinding(input, os) {
-        const parts = removeElementsAfterNulls(input.map(keybinding => this._resolveSimpleUserBinding(keybinding)));
-        if (parts.length > 0) {
-            return [new USLayoutResolvedKeybinding(new ChordKeybinding(parts), os)];
+    static resolveKeybinding(keybinding, os) {
+        const chords = toEmptyArrayIfContainsNull(keybinding.chords.map(chord => this._toKeyCodeChord(chord)));
+        if (chords.length > 0) {
+            return [new USLayoutResolvedKeybinding(chords, os)];
         }
         return [];
     }

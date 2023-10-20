@@ -40,4 +40,4 @@ export class LanguageFeaturesService {
         return (_a = this._notebookTypeResolver) === null || _a === void 0 ? void 0 : _a.call(this, uri);
     }
 }
-registerSingleton(ILanguageFeaturesService, LanguageFeaturesService, true);
+registerSingleton(ILanguageFeaturesService, LanguageFeaturesService, 1 /* InstantiationType.Delayed */);

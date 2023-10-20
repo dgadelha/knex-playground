@@ -7,7 +7,7 @@ import { GlobalPointerMoveMonitor } from '../../base/browser/globalPointerMoveMo
 import { StandardMouseEvent } from '../../base/browser/mouseEvent.js';
 import { RunOnceScheduler } from '../../base/common/async.js';
 import { Disposable } from '../../base/common/lifecycle.js';
-import { asCssVariableName } from '../../platform/theme/common/colorRegistry.js';
+import { asCssVariable } from '../../platform/theme/common/colorRegistry.js';
 /**
  * Coordinates relative to the whole document (e.g. mouse event's pageX and pageY)
  */
@@ -18,7 +18,7 @@ export class PageCoordinates {
         this._pageCoordinatesBrand = undefined;
     }
     toClientCoordinates() {
-        return new ClientCoordinates(this.x - dom.StandardWindow.scrollX, this.y - dom.StandardWindow.scrollY);
+        return new ClientCoordinates(this.x - window.scrollX, this.y - window.scrollY);
     }
 }
 /**
@@ -35,7 +35,7 @@ export class ClientCoordinates {
         this._clientCoordinatesBrand = undefined;
     }
     toPageCoordinates() {
-        return new PageCoordinates(this.clientX + dom.StandardWindow.scrollX, this.clientY + dom.StandardWindow.scrollY);
+        return new PageCoordinates(this.clientX + window.scrollX, this.clientY + window.scrollY);
     }
 }
 /**
@@ -166,9 +166,9 @@ export class GlobalEditorPointerMoveMonitor extends Disposable {
     startMonitoring(initialElement, pointerId, initialButtons, pointerMoveCallback, onStopCallback) {
         // Add a <<capture>> keydown event listener that will cancel the monitoring
         // if something other than a modifier key is pressed
-        this._keydownListener = dom.addStandardDisposableListener(document, 'keydown', (e) => {
-            const kb = e.toKeybinding();
-            if (kb.isModifierKey()) {
+        this._keydownListener = dom.addStandardDisposableListener(initialElement.ownerDocument, 'keydown', (e) => {
+            const chord = e.toKeyCodeChord();
+            if (chord.isModifierKey()) {
                 // Allow modifier keys
                 return;
             }
@@ -250,7 +250,7 @@ class RefCountedCssRule {
             const value = properties[prop];
             let cssValue;
             if (typeof value === 'object') {
-                cssValue = `var(${asCssVariableName(value.id)})`;
+                cssValue = asCssVariable(value.id);
             }
             else {
                 cssValue = value;

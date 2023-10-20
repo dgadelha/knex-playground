@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { localize } from '../../../nls.js';
-import { TernarySearchTree } from '../../../base/common/map.js';
+import { basename } from '../../../base/common/path.js';
+import { TernarySearchTree } from '../../../base/common/ternarySearchTree.js';
 import { URI } from '../../../base/common/uri.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const IWorkspaceContextService = createDecorator('contextService');
@@ -11,8 +12,33 @@ export function isSingleFolderWorkspaceIdentifier(obj) {
     const singleFolderIdentifier = obj;
     return typeof (singleFolderIdentifier === null || singleFolderIdentifier === void 0 ? void 0 : singleFolderIdentifier.id) === 'string' && URI.isUri(singleFolderIdentifier.uri);
 }
-export function toWorkspaceIdentifier(workspace) {
+export function isEmptyWorkspaceIdentifier(obj) {
+    const emptyWorkspaceIdentifier = obj;
+    return typeof (emptyWorkspaceIdentifier === null || emptyWorkspaceIdentifier === void 0 ? void 0 : emptyWorkspaceIdentifier.id) === 'string'
+        && !isSingleFolderWorkspaceIdentifier(obj)
+        && !isWorkspaceIdentifier(obj);
+}
+export const EXTENSION_DEVELOPMENT_EMPTY_WINDOW_WORKSPACE = { id: 'ext-dev' };
+export const UNKNOWN_EMPTY_WINDOW_WORKSPACE = { id: 'empty-window' };
+export function toWorkspaceIdentifier(arg0, isExtensionDevelopment) {
+    // Empty workspace
+    if (typeof arg0 === 'string' || typeof arg0 === 'undefined') {
+        // With a backupPath, the basename is the empty workspace identifier
+        if (typeof arg0 === 'string') {
+            return {
+                id: basename(arg0)
+            };
+        }
+        // Extension development empty windows have backups disabled
+        // so we return a constant workspace identifier for extension
+        // authors to allow to restore their workspace state even then.
+        if (isExtensionDevelopment) {
+            return EXTENSION_DEVELOPMENT_EMPTY_WINDOW_WORKSPACE;
+        }
+        return UNKNOWN_EMPTY_WINDOW_WORKSPACE;
+    }
     // Multi root
+    const workspace = arg0;
     if (workspace.configuration) {
         return {
             id: workspace.id,
@@ -26,8 +52,14 @@ export function toWorkspaceIdentifier(workspace) {
             uri: workspace.folders[0].uri
         };
     }
-    // Empty workspace
-    return undefined;
+    // Empty window
+    return {
+        id: workspace.id
+    };
+}
+export function isWorkspaceIdentifier(obj) {
+    const workspaceIdentifier = obj;
+    return typeof (workspaceIdentifier === null || workspaceIdentifier === void 0 ? void 0 : workspaceIdentifier.id) === 'string' && URI.isUri(workspaceIdentifier.configPath);
 }
 export class Workspace {
     constructor(_id, folders, _transient, _configuration, _ignorePathCasing) {
@@ -94,3 +126,7 @@ export class WorkspaceFolder {
 }
 export const WORKSPACE_EXTENSION = 'code-workspace';
 export const WORKSPACE_FILTER = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION] }];
+export const STANDALONE_EDITOR_WORKSPACE_ID = '4064f6ec-cb38-4ad0-af64-ee6467e63c82';
+export function isStandaloneEditorWorkspace(workspace) {
+    return workspace.id === STANDALONE_EDITOR_WORKSPACE_ID;
+}

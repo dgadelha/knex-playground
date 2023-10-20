@@ -81,16 +81,6 @@ export class OutlineGroup extends TreeElement {
     }
 }
 export class OutlineModel extends TreeElement {
-    constructor(uri) {
-        super();
-        this.uri = uri;
-        this.id = 'root';
-        this.parent = undefined;
-        this._groups = new Map();
-        this.children = new Map();
-        this.id = 'root';
-        this.parent = undefined;
-    }
     static create(registry, textModel, token) {
         const cts = new CancellationTokenSource(token);
         const result = new OutlineModel(textModel.uri);
@@ -130,7 +120,9 @@ export class OutlineModel extends TreeElement {
                 return result._compact();
             }
         }).finally(() => {
+            cts.dispose();
             listener.dispose();
+            cts.dispose();
         });
     }
     static _makeOutlineElement(info, container) {
@@ -142,6 +134,16 @@ export class OutlineModel extends TreeElement {
             }
         }
         container.children.set(res.id, res);
+    }
+    constructor(uri) {
+        super();
+        this.uri = uri;
+        this.id = 'root';
+        this.parent = undefined;
+        this._groups = new Map();
+        this.children = new Map();
+        this.id = 'root';
+        this.parent = undefined;
     }
     _compact() {
         let count = 0;
@@ -271,4 +273,4 @@ OutlineModelService = __decorate([
     __param(2, IModelService)
 ], OutlineModelService);
 export { OutlineModelService };
-registerSingleton(IOutlineModelService, OutlineModelService, true);
+registerSingleton(IOutlineModelService, OutlineModelService, 1 /* InstantiationType.Delayed */);

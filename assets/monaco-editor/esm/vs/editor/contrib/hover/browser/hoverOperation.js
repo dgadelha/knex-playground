@@ -62,7 +62,7 @@ export class HoverOperation extends Disposable {
         super.dispose();
     }
     get _hoverTime() {
-        return this._editor.getOption(55 /* EditorOption.hover */).delay;
+        return this._editor.getOption(60 /* EditorOption.hover */).delay;
     }
     get _firstWaitTime() {
         return this._hoverTime / 2;
@@ -86,11 +86,13 @@ export class HoverOperation extends Disposable {
             this._asyncIterableDone = false;
             this._asyncIterable = createCancelableAsyncIterable(token => this._computer.computeAsync(token));
             (() => __awaiter(this, void 0, void 0, function* () {
-                var e_1, _a;
+                var _a, e_1, _b, _c;
                 try {
                     try {
-                        for (var _b = __asyncValues(this._asyncIterable), _c; _c = yield _b.next(), !_c.done;) {
-                            const item = _c.value;
+                        for (var _d = true, _e = __asyncValues(this._asyncIterable), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
+                            _c = _f.value;
+                            _d = false;
+                            const item = _c;
                             if (item) {
                                 this._result.push(item);
                                 this._fireResult();
@@ -100,7 +102,7 @@ export class HoverOperation extends Disposable {
                     catch (e_1_1) { e_1 = { error: e_1_1 }; }
                     finally {
                         try {
-                            if (_c && !_c.done && (_a = _b.return)) yield _a.call(_b);
+                            if (!_d && !_a && (_b = _e.return)) yield _b.call(_e);
                         }
                         finally { if (e_1) throw e_1.error; }
                     }

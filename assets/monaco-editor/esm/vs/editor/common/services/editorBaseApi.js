@@ -22,8 +22,8 @@ KeyMod.Alt = 512 /* ConstKeyMod.Alt */;
 KeyMod.WinCtrl = 256 /* ConstKeyMod.WinCtrl */;
 export function createMonacoBaseAPI() {
     return {
-        editor: undefined,
-        languages: undefined,
+        editor: undefined, // undefined override expected here
+        languages: undefined, // undefined override expected here
         CancellationTokenSource: CancellationTokenSource,
         Emitter: Emitter,
         KeyCode: standaloneEnums.KeyCode,

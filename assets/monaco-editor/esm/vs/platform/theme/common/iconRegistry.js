@@ -3,14 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { RunOnceScheduler } from '../../../base/common/async.js';
-import { Codicon, CSSIcon } from '../../../base/common/codicons.js';
+import { Codicon, getCodiconFontCharacters } from '../../../base/common/codicons.js';
+import { ThemeIcon } from '../../../base/common/themables.js';
 import { Emitter } from '../../../base/common/event.js';
 import { isString } from '../../../base/common/types.js';
 import { URI } from '../../../base/common/uri.js';
 import { localize } from '../../../nls.js';
 import { Extensions as JSONExtensions } from '../../jsonschemas/common/jsonContributionRegistry.js';
 import * as platform from '../../registry/common/platform.js';
-import { ThemeIcon } from './themeService.js';
+//  ------ API types
 // icon registry
 export const Extensions = {
     IconContribution: 'base.contributions.icons'
@@ -72,7 +73,7 @@ class IconRegistry {
             type: 'object',
             properties: {}
         };
-        this.iconReferenceSchema = { type: 'string', pattern: `^${CSSIcon.iconNameExpression}$`, enum: [], enumDescriptions: [] };
+        this.iconReferenceSchema = { type: 'string', pattern: `^${ThemeIcon.iconNameExpression}$`, enum: [], enumDescriptions: [] };
         this.iconsById = {};
         this.iconFontsById = {};
     }
@@ -148,8 +149,10 @@ export function getIconRegistry() {
     return iconRegistry;
 }
 function initialize() {
-    for (const icon of Codicon.getAll()) {
-        iconRegistry.registerIcon(icon.id, icon.definition, icon.description);
+    const codiconFontCharacters = getCodiconFontCharacters();
+    for (const icon in codiconFontCharacters) {
+        const fontCharacter = '\\' + codiconFontCharacters[icon].toString(16);
+        iconRegistry.registerIcon(icon, { fontCharacter });
     }
 }
 initialize();

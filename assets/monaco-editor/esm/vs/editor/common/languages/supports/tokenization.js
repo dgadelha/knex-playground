@@ -131,16 +131,16 @@ export class ColorMap {
     }
 }
 export class TokenTheme {
-    constructor(colorMap, root) {
-        this._colorMap = colorMap;
-        this._root = root;
-        this._cache = new Map();
-    }
     static createFromRawTokenTheme(source, customTokenColors) {
         return this.createFromParsedTokenTheme(parseTokenTheme(source), customTokenColors);
     }
     static createFromParsedTokenTheme(source, customTokenColors) {
         return resolveParsedTokenThemeRules(source, customTokenColors);
+    }
+    constructor(colorMap, root) {
+        this._colorMap = colorMap;
+        this._root = root;
+        this._cache = new Map();
     }
     getColorMap() {
         return this._colorMap.getColorMap();

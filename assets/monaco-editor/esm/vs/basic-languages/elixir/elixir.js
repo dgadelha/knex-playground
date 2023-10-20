@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.34.0(9d278685b078158491964f8fd7ac9628fffa0f30)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -122,7 +122,7 @@ var language = {
     whitespace: [[/\s+/, "white"]],
     comments: [[/(#)(.*)/, ["comment.punctuation", "comment"]]],
     keywordsShorthand: [
-      [/(@atomName)(:)/, ["constant", "constant.punctuation"]],
+      [/(@atomName)(:)(\s+)/, ["constant", "constant.punctuation", "white"]],
       [
         /"(?=([^"]|#\{.*?\}|\\")*":)/,
         { token: "constant.delimiter", next: "@doubleQuotedStringKeyword" }
@@ -251,15 +251,15 @@ var language = {
     ],
     sigils: [
       [/~[a-z]@sigilStartDelimiter/, { token: "@rematch", next: "@sigil.interpol" }],
-      [/~[A-Z]@sigilStartDelimiter/, { token: "@rematch", next: "@sigil.noInterpol" }]
+      [/~([A-Z]+)@sigilStartDelimiter/, { token: "@rematch", next: "@sigil.noInterpol" }]
     ],
     sigil: [
-      [/~([a-zA-Z])\{/, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.{.}" }],
-      [/~([a-zA-Z])\[/, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.[.]" }],
-      [/~([a-zA-Z])\(/, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.(.)" }],
-      [/~([a-zA-Z])\</, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.<.>" }],
+      [/~([a-z]|[A-Z]+)\{/, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.{.}" }],
+      [/~([a-z]|[A-Z]+)\[/, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.[.]" }],
+      [/~([a-z]|[A-Z]+)\(/, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.(.)" }],
+      [/~([a-z]|[A-Z]+)\</, { token: "@rematch", switchTo: "@sigilStart.$S2.$1.<.>" }],
       [
-        /~([a-zA-Z])(@sigilSymmetricDelimiter)/,
+        /~([a-z]|[A-Z]+)(@sigilSymmetricDelimiter)/,
         { token: "@rematch", switchTo: "@sigilStart.$S2.$1.$2.$2" }
       ]
     ],
@@ -351,7 +351,7 @@ var language = {
     ],
     "sigilStart.interpol": [
       [
-        /~([a-zA-Z])@sigilStartDelimiter/,
+        /~([a-z]|[A-Z]+)@sigilStartDelimiter/,
         {
           token: "sigil.delimiter",
           switchTo: "@sigilContinue.$S2.$S3.$S4.$S5"
@@ -372,7 +372,7 @@ var language = {
     ],
     "sigilStart.noInterpol": [
       [
-        /~([a-zA-Z])@sigilStartDelimiter/,
+        /~([a-z]|[A-Z]+)@sigilStartDelimiter/,
         {
           token: "sigil.delimiter",
           switchTo: "@sigilContinue.$S2.$S3.$S4.$S5"
@@ -401,10 +401,24 @@ var language = {
         }
       ],
       [
+        /\@(module|type)?doc (~[sS])?'''/,
+        {
+          token: "comment.block.documentation",
+          next: "@singleQuotedHeredocDocstring"
+        }
+      ],
+      [
         /\@(module|type)?doc (~[sS])?"/,
         {
           token: "comment.block.documentation",
           next: "@doubleQuotedStringDocstring"
+        }
+      ],
+      [
+        /\@(module|type)?doc (~[sS])?'/,
+        {
+          token: "comment.block.documentation",
+          next: "@singleQuotedStringDocstring"
         }
       ],
       [/\@(module|type)?doc false/, "comment.block.documentation"],
@@ -414,8 +428,16 @@ var language = {
       [/"""/, { token: "comment.block.documentation", next: "@pop" }],
       { include: "@docstringContent" }
     ],
+    singleQuotedHeredocDocstring: [
+      [/'''/, { token: "comment.block.documentation", next: "@pop" }],
+      { include: "@docstringContent" }
+    ],
     doubleQuotedStringDocstring: [
       [/"/, { token: "comment.block.documentation", next: "@pop" }],
+      { include: "@docstringContent" }
+    ],
+    singleQuotedStringDocstring: [
+      [/'/, { token: "comment.block.documentation", next: "@pop" }],
       { include: "@docstringContent" }
     ],
     symbols: [

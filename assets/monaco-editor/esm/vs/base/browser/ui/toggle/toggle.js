@@ -3,14 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Widget } from '../widget.js';
-import { CSSIcon } from '../../../common/codicons.js';
-import { Color } from '../../../common/color.js';
+import { ThemeIcon } from '../../../common/themables.js';
 import { Emitter } from '../../../common/event.js';
 import './toggle.css';
-const defaultOpts = {
-    inputActiveOptionBorder: Color.fromHex('#007ACC00'),
-    inputActiveOptionForeground: Color.fromHex('#FFFFFF'),
-    inputActiveOptionBackground: Color.fromHex('#0E639C50')
+export const unthemedToggleStyles = {
+    inputActiveOptionBorder: '#007ACC00',
+    inputActiveOptionForeground: '#FFFFFF',
+    inputActiveOptionBackground: '#0E639C50'
 };
 export class Toggle extends Widget {
     constructor(opts) {
@@ -19,12 +18,12 @@ export class Toggle extends Widget {
         this.onChange = this._onChange.event;
         this._onKeyDown = this._register(new Emitter());
         this.onKeyDown = this._onKeyDown.event;
-        this._opts = Object.assign(Object.assign({}, defaultOpts), opts);
+        this._opts = opts;
         this._checked = this._opts.isChecked;
         const classes = ['monaco-custom-toggle'];
         if (this._opts.icon) {
             this._icon = this._opts.icon;
-            classes.push(...CSSIcon.asClassNameArray(this._icon));
+            classes.push(...ThemeIcon.asClassNameArray(this._icon));
         }
         if (this._opts.actionClassName) {
             classes.push(...this._opts.actionClassName.split(' '));
@@ -49,7 +48,7 @@ export class Toggle extends Widget {
                 ev.preventDefault();
             }
         });
-        this.ignoreGesture(this.domNode);
+        this._register(this.ignoreGesture(this.domNode));
         this.onkeydown(this.domNode, (keyboardEvent) => {
             if (keyboardEvent.keyCode === 10 /* KeyCode.Space */ || keyboardEvent.keyCode === 3 /* KeyCode.Enter */) {
                 this.checked = !this._checked;
@@ -79,23 +78,11 @@ export class Toggle extends Widget {
     width() {
         return 2 /*margin left*/ + 2 /*border*/ + 2 /*padding*/ + 16 /* icon width */;
     }
-    style(styles) {
-        if (styles.inputActiveOptionBorder) {
-            this._opts.inputActiveOptionBorder = styles.inputActiveOptionBorder;
-        }
-        if (styles.inputActiveOptionForeground) {
-            this._opts.inputActiveOptionForeground = styles.inputActiveOptionForeground;
-        }
-        if (styles.inputActiveOptionBackground) {
-            this._opts.inputActiveOptionBackground = styles.inputActiveOptionBackground;
-        }
-        this.applyStyles();
-    }
     applyStyles() {
         if (this.domNode) {
-            this.domNode.style.borderColor = this._checked && this._opts.inputActiveOptionBorder ? this._opts.inputActiveOptionBorder.toString() : '';
-            this.domNode.style.color = this._checked && this._opts.inputActiveOptionForeground ? this._opts.inputActiveOptionForeground.toString() : 'inherit';
-            this.domNode.style.backgroundColor = this._checked && this._opts.inputActiveOptionBackground ? this._opts.inputActiveOptionBackground.toString() : '';
+            this.domNode.style.borderColor = (this._checked && this._opts.inputActiveOptionBorder) || '';
+            this.domNode.style.color = (this._checked && this._opts.inputActiveOptionForeground) || 'inherit';
+            this.domNode.style.backgroundColor = (this._checked && this._opts.inputActiveOptionBackground) || '';
         }
     }
     enable() {

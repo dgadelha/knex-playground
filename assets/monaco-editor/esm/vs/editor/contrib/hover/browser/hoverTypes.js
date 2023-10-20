@@ -3,9 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 export class HoverRangeAnchor {
-    constructor(priority, range) {
+    constructor(priority, range, initialMousePosX, initialMousePosY) {
         this.priority = priority;
         this.range = range;
+        this.initialMousePosX = initialMousePosX;
+        this.initialMousePosY = initialMousePosY;
         this.type = 1 /* HoverAnchorType.Range */;
     }
     equals(other) {
@@ -16,10 +18,13 @@ export class HoverRangeAnchor {
     }
 }
 export class HoverForeignElementAnchor {
-    constructor(priority, owner, range) {
+    constructor(priority, owner, range, initialMousePosX, initialMousePosY, supportsMarkerHover) {
         this.priority = priority;
         this.owner = owner;
         this.range = range;
+        this.initialMousePosX = initialMousePosX;
+        this.initialMousePosY = initialMousePosY;
+        this.supportsMarkerHover = supportsMarkerHover;
         this.type = 2 /* HoverAnchorType.ForeignElement */;
     }
     equals(other) {

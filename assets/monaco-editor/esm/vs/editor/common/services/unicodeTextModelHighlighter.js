@@ -5,7 +5,7 @@
 import { Range } from '../core/range.js';
 import { Searcher } from '../model/textModelSearch.js';
 import * as strings from '../../../base/common/strings.js';
-import { assertNever } from '../../../base/common/types.js';
+import { assertNever } from '../../../base/common/assert.js';
 import { DEFAULT_WORD_REGEXP, getWordAtText } from '../core/wordHelper.js';
 export class UnicodeTextModelHighlighter {
     static computeUnicodeHighlights(model, options, range) {
@@ -51,7 +51,11 @@ export class UnicodeTextModelHighlighter {
                         }
                     }
                     const str = lineContent.substring(startIndex, endIndex);
-                    const word = getWordAtText(startIndex + 1, DEFAULT_WORD_REGEXP, lineContent, 0);
+                    let word = getWordAtText(startIndex + 1, DEFAULT_WORD_REGEXP, lineContent, 0);
+                    if (word && word.endColumn <= startIndex + 1) {
+                        // The word does not include the problematic character, ignore the word
+                        word = null;
+                    }
                     const highlightReason = codePointHighlighter.shouldHighlightNonBasicASCII(str, word ? word.word : null);
                     if (highlightReason !== 0 /* SimpleHighlightReason.None */) {
                         if (highlightReason === 3 /* SimpleHighlightReason.Ambiguous */) {

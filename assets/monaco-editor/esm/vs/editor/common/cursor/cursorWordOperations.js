@@ -162,6 +162,10 @@ export class WordOperations {
                 // snake_case_variables
                 return new Position(lineNumber, column);
             }
+            if (left === 45 /* CharCode.Dash */ && right !== 45 /* CharCode.Dash */) {
+                // kebab-case-variables
+                return new Position(lineNumber, column);
+            }
             if ((strings.isLowerAsciiLetter(left) || strings.isAsciiDigit(left)) && strings.isUpperAsciiLetter(right)) {
                 // camelCaseVariables
                 return new Position(lineNumber, column);
@@ -250,6 +254,10 @@ export class WordOperations {
             const right = lineContent.charCodeAt(column - 1);
             if (left !== 95 /* CharCode.Underline */ && right === 95 /* CharCode.Underline */) {
                 // snake_case_variables
+                return new Position(lineNumber, column);
+            }
+            if (left !== 45 /* CharCode.Dash */ && right === 45 /* CharCode.Dash */) {
+                // kebab-case-variables
                 return new Position(lineNumber, column);
             }
             if ((strings.isLowerAsciiLetter(left) || strings.isAsciiDigit(left)) && strings.isUpperAsciiLetter(right)) {
@@ -595,7 +603,7 @@ export class WordOperations {
                     endColumn = model.getLineMaxColumn(position.lineNumber);
                 }
             }
-            return new SingleCursorState(new Range(position.lineNumber, startColumn, position.lineNumber, endColumn), 0, new Position(position.lineNumber, endColumn), 0);
+            return new SingleCursorState(new Range(position.lineNumber, startColumn, position.lineNumber, endColumn), 1 /* SelectionStartKind.Word */, 0, new Position(position.lineNumber, endColumn), 0);
         }
         let startColumn;
         let endColumn;

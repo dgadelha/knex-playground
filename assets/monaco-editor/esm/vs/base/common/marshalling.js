@@ -4,10 +4,24 @@
  *--------------------------------------------------------------------------------------------*/
 import { VSBuffer } from './buffer.js';
 import { URI } from './uri.js';
+export function stringify(obj) {
+    return JSON.stringify(obj, replacer);
+}
 export function parse(text) {
     let data = JSON.parse(text);
     data = revive(data);
     return data;
+}
+function replacer(key, value) {
+    // URI is done via toJSON-member
+    if (value instanceof RegExp) {
+        return {
+            $mid: 2 /* MarshalledId.Regexp */,
+            source: value.source,
+            flags: value.flags,
+        };
+    }
+    return value;
 }
 export function revive(obj, depth = 0) {
     if (!obj || depth > 200) {
@@ -17,7 +31,7 @@ export function revive(obj, depth = 0) {
         switch (obj.$mid) {
             case 1 /* MarshalledId.Uri */: return URI.revive(obj);
             case 2 /* MarshalledId.Regexp */: return new RegExp(obj.source, obj.flags);
-            case 14 /* MarshalledId.Date */: return new Date(obj.source);
+            case 17 /* MarshalledId.Date */: return new Date(obj.source);
         }
         if (obj instanceof VSBuffer
             || obj instanceof Uint8Array) {

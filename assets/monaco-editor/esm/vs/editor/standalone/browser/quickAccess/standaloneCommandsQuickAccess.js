@@ -25,7 +25,6 @@ import { Extensions } from '../../../../platform/quickinput/common/quickAccess.j
 import { QuickCommandNLS } from '../../../common/standaloneStrings.js';
 import { ICodeEditorService } from '../../../browser/services/codeEditorService.js';
 import { AbstractEditorCommandsQuickAccessProvider } from '../../../contrib/quickAccess/browser/commandsQuickAccess.js';
-import { withNullAsUndefined } from '../../../../base/common/types.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
@@ -35,14 +34,22 @@ import { EditorAction, registerEditorAction } from '../../../browser/editorExten
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 let StandaloneCommandsQuickAccessProvider = class StandaloneCommandsQuickAccessProvider extends AbstractEditorCommandsQuickAccessProvider {
+    get activeTextEditorControl() { var _a; return (_a = this.codeEditorService.getFocusedCodeEditor()) !== null && _a !== void 0 ? _a : undefined; }
     constructor(instantiationService, codeEditorService, keybindingService, commandService, telemetryService, dialogService) {
         super({ showAlias: false }, instantiationService, keybindingService, commandService, telemetryService, dialogService);
         this.codeEditorService = codeEditorService;
     }
-    get activeTextEditorControl() { return withNullAsUndefined(this.codeEditorService.getFocusedCodeEditor()); }
     getCommandPicks() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.getCodeEditorCommandPicks();
+        });
+    }
+    hasAdditionalCommandPicks() {
+        return false;
+    }
+    getAdditionalCommandPicks() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return [];
         });
     }
 };

@@ -32,7 +32,13 @@ class ConfigurationRegistry {
             properties: {}
         };
         this.configurationContributors = [this.defaultLanguageConfigurationOverridesNode];
-        this.resourceLanguageSettingsSchema = { properties: {}, patternProperties: {}, additionalProperties: false, errorMessage: 'Unknown editor configuration setting', allowTrailingCommas: true, allowComments: true };
+        this.resourceLanguageSettingsSchema = {
+            properties: {},
+            patternProperties: {},
+            additionalProperties: true,
+            allowTrailingCommas: true,
+            allowComments: true
+        };
         this.configurationProperties = {};
         this.policyConfigurations = new Map();
         this.excludedConfigurationProperties = {};
@@ -43,18 +49,24 @@ class ConfigurationRegistry {
         this.registerConfigurations([configuration], validate);
     }
     registerConfigurations(configurations, validate = true) {
-        const properties = this.doRegisterConfigurations(configurations, validate);
+        const properties = new Set();
+        this.doRegisterConfigurations(configurations, validate, properties);
         contributionRegistry.registerSchema(resourceLanguageSettingsSchemaId, this.resourceLanguageSettingsSchema);
         this._onDidSchemaChange.fire();
         this._onDidUpdateConfiguration.fire({ properties });
     }
     registerDefaultConfigurations(configurationDefaults) {
+        const properties = new Set();
+        this.doRegisterDefaultConfigurations(configurationDefaults, properties);
+        this._onDidSchemaChange.fire();
+        this._onDidUpdateConfiguration.fire({ properties, defaultsOverrides: true });
+    }
+    doRegisterDefaultConfigurations(configurationDefaults, bucket) {
         var _a;
-        const properties = [];
         const overrideIdentifiers = [];
         for (const { overrides, source } of configurationDefaults) {
             for (const key in overrides) {
-                properties.push(key);
+                bucket.add(key);
                 if (OVERRIDE_PROPERTY_REGEX.test(key)) {
                     const configurationDefaultOverride = this.configurationDefaultsOverrides.get(key);
                     const valuesSources = (_a = configurationDefaultOverride === null || configurationDefaultOverride === void 0 ? void 0 : configurationDefaultOverride.valuesSources) !== null && _a !== void 0 ? _a : new Map();
@@ -89,29 +101,28 @@ class ConfigurationRegistry {
                 }
             }
         }
-        this.registerOverrideIdentifiers(overrideIdentifiers);
-        this._onDidSchemaChange.fire();
-        this._onDidUpdateConfiguration.fire({ properties, defaultsOverrides: true });
+        this.doRegisterOverrideIdentifiers(overrideIdentifiers);
     }
     registerOverrideIdentifiers(overrideIdentifiers) {
+        this.doRegisterOverrideIdentifiers(overrideIdentifiers);
+        this._onDidSchemaChange.fire();
+    }
+    doRegisterOverrideIdentifiers(overrideIdentifiers) {
         for (const overrideIdentifier of overrideIdentifiers) {
             this.overrideIdentifiers.add(overrideIdentifier);
         }
         this.updateOverridePropertyPatternKey();
     }
-    doRegisterConfigurations(configurations, validate) {
-        const properties = [];
+    doRegisterConfigurations(configurations, validate, bucket) {
         configurations.forEach(configuration => {
-            properties.push(...this.validateAndRegisterProperties(configuration, validate, configuration.extensionInfo, configuration.restrictedProperties)); // fills in defaults
+            this.validateAndRegisterProperties(configuration, validate, configuration.extensionInfo, configuration.restrictedProperties, undefined, bucket);
             this.configurationContributors.push(configuration);
             this.registerJSONConfiguration(configuration);
         });
-        return properties;
     }
-    validateAndRegisterProperties(configuration, validate = true, extensionInfo, restrictedProperties, scope = 3 /* ConfigurationScope.WINDOW */) {
+    validateAndRegisterProperties(configuration, validate = true, extensionInfo, restrictedProperties, scope = 3 /* ConfigurationScope.WINDOW */, bucket) {
         var _a;
         scope = types.isUndefinedOrNull(configuration.scope) ? scope : configuration.scope;
-        const propertyKeys = [];
         const properties = configuration.properties;
         if (properties) {
             for (const key in properties) {
@@ -149,16 +160,15 @@ class ConfigurationRegistry {
                     // If not set, default deprecationMessage to the markdown source
                     properties[key].deprecationMessage = properties[key].markdownDeprecationMessage;
                 }
-                propertyKeys.push(key);
+                bucket.add(key);
             }
         }
         const subNodes = configuration.allOf;
         if (subNodes) {
             for (const node of subNodes) {
-                propertyKeys.push(...this.validateAndRegisterProperties(node, validate, extensionInfo, restrictedProperties, scope));
+                this.validateAndRegisterProperties(node, validate, extensionInfo, restrictedProperties, scope, bucket);
             }
         }
-        return propertyKeys;
     }
     getConfigurationProperties() {
         return this.configurationProperties;
@@ -220,7 +230,6 @@ class ConfigurationRegistry {
             windowSettings.properties[overrideIdentifierProperty] = resourceLanguagePropertiesSchema;
             resourceSettings.properties[overrideIdentifierProperty] = resourceLanguagePropertiesSchema;
         }
-        this._onDidSchemaChange.fire();
     }
     registerOverridePropertyPatternKey() {
         const resourceLanguagePropertiesSchema = {

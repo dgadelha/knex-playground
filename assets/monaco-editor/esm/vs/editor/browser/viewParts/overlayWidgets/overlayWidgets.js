@@ -9,7 +9,7 @@ export class ViewOverlayWidgets extends ViewPart {
     constructor(context) {
         super(context);
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(133 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         this._widgets = {};
         this._verticalScrollbarWidth = layoutInfo.verticalScrollbarWidth;
         this._minimapWidth = layoutInfo.minimap.minimapWidth;
@@ -30,7 +30,7 @@ export class ViewOverlayWidgets extends ViewPart {
     // ---- begin view event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(133 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         this._verticalScrollbarWidth = layoutInfo.verticalScrollbarWidth;
         this._minimapWidth = layoutInfo.minimap.minimapWidth;
         this._horizontalScrollbarHeight = layoutInfo.horizontalScrollbarHeight;
@@ -51,14 +51,17 @@ export class ViewOverlayWidgets extends ViewPart {
         domNode.setAttribute('widgetId', widget.getId());
         this._domNode.appendChild(domNode);
         this.setShouldRender();
+        this._updateMaxMinWidth();
     }
     setWidgetPosition(widget, preference) {
         const widgetData = this._widgets[widget.getId()];
         if (widgetData.preference === preference) {
+            this._updateMaxMinWidth();
             return false;
         }
         widgetData.preference = preference;
         this.setShouldRender();
+        this._updateMaxMinWidth();
         return true;
     }
     removeWidget(widget) {
@@ -69,7 +72,22 @@ export class ViewOverlayWidgets extends ViewPart {
             delete this._widgets[widgetId];
             domNode.parentNode.removeChild(domNode);
             this.setShouldRender();
+            this._updateMaxMinWidth();
         }
+    }
+    _updateMaxMinWidth() {
+        var _a, _b;
+        let maxMinWidth = 0;
+        const keys = Object.keys(this._widgets);
+        for (let i = 0, len = keys.length; i < len; i++) {
+            const widgetId = keys[i];
+            const widget = this._widgets[widgetId];
+            const widgetMinWidthInPx = (_b = (_a = widget.widget).getMinContentWidthInPx) === null || _b === void 0 ? void 0 : _b.call(_a);
+            if (typeof widgetMinWidthInPx !== 'undefined') {
+                maxMinWidth = Math.max(maxMinWidth, widgetMinWidthInPx);
+            }
+        }
+        this._context.viewLayout.setOverlayWidgetsMinWidth(maxMinWidth);
     }
     _renderWidget(widgetData) {
         const domNode = widgetData.domNode;

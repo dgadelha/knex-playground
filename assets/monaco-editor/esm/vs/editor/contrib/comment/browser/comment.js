@@ -24,7 +24,7 @@ class CommentLineAction extends EditorAction {
         const model = editor.getModel();
         const commands = [];
         const modelOptions = model.getOptions();
-        const commentsOptions = editor.getOption(19 /* EditorOption.comments */);
+        const commentsOptions = editor.getOption(23 /* EditorOption.comments */);
         const selections = editor.getSelections().map((selection, index) => ({ selection, index, ignoreFirstLine: false }));
         selections.sort((a, b) => Range.compareRangesUsingStarts(a.selection, b.selection));
         // Remove selections that would result in copying the same line
@@ -61,7 +61,7 @@ class ToggleCommentLineAction extends CommentLineAction {
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
-                primary: 2048 /* KeyMod.CtrlCmd */ | 85 /* KeyCode.Slash */,
+                primary: 2048 /* KeyMod.CtrlCmd */ | 90 /* KeyCode.Slash */,
                 weight: 100 /* KeybindingWeight.EditorContrib */
             },
             menuOpts: {
@@ -129,7 +129,7 @@ class BlockCommentAction extends EditorAction {
         if (!editor.hasModel()) {
             return;
         }
-        const commentsOptions = editor.getOption(19 /* EditorOption.comments */);
+        const commentsOptions = editor.getOption(23 /* EditorOption.comments */);
         const commands = [];
         const selections = editor.getSelections();
         for (const selection of selections) {

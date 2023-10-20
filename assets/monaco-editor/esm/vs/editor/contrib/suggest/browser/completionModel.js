@@ -46,36 +46,19 @@ export class CompletionModel {
         this._ensureCachedState();
         return this._filteredItems;
     }
-    get allProvider() {
+    getItemsByProvider() {
         this._ensureCachedState();
-        return this._providerInfo.keys();
+        return this._itemsByProvider;
     }
-    get incomplete() {
+    getIncompleteProvider() {
         this._ensureCachedState();
         const result = new Set();
-        for (const [provider, incomplete] of this._providerInfo) {
-            if (incomplete) {
+        for (const [provider, items] of this.getItemsByProvider()) {
+            if (items.length > 0 && items[0].container.incomplete) {
                 result.add(provider);
             }
         }
         return result;
-    }
-    adopt(except) {
-        const res = [];
-        for (let i = 0; i < this._items.length;) {
-            if (!except.has(this._items[i].provider)) {
-                res.push(this._items[i]);
-                // unordered removed
-                this._items[i] = this._items[this._items.length - 1];
-                this._items.pop();
-            }
-            else {
-                // continue with next item
-                i++;
-            }
-        }
-        this._refilterKind = 1 /* Refilter.All */;
-        return res;
     }
     get stats() {
         this._ensureCachedState();
@@ -87,7 +70,7 @@ export class CompletionModel {
         }
     }
     _createCachedState() {
-        this._providerInfo = new Map();
+        this._itemsByProvider = new Map();
         const labelLengths = [];
         const { leadingLineContent, characterCountDelta } = this._lineContext;
         let word = '';
@@ -104,8 +87,14 @@ export class CompletionModel {
             if (item.isInvalid) {
                 continue; // SKIP invalid items
             }
-            // collect all support, know if their result is incomplete
-            this._providerInfo.set(item.provider, Boolean(item.container.incomplete));
+            // keep all items by their provider
+            const arr = this._itemsByProvider.get(item.provider);
+            if (arr) {
+                arr.push(item);
+            }
+            else {
+                this._itemsByProvider.set(item.provider, [item]);
+            }
             // 'word' is that remainder of the current line that we
             // filter and score against. In theory each suggestion uses a
             // different word, but in practice not - that's why we cache

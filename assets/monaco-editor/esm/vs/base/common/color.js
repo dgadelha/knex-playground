@@ -178,6 +178,32 @@ export class HSVA {
     }
 }
 export class Color {
+    static fromHex(hex) {
+        return Color.Format.CSS.parseHex(hex) || Color.red;
+    }
+    static equals(a, b) {
+        if (!a && !b) {
+            return true;
+        }
+        if (!a || !b) {
+            return false;
+        }
+        return a.equals(b);
+    }
+    get hsla() {
+        if (this._hsla) {
+            return this._hsla;
+        }
+        else {
+            return HSLA.fromRGBA(this.rgba);
+        }
+    }
+    get hsva() {
+        if (this._hsva) {
+            return this._hsva;
+        }
+        return HSVA.fromRGBA(this.rgba);
+    }
     constructor(arg) {
         if (!arg) {
             throw new Error('Color needs a value');
@@ -196,23 +222,6 @@ export class Color {
         else {
             throw new Error('Invalid color ctor argument');
         }
-    }
-    static fromHex(hex) {
-        return Color.Format.CSS.parseHex(hex) || Color.red;
-    }
-    get hsla() {
-        if (this._hsla) {
-            return this._hsla;
-        }
-        else {
-            return HSLA.fromRGBA(this.rgba);
-        }
-    }
-    get hsva() {
-        if (this._hsva) {
-            return this._hsva;
-        }
-        return HSVA.fromRGBA(this.rgba);
     }
     equals(other) {
         return !!other && RGBA.equals(this.rgba, other.rgba) && HSLA.equals(this.hsla, other.hsla) && HSVA.equals(this.hsva, other.hsva);
@@ -268,6 +277,15 @@ export class Color {
     }
     opposite() {
         return new Color(new RGBA(255 - this.rgba.r, 255 - this.rgba.g, 255 - this.rgba.b, this.rgba.a));
+    }
+    makeOpaque(opaqueBackground) {
+        if (this.isOpaque() || opaqueBackground.rgba.a !== 1) {
+            // only allow to blend onto a non-opaque color onto a opaque color
+            return this;
+        }
+        const { r, g, b, a } = this.rgba;
+        // https://stackoverflow.com/questions/12228548/finding-equivalent-color-with-opacity
+        return new Color(new RGBA(opaqueBackground.rgba.r - a * (opaqueBackground.rgba.r - r), opaqueBackground.rgba.g - a * (opaqueBackground.rgba.g - g), opaqueBackground.rgba.b - a * (opaqueBackground.rgba.b - b), 1));
     }
     toString() {
         if (!this._toString) {

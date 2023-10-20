@@ -28,7 +28,7 @@ export class PartFingerprints {
     static collect(child, stopAt) {
         const result = [];
         let resultLen = 0;
-        while (child && child !== document.body) {
+        while (child && child !== child.ownerDocument.body) {
             if (child === stopAt) {
                 break;
             }

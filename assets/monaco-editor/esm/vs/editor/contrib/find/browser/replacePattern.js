@@ -22,6 +22,12 @@ class DynamicPiecesReplacePattern {
     }
 }
 export class ReplacePattern {
+    static fromStaticValue(value) {
+        return new ReplacePattern([ReplacePiece.staticValue(value)]);
+    }
+    get hasReplacementPatterns() {
+        return (this._state.kind === 1 /* ReplacePatternKind.DynamicPieces */);
+    }
     constructor(pieces) {
         if (!pieces || pieces.length === 0) {
             this._state = new StaticValueReplacePattern('');
@@ -32,12 +38,6 @@ export class ReplacePattern {
         else {
             this._state = new DynamicPiecesReplacePattern(pieces);
         }
-    }
-    static fromStaticValue(value) {
-        return new ReplacePattern([ReplacePiece.staticValue(value)]);
-    }
-    get hasReplacementPatterns() {
-        return (this._state.kind === 1 /* ReplacePatternKind.DynamicPieces */);
     }
     buildReplaceString(matches, preserveCase) {
         if (this._state.kind === 0 /* ReplacePatternKind.StaticValue */) {
@@ -116,6 +116,12 @@ export class ReplacePattern {
  * A replace piece can either be a static string or an index to a specific match.
  */
 export class ReplacePiece {
+    static staticValue(value) {
+        return new ReplacePiece(value, -1, null);
+    }
+    static caseOps(index, caseOps) {
+        return new ReplacePiece(null, index, caseOps);
+    }
     constructor(staticValue, matchIndex, caseOps) {
         this.staticValue = staticValue;
         this.matchIndex = matchIndex;
@@ -125,12 +131,6 @@ export class ReplacePiece {
         else {
             this.caseOps = caseOps.slice(0);
         }
-    }
-    static staticValue(value) {
-        return new ReplacePiece(value, -1, null);
-    }
-    static caseOps(index, caseOps) {
-        return new ReplacePiece(null, index, caseOps);
     }
 }
 class ReplacePieceBuilder {

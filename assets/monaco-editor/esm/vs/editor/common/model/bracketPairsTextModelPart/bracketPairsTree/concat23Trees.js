@@ -98,7 +98,7 @@ function concat(node1, node2) {
 function append(list, nodeToAppend) {
     list = list.toMutable();
     let curNode = list;
-    const parents = new Array();
+    const parents = [];
     let nodeToAppendOfCorrectHeight;
     while (true) {
         // assert nodeToInsert.listHeight <= curNode.listHeight
@@ -148,7 +148,7 @@ function append(list, nodeToAppend) {
 function prepend(list, nodeToAppend) {
     list = list.toMutable();
     let curNode = list;
-    const parents = new Array();
+    const parents = [];
     // assert nodeToInsert.listHeight <= curNode.listHeight
     while (nodeToAppend.listHeight !== curNode.listHeight) {
         // assert 0 <= nodeToInsert.listHeight < curNode.listHeight

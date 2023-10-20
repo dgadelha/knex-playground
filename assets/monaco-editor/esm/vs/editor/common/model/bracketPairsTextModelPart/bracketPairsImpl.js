@@ -2,14 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import { CallbackIterable, compareBy } from '../../../../base/common/arrays.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { Disposable, DisposableStore, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { Range } from '../../core/range.js';
-import { BracketPairsTree } from './bracketPairsTree/bracketPairsTree.js';
 import { ignoreBracketsInToken } from '../../languages/supports.js';
 import { BracketsUtils } from '../../languages/supports/richEditBrackets.js';
-import { compareBy, findLast, findLastMaxBy } from '../../../../base/common/arrays.js';
+import { BracketPairsTree } from './bracketPairsTree/bracketPairsTree.js';
 export class BracketPairsTextModelPart extends Disposable {
+    get canBuildAST() {
+        const maxSupportedDocumentLength = /* max lines */ 50000 * /* average column count */ 100;
+        return this.textModel.getValueLength() <= maxSupportedDocumentLength;
+    }
     constructor(textModel, languageConfigurationService) {
         super();
         this.textModel = textModel;
@@ -25,10 +29,6 @@ export class BracketPairsTextModelPart extends Disposable {
                 this.updateBracketPairsTree();
             }
         }));
-    }
-    get canBuildAST() {
-        const maxSupportedDocumentLength = /* max lines */ 50000 * /* average column count */ 100;
-        return this.textModel.getValueLength() <= maxSupportedDocumentLength;
     }
     //#region TextModel events
     handleDidChangeOptions(e) {
@@ -79,19 +79,19 @@ export class BracketPairsTextModelPart extends Disposable {
         var _a;
         this.bracketsRequested = true;
         this.updateBracketPairsTree();
-        return ((_a = this.bracketPairsTree.value) === null || _a === void 0 ? void 0 : _a.object.getBracketPairsInRange(range, false)) || [];
+        return ((_a = this.bracketPairsTree.value) === null || _a === void 0 ? void 0 : _a.object.getBracketPairsInRange(range, false)) || CallbackIterable.empty;
     }
     getBracketPairsInRangeWithMinIndentation(range) {
         var _a;
         this.bracketsRequested = true;
         this.updateBracketPairsTree();
-        return ((_a = this.bracketPairsTree.value) === null || _a === void 0 ? void 0 : _a.object.getBracketPairsInRange(range, true)) || [];
+        return ((_a = this.bracketPairsTree.value) === null || _a === void 0 ? void 0 : _a.object.getBracketPairsInRange(range, true)) || CallbackIterable.empty;
     }
-    getBracketsInRange(range) {
+    getBracketsInRange(range, onlyColorizedBrackets = false) {
         var _a;
         this.bracketsRequested = true;
         this.updateBracketPairsTree();
-        return ((_a = this.bracketPairsTree.value) === null || _a === void 0 ? void 0 : _a.object.getBracketsInRange(range)) || [];
+        return ((_a = this.bracketPairsTree.value) === null || _a === void 0 ? void 0 : _a.object.getBracketsInRange(range, onlyColorizedBrackets)) || CallbackIterable.empty;
     }
     findMatchingBracketUp(_bracket, _position, maxDuration) {
         const position = this.textModel.validatePosition(_position);
@@ -103,7 +103,7 @@ export class BracketPairsTextModelPart extends Disposable {
             if (!closingBracketInfo) {
                 return null;
             }
-            const bracketPair = findLast(this.getBracketPairsInRange(Range.fromPositions(_position, _position)) || [], (b) => closingBracketInfo.closes(b.openingBracketInfo));
+            const bracketPair = this.getBracketPairsInRange(Range.fromPositions(_position, _position)).findLast((b) => closingBracketInfo.closes(b.openingBracketInfo));
             if (bracketPair) {
                 return bracketPair.openingBracketRange;
             }
@@ -125,9 +125,9 @@ export class BracketPairsTextModelPart extends Disposable {
     }
     matchBracket(position, maxDuration) {
         if (this.canBuildAST) {
-            const bracketPair = findLastMaxBy(this.getBracketPairsInRange(Range.fromPositions(position, position)).filter((item) => item.closingBracketRange !== undefined &&
+            const bracketPair = this.getBracketPairsInRange(Range.fromPositions(position, position)).filter((item) => item.closingBracketRange !== undefined &&
                 (item.openingBracketRange.containsPosition(position) ||
-                    item.closingBracketRange.containsPosition(position))), compareBy((item) => item.openingBracketRange.containsPosition(position)
+                    item.closingBracketRange.containsPosition(position))).findLastMaxBy(compareBy((item) => item.openingBracketRange.containsPosition(position)
                 ? item.openingBracketRange
                 : item.closingBracketRange, Range.compareRangesUsingStarts));
             if (bracketPair) {
@@ -560,7 +560,7 @@ export class BracketPairsTextModelPart extends Disposable {
         const position = this.textModel.validatePosition(_position);
         if (this.canBuildAST) {
             const range = Range.fromPositions(position);
-            const bracketPair = findLast(this.getBracketPairsInRange(Range.fromPositions(position, position)), (item) => item.closingBracketRange !== undefined && item.range.strictContainsRange(range));
+            const bracketPair = this.getBracketPairsInRange(Range.fromPositions(position, position)).findLast((item) => item.closingBracketRange !== undefined && item.range.strictContainsRange(range));
             if (bracketPair) {
                 return [bracketPair.openingBracketRange, bracketPair.closingBracketRange];
             }

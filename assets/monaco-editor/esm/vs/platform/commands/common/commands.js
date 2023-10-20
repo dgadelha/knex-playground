@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { Emitter } from '../../../base/common/event.js';
 import { Iterable } from '../../../base/common/iterator.js';
-import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
+import { toDisposable } from '../../../base/common/lifecycle.js';
 import { LinkedList } from '../../../base/common/linkedList.js';
 import { validateConstraints } from '../../../base/common/types.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
@@ -75,14 +75,6 @@ export const CommandsRegistry = new class {
             }
         }
         return result;
-    }
-};
-export const NullCommandService = {
-    _serviceBrand: undefined,
-    onWillExecuteCommand: () => Disposable.None,
-    onDidExecuteCommand: () => Disposable.None,
-    executeCommand() {
-        return Promise.resolve(undefined);
     }
 };
 CommandsRegistry.registerCommand('noop', () => { });

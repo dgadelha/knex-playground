@@ -14,11 +14,11 @@ import { ObjectTreeModel } from './objectTreeModel.js';
 import { memoize } from '../../../common/decorators.js';
 import { Iterable } from '../../../common/iterator.js';
 export class ObjectTree extends AbstractTree {
+    get onDidChangeCollapseState() { return this.model.onDidChangeCollapseState; }
     constructor(user, container, delegate, renderers, options = {}) {
         super(user, container, delegate, renderers, options);
         this.user = user;
     }
-    get onDidChangeCollapseState() { return this.model.onDidChangeCollapseState; }
     setChildren(element, children = Iterable.empty(), options) {
         this.model.setChildren(element, children, options);
     }
@@ -37,6 +37,9 @@ export class ObjectTree extends AbstractTree {
     }
 }
 class CompressibleRenderer {
+    get compressedTreeNodeProvider() {
+        return this._compressedTreeNodeProvider();
+    }
     constructor(_compressedTreeNodeProvider, renderer) {
         this._compressedTreeNodeProvider = _compressedTreeNodeProvider;
         this.renderer = renderer;
@@ -44,9 +47,6 @@ class CompressibleRenderer {
         if (renderer.onDidChangeTwistieState) {
             this.onDidChangeTwistieState = renderer.onDidChangeTwistieState;
         }
-    }
-    get compressedTreeNodeProvider() {
-        return this._compressedTreeNodeProvider();
     }
     renderTemplate(container) {
         const data = this.renderer.renderTemplate(container);

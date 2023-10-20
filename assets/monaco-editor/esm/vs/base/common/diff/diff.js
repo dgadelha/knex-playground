@@ -23,14 +23,14 @@ export function stringDiff(original, modified, pretty) {
 //
 // The code below has been ported from a C# implementation in VS
 //
-export class Debug {
+class Debug {
     static Assert(condition, message) {
         if (!condition) {
             throw new Error(message);
         }
     }
 }
-export class MyArray {
+class MyArray {
     /**
      * Copies a range of elements from an Array starting at the specified source index and pastes
      * them to another Array starting at the specified destination index. The length and the indexes

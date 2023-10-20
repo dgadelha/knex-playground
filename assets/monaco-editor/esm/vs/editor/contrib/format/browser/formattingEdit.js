@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { EditOperation } from '../../../common/core/editOperation.js';
 import { Range } from '../../../common/core/range.js';
+import { StableEditorScrollState } from '../../../browser/stableEditorScroll.js';
 export class FormattingEdit {
     static _handleEolEdits(editor, edits) {
         let newEol = undefined;
@@ -36,6 +37,7 @@ export class FormattingEdit {
         if (addUndoStops) {
             editor.pushUndoStop();
         }
+        const scrollState = StableEditorScrollState.capture(editor);
         const edits = FormattingEdit._handleEolEdits(editor, _edits);
         if (edits.length === 1 && FormattingEdit._isFullModelReplaceEdit(editor, edits[0])) {
             // We use replace semantics and hope that markers stay put...
@@ -47,5 +49,6 @@ export class FormattingEdit {
         if (addUndoStops) {
             editor.pushUndoStop();
         }
+        scrollState.restoreRelativeVerticalPositionOfCursor(editor);
     }
 }

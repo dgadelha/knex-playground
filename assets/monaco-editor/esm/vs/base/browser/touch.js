@@ -11,7 +11,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 import * as DomUtils from './dom.js';
 import * as arrays from '../common/arrays.js';
 import { memoize } from '../common/decorators.js';
-import { Disposable } from '../common/lifecycle.js';
+import { Disposable, markAsSingleton, toDisposable } from '../common/lifecycle.js';
+import { LinkedList } from '../common/linkedList.js';
 export var EventType;
 (function (EventType) {
     EventType.Tap = '-monaco-gesturetap';
@@ -24,10 +25,10 @@ export class Gesture extends Disposable {
     constructor() {
         super();
         this.dispatched = false;
+        this.targets = new LinkedList();
+        this.ignoreTargets = new LinkedList();
         this.activeTouches = {};
         this.handle = null;
-        this.targets = [];
-        this.ignoreTargets = [];
         this._lastSetTapCountTime = 0;
         this._register(DomUtils.addDisposableListener(document, 'touchstart', (e) => this.onTouchStart(e), { passive: false }));
         this._register(DomUtils.addDisposableListener(document, 'touchend', (e) => this.onTouchEnd(e)));
@@ -38,28 +39,20 @@ export class Gesture extends Disposable {
             return Disposable.None;
         }
         if (!Gesture.INSTANCE) {
-            Gesture.INSTANCE = new Gesture();
+            Gesture.INSTANCE = markAsSingleton(new Gesture());
         }
-        Gesture.INSTANCE.targets.push(element);
-        return {
-            dispose: () => {
-                Gesture.INSTANCE.targets = Gesture.INSTANCE.targets.filter(t => t !== element);
-            }
-        };
+        const remove = Gesture.INSTANCE.targets.push(element);
+        return toDisposable(remove);
     }
     static ignoreTarget(element) {
         if (!Gesture.isTouchDevice()) {
             return Disposable.None;
         }
         if (!Gesture.INSTANCE) {
-            Gesture.INSTANCE = new Gesture();
+            Gesture.INSTANCE = markAsSingleton(new Gesture());
         }
-        Gesture.INSTANCE.ignoreTargets.push(element);
-        return {
-            dispose: () => {
-                Gesture.INSTANCE.ignoreTargets = Gesture.INSTANCE.ignoreTargets.filter(t => t !== element);
-            }
-        };
+        const remove = Gesture.INSTANCE.ignoreTargets.push(element);
+        return toDisposable(remove);
     }
     static isTouchDevice() {
         // `'ontouchstart' in window` always evaluates to true with typescript's modern typings. This causes `window` to be
@@ -135,7 +128,7 @@ export class Gesture extends Disposable {
                 const deltaX = finalX - data.rollingPageX[0];
                 const deltaY = finalY - data.rollingPageY[0];
                 // We need to get all the dispatch targets on the start of the inertia event
-                const dispatchTo = this.targets.filter(t => data.initialTarget instanceof Node && t.contains(data.initialTarget));
+                const dispatchTo = [...this.targets].filter(t => data.initialTarget instanceof Node && t.contains(data.initialTarget));
                 this.inertia(dispatchTo, timestamp, // time now
                 Math.abs(deltaX) / deltaT, // speed
                 deltaX > 0 ? 1 : -1, // x direction
@@ -179,17 +172,19 @@ export class Gesture extends Disposable {
             // tap is canceled by scrolling or context menu
             this._lastSetTapCountTime = 0;
         }
-        for (let i = 0; i < this.ignoreTargets.length; i++) {
-            if (event.initialTarget instanceof Node && this.ignoreTargets[i].contains(event.initialTarget)) {
-                return;
+        if (event.initialTarget instanceof Node) {
+            for (const ignoreTarget of this.ignoreTargets) {
+                if (ignoreTarget.contains(event.initialTarget)) {
+                    return;
+                }
+            }
+            for (const target of this.targets) {
+                if (target.contains(event.initialTarget)) {
+                    target.dispatchEvent(event);
+                    this.dispatched = true;
+                }
             }
         }
-        this.targets.forEach(target => {
-            if (event.initialTarget instanceof Node && target.contains(event.initialTarget)) {
-                target.dispatchEvent(event);
-                this.dispatched = true;
-            }
-        });
     }
     inertia(dispatchTo, t1, vX, dirX, x, vY, dirY, y) {
         this.handle = DomUtils.scheduleAtNextAnimationFrame(() => {

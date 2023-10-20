@@ -2,13 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { findLast } from '../../../base/common/arrays.js';
+import { findLast } from '../../../base/common/arraysFind.js';
 import * as strings from '../../../base/common/strings.js';
 import { CursorColumns } from '../core/cursorColumns.js';
 import { Range } from '../core/range.js';
 import { TextModelPart } from './textModelPart.js';
 import { computeIndentLevel } from './utils.js';
 import { HorizontalGuidesState, IndentGuide, IndentGuideHorizontalLine } from '../textModelGuides.js';
+import { BugIndicatingError } from '../../../base/common/errors.js';
 export class GuidesTextModelPart extends TextModelPart {
     constructor(textModel, languageConfigurationService) {
         super();
@@ -25,7 +26,7 @@ export class GuidesTextModelPart extends TextModelPart {
         this.assertNotDisposed();
         const lineCount = this.textModel.getLineCount();
         if (lineNumber < 1 || lineNumber > lineCount) {
-            throw new Error('Illegal value for lineNumber');
+            throw new BugIndicatingError('Illegal value for lineNumber');
         }
         const foldingRules = this.getLanguageConfiguration(this.textModel.getLanguageId()).foldingRules;
         const offSide = Boolean(foldingRules && foldingRules.offSide);
@@ -211,14 +212,14 @@ export class GuidesTextModelPart extends TextModelPart {
         }
         // If requested, this could be made configurable.
         const includeSingleLinePairs = true;
-        const bracketPairs = this.textModel.bracketPairs.getBracketPairsInRangeWithMinIndentation(new Range(startLineNumber, 1, endLineNumber, this.textModel.getLineMaxColumn(endLineNumber)));
+        const bracketPairs = this.textModel.bracketPairs.getBracketPairsInRangeWithMinIndentation(new Range(startLineNumber, 1, endLineNumber, this.textModel.getLineMaxColumn(endLineNumber))).toArray();
         let activeBracketPairRange = undefined;
         if (activePosition && bracketPairs.length > 0) {
             const bracketsContainingActivePosition = (startLineNumber <= activePosition.lineNumber &&
                 activePosition.lineNumber <= endLineNumber
                 // We don't need to query the brackets again if the cursor is in the viewport
                 ? bracketPairs
-                : this.textModel.bracketPairs.getBracketPairsInRange(Range.fromPositions(activePosition))).filter((bp) => Range.strictContainsPosition(bp.range, activePosition));
+                : this.textModel.bracketPairs.getBracketPairsInRange(Range.fromPositions(activePosition)).toArray()).filter((bp) => Range.strictContainsPosition(bp.range, activePosition));
             activeBracketPairRange = (_a = findLast(bracketsContainingActivePosition, (i) => includeSingleLinePairs || i.range.startLineNumber !== i.range.endLineNumber)) === null || _a === void 0 ? void 0 : _a.range;
         }
         const independentColorPoolPerBracketType = this.textModel.getOptions().bracketPairColorizationOptions.independentColorPoolPerBracketType;

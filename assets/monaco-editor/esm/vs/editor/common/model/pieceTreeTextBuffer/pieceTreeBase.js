@@ -8,8 +8,8 @@ import { FindMatch } from '../../model.js';
 import { SENTINEL, TreeNode, fixInsert, leftest, rbDelete, righttest, updateTreeMetadata } from './rbTreeBase.js';
 import { Searcher, createFindMatch, isValidMatch } from '../textModelSearch.js';
 // const lfRegex = new RegExp(/\r\n|\r|\n/g);
-export const AverageBufferSize = 65535;
-export function createUintArray(arr) {
+const AverageBufferSize = 65535;
+function createUintArray(arr) {
     let r;
     if (arr[arr.length - 1] < 65536) {
         r = new Uint16Array(arr.length);
@@ -20,7 +20,7 @@ export function createUintArray(arr) {
     r.set(arr, 0);
     return r;
 }
-export class LineStarts {
+class LineStarts {
     constructor(lineStarts, cr, lf, crlf, isBasicASCII) {
         this.lineStarts = lineStarts;
         this.cr = cr;

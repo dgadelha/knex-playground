@@ -20,6 +20,9 @@ export class ContiguousTokensStore {
         this._lineTokens = [];
         this._len = 0;
     }
+    get hasTokens() {
+        return this._lineTokens.length > 0;
+    }
     getTokens(topLevelLanguageId, lineIndex, lineText) {
         let rawLineTokens = null;
         if (lineIndex < this._len) {
@@ -157,6 +160,37 @@ export class ContiguousTokensStore {
         this._lineTokens[lineIndex] = ContiguousTokensEditing.deleteEnding(this._lineTokens[lineIndex], position.column - 1);
         this._lineTokens[lineIndex] = ContiguousTokensEditing.insert(this._lineTokens[lineIndex], position.column - 1, firstLineLength);
         this._insertLines(position.lineNumber, eolCount);
+    }
+    //#endregion
+    setMultilineTokens(tokens, textModel) {
+        if (tokens.length === 0) {
+            return { changes: [] };
+        }
+        const ranges = [];
+        for (let i = 0, len = tokens.length; i < len; i++) {
+            const element = tokens[i];
+            let minChangedLineNumber = 0;
+            let maxChangedLineNumber = 0;
+            let hasChange = false;
+            for (let lineNumber = element.startLineNumber; lineNumber <= element.endLineNumber; lineNumber++) {
+                if (hasChange) {
+                    this.setTokens(textModel.getLanguageId(), lineNumber - 1, textModel.getLineLength(lineNumber), element.getLineTokens(lineNumber), false);
+                    maxChangedLineNumber = lineNumber;
+                }
+                else {
+                    const lineHasChange = this.setTokens(textModel.getLanguageId(), lineNumber - 1, textModel.getLineLength(lineNumber), element.getLineTokens(lineNumber), true);
+                    if (lineHasChange) {
+                        hasChange = true;
+                        minChangedLineNumber = lineNumber;
+                        maxChangedLineNumber = lineNumber;
+                    }
+                }
+            }
+            if (hasChange) {
+                ranges.push({ fromLineNumber: minChangedLineNumber, toLineNumber: maxChangedLineNumber, });
+            }
+        }
+        return { changes: ranges };
     }
 }
 function getDefaultMetadata(topLevelLanguageId) {

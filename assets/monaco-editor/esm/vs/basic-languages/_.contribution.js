@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.34.0(9d278685b078158491964f8fd7ac9628fffa0f30)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -71,7 +71,7 @@ function registerLanguage(def) {
       return mod.language;
     }
   });
-  monaco_editor_core_exports.languages.onLanguage(languageId, async () => {
+  monaco_editor_core_exports.languages.onLanguageEncountered(languageId, async () => {
     const mod = await lazyLanguageLoader.load();
     monaco_editor_core_exports.languages.setLanguageConfiguration(languageId, mod.conf);
   });

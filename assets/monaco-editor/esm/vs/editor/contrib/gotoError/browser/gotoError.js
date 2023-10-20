@@ -20,6 +20,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var MarkerController_1;
 import { Codicon } from '../../../../base/common/codicons.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { EditorAction, EditorCommand, registerEditorAction, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
@@ -34,7 +35,10 @@ import { IContextKeyService, RawContextKey } from '../../../../platform/contextk
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { MarkerNavigationWidget } from './gotoErrorWidget.js';
-let MarkerController = class MarkerController {
+let MarkerController = MarkerController_1 = class MarkerController {
+    static get(editor) {
+        return editor.getContribution(MarkerController_1.ID);
+    }
     constructor(editor, _markerNavigationService, _contextKeyService, _editorService, _instantiationService) {
         this._markerNavigationService = _markerNavigationService;
         this._contextKeyService = _contextKeyService;
@@ -43,9 +47,6 @@ let MarkerController = class MarkerController {
         this._sessionDispoables = new DisposableStore();
         this._editor = editor;
         this._widgetVisible = CONTEXT_MARKERS_NAVIGATION_VISIBLE.bindTo(this._contextKeyService);
-    }
-    static get(editor) {
-        return editor.getContribution(MarkerController.ID);
     }
     dispose() {
         this._cleanUp();
@@ -139,8 +140,8 @@ let MarkerController = class MarkerController {
                         options: { pinned: false, revealIfOpened: true, selectionRevealType: 2 /* TextEditorSelectionRevealType.NearTop */, selection: model.selected.marker }
                     }, this._editor);
                     if (otherEditor) {
-                        (_a = MarkerController.get(otherEditor)) === null || _a === void 0 ? void 0 : _a.close();
-                        (_b = MarkerController.get(otherEditor)) === null || _b === void 0 ? void 0 : _b.nagivate(next, multiFile);
+                        (_a = MarkerController_1.get(otherEditor)) === null || _a === void 0 ? void 0 : _a.close();
+                        (_b = MarkerController_1.get(otherEditor)) === null || _b === void 0 ? void 0 : _b.nagivate(next, multiFile);
                     }
                 }
                 else {
@@ -152,7 +153,7 @@ let MarkerController = class MarkerController {
     }
 };
 MarkerController.ID = 'editor.contrib.markerController';
-MarkerController = __decorate([
+MarkerController = MarkerController_1 = __decorate([
     __param(1, IMarkerNavigationService),
     __param(2, IContextKeyService),
     __param(3, ICodeEditorService),
@@ -264,7 +265,7 @@ class PrevMarkerInFilesAction extends MarkerNavigationAction {
         });
     }
 }
-registerEditorContribution(MarkerController.ID, MarkerController);
+registerEditorContribution(MarkerController.ID, MarkerController, 4 /* EditorContributionInstantiation.Lazy */);
 registerEditorAction(NextMarkerAction);
 registerEditorAction(PrevMarkerAction);
 registerEditorAction(NextMarkerInFilesAction);

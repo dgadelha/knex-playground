@@ -114,6 +114,12 @@ export class Marker {
     get children() {
         return this._children;
     }
+    get rightMostDescendant() {
+        if (this._children.length > 0) {
+            return this._children[this._children.length - 1].rightMostDescendant;
+        }
+        return this;
+    }
     get snippet() {
         let candidate = this;
         while (true) {
@@ -151,10 +157,6 @@ export class Text extends Marker {
 export class TransformableMarker extends Marker {
 }
 export class Placeholder extends TransformableMarker {
-    constructor(index) {
-        super();
-        this.index = index;
-    }
     static compareByIndex(a, b) {
         if (a.index === b.index) {
             return 0;
@@ -174,6 +176,10 @@ export class Placeholder extends TransformableMarker {
         else {
             return 0;
         }
+    }
+    constructor(index) {
+        super();
+        this.index = index;
     }
     get isFinalTabstop() {
         return this.index === 0;
@@ -483,16 +489,28 @@ export class SnippetParser {
             }
             return true;
         });
-        for (const placeholder of incompletePlaceholders) {
+        const fillInIncompletePlaceholder = (placeholder, stack) => {
             const defaultValues = placeholderDefaultValues.get(placeholder.index);
-            if (defaultValues) {
-                const clone = new Placeholder(placeholder.index);
-                clone.transform = placeholder.transform;
-                for (const child of defaultValues) {
-                    clone.appendChild(child.clone());
-                }
-                snippet.replace(placeholder, [clone]);
+            if (!defaultValues) {
+                return;
             }
+            const clone = new Placeholder(placeholder.index);
+            clone.transform = placeholder.transform;
+            for (const child of defaultValues) {
+                const newChild = child.clone();
+                clone.appendChild(newChild);
+                // "recurse" on children that are again placeholders
+                if (newChild instanceof Placeholder && placeholderDefaultValues.has(newChild.index) && !stack.has(newChild.index)) {
+                    stack.add(newChild.index);
+                    fillInIncompletePlaceholder(newChild, stack);
+                    stack.delete(newChild.index);
+                }
+            }
+            snippet.replace(placeholder, [clone]);
+        };
+        const stack = new Set();
+        for (const placeholder of incompletePlaceholders) {
+            fillInIncompletePlaceholder(placeholder, stack);
         }
         return snippet.children.slice(offset);
     }

@@ -79,14 +79,14 @@ export class CursorColumns {
         return lineContentLength + 1;
     }
     /**
-     * ATTENTION: This works with 0-based columns (as oposed to the regular 1-based columns)
+     * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
      * @see {@link CursorColumns}
      */
     static nextRenderTabStop(visibleColumn, tabSize) {
         return visibleColumn + tabSize - visibleColumn % tabSize;
     }
     /**
-     * ATTENTION: This works with 0-based columns (as oposed to the regular 1-based columns)
+     * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
      * @see {@link CursorColumns}
      */
     static nextIndentTabStop(visibleColumn, indentSize) {

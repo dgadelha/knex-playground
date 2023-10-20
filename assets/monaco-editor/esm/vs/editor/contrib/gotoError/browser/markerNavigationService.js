@@ -189,4 +189,4 @@ MarkerNavigationService = __decorate([
     __param(0, IMarkerService),
     __param(1, IConfigurationService)
 ], MarkerNavigationService);
-registerSingleton(IMarkerNavigationService, MarkerNavigationService, true);
+registerSingleton(IMarkerNavigationService, MarkerNavigationService, 1 /* InstantiationType.Delayed */);

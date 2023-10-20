@@ -15,9 +15,7 @@ export class CharacterClassifier {
     }
     static _createAsciiMap(defaultValue) {
         const asciiMap = new Uint8Array(256);
-        for (let i = 0; i < 256; i++) {
-            asciiMap[i] = defaultValue;
-        }
+        asciiMap.fill(defaultValue);
         return asciiMap;
     }
     set(charCode, _value) {
@@ -37,6 +35,10 @@ export class CharacterClassifier {
             return (this._map.get(charCode) || this._defaultValue);
         }
     }
+    clear() {
+        this._asciiMap.fill(this._defaultValue);
+        this._map.clear();
+    }
 }
 export class CharacterSet {
     constructor() {
@@ -47,5 +49,8 @@ export class CharacterSet {
     }
     has(charCode) {
         return (this._actual.get(charCode) === 1 /* Boolean.True */);
+    }
+    clear() {
+        return this._actual.clear();
     }
 }

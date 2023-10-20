@@ -42,6 +42,7 @@ export const Context = {
 export const suggestWidgetStatusbarMenu = new MenuId('suggestWidgetStatusBar');
 export class CompletionItem {
     constructor(position, completion, container, provider) {
+        var _a;
         this.position = position;
         this.completion = completion;
         this.container = container;
@@ -53,7 +54,7 @@ export class CompletionItem {
         this.distance = 0;
         this.textLabel = typeof completion.label === 'string'
             ? completion.label
-            : completion.label.label;
+            : (_a = completion.label) === null || _a === void 0 ? void 0 : _a.label;
         // ensure lower-variants (perf)
         this.labelLow = this.textLabel.toLowerCase();
         // validate label
@@ -83,31 +84,36 @@ export class CompletionItem {
         // create the suggestion resolver
         if (typeof provider.resolveCompletionItem !== 'function') {
             this._resolveCache = Promise.resolve();
-            this._isResolved = true;
+            this._resolveDuration = 0;
         }
     }
     // ---- resolving
     get isResolved() {
-        return !!this._isResolved;
+        return this._resolveDuration !== undefined;
+    }
+    get resolveDuration() {
+        return this._resolveDuration !== undefined ? this._resolveDuration : -1;
     }
     resolve(token) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this._resolveCache) {
                 const sub = token.onCancellationRequested(() => {
                     this._resolveCache = undefined;
-                    this._isResolved = false;
+                    this._resolveDuration = undefined;
                 });
+                const sw = new StopWatch(true);
                 this._resolveCache = Promise.resolve(this.provider.resolveCompletionItem(this.completion, token)).then(value => {
                     Object.assign(this.completion, value);
-                    this._isResolved = true;
-                    sub.dispose();
+                    this._resolveDuration = sw.elapsed();
                 }, err => {
                     if (isCancellationError(err)) {
                         // the IPC queue will reject the request with the
                         // cancellation error -> reset cached
                         this._resolveCache = undefined;
-                        this._isResolved = false;
+                        this._resolveDuration = undefined;
                     }
+                }).finally(() => {
+                    sub.dispose();
                 });
             }
             return this._resolveCache;
@@ -115,10 +121,11 @@ export class CompletionItem {
     }
 }
 export class CompletionOptions {
-    constructor(snippetSortOrder = 2 /* SnippetSortOrder.Bottom */, kindFilter = new Set(), providerFilter = new Set(), showDeprecated = true) {
+    constructor(snippetSortOrder = 2 /* SnippetSortOrder.Bottom */, kindFilter = new Set(), providerFilter = new Set(), providerItemsToReuse = new Map(), showDeprecated = true) {
         this.snippetSortOrder = snippetSortOrder;
         this.kindFilter = kindFilter;
         this.providerFilter = providerFilter;
+        this.providerItemsToReuse = providerItemsToReuse;
         this.showDeprecated = showDeprecated;
     }
 }
@@ -137,7 +144,7 @@ export class CompletionItemModel {
 }
 export function provideSuggestionItems(registry, model, position, options = CompletionOptions.default, context = { triggerKind: 0 /* languages.CompletionTriggerKind.Invoke */ }, token = CancellationToken.None) {
     return __awaiter(this, void 0, void 0, function* () {
-        const sw = new StopWatch(true);
+        const sw = new StopWatch();
         position = position.clone();
         const word = model.getWordAtPosition(position);
         const defaultReplaceRange = word ? new Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn) : Range.fromPositions(position);
@@ -187,10 +194,16 @@ export function provideSuggestionItems(registry, model, position, options = Comp
             if (!_snippetSuggestSupport || options.kindFilter.has(27 /* languages.CompletionItemKind.Snippet */)) {
                 return;
             }
+            // we have items from a previous session that we can reuse
+            const reuseItems = options.providerItemsToReuse.get(_snippetSuggestSupport);
+            if (reuseItems) {
+                reuseItems.forEach(item => result.push(item));
+                return;
+            }
             if (options.providerFilter.size > 0 && !options.providerFilter.has(_snippetSuggestSupport)) {
                 return;
             }
-            const sw = new StopWatch(true);
+            const sw = new StopWatch();
             const list = yield _snippetSuggestSupport.provideCompletionItems(model, position, context, token);
             onCompletionList(_snippetSuggestSupport, list, sw);
         }))();
@@ -201,11 +214,19 @@ export function provideSuggestionItems(registry, model, position, options = Comp
             // for each support in the group ask for suggestions
             let didAddResult = false;
             yield Promise.all(providerGroup.map((provider) => __awaiter(this, void 0, void 0, function* () {
+                // we have items from a previous session that we can reuse
+                if (options.providerItemsToReuse.has(provider)) {
+                    const items = options.providerItemsToReuse.get(provider);
+                    items.forEach(item => result.push(item));
+                    didAddResult = didAddResult || items.length > 0;
+                    return;
+                }
+                // check if this provider is filtered out
                 if (options.providerFilter.size > 0 && !options.providerFilter.has(provider)) {
                     return;
                 }
                 try {
-                    const sw = new StopWatch(true);
+                    const sw = new StopWatch();
                     const list = yield provider.provideCompletionItems(model, position, context, token);
                     didAddResult = onCompletionList(provider, list, sw) || didAddResult;
                 }
@@ -288,7 +309,8 @@ CommandsRegistry.registerCommand('_executeCompletionItemProvider', (accessor, ..
             suggestions: []
         };
         const resolving = [];
-        const completions = yield provideSuggestionItems(completionProvider, ref.object.textEditorModel, Position.lift(position), undefined, { triggerCharacter, triggerKind: triggerCharacter ? 1 /* languages.CompletionTriggerKind.TriggerCharacter */ : 0 /* languages.CompletionTriggerKind.Invoke */ });
+        const actualPosition = ref.object.textEditorModel.validatePosition(position);
+        const completions = yield provideSuggestionItems(completionProvider, ref.object.textEditorModel, actualPosition, undefined, { triggerCharacter: triggerCharacter !== null && triggerCharacter !== void 0 ? triggerCharacter : undefined, triggerKind: triggerCharacter ? 1 /* languages.CompletionTriggerKind.TriggerCharacter */ : 0 /* languages.CompletionTriggerKind.Invoke */ });
         for (const item of completions.items) {
             if (resolving.length < (maxItemsToResolve !== null && maxItemsToResolve !== void 0 ? maxItemsToResolve : 0)) {
                 resolving.push(item.resolve(CancellationToken.None));

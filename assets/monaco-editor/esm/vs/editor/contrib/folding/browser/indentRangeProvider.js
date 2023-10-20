@@ -5,26 +5,25 @@
 import { computeIndentLevel } from '../../../common/model/utils.js';
 import { FoldingRegions, MAX_LINE_NUMBER } from './foldingRanges.js';
 const MAX_FOLDING_REGIONS_FOR_INDENT_DEFAULT = 5000;
-export const ID_INDENT_PROVIDER = 'indent';
+const ID_INDENT_PROVIDER = 'indent';
 export class IndentRangeProvider {
-    constructor(editorModel, languageConfigurationService, maxFoldingRegions) {
+    constructor(editorModel, languageConfigurationService, foldingRangesLimit) {
         this.editorModel = editorModel;
         this.languageConfigurationService = languageConfigurationService;
-        this.maxFoldingRegions = maxFoldingRegions;
+        this.foldingRangesLimit = foldingRangesLimit;
         this.id = ID_INDENT_PROVIDER;
     }
     dispose() { }
-    compute(cancelationToken, notifyTooManyRegions) {
+    compute(cancelationToken) {
         const foldingRules = this.languageConfigurationService.getLanguageConfiguration(this.editorModel.getLanguageId()).foldingRules;
         const offSide = foldingRules && !!foldingRules.offSide;
         const markers = foldingRules && foldingRules.markers;
-        return Promise.resolve(computeRanges(this.editorModel, offSide, markers, this.maxFoldingRegions, notifyTooManyRegions));
+        return Promise.resolve(computeRanges(this.editorModel, offSide, markers, this.foldingRangesLimit));
     }
 }
 // public only for testing
 export class RangesCollector {
-    constructor(foldingRangesLimit, _notifyTooManyRegions) {
-        this._notifyTooManyRegions = _notifyTooManyRegions;
+    constructor(foldingRangesLimit) {
         this._startIndexes = [];
         this._endIndexes = [];
         this._indentOccurrences = [];
@@ -44,8 +43,9 @@ export class RangesCollector {
         }
     }
     toIndentRanges(model) {
-        var _a;
-        if (this._length <= this._foldingRangesLimit) {
+        const limit = this._foldingRangesLimit.limit;
+        if (this._length <= limit) {
+            this._foldingRangesLimit.update(this._length, false);
             // reverse and create arrays of the exact length
             const startIndexes = new Uint32Array(this._length);
             const endIndexes = new Uint32Array(this._length);
@@ -56,13 +56,13 @@ export class RangesCollector {
             return new FoldingRegions(startIndexes, endIndexes);
         }
         else {
-            (_a = this._notifyTooManyRegions) === null || _a === void 0 ? void 0 : _a.call(this, this._foldingRangesLimit);
+            this._foldingRangesLimit.update(this._length, limit);
             let entries = 0;
             let maxIndent = this._indentOccurrences.length;
             for (let i = 0; i < this._indentOccurrences.length; i++) {
                 const n = this._indentOccurrences[i];
                 if (n) {
-                    if (n + entries > this._foldingRangesLimit) {
+                    if (n + entries > limit) {
                         maxIndent = i;
                         break;
                     }
@@ -71,13 +71,13 @@ export class RangesCollector {
             }
             const tabSize = model.getOptions().tabSize;
             // reverse and create arrays of the exact length
-            const startIndexes = new Uint32Array(this._foldingRangesLimit);
-            const endIndexes = new Uint32Array(this._foldingRangesLimit);
+            const startIndexes = new Uint32Array(limit);
+            const endIndexes = new Uint32Array(limit);
             for (let i = this._length - 1, k = 0; i >= 0; i--) {
                 const startIndex = this._startIndexes[i];
                 const lineContent = model.getLineContent(startIndex);
                 const indent = computeIndentLevel(lineContent, tabSize);
-                if (indent < maxIndent || (indent === maxIndent && entries++ < this._foldingRangesLimit)) {
+                if (indent < maxIndent || (indent === maxIndent && entries++ < limit)) {
                     startIndexes[k] = startIndex;
                     endIndexes[k] = this._endIndexes[i];
                     k++;
@@ -87,10 +87,13 @@ export class RangesCollector {
         }
     }
 }
-export function computeRanges(model, offSide, markers, foldingRangesLimit, notifyTooManyRegions) {
+const foldingRangesLimitDefault = {
+    limit: MAX_FOLDING_REGIONS_FOR_INDENT_DEFAULT,
+    update: () => { }
+};
+export function computeRanges(model, offSide, markers, foldingRangesLimit = foldingRangesLimitDefault) {
     const tabSize = model.getOptions().tabSize;
-    foldingRangesLimit = foldingRangesLimit !== null && foldingRangesLimit !== void 0 ? foldingRangesLimit : MAX_FOLDING_REGIONS_FOR_INDENT_DEFAULT;
-    const result = new RangesCollector(foldingRangesLimit, notifyTooManyRegions);
+    const result = new RangesCollector(foldingRangesLimit);
     let pattern = undefined;
     if (markers) {
         pattern = new RegExp(`(${markers.start.source})|(?:${markers.end.source})`);

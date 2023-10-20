@@ -91,7 +91,9 @@ function computeConfig(languageId, registry, configurationService, languageServi
     let languageConfig = registry.getLanguageConfiguration(languageId);
     if (!languageConfig) {
         if (!languageService.isRegisteredLanguageId(languageId)) {
-            throw new Error(`Language id "${languageId}" is not configured nor known`);
+            // this happens for the null language, which can be returned by monarch.
+            // Instead of throwing an error, we just return a default config.
+            return new ResolvedLanguageConfiguration(languageId, {});
         }
         languageConfig = new ResolvedLanguageConfiguration(languageId, {});
     }
@@ -331,8 +333,8 @@ export class ResolvedLanguageConfiguration {
     getAutoClosingPairs() {
         return new AutoClosingPairs(this.characterPair.getAutoClosingPairs());
     }
-    getAutoCloseBeforeSet() {
-        return this.characterPair.getAutoCloseBeforeSet();
+    getAutoCloseBeforeSet(forQuotes) {
+        return this.characterPair.getAutoCloseBeforeSet(forQuotes);
     }
     getSurroundingPairs() {
         return this.characterPair.getSurroundingPairs();
@@ -355,4 +357,4 @@ export class ResolvedLanguageConfiguration {
         return comments;
     }
 }
-registerSingleton(ILanguageConfigurationService, LanguageConfigurationService);
+registerSingleton(ILanguageConfigurationService, LanguageConfigurationService, 1 /* InstantiationType.Delayed */);

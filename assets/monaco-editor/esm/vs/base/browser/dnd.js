@@ -16,8 +16,11 @@ export const DataTransfers = {
     /**
      * Typically transfer type for copy/paste transfers.
      */
-    TEXT: Mimes.text
-};
-export const StaticDND = {
-    CurrentDragAndDropData: undefined
+    TEXT: Mimes.text,
+    /**
+     * Internal type used to pass around text/uri-list data.
+     *
+     * This is needed to work around https://bugs.chromium.org/p/chromium/issues/detail?id=239745.
+     */
+    INTERNAL_URI_LIST: 'application/vnd.code.uri-list',
 };

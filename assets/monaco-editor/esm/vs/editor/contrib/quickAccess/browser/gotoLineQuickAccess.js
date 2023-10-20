@@ -61,7 +61,7 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         const codeEditor = getCodeEditor(editor);
         if (codeEditor) {
             const options = codeEditor.getOptions();
-            const lineNumbers = options.get(62 /* EditorOption.lineNumbers */);
+            const lineNumbers = options.get(67 /* EditorOption.lineNumbers */);
             if (lineNumbers.renderType === 2 /* RenderLineNumbersType.Relative */) {
                 codeEditor.updateOptions({ lineNumbers: 'on' });
                 disposables.add(toDisposable(() => codeEditor.updateOptions({ lineNumbers: 'relative' })));

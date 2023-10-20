@@ -1,15 +1,13 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-import { Emitter } from '../../../../base/common/event.js';
-import { Disposable } from '../../../../base/common/lifecycle.js';
 import { applyEdits } from './utils.js';
 export class GhostText {
-    constructor(lineNumber, parts, additionalReservedLineCount = 0) {
+    constructor(lineNumber, parts) {
         this.lineNumber = lineNumber;
         this.parts = parts;
-        this.additionalReservedLineCount = additionalReservedLineCount;
+    }
+    equals(other) {
+        return this.lineNumber === other.lineNumber &&
+            this.parts.length === other.parts.length &&
+            this.parts.every((part, index) => part.equals(other.parts[index]));
     }
     renderForScreenReader(lineText) {
         if (this.parts.length === 0) {
@@ -26,6 +24,9 @@ export class GhostText {
     isEmpty() {
         return this.parts.every(p => p.lines.length === 0);
     }
+    get lineCount() {
+        return 1 + this.parts.reduce((r, p) => r + p.lines.length - 1, 0);
+    }
 }
 export class GhostTextPart {
     constructor(column, lines, 
@@ -37,37 +38,51 @@ export class GhostTextPart {
         this.lines = lines;
         this.preview = preview;
     }
+    equals(other) {
+        return this.column === other.column &&
+            this.lines.length === other.lines.length &&
+            this.lines.every((line, index) => line === other.lines[index]);
+    }
 }
 export class GhostTextReplacement {
-    constructor(lineNumber, columnStart, length, newLines, additionalReservedLineCount = 0) {
+    constructor(lineNumber, columnRange, newLines, additionalReservedLineCount = 0) {
         this.lineNumber = lineNumber;
-        this.columnStart = columnStart;
-        this.length = length;
+        this.columnRange = columnRange;
         this.newLines = newLines;
         this.additionalReservedLineCount = additionalReservedLineCount;
         this.parts = [
-            new GhostTextPart(this.columnStart + this.length, this.newLines, false),
+            new GhostTextPart(this.columnRange.endColumnExclusive, this.newLines, false),
         ];
     }
     renderForScreenReader(_lineText) {
         return this.newLines.join('\n');
     }
+    get lineCount() {
+        return this.newLines.length;
+    }
+    isEmpty() {
+        return this.parts.every(p => p.lines.length === 0);
+    }
+    equals(other) {
+        return this.lineNumber === other.lineNumber &&
+            this.columnRange.equals(other.columnRange) &&
+            this.newLines.length === other.newLines.length &&
+            this.newLines.every((line, index) => line === other.newLines[index]) &&
+            this.additionalReservedLineCount === other.additionalReservedLineCount;
+    }
 }
-export class BaseGhostTextWidgetModel extends Disposable {
-    constructor(editor) {
-        super();
-        this.editor = editor;
-        this._expanded = undefined;
-        this.onDidChangeEmitter = new Emitter();
-        this.onDidChange = this.onDidChangeEmitter.event;
-        this._register(editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(108 /* EditorOption.suggest */) && this._expanded === undefined) {
-                this.onDidChangeEmitter.fire();
-            }
-        }));
+export function ghostTextOrReplacementEquals(a, b) {
+    if (a === b) {
+        return true;
     }
-    setExpanded(expanded) {
-        this._expanded = true;
-        this.onDidChangeEmitter.fire();
+    if (!a || !b) {
+        return false;
     }
+    if (a instanceof GhostText && b instanceof GhostText) {
+        return a.equals(b);
+    }
+    if (a instanceof GhostTextReplacement && b instanceof GhostTextReplacement) {
+        return a.equals(b);
+    }
+    return false;
 }

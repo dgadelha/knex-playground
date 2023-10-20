@@ -1,7 +1,7 @@
 import '../../editor/editor.api.js';
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.34.0(9d278685b078158491964f8fd7ac9628fffa0f30)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -21,7 +21,7 @@ var __copyProps = (to, from, except, desc) => {
 var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
 
 // src/language/typescript/lib/typescriptServicesMetadata.ts
-var typescriptVersion = "4.5.5";
+var typescriptVersion = "5.0.2";
 
 // src/fillers/monaco-editor-core.ts
 var monaco_editor_core_exports = {};
@@ -83,7 +83,8 @@ var LanguageServiceDefaultsImpl = class {
   _workerOptions;
   _onDidExtraLibsChangeTimeout;
   _inlayHintsOptions;
-  constructor(compilerOptions, diagnosticsOptions, workerOptions, inlayHintsOptions) {
+  _modeConfiguration;
+  constructor(compilerOptions, diagnosticsOptions, workerOptions, inlayHintsOptions, modeConfiguration) {
     this._extraLibs = /* @__PURE__ */ Object.create(null);
     this._removedExtraLibs = /* @__PURE__ */ Object.create(null);
     this._eagerModelSync = false;
@@ -91,6 +92,7 @@ var LanguageServiceDefaultsImpl = class {
     this.setDiagnosticsOptions(diagnosticsOptions);
     this.setWorkerOptions(workerOptions);
     this.setInlayHintsOptions(inlayHintsOptions);
+    this.setModeConfiguration(modeConfiguration);
     this._onDidExtraLibsChangeTimeout = -1;
   }
   get onDidChange() {
@@ -98,6 +100,9 @@ var LanguageServiceDefaultsImpl = class {
   }
   get onDidExtraLibsChange() {
     return this._onDidExtraLibsChange.event;
+  }
+  get modeConfiguration() {
+    return this._modeConfiguration;
   }
   get workerOptions() {
     return this._workerOptions;
@@ -208,10 +213,29 @@ var LanguageServiceDefaultsImpl = class {
   getEagerModelSync() {
     return this._eagerModelSync;
   }
+  setModeConfiguration(modeConfiguration) {
+    this._modeConfiguration = modeConfiguration || /* @__PURE__ */ Object.create(null);
+    this._onDidChange.fire(void 0);
+  }
 };
 var typescriptVersion2 = typescriptVersion;
-var typescriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, target: 99 /* Latest */ }, { noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: false }, {}, {});
-var javascriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, allowJs: true, target: 99 /* Latest */ }, { noSemanticValidation: true, noSyntaxValidation: false, onlyVisible: false }, {}, {});
+var modeConfigurationDefault = {
+  completionItems: true,
+  hovers: true,
+  documentSymbols: true,
+  definitions: true,
+  references: true,
+  documentHighlights: true,
+  rename: true,
+  diagnostics: true,
+  documentRangeFormattingEdits: true,
+  signatureHelp: true,
+  onTypeFormattingEdits: true,
+  codeActions: true,
+  inlayHints: true
+};
+var typescriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, target: 99 /* Latest */ }, { noSemanticValidation: false, noSyntaxValidation: false, onlyVisible: false }, {}, {}, modeConfigurationDefault);
+var javascriptDefaults = new LanguageServiceDefaultsImpl({ allowNonTsExtensions: true, allowJs: true, target: 99 /* Latest */ }, { noSemanticValidation: true, noSyntaxValidation: false, onlyVisible: false }, {}, {}, modeConfigurationDefault);
 var getTypeScriptWorker = () => {
   return getMode().then((mode) => mode.getTypeScriptWorker());
 };
@@ -236,7 +260,7 @@ function getMode() {
       __require(["vs/language/typescript/tsMode"], resolve, reject);
     });
   } else {
-    return import("./tsMode");
+    return import("./tsMode.js");
   }
 }
 monaco_editor_core_exports.languages.onLanguage("typescript", () => {

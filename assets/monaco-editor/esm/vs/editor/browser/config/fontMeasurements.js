@@ -8,7 +8,7 @@ import { Disposable } from '../../../base/common/lifecycle.js';
 import { CharWidthRequest, readCharWidths } from './charWidthReader.js';
 import { EditorFontLigatures } from '../../common/config/editorOptions.js';
 import { FontInfo } from '../../common/config/fontInfo.js';
-class FontMeasurementsImpl extends Disposable {
+export class FontMeasurementsImpl extends Disposable {
     constructor() {
         super();
         this._onDidChange = this._register(new Emitter());
@@ -67,6 +67,7 @@ class FontMeasurementsImpl extends Disposable {
                     fontWeight: readConfig.fontWeight,
                     fontSize: readConfig.fontSize,
                     fontFeatureSettings: readConfig.fontFeatureSettings,
+                    fontVariationSettings: readConfig.fontVariationSettings,
                     lineHeight: readConfig.lineHeight,
                     letterSpacing: readConfig.letterSpacing,
                     isMonospace: readConfig.isMonospace,
@@ -145,6 +146,7 @@ class FontMeasurementsImpl extends Disposable {
             fontWeight: bareFontInfo.fontWeight,
             fontSize: bareFontInfo.fontSize,
             fontFeatureSettings: bareFontInfo.fontFeatureSettings,
+            fontVariationSettings: bareFontInfo.fontVariationSettings,
             lineHeight: bareFontInfo.lineHeight,
             letterSpacing: bareFontInfo.letterSpacing,
             isMonospace: isMonospace,

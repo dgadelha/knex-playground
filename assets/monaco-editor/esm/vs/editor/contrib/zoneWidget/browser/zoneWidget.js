@@ -21,13 +21,15 @@ const defaultOptions = {
     keepEditorSelection: false
 };
 const WIDGET_ID = 'vs.editor.contrib.zoneWidget';
-export class ViewZoneDelegate {
-    constructor(domNode, afterLineNumber, afterColumn, heightInLines, onDomNodeTop, onComputedHeight) {
+class ViewZoneDelegate {
+    constructor(domNode, afterLineNumber, afterColumn, heightInLines, onDomNodeTop, onComputedHeight, showInHiddenAreas, ordinal) {
         this.id = ''; // A valid zone id should be greater than 0
         this.domNode = domNode;
         this.afterLineNumber = afterLineNumber;
         this.afterColumn = afterColumn;
         this.heightInLines = heightInLines;
+        this.showInHiddenAreas = showInHiddenAreas;
+        this.ordinal = ordinal;
         this._onDomNodeTop = onDomNodeTop;
         this._onComputedHeight = onComputedHeight;
     }
@@ -191,6 +193,7 @@ export class ZoneWidget {
         this.domNode.style.top = top + 'px';
     }
     _onViewZoneHeight(height) {
+        var _a;
         this.domNode.style.height = `${height}px`;
         if (this.container) {
             const containerHeight = height - this._decoratingElementsHeight();
@@ -198,9 +201,7 @@ export class ZoneWidget {
             const layoutInfo = this.editor.getLayoutInfo();
             this._doLayout(containerHeight, this._getWidth(layoutInfo));
         }
-        if (this._resizeSash) {
-            this._resizeSash.layout();
-        }
+        (_a = this._resizeSash) === null || _a === void 0 ? void 0 : _a.layout();
     }
     get position() {
         const range = this._positionMarkerId.getRange(0);
@@ -217,6 +218,7 @@ export class ZoneWidget {
         this._positionMarkerId.set([{ range, options: ModelDecorationOptions.EMPTY }]);
     }
     hide() {
+        var _a;
         if (this._viewZone) {
             this.editor.changeViewZones(accessor => {
                 if (this._viewZone) {
@@ -229,12 +231,11 @@ export class ZoneWidget {
             this.editor.removeOverlayWidget(this._overlayWidget);
             this._overlayWidget = null;
         }
-        if (this._arrow) {
-            this._arrow.hide();
-        }
+        (_a = this._arrow) === null || _a === void 0 ? void 0 : _a.hide();
+        this._positionMarkerId.clear();
     }
     _decoratingElementsHeight() {
-        const lineHeight = this.editor.getOption(61 /* EditorOption.lineHeight */);
+        const lineHeight = this.editor.getOption(66 /* EditorOption.lineHeight */);
         let result = 0;
         if (this.options.showArrow) {
             const arrowHeight = Math.round(lineHeight / 3);
@@ -255,10 +256,12 @@ export class ZoneWidget {
         // Render the widget as zone (rendering) and widget (lifecycle)
         const viewZoneDomNode = document.createElement('div');
         viewZoneDomNode.style.overflow = 'hidden';
-        const lineHeight = this.editor.getOption(61 /* EditorOption.lineHeight */);
+        const lineHeight = this.editor.getOption(66 /* EditorOption.lineHeight */);
         // adjust heightInLines to viewport
-        const maxHeightInLines = Math.max(12, (this.editor.getLayoutInfo().height / lineHeight) * 0.8);
-        heightInLines = Math.min(heightInLines, maxHeightInLines);
+        if (!this.options.allowUnlimitedHeight) {
+            const maxHeightInLines = Math.max(12, (this.editor.getLayoutInfo().height / lineHeight) * 0.8);
+            heightInLines = Math.min(heightInLines, maxHeightInLines);
+        }
         let arrowHeight = 0;
         let frameThickness = 0;
         // Render the arrow one 1/3 of an editor line height
@@ -281,7 +284,7 @@ export class ZoneWidget {
                 this._overlayWidget = null;
             }
             this.domNode.style.top = '-1000px';
-            this._viewZone = new ViewZoneDelegate(viewZoneDomNode, position.lineNumber, position.column, heightInLines, (top) => this._onViewZoneTop(top), (height) => this._onViewZoneHeight(height));
+            this._viewZone = new ViewZoneDelegate(viewZoneDomNode, position.lineNumber, position.column, heightInLines, (top) => this._onViewZoneTop(top), (height) => this._onViewZoneHeight(height), this.options.showInHiddenAreas, this.options.ordinal);
             this._viewZone.id = accessor.addZone(this._viewZone);
             this._overlayWidget = new OverlayWidgetDelegate(WIDGET_ID + this._viewZone.id, this.domNode);
             this.editor.addOverlayWidget(this._overlayWidget);
@@ -303,23 +306,16 @@ export class ZoneWidget {
         }
         const model = this.editor.getModel();
         if (model) {
-            const revealLine = where.endLineNumber + 1;
-            if (revealLine <= model.getLineCount()) {
-                // reveal line below the zone widget
-                this.revealLine(revealLine, false);
-            }
-            else {
-                // reveal last line atop
-                this.revealLine(model.getLineCount(), true);
-            }
+            const range = model.validateRange(new Range(where.startLineNumber, 1, where.endLineNumber + 1, 1));
+            this.revealRange(range, range.startLineNumber === model.getLineCount());
         }
     }
-    revealLine(lineNumber, isLastLine) {
+    revealRange(range, isLastLine) {
         if (isLastLine) {
-            this.editor.revealLineInCenter(lineNumber, 0 /* ScrollType.Smooth */);
+            this.editor.revealLineNearTop(range.endLineNumber, 0 /* ScrollType.Smooth */);
         }
         else {
-            this.editor.revealLine(lineNumber, 0 /* ScrollType.Smooth */);
+            this.editor.revealRange(range, 0 /* ScrollType.Smooth */);
         }
     }
     setCssClass(className, classToReplace) {
@@ -370,7 +366,7 @@ export class ZoneWidget {
         }));
         this._disposables.add(this._resizeSash.onDidChange((evt) => {
             if (data) {
-                const lineDelta = (evt.currentY - data.startY) / this.editor.getOption(61 /* EditorOption.lineHeight */);
+                const lineDelta = (evt.currentY - data.startY) / this.editor.getOption(66 /* EditorOption.lineHeight */);
                 const roundedLineDelta = lineDelta < 0 ? Math.ceil(lineDelta) : Math.floor(lineDelta);
                 const newHeightInLines = data.heightInLines + roundedLineDelta;
                 if (newHeightInLines > 5 && newHeightInLines < 35) {

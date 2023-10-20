@@ -43,12 +43,18 @@ let CommandOpener = class CommandOpener {
             }
             if (!(options === null || options === void 0 ? void 0 : options.allowCommands)) {
                 // silently ignore commands when command-links are disabled, also
-                // surpress other openers by returning TRUE
+                // suppress other openers by returning TRUE
                 return true;
             }
-            // run command or bail out if command isn't known
             if (typeof target === 'string') {
                 target = URI.parse(target);
+            }
+            if (Array.isArray(options.allowCommands)) {
+                // Only allow specific commands
+                if (!options.allowCommands.includes(target.path)) {
+                    // Suppress other openers by returning TRUE
+                    return true;
+                }
             }
             // execute as command
             let args = [];
@@ -139,21 +145,6 @@ let OpenerService = class OpenerService {
     }
     registerOpener(opener) {
         const remove = this._openers.unshift(opener);
-        return { dispose: remove };
-    }
-    registerValidator(validator) {
-        const remove = this._validators.push(validator);
-        return { dispose: remove };
-    }
-    registerExternalUriResolver(resolver) {
-        const remove = this._resolvers.push(resolver);
-        return { dispose: remove };
-    }
-    setDefaultExternalOpener(externalOpener) {
-        this._defaultExternalOpener = externalOpener;
-    }
-    registerExternalOpener(opener) {
-        const remove = this._externalOpeners.push(opener);
         return { dispose: remove };
     }
     open(target, options) {

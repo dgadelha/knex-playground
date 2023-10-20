@@ -5,16 +5,16 @@
 import { EditOperation } from '../../../common/core/editOperation.js';
 import { Range } from '../../../common/core/range.js';
 export class SortLinesCommand {
-    constructor(selection, descending) {
-        this.selection = selection;
-        this.descending = descending;
-        this.selectionId = null;
-    }
     static getCollator() {
         if (!SortLinesCommand._COLLATOR) {
             SortLinesCommand._COLLATOR = new Intl.Collator();
         }
         return SortLinesCommand._COLLATOR;
+    }
+    constructor(selection, descending) {
+        this.selection = selection;
+        this.descending = descending;
+        this.selectionId = null;
     }
     getEditOperations(model, builder) {
         const op = sortLines(model, this.selection, this.descending);

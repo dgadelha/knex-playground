@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.34.0(9d278685b078158491964f8fd7ac9628fffa0f30)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -624,11 +624,15 @@ var language = {
     "range_intersect_agg",
     "range_merge",
     "rank",
+    "regexp_count",
+    "regexp_instr",
+    "regexp_like",
     "regexp_match",
     "regexp_matches",
     "regexp_replace",
     "regexp_split_to_array",
     "regexp_split_to_table",
+    "regexp_substr",
     "regr_avgx",
     "regr_avgy",
     "regr_count",

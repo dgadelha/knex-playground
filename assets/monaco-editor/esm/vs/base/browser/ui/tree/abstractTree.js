@@ -16,16 +16,18 @@ import { DomEmitter } from '../../event.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { ActionBar } from '../actionbar/actionbar.js';
 import { FindInput } from '../findinput/findInput.js';
+import { unthemedInboxStyles } from '../inputbox/inputBox.js';
 import { ElementsDragAndDropData } from '../list/listView.js';
 import { isButton, isInputElement, isMonacoEditor, List, MouseController } from '../list/listWidget.js';
-import { Toggle } from '../toggle/toggle.js';
+import { Toggle, unthemedToggleStyles } from '../toggle/toggle.js';
 import { getVisibleState, isFilterResult } from './indexTreeModel.js';
 import { TreeMouseEventTarget } from './tree.js';
 import { Action } from '../../../common/actions.js';
 import { distinct, equals, range } from '../../../common/arrays.js';
-import { disposableTimeout, timeout } from '../../../common/async.js';
+import { Delayer, disposableTimeout, timeout } from '../../../common/async.js';
 import { Codicon } from '../../../common/codicons.js';
-import { SetMap } from '../../../common/collections.js';
+import { ThemeIcon } from '../../../common/themables.js';
+import { SetMap } from '../../../common/map.js';
 import { Emitter, Event, EventBufferer, Relay } from '../../../common/event.js';
 import { fuzzyScore, FuzzyScore } from '../../../common/filters.js';
 import { Disposable, DisposableStore, dispose, toDisposable } from '../../../common/lifecycle.js';
@@ -50,6 +52,7 @@ class TreeNodeListDragAndDrop {
         this.modelProvider = modelProvider;
         this.dnd = dnd;
         this.autoExpandDisposable = Disposable.None;
+        this.disposables = new DisposableStore();
     }
     getDragURI(node) {
         return this.dnd.getDragURI(node.element);
@@ -82,7 +85,7 @@ class TreeNodeListDragAndDrop {
                     model.setCollapsed(ref, false);
                 }
                 this.autoExpandNode = undefined;
-            }, 500);
+            }, 500, this.disposables);
         }
         if (typeof result === 'boolean' || !result.accept || typeof result.bubble === 'undefined' || result.feedback) {
             if (!raw) {
@@ -114,6 +117,10 @@ class TreeNodeListDragAndDrop {
     onDragEnd(originalEvent) {
         var _a, _b;
         (_b = (_a = this.dnd).onDragEnd) === null || _b === void 0 ? void 0 : _b.call(_a, originalEvent);
+    }
+    dispose() {
+        this.disposables.dispose();
+        this.dnd.dispose();
     }
 }
 function asListOptions(modelProvider, options) {
@@ -179,30 +186,30 @@ export var RenderIndentGuides;
     RenderIndentGuides["Always"] = "always";
 })(RenderIndentGuides || (RenderIndentGuides = {}));
 class EventCollection {
+    get elements() {
+        return this._elements;
+    }
     constructor(onDidChange, _elements = []) {
         this._elements = _elements;
         this.disposables = new DisposableStore();
         this.onDidChange = Event.forEach(onDidChange, elements => this._elements = elements, this.disposables);
-    }
-    get elements() {
-        return this._elements;
     }
     dispose() {
         this.disposables.dispose();
     }
 }
 class TreeRenderer {
-    constructor(renderer, modelProvider, onDidChangeCollapseState, activeNodes, options = {}) {
+    constructor(renderer, modelProvider, onDidChangeCollapseState, activeNodes, renderedIndentGuides, options = {}) {
         var _a;
         this.renderer = renderer;
         this.modelProvider = modelProvider;
         this.activeNodes = activeNodes;
+        this.renderedIndentGuides = renderedIndentGuides;
         this.renderedElements = new Map();
         this.renderedNodes = new Map();
         this.indent = TreeRenderer.DefaultIndent;
         this.hideTwistiesOfChildlessElements = false;
         this.shouldRenderIndentGuides = false;
-        this.renderedIndentGuides = new SetMap();
         this.activeIndentNodes = new Set();
         this.indentGuidesDisposable = Disposable.None;
         this.disposables = new DisposableStore();
@@ -213,12 +220,21 @@ class TreeRenderer {
     }
     updateOptions(options = {}) {
         if (typeof options.indent !== 'undefined') {
-            this.indent = clamp(options.indent, 0, 40);
+            const indent = clamp(options.indent, 0, 40);
+            if (indent !== this.indent) {
+                this.indent = indent;
+                for (const [node, templateData] of this.renderedNodes) {
+                    this.renderTreeElement(node, templateData);
+                }
+            }
         }
         if (typeof options.renderIndentGuides !== 'undefined') {
             const shouldRenderIndentGuides = options.renderIndentGuides !== RenderIndentGuides.None;
             if (shouldRenderIndentGuides !== this.shouldRenderIndentGuides) {
                 this.shouldRenderIndentGuides = shouldRenderIndentGuides;
+                for (const [node, templateData] of this.renderedNodes) {
+                    this._renderIndentGuides(node, templateData);
+                }
                 this.indentGuidesDisposable.dispose();
                 if (shouldRenderIndentGuides) {
                     const disposables = new DisposableStore();
@@ -241,17 +257,9 @@ class TreeRenderer {
         return { container, indent, twistie, indentGuidesDisposable: Disposable.None, templateData };
     }
     renderElement(node, index, templateData, height) {
-        if (typeof height === 'number') {
-            this.renderedNodes.set(node, { templateData, height });
-            this.renderedElements.set(node.element, node);
-        }
-        const indent = TreeRenderer.DefaultIndent + (node.depth - 1) * this.indent;
-        templateData.twistie.style.paddingLeft = `${indent}px`;
-        templateData.indent.style.width = `${indent + this.indent - 16}px`;
-        this.renderTwistie(node, templateData);
-        if (typeof height === 'number') {
-            this.renderIndentGuides(node, templateData);
-        }
+        this.renderedNodes.set(node, templateData);
+        this.renderedElements.set(node.element, node);
+        this.renderTreeElement(node, templateData);
         this.renderer.renderElement(node, index, templateData.templateData, height);
     }
     disposeElement(node, index, templateData, height) {
@@ -274,23 +282,31 @@ class TreeRenderer {
         this.onDidChangeNodeTwistieState(node);
     }
     onDidChangeNodeTwistieState(node) {
-        const data = this.renderedNodes.get(node);
-        if (!data) {
+        const templateData = this.renderedNodes.get(node);
+        if (!templateData) {
             return;
         }
-        this.renderTwistie(node, data.templateData);
         this._onDidChangeActiveNodes(this.activeNodes.elements);
-        this.renderIndentGuides(node, data.templateData);
+        this.renderTreeElement(node, templateData);
     }
-    renderTwistie(node, templateData) {
-        templateData.twistie.classList.remove(...Codicon.treeItemExpanded.classNamesArray);
+    renderTreeElement(node, templateData) {
+        const indent = TreeRenderer.DefaultIndent + (node.depth - 1) * this.indent;
+        templateData.twistie.style.paddingLeft = `${indent}px`;
+        templateData.indent.style.width = `${indent + this.indent - 16}px`;
+        if (node.collapsible) {
+            templateData.container.setAttribute('aria-expanded', String(!node.collapsed));
+        }
+        else {
+            templateData.container.removeAttribute('aria-expanded');
+        }
+        templateData.twistie.classList.remove(...ThemeIcon.asClassNameArray(Codicon.treeItemExpanded));
         let twistieRendered = false;
         if (this.renderer.renderTwistie) {
             twistieRendered = this.renderer.renderTwistie(node.element, templateData.twistie);
         }
         if (node.collapsible && (!this.hideTwistiesOfChildlessElements || node.visibleChildrenCount > 0)) {
             if (!twistieRendered) {
-                templateData.twistie.classList.add(...Codicon.treeItemExpanded.classNamesArray);
+                templateData.twistie.classList.add(...ThemeIcon.asClassNameArray(Codicon.treeItemExpanded));
             }
             templateData.twistie.classList.add('collapsible');
             templateData.twistie.classList.toggle('collapsed', node.collapsed);
@@ -298,14 +314,9 @@ class TreeRenderer {
         else {
             templateData.twistie.classList.remove('collapsible', 'collapsed');
         }
-        if (node.collapsible) {
-            templateData.container.setAttribute('aria-expanded', String(!node.collapsed));
-        }
-        else {
-            templateData.container.removeAttribute('aria-expanded');
-        }
+        this._renderIndentGuides(node, templateData);
     }
-    renderIndentGuides(target, templateData) {
+    _renderIndentGuides(node, templateData) {
         clearNode(templateData.indent);
         templateData.indentGuidesDisposable.dispose();
         if (!this.shouldRenderIndentGuides) {
@@ -313,7 +324,6 @@ class TreeRenderer {
         }
         const disposableStore = new DisposableStore();
         const model = this.modelProvider();
-        let node = target;
         while (true) {
             const ref = model.getNodeLocation(node);
             const parentRef = model.getParentNodeLocation(ref);
@@ -379,6 +389,8 @@ class TreeRenderer {
 }
 TreeRenderer.DefaultIndent = 8;
 class FindFilter {
+    get totalCount() { return this._totalCount; }
+    get matchCount() { return this._matchCount; }
     constructor(tree, keyboardNavigationLabelProvider, _filter) {
         this.tree = tree;
         this.keyboardNavigationLabelProvider = keyboardNavigationLabelProvider;
@@ -390,8 +402,6 @@ class FindFilter {
         this.disposables = new DisposableStore();
         tree.onWillRefilter(this.reset, this, this.disposables);
     }
-    get totalCount() { return this._totalCount; }
-    get matchCount() { return this._matchCount; }
     filter(element, parentVisibility) {
         let visibility = 1 /* TreeVisibility.Visible */;
         if (this._filter) {
@@ -421,7 +431,19 @@ class FindFilter {
             if (typeof labelStr === 'undefined') {
                 return { data: FuzzyScore.Default, visibility };
             }
-            const score = fuzzyScore(this._pattern, this._lowercasePattern, 0, labelStr, labelStr.toLowerCase(), 0, { firstMatchCanBeWeak: true, boostFullMatch: true });
+            let score;
+            if (this.tree.findMatchType === TreeFindMatchType.Contiguous) {
+                const index = labelStr.toLowerCase().indexOf(this._lowercasePattern);
+                if (index > -1) {
+                    score = [Number.MAX_SAFE_INTEGER, 0];
+                    for (let i = this._lowercasePattern.length; i > 0; i--) {
+                        score.push(index + i - 1);
+                    }
+                }
+            }
+            else {
+                score = fuzzyScore(this._pattern, this._lowercasePattern, 0, labelStr, labelStr.toLowerCase(), 0, { firstMatchCanBeWeak: true, boostFullMatch: true });
+            }
             if (score) {
                 this._matchCount++;
                 return labels.length === 1 ?
@@ -430,7 +452,15 @@ class FindFilter {
             }
         }
         if (this.tree.findMode === TreeFindMode.Filter) {
-            return 2 /* TreeVisibility.Recurse */;
+            if (typeof this.tree.options.defaultFindVisibility === 'number') {
+                return this.tree.options.defaultFindVisibility;
+            }
+            else if (this.tree.options.defaultFindVisibility) {
+                return this.tree.options.defaultFindVisibility(element);
+            }
+            else {
+                return 2 /* TreeVisibility.Recurse */;
+            }
         }
         else {
             return { data: FuzzyScore.Default, visibility };
@@ -448,22 +478,56 @@ export class ModeToggle extends Toggle {
     constructor(opts) {
         var _a;
         super({
-            icon: Codicon.filter,
+            icon: Codicon.listFilter,
             title: localize('filter', "Filter"),
-            isChecked: (_a = opts === null || opts === void 0 ? void 0 : opts.isChecked) !== null && _a !== void 0 ? _a : false,
-            inputActiveOptionBorder: opts === null || opts === void 0 ? void 0 : opts.inputActiveOptionBorder,
-            inputActiveOptionForeground: opts === null || opts === void 0 ? void 0 : opts.inputActiveOptionForeground,
-            inputActiveOptionBackground: opts === null || opts === void 0 ? void 0 : opts.inputActiveOptionBackground
+            isChecked: (_a = opts.isChecked) !== null && _a !== void 0 ? _a : false,
+            inputActiveOptionBorder: opts.inputActiveOptionBorder,
+            inputActiveOptionForeground: opts.inputActiveOptionForeground,
+            inputActiveOptionBackground: opts.inputActiveOptionBackground
         });
     }
 }
+export class FuzzyToggle extends Toggle {
+    constructor(opts) {
+        var _a;
+        super({
+            icon: Codicon.searchFuzzy,
+            title: localize('fuzzySearch', "Fuzzy Match"),
+            isChecked: (_a = opts.isChecked) !== null && _a !== void 0 ? _a : false,
+            inputActiveOptionBorder: opts.inputActiveOptionBorder,
+            inputActiveOptionForeground: opts.inputActiveOptionForeground,
+            inputActiveOptionBackground: opts.inputActiveOptionBackground
+        });
+    }
+}
+const unthemedFindWidgetStyles = {
+    inputBoxStyles: unthemedInboxStyles,
+    toggleStyles: unthemedToggleStyles,
+    listFilterWidgetBackground: undefined,
+    listFilterWidgetNoMatchesOutline: undefined,
+    listFilterWidgetOutline: undefined,
+    listFilterWidgetShadow: undefined
+};
 export var TreeFindMode;
 (function (TreeFindMode) {
     TreeFindMode[TreeFindMode["Highlight"] = 0] = "Highlight";
     TreeFindMode[TreeFindMode["Filter"] = 1] = "Filter";
 })(TreeFindMode || (TreeFindMode = {}));
+export var TreeFindMatchType;
+(function (TreeFindMatchType) {
+    TreeFindMatchType[TreeFindMatchType["Fuzzy"] = 0] = "Fuzzy";
+    TreeFindMatchType[TreeFindMatchType["Contiguous"] = 1] = "Contiguous";
+})(TreeFindMatchType || (TreeFindMatchType = {}));
 class FindWidget extends Disposable {
-    constructor(container, tree, contextViewProvider, mode, options) {
+    set mode(mode) {
+        this.modeToggle.checked = mode === TreeFindMode.Filter;
+        this.findInput.inputBox.setPlaceHolder(mode === TreeFindMode.Filter ? localize('type to filter', "Type to filter") : localize('type to search', "Type to search"));
+    }
+    set matchType(matchType) {
+        this.matchTypeToggle.checked = matchType === TreeFindMatchType.Fuzzy;
+    }
+    constructor(container, tree, contextViewProvider, mode, matchType, options) {
+        var _a;
         super();
         this.tree = tree;
         this.elements = h('.monaco-tree-type-filter', [
@@ -473,28 +537,63 @@ class FindWidget extends Disposable {
         ]);
         this.width = 0;
         this.right = 0;
+        this.top = 0;
         this._onDidDisable = new Emitter();
         container.appendChild(this.elements.root);
         this._register(toDisposable(() => container.removeChild(this.elements.root)));
-        this.modeToggle = this._register(new ModeToggle(Object.assign(Object.assign({}, options), { isChecked: mode === TreeFindMode.Filter })));
+        const styles = (_a = options === null || options === void 0 ? void 0 : options.styles) !== null && _a !== void 0 ? _a : unthemedFindWidgetStyles;
+        if (styles.listFilterWidgetBackground) {
+            this.elements.root.style.backgroundColor = styles.listFilterWidgetBackground;
+        }
+        if (styles.listFilterWidgetShadow) {
+            this.elements.root.style.boxShadow = `0 0 8px 2px ${styles.listFilterWidgetShadow}`;
+        }
+        this.modeToggle = this._register(new ModeToggle(Object.assign(Object.assign({}, styles.toggleStyles), { isChecked: mode === TreeFindMode.Filter })));
+        this.matchTypeToggle = this._register(new FuzzyToggle(Object.assign(Object.assign({}, styles.toggleStyles), { isChecked: matchType === TreeFindMatchType.Fuzzy })));
         this.onDidChangeMode = Event.map(this.modeToggle.onChange, () => this.modeToggle.checked ? TreeFindMode.Filter : TreeFindMode.Highlight, this._store);
-        this.findInput = this._register(new FindInput(this.elements.findInput, contextViewProvider, false, {
+        this.onDidChangeMatchType = Event.map(this.matchTypeToggle.onChange, () => this.matchTypeToggle.checked ? TreeFindMatchType.Fuzzy : TreeFindMatchType.Contiguous, this._store);
+        this.findInput = this._register(new FindInput(this.elements.findInput, contextViewProvider, {
             label: localize('type to search', "Type to search"),
-            additionalToggles: [this.modeToggle]
+            additionalToggles: [this.modeToggle, this.matchTypeToggle],
+            showCommonFindToggles: false,
+            inputBoxStyles: styles.inputBoxStyles,
+            toggleStyles: styles.toggleStyles,
+            history: options === null || options === void 0 ? void 0 : options.history
         }));
         this.actionbar = this._register(new ActionBar(this.elements.actionbar));
         this.mode = mode;
         const emitter = this._register(new DomEmitter(this.findInput.inputBox.inputElement, 'keydown'));
-        const onKeyDown = this._register(Event.chain(emitter.event))
-            .map(e => new StandardKeyboardEvent(e))
-            .event;
+        const onKeyDown = Event.chain(emitter.event, $ => $.map(e => new StandardKeyboardEvent(e)));
         this._register(onKeyDown((e) => {
-            switch (e.keyCode) {
-                case 18 /* KeyCode.DownArrow */:
-                    e.preventDefault();
-                    e.stopPropagation();
+            // Using equals() so we reserve modified keys for future use
+            if (e.equals(3 /* KeyCode.Enter */)) {
+                // This is the only keyboard way to return to the tree from a history item that isn't the last one
+                e.preventDefault();
+                e.stopPropagation();
+                this.findInput.inputBox.addToHistory();
+                this.tree.domFocus();
+                return;
+            }
+            if (e.equals(18 /* KeyCode.DownArrow */)) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.findInput.inputBox.isAtLastInHistory() || this.findInput.inputBox.isNowhereInHistory()) {
+                    // Retain original pre-history DownArrow behavior
+                    this.findInput.inputBox.addToHistory();
                     this.tree.domFocus();
-                    return;
+                }
+                else {
+                    // Downward through history
+                    this.findInput.inputBox.showNextValue();
+                }
+                return;
+            }
+            if (e.equals(16 /* KeyCode.UpArrow */)) {
+                e.preventDefault();
+                e.stopPropagation();
+                // Upward through history
+                this.findInput.inputBox.showPreviousValue();
+                return;
             }
         }));
         const closeAction = this._register(new Action('close', localize('close', "Close"), 'codicon codicon-close', true, () => this.dispose()));
@@ -506,24 +605,30 @@ class FindWidget extends Disposable {
             const onWindowMouseUp = disposables.add(new DomEmitter(window, 'mouseup'));
             const startRight = this.right;
             const startX = e.pageX;
+            const startTop = this.top;
+            const startY = e.pageY;
             this.elements.grab.classList.add('grabbing');
+            const transition = this.elements.root.style.transition;
+            this.elements.root.style.transition = 'unset';
             const update = (e) => {
                 const deltaX = e.pageX - startX;
                 this.right = startRight - deltaX;
+                const deltaY = e.pageY - startY;
+                this.top = startTop + deltaY;
                 this.layout();
             };
             disposables.add(onWindowMouseMove.event(update));
             disposables.add(onWindowMouseUp.event(e => {
                 update(e);
                 this.elements.grab.classList.remove('grabbing');
+                this.elements.root.style.transition = transition;
                 disposables.dispose();
             }));
         }));
-        const onGrabKeyDown = this._register(Event.chain(this._register(new DomEmitter(this.elements.grab, 'keydown')).event))
-            .map(e => new StandardKeyboardEvent(e))
-            .event;
+        const onGrabKeyDown = Event.chain(this._register(new DomEmitter(this.elements.grab, 'keydown')).event, $ => $.map(e => new StandardKeyboardEvent(e)));
         this._register(onGrabKeyDown((e) => {
             let right;
+            let top;
             if (e.keyCode === 15 /* KeyCode.LeftArrow */) {
                 right = Number.POSITIVE_INFINITY;
             }
@@ -533,33 +638,38 @@ class FindWidget extends Disposable {
             else if (e.keyCode === 10 /* KeyCode.Space */) {
                 right = this.right === 0 ? Number.POSITIVE_INFINITY : 0;
             }
+            if (e.keyCode === 16 /* KeyCode.UpArrow */) {
+                top = 0;
+            }
+            else if (e.keyCode === 18 /* KeyCode.DownArrow */) {
+                top = Number.POSITIVE_INFINITY;
+            }
             if (right !== undefined) {
                 e.preventDefault();
                 e.stopPropagation();
                 this.right = right;
                 this.layout();
             }
+            if (top !== undefined) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.top = top;
+                const transition = this.elements.root.style.transition;
+                this.elements.root.style.transition = 'unset';
+                this.layout();
+                setTimeout(() => {
+                    this.elements.root.style.transition = transition;
+                }, 0);
+            }
         }));
         this.onDidChangeValue = this.findInput.onDidChange;
-        this.style(options !== null && options !== void 0 ? options : {});
-    }
-    set mode(mode) {
-        this.modeToggle.checked = mode === TreeFindMode.Filter;
-        this.findInput.inputBox.setPlaceHolder(mode === TreeFindMode.Filter ? localize('type to filter', "Type to filter") : localize('type to search', "Type to search"));
-    }
-    style(styles) {
-        this.findInput.style(styles);
-        if (styles.listFilterWidgetBackground) {
-            this.elements.root.style.backgroundColor = styles.listFilterWidgetBackground.toString();
-        }
-        if (styles.listFilterWidgetShadow) {
-            this.elements.root.style.boxShadow = `0 0 8px 2px ${styles.listFilterWidgetShadow}`;
-        }
     }
     layout(width = this.width) {
         this.width = width;
         this.right = clamp(this.right, 0, Math.max(0, width - 212));
         this.elements.root.style.right = `${this.right}px`;
+        this.top = clamp(this.top, 0, 24);
+        this.elements.root.style.top = `${this.top}px`;
     }
     showMessage(message) {
         this.findInput.showMessage(message);
@@ -580,24 +690,6 @@ class FindWidget extends Disposable {
     }
 }
 class FindController {
-    constructor(tree, model, view, filter, contextViewProvider) {
-        var _a;
-        this.tree = tree;
-        this.view = view;
-        this.filter = filter;
-        this.contextViewProvider = contextViewProvider;
-        this._pattern = '';
-        this.width = 0;
-        this._onDidChangeMode = new Emitter();
-        this.onDidChangeMode = this._onDidChangeMode.event;
-        this._onDidChangePattern = new Emitter();
-        this._onDidChangeOpenState = new Emitter();
-        this.onDidChangeOpenState = this._onDidChangeOpenState.event;
-        this.enabledDisposables = new DisposableStore();
-        this.disposables = new DisposableStore();
-        this._mode = (_a = tree.options.defaultFindMode) !== null && _a !== void 0 ? _a : TreeFindMode.Highlight;
-        model.onDidSplice(this.onDidSpliceModel, this, this.disposables);
-    }
     get pattern() { return this._pattern; }
     get mode() { return this._mode; }
     set mode(mode) {
@@ -612,6 +704,49 @@ class FindController {
         this.render();
         this._onDidChangeMode.fire(mode);
     }
+    get matchType() { return this._matchType; }
+    set matchType(matchType) {
+        if (matchType === this._matchType) {
+            return;
+        }
+        this._matchType = matchType;
+        if (this.widget) {
+            this.widget.matchType = this._matchType;
+        }
+        this.tree.refilter();
+        this.render();
+        this._onDidChangeMatchType.fire(matchType);
+    }
+    constructor(tree, model, view, filter, contextViewProvider, options = {}) {
+        var _a, _b;
+        this.tree = tree;
+        this.view = view;
+        this.filter = filter;
+        this.contextViewProvider = contextViewProvider;
+        this.options = options;
+        this._pattern = '';
+        this.width = 0;
+        this._onDidChangeMode = new Emitter();
+        this.onDidChangeMode = this._onDidChangeMode.event;
+        this._onDidChangeMatchType = new Emitter();
+        this.onDidChangeMatchType = this._onDidChangeMatchType.event;
+        this._onDidChangePattern = new Emitter();
+        this._onDidChangeOpenState = new Emitter();
+        this.onDidChangeOpenState = this._onDidChangeOpenState.event;
+        this.enabledDisposables = new DisposableStore();
+        this.disposables = new DisposableStore();
+        this._mode = (_a = tree.options.defaultFindMode) !== null && _a !== void 0 ? _a : TreeFindMode.Highlight;
+        this._matchType = (_b = tree.options.defaultFindMatchType) !== null && _b !== void 0 ? _b : TreeFindMatchType.Fuzzy;
+        model.onDidSplice(this.onDidSpliceModel, this, this.disposables);
+    }
+    updateOptions(optionsUpdate = {}) {
+        if (optionsUpdate.defaultFindMode !== undefined) {
+            this.mode = optionsUpdate.defaultFindMode;
+        }
+        if (optionsUpdate.defaultFindMatchType !== undefined) {
+            this.matchType = optionsUpdate.defaultFindMatchType;
+        }
+    }
     onDidSpliceModel() {
         if (!this.widget || this.pattern.length === 0) {
             return;
@@ -620,13 +755,18 @@ class FindController {
         this.render();
     }
     render() {
-        var _a, _b;
+        var _a, _b, _c, _d;
         const noMatches = this.filter.totalCount > 0 && this.filter.matchCount === 0;
         if (this.pattern && noMatches) {
-            (_a = this.widget) === null || _a === void 0 ? void 0 : _a.showMessage({ type: 2 /* MessageType.WARNING */, content: localize('not found', "No elements found.") });
+            if ((_a = this.tree.options.showNotFoundMessage) !== null && _a !== void 0 ? _a : true) {
+                (_b = this.widget) === null || _b === void 0 ? void 0 : _b.showMessage({ type: 2 /* MessageType.WARNING */, content: localize('not found', "No elements found.") });
+            }
+            else {
+                (_c = this.widget) === null || _c === void 0 ? void 0 : _c.showMessage({ type: 2 /* MessageType.WARNING */ });
+            }
         }
         else {
-            (_b = this.widget) === null || _b === void 0 ? void 0 : _b.clearMessage();
+            (_d = this.widget) === null || _d === void 0 ? void 0 : _d.clearMessage();
         }
     }
     shouldAllowFocus(node) {
@@ -638,17 +778,13 @@ class FindController {
         }
         return !FuzzyScore.isDefault(node.filterData);
     }
-    style(styles) {
-        var _a;
-        this.styles = styles;
-        (_a = this.widget) === null || _a === void 0 ? void 0 : _a.style(styles);
-    }
     layout(width) {
         var _a;
         this.width = width;
         (_a = this.widget) === null || _a === void 0 ? void 0 : _a.layout(width);
     }
     dispose() {
+        this._history = undefined;
         this._onDidChangePattern.dispose();
         this.enabledDisposables.dispose();
         this.disposables.dispose();
@@ -680,18 +816,18 @@ function dfs(node, fn) {
  * tree nodes will not be known by the list.
  */
 class Trait {
+    get nodeSet() {
+        if (!this._nodeSet) {
+            this._nodeSet = this.createNodeSet();
+        }
+        return this._nodeSet;
+    }
     constructor(getFirstViewElementWithTrait, identityProvider) {
         this.getFirstViewElementWithTrait = getFirstViewElementWithTrait;
         this.identityProvider = identityProvider;
         this.nodes = [];
         this._onDidChange = new Emitter();
         this.onDidChange = this._onDidChange.event;
-    }
-    get nodeSet() {
-        if (!this._nodeSet) {
-            this._nodeSet = this.createNodeSet();
-        }
-        return this._nodeSet;
     }
     set(nodes, browserEvent) {
         if (!(browserEvent === null || browserEvent === void 0 ? void 0 : browserEvent.__forceEvent) && equals(this.nodes, nodes)) {
@@ -743,7 +879,7 @@ class Trait {
             }
             else {
                 const insertedNode = insertedNodesMap.get(id);
-                if (insertedNode) {
+                if (insertedNode && insertedNode.visible) {
                     nodes.push(insertedNode);
                 }
             }
@@ -775,6 +911,9 @@ class TreeNodeListMouseController extends MouseController {
             isMonacoEditor(e.browserEvent.target)) {
             return;
         }
+        if (e.browserEvent.isHandledByList) {
+            return;
+        }
         const node = e.element;
         if (!node) {
             return super.onViewPointer(e);
@@ -799,12 +938,13 @@ class TreeNodeListMouseController extends MouseController {
             return super.onViewPointer(e);
         }
         if (node.collapsible) {
-            const model = this.tree.model; // internal
-            const location = model.getNodeLocation(node);
+            const location = this.tree.getNodeLocation(node);
             const recursive = e.browserEvent.altKey;
             this.tree.setFocus([location]);
-            model.setCollapsed(location, undefined, recursive);
+            this.tree.toggleCollapsed(location, recursive);
             if (expandOnlyOnTwistieClick && onTwistie) {
+                // Do not set this before calling a handler on the super class, because it will reject it as handled
+                e.browserEvent.isHandledByList = true;
                 return;
             }
         }
@@ -813,6 +953,9 @@ class TreeNodeListMouseController extends MouseController {
     onDoubleClick(e) {
         const onTwistie = e.browserEvent.target.classList.contains('monaco-tl-twistie');
         if (onTwistie || !this.tree.expandOnDoubleClick) {
+            return;
+        }
+        if (e.browserEvent.isHandledByList) {
             return;
         }
         super.onDoubleClick(e);
@@ -886,6 +1029,25 @@ class TreeNodeList extends List {
     }
 }
 export class AbstractTree {
+    get onDidScroll() { return this.view.onDidScroll; }
+    get onDidChangeFocus() { return this.eventBufferer.wrapEvent(this.focus.onDidChange); }
+    get onDidChangeSelection() { return this.eventBufferer.wrapEvent(this.selection.onDidChange); }
+    get onMouseDblClick() { return Event.filter(Event.map(this.view.onMouseDblClick, asTreeMouseEvent), e => e.target !== TreeMouseEventTarget.Filter); }
+    get onPointer() { return Event.map(this.view.onPointer, asTreeMouseEvent); }
+    get onDidFocus() { return this.view.onDidFocus; }
+    get onDidChangeModel() { return Event.signal(this.model.onDidSplice); }
+    get onDidChangeCollapseState() { return this.model.onDidChangeCollapseState; }
+    get findMode() { var _a, _b; return (_b = (_a = this.findController) === null || _a === void 0 ? void 0 : _a.mode) !== null && _b !== void 0 ? _b : TreeFindMode.Highlight; }
+    set findMode(findMode) { if (this.findController) {
+        this.findController.mode = findMode;
+    } }
+    get findMatchType() { var _a, _b; return (_b = (_a = this.findController) === null || _a === void 0 ? void 0 : _a.matchType) !== null && _b !== void 0 ? _b : TreeFindMatchType.Fuzzy; }
+    set findMatchType(findFuzzy) { if (this.findController) {
+        this.findController.matchType = findFuzzy;
+    } }
+    get expandOnDoubleClick() { return typeof this._options.expandOnDoubleClick === 'undefined' ? true : this._options.expandOnDoubleClick; }
+    get expandOnlyOnTwistieClick() { return typeof this._options.expandOnlyOnTwistieClick === 'undefined' ? true : this._options.expandOnlyOnTwistieClick; }
+    get onDidDispose() { return this.view.onDidDispose; }
     constructor(_user, container, delegate, renderers, _options = {}) {
         var _a;
         this._user = _user;
@@ -900,7 +1062,8 @@ export class AbstractTree {
         const onDidChangeCollapseStateRelay = new Relay();
         const onDidChangeActiveNodes = new Relay();
         const activeNodes = this.disposables.add(new EventCollection(onDidChangeActiveNodes.event));
-        this.renderers = renderers.map(r => new TreeRenderer(r, () => this.model, onDidChangeCollapseStateRelay.event, activeNodes, _options));
+        const renderedIndentGuides = new SetMap();
+        this.renderers = renderers.map(r => new TreeRenderer(r, () => this.model, onDidChangeCollapseStateRelay.event, activeNodes, renderedIndentGuides, _options));
         for (const r of this.renderers) {
             this.disposables.add(r);
         }
@@ -928,59 +1091,52 @@ export class AbstractTree {
         // We debounce it with 0 delay since these events may fire in the same stack and we only
         // want to run this once. It also doesn't matter if it runs on the next tick since it's only
         // a nice to have UI feature.
-        onDidChangeActiveNodes.input = Event.chain(Event.any(onDidModelSplice, this.focus.onDidChange, this.selection.onDidChange))
-            .debounce(() => null, 0)
-            .map(() => {
-            const set = new Set();
-            for (const node of this.focus.getNodes()) {
-                set.add(node);
-            }
-            for (const node of this.selection.getNodes()) {
-                set.add(node);
-            }
-            return [...set.values()];
-        }).event;
+        const activeNodesEmitter = this.disposables.add(new Emitter());
+        const activeNodesDebounce = this.disposables.add(new Delayer(0));
+        this.disposables.add(Event.any(onDidModelSplice, this.focus.onDidChange, this.selection.onDidChange)(() => {
+            activeNodesDebounce.trigger(() => {
+                const set = new Set();
+                for (const node of this.focus.getNodes()) {
+                    set.add(node);
+                }
+                for (const node of this.selection.getNodes()) {
+                    set.add(node);
+                }
+                activeNodesEmitter.fire([...set.values()]);
+            });
+        }));
+        onDidChangeActiveNodes.input = activeNodesEmitter.event;
         if (_options.keyboardSupport !== false) {
-            const onKeyDown = Event.chain(this.view.onKeyDown)
-                .filter(e => !isInputElement(e.target))
-                .map(e => new StandardKeyboardEvent(e));
-            onKeyDown.filter(e => e.keyCode === 15 /* KeyCode.LeftArrow */).on(this.onLeftArrow, this, this.disposables);
-            onKeyDown.filter(e => e.keyCode === 17 /* KeyCode.RightArrow */).on(this.onRightArrow, this, this.disposables);
-            onKeyDown.filter(e => e.keyCode === 10 /* KeyCode.Space */).on(this.onSpace, this, this.disposables);
+            const onKeyDown = Event.chain(this.view.onKeyDown, $ => $.filter(e => !isInputElement(e.target))
+                .map(e => new StandardKeyboardEvent(e)));
+            Event.chain(onKeyDown, $ => $.filter(e => e.keyCode === 15 /* KeyCode.LeftArrow */))(this.onLeftArrow, this, this.disposables);
+            Event.chain(onKeyDown, $ => $.filter(e => e.keyCode === 17 /* KeyCode.RightArrow */))(this.onRightArrow, this, this.disposables);
+            Event.chain(onKeyDown, $ => $.filter(e => e.keyCode === 10 /* KeyCode.Space */))(this.onSpace, this, this.disposables);
         }
         if (((_a = _options.findWidgetEnabled) !== null && _a !== void 0 ? _a : true) && _options.keyboardNavigationLabelProvider && _options.contextViewProvider) {
-            this.findController = new FindController(this, this.model, this.view, filter, _options.contextViewProvider);
+            const opts = this.options.findWidgetStyles ? { styles: this.options.findWidgetStyles } : undefined;
+            this.findController = new FindController(this, this.model, this.view, filter, _options.contextViewProvider, opts);
             this.focusNavigationFilter = node => this.findController.shouldAllowFocus(node);
             this.onDidChangeFindOpenState = this.findController.onDidChangeOpenState;
             this.disposables.add(this.findController);
             this.onDidChangeFindMode = this.findController.onDidChangeMode;
+            this.onDidChangeFindMatchType = this.findController.onDidChangeMatchType;
         }
         else {
             this.onDidChangeFindMode = Event.None;
+            this.onDidChangeFindMatchType = Event.None;
         }
         this.styleElement = createStyleSheet(this.view.getHTMLElement());
         this.getHTMLElement().classList.toggle('always', this._options.renderIndentGuides === RenderIndentGuides.Always);
     }
-    get onDidChangeFocus() { return this.eventBufferer.wrapEvent(this.focus.onDidChange); }
-    get onDidChangeSelection() { return this.eventBufferer.wrapEvent(this.selection.onDidChange); }
-    get onMouseDblClick() { return Event.filter(Event.map(this.view.onMouseDblClick, asTreeMouseEvent), e => e.target !== TreeMouseEventTarget.Filter); }
-    get onPointer() { return Event.map(this.view.onPointer, asTreeMouseEvent); }
-    get onDidFocus() { return this.view.onDidFocus; }
-    get onDidChangeModel() { return Event.signal(this.model.onDidSplice); }
-    get onDidChangeCollapseState() { return this.model.onDidChangeCollapseState; }
-    get findMode() { var _a, _b; return (_b = (_a = this.findController) === null || _a === void 0 ? void 0 : _a.mode) !== null && _b !== void 0 ? _b : TreeFindMode.Highlight; }
-    set findMode(findMode) { if (this.findController) {
-        this.findController.mode = findMode;
-    } }
-    get expandOnDoubleClick() { return typeof this._options.expandOnDoubleClick === 'undefined' ? true : this._options.expandOnDoubleClick; }
-    get expandOnlyOnTwistieClick() { return typeof this._options.expandOnlyOnTwistieClick === 'undefined' ? true : this._options.expandOnlyOnTwistieClick; }
-    get onDidDispose() { return this.view.onDidDispose; }
     updateOptions(optionsUpdate = {}) {
+        var _a;
         this._options = Object.assign(Object.assign({}, this._options), optionsUpdate);
         for (const renderer of this.renderers) {
             renderer.updateOptions(optionsUpdate);
         }
         this.view.updateOptions(this._options);
+        (_a = this.findController) === null || _a === void 0 ? void 0 : _a.updateOptions(optionsUpdate);
         this._onDidUpdateOptions.fire(this._options);
         this.getHTMLElement().classList.toggle('always', this._options.renderIndentGuides === RenderIndentGuides.Always);
     }
@@ -997,6 +1153,12 @@ export class AbstractTree {
     set scrollTop(scrollTop) {
         this.view.scrollTop = scrollTop;
     }
+    get scrollHeight() {
+        return this.view.scrollHeight;
+    }
+    get renderHeight() {
+        return this.view.renderHeight;
+    }
     domFocus() {
         this.view.domFocus();
     }
@@ -1008,15 +1170,13 @@ export class AbstractTree {
         }
     }
     style(styles) {
-        var _a;
         const suffix = `.${this.view.domId}`;
         const content = [];
         if (styles.treeIndentGuidesStroke) {
-            content.push(`.monaco-list${suffix}:hover .monaco-tl-indent > .indent-guide, .monaco-list${suffix}.always .monaco-tl-indent > .indent-guide  { border-color: ${styles.treeIndentGuidesStroke.transparent(0.4)}; }`);
+            content.push(`.monaco-list${suffix}:hover .monaco-tl-indent > .indent-guide, .monaco-list${suffix}.always .monaco-tl-indent > .indent-guide  { border-color: ${styles.treeInactiveIndentGuidesStroke}; }`);
             content.push(`.monaco-list${suffix} .monaco-tl-indent > .indent-guide.active { border-color: ${styles.treeIndentGuidesStroke}; }`);
         }
         this.styleElement.textContent = content.join('\n');
-        (_a = this.findController) === null || _a === void 0 ? void 0 : _a.style(styles);
         this.view.style(styles);
     }
     // Tree navigation
@@ -1032,11 +1192,17 @@ export class AbstractTree {
     getNode(location) {
         return this.model.getNode(location);
     }
+    getNodeLocation(node) {
+        return this.model.getNodeLocation(node);
+    }
     collapse(location, recursive = false) {
         return this.model.setCollapsed(location, true, recursive);
     }
     expand(location, recursive = false) {
         return this.model.setCollapsed(location, false, recursive);
+    }
+    toggleCollapsed(location, recursive = false) {
+        return this.model.setCollapsed(location, undefined, recursive);
     }
     isCollapsible(location) {
         return this.model.isCollapsible(location);

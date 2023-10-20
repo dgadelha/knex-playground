@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 import './textAreaHandler.css';
 import * as nls from '../../../nls.js';
 import * as browser from '../../../base/browser/browser.js';
@@ -22,6 +31,8 @@ import { Selection } from '../../common/core/selection.js';
 import { MOUSE_CURSOR_TEXT_CSS_CLASS_NAME } from '../../../base/browser/ui/mouseCursor/mouseCursor.js';
 import { TokenizationRegistry } from '../../common/languages.js';
 import { Color } from '../../../base/common/color.js';
+import { IME } from '../../../base/common/ime.js';
+import { IKeybindingService } from '../../../platform/keybinding/common/keybinding.js';
 class VisibleTextAreaData {
     constructor(_context, modelLineNumber, distanceToModelLineStart, widthOfHiddenLineTextBefore, distanceToModelLineEnd) {
         this._context = _context;
@@ -77,10 +88,10 @@ class VisibleTextAreaData {
     }
 }
 const canUseZeroSizeTextarea = (browser.isFirefox);
-export class TextAreaHandler extends ViewPart {
-    constructor(context, viewController, visibleRangeProvider) {
+let TextAreaHandler = class TextAreaHandler extends ViewPart {
+    constructor(context, viewController, visibleRangeProvider, _keybindingService) {
         super(context);
-        // --- end view API
+        this._keybindingService = _keybindingService;
         this._primaryCursorPosition = new Position(1, 1);
         this._primaryCursorVisibleRange = null;
         this._viewController = viewController;
@@ -88,15 +99,15 @@ export class TextAreaHandler extends ViewPart {
         this._scrollLeft = 0;
         this._scrollTop = 0;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(133 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         this._setAccessibilityOptions(options);
         this._contentLeft = layoutInfo.contentLeft;
         this._contentWidth = layoutInfo.contentWidth;
         this._contentHeight = layoutInfo.height;
-        this._fontInfo = options.get(46 /* EditorOption.fontInfo */);
-        this._lineHeight = options.get(61 /* EditorOption.lineHeight */);
-        this._emptySelectionClipboard = options.get(33 /* EditorOption.emptySelectionClipboard */);
-        this._copyWithSyntaxHighlighting = options.get(21 /* EditorOption.copyWithSyntaxHighlighting */);
+        this._fontInfo = options.get(50 /* EditorOption.fontInfo */);
+        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._emptySelectionClipboard = options.get(37 /* EditorOption.emptySelectionClipboard */);
+        this._copyWithSyntaxHighlighting = options.get(25 /* EditorOption.copyWithSyntaxHighlighting */);
         this._visibleTextArea = null;
         this._selections = [new Selection(1, 1, 1, 1)];
         this._modelSelections = [new Selection(1, 1, 1, 1)];
@@ -105,21 +116,21 @@ export class TextAreaHandler extends ViewPart {
         this.textArea = createFastDomNode(document.createElement('textarea'));
         PartFingerprints.write(this.textArea, 6 /* PartFingerprint.TextArea */);
         this.textArea.setClassName(`inputarea ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME}`);
-        this.textArea.setAttribute('wrap', 'off');
+        this.textArea.setAttribute('wrap', this._textAreaWrapping && !this._visibleTextArea ? 'on' : 'off');
+        const { tabSize } = this._context.viewModel.model.getOptions();
+        this.textArea.domNode.style.tabSize = `${tabSize * this._fontInfo.spaceWidth}px`;
         this.textArea.setAttribute('autocorrect', 'off');
         this.textArea.setAttribute('autocapitalize', 'off');
         this.textArea.setAttribute('autocomplete', 'off');
         this.textArea.setAttribute('spellcheck', 'false');
         this.textArea.setAttribute('aria-label', this._getAriaLabel(options));
-        this.textArea.setAttribute('tabindex', String(options.get(114 /* EditorOption.tabIndex */)));
+        this.textArea.setAttribute('aria-required', options.get(5 /* EditorOption.ariaRequired */) ? 'true' : 'false');
+        this.textArea.setAttribute('tabindex', String(options.get(123 /* EditorOption.tabIndex */)));
         this.textArea.setAttribute('role', 'textbox');
         this.textArea.setAttribute('aria-roledescription', nls.localize('editor', "editor"));
         this.textArea.setAttribute('aria-multiline', 'true');
-        this.textArea.setAttribute('aria-haspopup', 'false');
-        this.textArea.setAttribute('aria-autocomplete', 'both');
-        if (options.get(30 /* EditorOption.domReadOnly */) && options.get(83 /* EditorOption.readOnly */)) {
-            this.textArea.setAttribute('readonly', 'true');
-        }
+        this.textArea.setAttribute('aria-autocomplete', options.get(90 /* EditorOption.readOnly */) ? 'none' : 'both');
+        this._ensureReadOnlyAttribute();
         this.textAreaCover = createFastDomNode(document.createElement('div'));
         this.textAreaCover.setPosition('absolute');
         const simpleModel = {
@@ -131,6 +142,12 @@ export class TextAreaHandler extends ViewPart {
             },
             getValueInRange: (range, eol) => {
                 return this._context.viewModel.getValueInRange(range, eol);
+            },
+            getValueLengthInRange: (range, eol) => {
+                return this._context.viewModel.getValueLengthInRange(range, eol);
+            },
+            modifyPosition: (position, offset) => {
+                return this._context.viewModel.modifyPosition(position, offset);
             }
         };
         const textAreaInputHost = {
@@ -157,7 +174,7 @@ export class TextAreaHandler extends ViewPart {
                     mode
                 };
             },
-            getScreenReaderContent: (currentState) => {
+            getScreenReaderContent: () => {
                 if (this._accessibilitySupport === 1 /* AccessibilitySupport.Disabled */) {
                     // We know for a fact that a screen reader is not attached
                     // On OSX, we write the character before the cursor to allow for "long-press" composition
@@ -170,15 +187,24 @@ export class TextAreaHandler extends ViewPart {
                             textBefore = this._getCharacterBeforePosition(position);
                         }
                         if (textBefore.length > 0) {
-                            return new TextAreaState(textBefore, textBefore.length, textBefore.length, position, position);
+                            return new TextAreaState(textBefore, textBefore.length, textBefore.length, Range.fromPositions(position), 0);
                         }
+                    }
+                    // on macOS, write current selection into textarea will allow system text services pick selected text,
+                    // but we still want to limit the amount of text given Chromium handles very poorly text even of a few
+                    // thousand chars
+                    // (https://github.com/microsoft/vscode/issues/27799)
+                    const LIMIT_CHARS = 500;
+                    if (platform.isMacintosh && !selection.isEmpty() && simpleModel.getValueLengthInRange(selection, 0 /* EndOfLinePreference.TextDefined */) < LIMIT_CHARS) {
+                        const text = simpleModel.getValueInRange(selection, 0 /* EndOfLinePreference.TextDefined */);
+                        return new TextAreaState(text, 0, text.length, selection, 0);
                     }
                     // on Safari, document.execCommand('cut') and document.execCommand('copy') will just not work
                     // if the textarea has no content selected. So if there is an editor selection, ensure something
                     // is selected in the textarea.
                     if (browser.isSafari && !selection.isEmpty()) {
                         const placeholderText = 'vscode-placeholder';
-                        return new TextAreaState(placeholderText, 0, placeholderText.length, null, null);
+                        return new TextAreaState(placeholderText, 0, placeholderText.length, null, undefined);
                     }
                     return TextAreaState.EMPTY;
                 }
@@ -192,19 +218,24 @@ export class TextAreaHandler extends ViewPart {
                         const position = selection.getStartPosition();
                         const [wordAtPosition, positionOffsetInWord] = this._getAndroidWordAtPosition(position);
                         if (wordAtPosition.length > 0) {
-                            return new TextAreaState(wordAtPosition, positionOffsetInWord, positionOffsetInWord, position, position);
+                            return new TextAreaState(wordAtPosition, positionOffsetInWord, positionOffsetInWord, Range.fromPositions(position), 0);
                         }
                     }
                     return TextAreaState.EMPTY;
                 }
-                return PagedScreenReaderStrategy.fromEditorSelection(currentState, simpleModel, this._selections[0], this._accessibilityPageSize, this._accessibilitySupport === 0 /* AccessibilitySupport.Unknown */);
+                return PagedScreenReaderStrategy.fromEditorSelection(simpleModel, this._selections[0], this._accessibilityPageSize, this._accessibilitySupport === 0 /* AccessibilitySupport.Unknown */);
             },
             deduceModelPosition: (viewAnchorPosition, deltaOffset, lineFeedCnt) => {
                 return this._context.viewModel.deduceModelPositionRelativeToViewPosition(viewAnchorPosition, deltaOffset, lineFeedCnt);
             }
         };
         const textAreaWrapper = this._register(new TextAreaWrapper(this.textArea.domNode));
-        this._textAreaInput = this._register(new TextAreaInput(textAreaInputHost, textAreaWrapper, platform.OS, browser));
+        this._textAreaInput = this._register(new TextAreaInput(textAreaInputHost, textAreaWrapper, platform.OS, {
+            isAndroid: browser.isAndroid,
+            isChrome: browser.isChrome,
+            isFirefox: browser.isFirefox,
+            isSafari: browser.isSafari,
+        }));
         this._register(this._textAreaInput.onKeyDown((e) => {
             this._viewController.emitKeyDown(e);
         }));
@@ -276,7 +307,8 @@ export class TextAreaHandler extends ViewPart {
                 const visibleBeforeCharCount = Math.min(startModelPosition.column - 1, desiredVisibleBeforeCharCount);
                 const distanceToModelLineStart = startModelPosition.column - 1 - visibleBeforeCharCount;
                 const hiddenLineTextBefore = lineTextBeforeSelection.substring(0, lineTextBeforeSelection.length - visibleBeforeCharCount);
-                const widthOfHiddenTextBefore = measureText(hiddenLineTextBefore, this._fontInfo);
+                const { tabSize } = this._context.viewModel.model.getOptions();
+                const widthOfHiddenTextBefore = measureText(this.textArea.domNode.ownerDocument, hiddenLineTextBefore, this._fontInfo, tabSize);
                 return { distanceToModelLineStart, widthOfHiddenTextBefore };
             })();
             const { distanceToModelLineEnd } = (() => {
@@ -294,6 +326,8 @@ export class TextAreaHandler extends ViewPart {
             // Scroll to reveal the location in the editor where composition occurs
             this._context.viewModel.revealRange('keyboard', true, Range.fromPositions(this._selections[0].getStartPosition()), 0 /* viewEvents.VerticalRevealType.Simple */, 1 /* ScrollType.Immediate */);
             this._visibleTextArea = new VisibleTextAreaData(this._context, modelSelection.startLineNumber, distanceToModelLineStart, widthOfHiddenTextBefore, distanceToModelLineEnd);
+            // We turn off wrapping if the <textarea> becomes visible for composition
+            this.textArea.setAttribute('wrap', this._textAreaWrapping && !this._visibleTextArea ? 'on' : 'off');
             this._visibleTextArea.prepareRender(this._visibleRangeProvider);
             this._render();
             // Show the textarea
@@ -310,6 +344,8 @@ export class TextAreaHandler extends ViewPart {
         }));
         this._register(this._textAreaInput.onCompositionEnd(() => {
             this._visibleTextArea = null;
+            // We turn on wrapping as necessary if the <textarea> hides after composition
+            this.textArea.setAttribute('wrap', this._textAreaWrapping && !this._visibleTextArea ? 'on' : 'off');
             this._render();
             this.textArea.setClassName(`inputarea ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME}`);
             this._viewController.compositionEnd();
@@ -321,6 +357,12 @@ export class TextAreaHandler extends ViewPart {
         this._register(this._textAreaInput.onBlur(() => {
             this._context.viewModel.setHasFocus(false);
         }));
+        this._register(IME.onDidChange(() => {
+            this._ensureReadOnlyAttribute();
+        }));
+    }
+    writeScreenReaderContent(reason) {
+        this._textAreaInput.writeScreenReaderContent(reason);
     }
     dispose() {
         super.dispose();
@@ -367,7 +409,7 @@ export class TextAreaHandler extends ViewPart {
     }
     _getWordBeforePosition(position) {
         const lineContent = this._context.viewModel.getLineContent(position.lineNumber);
-        const wordSeparators = getMapForWordSeparators(this._context.configuration.options.get(119 /* EditorOption.wordSeparators */));
+        const wordSeparators = getMapForWordSeparators(this._context.configuration.options.get(129 /* EditorOption.wordSeparators */));
         let column = position.column;
         let distance = 0;
         while (column > 1) {
@@ -392,9 +434,26 @@ export class TextAreaHandler extends ViewPart {
         return '';
     }
     _getAriaLabel(options) {
+        var _a, _b, _c;
         const accessibilitySupport = options.get(2 /* EditorOption.accessibilitySupport */);
         if (accessibilitySupport === 1 /* AccessibilitySupport.Disabled */) {
-            return nls.localize('accessibilityOffAriaLabel', "The editor is not accessible at this time. Press {0} for options.", platform.isLinux ? 'Shift+Alt+F1' : 'Alt+F1');
+            const toggleKeybindingLabel = (_a = this._keybindingService.lookupKeybinding('editor.action.toggleScreenReaderAccessibilityMode')) === null || _a === void 0 ? void 0 : _a.getAriaLabel();
+            const runCommandKeybindingLabel = (_b = this._keybindingService.lookupKeybinding('workbench.action.showCommands')) === null || _b === void 0 ? void 0 : _b.getAriaLabel();
+            const keybindingEditorKeybindingLabel = (_c = this._keybindingService.lookupKeybinding('workbench.action.openGlobalKeybindings')) === null || _c === void 0 ? void 0 : _c.getAriaLabel();
+            const editorNotAccessibleMessage = nls.localize('accessibilityModeOff', "The editor is not accessible at this time.");
+            if (toggleKeybindingLabel) {
+                return nls.localize('accessibilityOffAriaLabel', "{0} To enable screen reader optimized mode, use {1}", editorNotAccessibleMessage, toggleKeybindingLabel);
+            }
+            else if (runCommandKeybindingLabel) {
+                return nls.localize('accessibilityOffAriaLabelNoKb', "{0} To enable screen reader optimized mode, open the quick pick with {1} and run the command Toggle Screen Reader Accessibility Mode, which is currently not triggerable via keyboard.", editorNotAccessibleMessage, runCommandKeybindingLabel);
+            }
+            else if (keybindingEditorKeybindingLabel) {
+                return nls.localize('accessibilityOffAriaLabelNoKbs', "{0} Please assign a keybinding for the command Toggle Screen Reader Accessibility Mode by accessing the keybindings editor with {1} and run it.", editorNotAccessibleMessage, keybindingEditorKeybindingLabel);
+            }
+            else {
+                // SOS
+                return editorNotAccessibleMessage;
+            }
         }
         return options.get(4 /* EditorOption.ariaLabel */);
     }
@@ -408,28 +467,42 @@ export class TextAreaHandler extends ViewPart {
         else {
             this._accessibilityPageSize = accessibilityPageSize;
         }
+        // When wrapping is enabled and a screen reader might be attached,
+        // we will size the textarea to match the width used for wrapping points computation (see `domLineBreaksComputer.ts`).
+        // This is because screen readers will read the text in the textarea and we'd like that the
+        // wrapping points in the textarea match the wrapping points in the editor.
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const wrappingColumn = layoutInfo.wrappingColumn;
+        if (wrappingColumn !== -1 && this._accessibilitySupport !== 1 /* AccessibilitySupport.Disabled */) {
+            const fontInfo = options.get(50 /* EditorOption.fontInfo */);
+            this._textAreaWrapping = true;
+            this._textAreaWidth = Math.round(wrappingColumn * fontInfo.typicalHalfwidthCharacterWidth);
+        }
+        else {
+            this._textAreaWrapping = false;
+            this._textAreaWidth = (canUseZeroSizeTextarea ? 0 : 1);
+        }
     }
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(133 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         this._setAccessibilityOptions(options);
         this._contentLeft = layoutInfo.contentLeft;
         this._contentWidth = layoutInfo.contentWidth;
         this._contentHeight = layoutInfo.height;
-        this._fontInfo = options.get(46 /* EditorOption.fontInfo */);
-        this._lineHeight = options.get(61 /* EditorOption.lineHeight */);
-        this._emptySelectionClipboard = options.get(33 /* EditorOption.emptySelectionClipboard */);
-        this._copyWithSyntaxHighlighting = options.get(21 /* EditorOption.copyWithSyntaxHighlighting */);
+        this._fontInfo = options.get(50 /* EditorOption.fontInfo */);
+        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._emptySelectionClipboard = options.get(37 /* EditorOption.emptySelectionClipboard */);
+        this._copyWithSyntaxHighlighting = options.get(25 /* EditorOption.copyWithSyntaxHighlighting */);
+        this.textArea.setAttribute('wrap', this._textAreaWrapping && !this._visibleTextArea ? 'on' : 'off');
+        const { tabSize } = this._context.viewModel.model.getOptions();
+        this.textArea.domNode.style.tabSize = `${tabSize * this._fontInfo.spaceWidth}px`;
         this.textArea.setAttribute('aria-label', this._getAriaLabel(options));
-        this.textArea.setAttribute('tabindex', String(options.get(114 /* EditorOption.tabIndex */)));
-        if (e.hasChanged(30 /* EditorOption.domReadOnly */) || e.hasChanged(83 /* EditorOption.readOnly */)) {
-            if (options.get(30 /* EditorOption.domReadOnly */) && options.get(83 /* EditorOption.readOnly */)) {
-                this.textArea.setAttribute('readonly', 'true');
-            }
-            else {
-                this.textArea.removeAttribute('readonly');
-            }
+        this.textArea.setAttribute('aria-required', options.get(5 /* EditorOption.ariaRequired */) ? 'true' : 'false');
+        this.textArea.setAttribute('tabindex', String(options.get(123 /* EditorOption.tabIndex */)));
+        if (e.hasChanged(34 /* EditorOption.domReadOnly */) || e.hasChanged(90 /* EditorOption.readOnly */)) {
+            this._ensureReadOnlyAttribute();
         }
         if (e.hasChanged(2 /* EditorOption.accessibilitySupport */)) {
             this._textAreaInput.writeScreenReaderContent('strategy changed');
@@ -439,6 +512,8 @@ export class TextAreaHandler extends ViewPart {
     onCursorStateChanged(e) {
         this._selections = e.selections.slice(0);
         this._modelSelections = e.modelSelections.slice(0);
+        // We must update the <textarea> synchronously, otherwise long press IME on macos breaks.
+        // See https://github.com/microsoft/vscode/issues/165821
         this._textAreaInput.writeScreenReaderContent('selection changed');
         return true;
     }
@@ -492,6 +567,19 @@ export class TextAreaHandler extends ViewPart {
             this.textArea.setAttribute('role', options.role);
         }
     }
+    // --- end view API
+    _ensureReadOnlyAttribute() {
+        const options = this._context.configuration.options;
+        // When someone requests to disable IME, we set the "readonly" attribute on the <textarea>.
+        // This will prevent composition.
+        const useReadOnly = !IME.enabled || (options.get(34 /* EditorOption.domReadOnly */) && options.get(90 /* EditorOption.readOnly */));
+        if (useReadOnly) {
+            this.textArea.setAttribute('readonly', 'true');
+        }
+        else {
+            this.textArea.removeAttribute('readonly');
+        }
+    }
     prepareRender(ctx) {
         var _a;
         this._primaryCursorPosition = new Position(this._selections[0].positionLineNumber, this._selections[0].positionColumn);
@@ -503,6 +591,7 @@ export class TextAreaHandler extends ViewPart {
         this._render();
     }
     _render() {
+        var _a;
         if (this._visibleTextArea) {
             // The text area is visible for composition reasons
             const visibleStart = this._visibleTextArea.visibleTextareaStart;
@@ -583,24 +672,24 @@ export class TextAreaHandler extends ViewPart {
             // We will also make the fontSize and lineHeight the correct dimensions to help with the placement of these pickers
             this._doRender({
                 lastRenderPosition: this._primaryCursorPosition,
-                top: top,
-                left: left,
-                width: (canUseZeroSizeTextarea ? 0 : 1),
+                top,
+                left: this._textAreaWrapping ? this._contentLeft : left,
+                width: this._textAreaWidth,
                 height: this._lineHeight,
                 useCover: false
             });
             // In case the textarea contains a word, we're going to try to align the textarea's cursor
             // with our cursor by scrolling the textarea as much as possible
             this.textArea.domNode.scrollLeft = this._primaryCursorVisibleRange.left;
-            const lineCount = this._newlinecount(this.textArea.domNode.value.substr(0, this.textArea.domNode.selectionStart));
+            const lineCount = (_a = this._textAreaInput.textAreaState.newlineCountBeforeSelection) !== null && _a !== void 0 ? _a : this._newlinecount(this.textArea.domNode.value.substr(0, this.textArea.domNode.selectionStart));
             this.textArea.domNode.scrollTop = lineCount * this._lineHeight;
             return;
         }
         this._doRender({
             lastRenderPosition: this._primaryCursorPosition,
             top: top,
-            left: left,
-            width: (canUseZeroSizeTextarea ? 0 : 1),
+            left: this._textAreaWrapping ? this._contentLeft : left,
+            width: this._textAreaWidth,
             height: (canUseZeroSizeTextarea ? 0 : 1),
             useCover: false
         });
@@ -624,7 +713,7 @@ export class TextAreaHandler extends ViewPart {
             lastRenderPosition: null,
             top: 0,
             left: 0,
-            width: (canUseZeroSizeTextarea ? 0 : 1),
+            width: this._textAreaWidth,
             height: (canUseZeroSizeTextarea ? 0 : 1),
             useCover: true
         });
@@ -650,11 +739,11 @@ export class TextAreaHandler extends ViewPart {
         tac.setWidth(renderData.useCover ? renderData.width : 0);
         tac.setHeight(renderData.useCover ? renderData.height : 0);
         const options = this._context.configuration.options;
-        if (options.get(52 /* EditorOption.glyphMargin */)) {
+        if (options.get(57 /* EditorOption.glyphMargin */)) {
             tac.setClassName('monaco-editor-background textAreaCover ' + Margin.OUTER_CLASS_NAME);
         }
         else {
-            if (options.get(62 /* EditorOption.lineNumbers */).renderType !== 0 /* RenderLineNumbersType.Off */) {
+            if (options.get(67 /* EditorOption.lineNumbers */).renderType !== 0 /* RenderLineNumbersType.Off */) {
                 tac.setClassName('monaco-editor-background textAreaCover ' + LineNumbersOverlay.CLASS_NAME);
             }
             else {
@@ -662,8 +751,12 @@ export class TextAreaHandler extends ViewPart {
             }
         }
     }
-}
-function measureText(text, fontInfo) {
+};
+TextAreaHandler = __decorate([
+    __param(3, IKeybindingService)
+], TextAreaHandler);
+export { TextAreaHandler };
+function measureText(document, text, fontInfo, tabSize) {
     if (text.length === 0) {
         return 0;
     }
@@ -674,6 +767,7 @@ function measureText(text, fontInfo) {
     const regularDomNode = document.createElement('span');
     applyFontInfo(regularDomNode, fontInfo);
     regularDomNode.style.whiteSpace = 'pre'; // just like the textarea
+    regularDomNode.style.tabSize = `${tabSize * fontInfo.spaceWidth}px`; // just like the textarea
     regularDomNode.append(text);
     container.appendChild(regularDomNode);
     document.body.appendChild(container);

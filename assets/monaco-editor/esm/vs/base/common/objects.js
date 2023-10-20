@@ -2,23 +2,17 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { isArray, isTypedArray, isObject, isUndefinedOrNull } from './types.js';
+import { isTypedArray, isObject, isUndefinedOrNull } from './types.js';
 export function deepClone(obj) {
     if (!obj || typeof obj !== 'object') {
         return obj;
     }
     if (obj instanceof RegExp) {
-        // See https://github.com/microsoft/TypeScript/issues/10990
         return obj;
     }
     const result = Array.isArray(obj) ? [] : {};
-    Object.keys(obj).forEach((key) => {
-        if (obj[key] && typeof obj[key] === 'object') {
-            result[key] = deepClone(obj[key]);
-        }
-        else {
-            result[key] = obj[key];
-        }
+    Object.entries(obj).forEach(([key, value]) => {
+        result[key] = value && typeof value === 'object' ? deepClone(value) : value;
     });
     return result;
 }
@@ -53,7 +47,7 @@ function _cloneAndChange(obj, changer, seen) {
     if (typeof changed !== 'undefined') {
         return changed;
     }
-    if (isArray(obj)) {
+    if (Array.isArray(obj)) {
         const r1 = [];
         for (const e of obj) {
             r1.push(_cloneAndChange(e, changer, seen));
@@ -152,4 +146,34 @@ export function equals(one, other) {
         }
     }
     return true;
+}
+export function getAllPropertyNames(obj) {
+    let res = [];
+    while (Object.prototype !== obj) {
+        res = res.concat(Object.getOwnPropertyNames(obj));
+        obj = Object.getPrototypeOf(obj);
+    }
+    return res;
+}
+export function getAllMethodNames(obj) {
+    const methods = [];
+    for (const prop of getAllPropertyNames(obj)) {
+        if (typeof obj[prop] === 'function') {
+            methods.push(prop);
+        }
+    }
+    return methods;
+}
+export function createProxyObject(methodNames, invoke) {
+    const createProxyMethod = (method) => {
+        return function () {
+            const args = Array.prototype.slice.call(arguments, 0);
+            return invoke(method, args);
+        };
+    };
+    const result = {};
+    for (const methodName of methodNames) {
+        result[methodName] = createProxyMethod(methodName);
+    }
+    return result;
 }

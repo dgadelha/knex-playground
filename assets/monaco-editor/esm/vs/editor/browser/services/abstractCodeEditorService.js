@@ -24,10 +24,12 @@ let AbstractCodeEditorService = class AbstractCodeEditorService extends Disposab
     constructor(_themeService) {
         super();
         this._themeService = _themeService;
+        this._onWillCreateCodeEditor = this._register(new Emitter());
         this._onCodeEditorAdd = this._register(new Emitter());
         this.onCodeEditorAdd = this._onCodeEditorAdd.event;
         this._onCodeEditorRemove = this._register(new Emitter());
         this.onCodeEditorRemove = this._onCodeEditorRemove.event;
+        this._onWillCreateDiffEditor = this._register(new Emitter());
         this._onDiffEditorAdd = this._register(new Emitter());
         this.onDiffEditorAdd = this._onDiffEditorAdd.event;
         this._onDiffEditorRemove = this._register(new Emitter());
@@ -38,6 +40,9 @@ let AbstractCodeEditorService = class AbstractCodeEditorService extends Disposab
         this._codeEditors = Object.create(null);
         this._diffEditors = Object.create(null);
         this._globalStyleSheet = null;
+    }
+    willCreateCodeEditor() {
+        this._onWillCreateCodeEditor.fire();
     }
     addCodeEditor(editor) {
         this._codeEditors[editor.getId()] = editor;
@@ -51,14 +56,12 @@ let AbstractCodeEditorService = class AbstractCodeEditorService extends Disposab
     listCodeEditors() {
         return Object.keys(this._codeEditors).map(id => this._codeEditors[id]);
     }
+    willCreateDiffEditor() {
+        this._onWillCreateDiffEditor.fire();
+    }
     addDiffEditor(editor) {
         this._diffEditors[editor.getId()] = editor;
         this._onDiffEditorAdd.fire(editor);
-    }
-    removeDiffEditor(editor) {
-        if (delete this._diffEditors[editor.getId()]) {
-            this._onDiffEditorRemove.fire(editor);
-        }
     }
     listDiffEditors() {
         return Object.keys(this._diffEditors).map(id => this._diffEditors[id]);

@@ -20,31 +20,9 @@ import { IModelService } from './model.js';
 import { Range } from '../core/range.js';
 import { Schemas } from '../../../base/common/network.js';
 import { Emitter } from '../../../base/common/event.js';
-import { minimapWarning, minimapError } from '../../../platform/theme/common/colorRegistry.js';
-import { ResourceMap } from '../../../base/common/map.js';
-class MarkerDecorations extends Disposable {
-    constructor(model) {
-        super();
-        this.model = model;
-        this._markersData = new Map();
-        this._register(toDisposable(() => {
-            this.model.deltaDecorations([...this._markersData.keys()], []);
-            this._markersData.clear();
-        }));
-    }
-    update(markers, newDecorations) {
-        const oldIds = [...this._markersData.keys()];
-        this._markersData.clear();
-        const ids = this.model.deltaDecorations(oldIds, newDecorations);
-        for (let index = 0; index < ids.length; index++) {
-            this._markersData.set(ids[index], markers[index]);
-        }
-        return oldIds.length !== 0 || ids.length !== 0;
-    }
-    getMarker(decoration) {
-        return this._markersData.get(decoration.id);
-    }
-}
+import { minimapInfo, minimapWarning, minimapError } from '../../../platform/theme/common/colorRegistry.js';
+import { BidirectionalMap, ResourceMap } from '../../../base/common/map.js';
+import { diffSets } from '../../../base/common/collections.js';
 let MarkerDecorationsService = class MarkerDecorationsService extends Disposable {
     constructor(modelService, _markerService) {
         super();
@@ -95,15 +73,51 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
     _updateDecorations(markerDecorations) {
         // Limit to the first 500 errors/warnings
         const markers = this._markerService.read({ resource: markerDecorations.model.uri, take: 500 });
-        const newModelDecorations = markers.map((marker) => {
+        if (markerDecorations.update(markers)) {
+            this._onDidChangeMarker.fire(markerDecorations.model);
+        }
+    }
+};
+MarkerDecorationsService = __decorate([
+    __param(0, IModelService),
+    __param(1, IMarkerService)
+], MarkerDecorationsService);
+export { MarkerDecorationsService };
+class MarkerDecorations extends Disposable {
+    constructor(model) {
+        super();
+        this.model = model;
+        this._map = new BidirectionalMap();
+        this._register(toDisposable(() => {
+            this.model.deltaDecorations([...this._map.values()], []);
+            this._map.clear();
+        }));
+    }
+    update(markers) {
+        // We use the fact that marker instances are not recreated when different owners
+        // update. So we can compare references to find out what changed since the last update.
+        const { added, removed } = diffSets(new Set(this._map.keys()), new Set(markers));
+        if (added.length === 0 && removed.length === 0) {
+            return false;
+        }
+        const oldIds = removed.map(marker => this._map.get(marker));
+        const newDecorations = added.map(marker => {
             return {
-                range: this._createDecorationRange(markerDecorations.model, marker),
+                range: this._createDecorationRange(this.model, marker),
                 options: this._createDecorationOption(marker)
             };
         });
-        if (markerDecorations.update(markers, newModelDecorations)) {
-            this._onDidChangeMarker.fire(markerDecorations.model);
+        const ids = this.model.deltaDecorations(oldIds, newDecorations);
+        for (const removedMarker of removed) {
+            this._map.delete(removedMarker);
         }
+        for (let index = 0; index < ids.length; index++) {
+            this._map.set(added[index], ids[index]);
+        }
+        return true;
+    }
+    getMarker(decoration) {
+        return this._map.getKey(decoration.id);
     }
     _createDecorationRange(model, rawMarker) {
         let ret = Range.lift(rawMarker);
@@ -154,6 +168,15 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
                 }
                 zIndex = 0;
                 break;
+            case MarkerSeverity.Info:
+                className = "squiggly-info" /* ClassName.EditorInfoDecoration */;
+                color = themeColorFromId(overviewRulerInfo);
+                zIndex = 10;
+                minimap = {
+                    color: themeColorFromId(minimapInfo),
+                    position: MinimapPosition.Inline
+                };
+                break;
             case MarkerSeverity.Warning:
                 className = "squiggly-warning" /* ClassName.EditorWarningDecoration */;
                 color = themeColorFromId(overviewRulerWarning);
@@ -162,11 +185,6 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
                     color: themeColorFromId(minimapWarning),
                     position: MinimapPosition.Inline
                 };
-                break;
-            case MarkerSeverity.Info:
-                className = "squiggly-info" /* ClassName.EditorInfoDecoration */;
-                color = themeColorFromId(overviewRulerInfo);
-                zIndex = 10;
                 break;
             case MarkerSeverity.Error:
             default:
@@ -207,9 +225,4 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
         }
         return false;
     }
-};
-MarkerDecorationsService = __decorate([
-    __param(0, IModelService),
-    __param(1, IMarkerService)
-], MarkerDecorationsService);
-export { MarkerDecorationsService };
+}

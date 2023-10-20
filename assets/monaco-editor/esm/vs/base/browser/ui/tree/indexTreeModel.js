@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 import { TreeError } from './tree.js';
 import { splice, tail2 } from '../../../common/arrays.js';
-import { Delayer, MicrotaskDelay } from '../../../common/async.js';
+import { Delayer } from '../../../common/async.js';
+import { MicrotaskDelay } from '../../../common/symbols.js';
 import { LcsDiff } from '../../../common/diff/diff.js';
 import { Emitter, EventBufferer } from '../../../common/event.js';
 import { Iterable } from '../../../common/iterator.js';
@@ -330,10 +331,10 @@ export class IndexTreeModel {
         }
         const childElements = treeElement.children || Iterable.empty();
         const childRevealed = revealed && visibility !== 0 /* TreeVisibility.Hidden */ && !node.collapsed;
-        const childNodes = Iterable.map(childElements, el => this.createTreeNode(el, node, visibility, childRevealed, treeListElements, onDidCreateNode));
         let visibleChildrenCount = 0;
         let renderNodeCount = 1;
-        for (const child of childNodes) {
+        for (const el of childElements) {
+            const child = this.createTreeNode(el, node, visibility, childRevealed, treeListElements, onDidCreateNode);
             node.children.push(child);
             renderNodeCount += child.renderNodeCount;
             if (child.visible) {

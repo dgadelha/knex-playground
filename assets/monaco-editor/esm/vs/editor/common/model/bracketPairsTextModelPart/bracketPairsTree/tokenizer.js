@@ -43,7 +43,7 @@ export class TextBufferTokenizer {
         return this._offset;
     }
     get length() {
-        return toLength(this.textBufferLineCount, this.textBufferLastLineLength);
+        return toLength(this.textBufferLineCount - 1, this.textBufferLastLineLength);
     }
     skip(length) {
         this.didPeek = false;
@@ -94,7 +94,9 @@ class NonPeekableTextBufferTokenizer {
         // We must not jump into a token!
         if (lineIdx === this.lineIdx) {
             this.lineCharOffset = column;
-            this.lineTokenOffset = this.lineCharOffset === 0 ? 0 : this.lineTokens.findTokenIndexAtOffset(this.lineCharOffset);
+            if (this.line !== null) {
+                this.lineTokenOffset = this.lineCharOffset === 0 ? 0 : this.lineTokens.findTokenIndexAtOffset(this.lineCharOffset);
+            }
         }
         else {
             this.lineIdx = lineIdx;
@@ -220,11 +222,11 @@ export class FastTokenizer {
         let lastLineBreakOffset = 0;
         let lastTokenEndOffset = 0;
         let lastTokenEndLine = 0;
-        const smallTextTokens0Line = new Array();
+        const smallTextTokens0Line = [];
         for (let i = 0; i < 60; i++) {
             smallTextTokens0Line.push(new Token(toLength(0, i), 0 /* TokenKind.Text */, -1, SmallImmutableSet.getEmpty(), new TextAstNode(toLength(0, i))));
         }
-        const smallTextTokens1Line = new Array();
+        const smallTextTokens1Line = [];
         for (let i = 0; i < 60; i++) {
             smallTextTokens1Line.push(new Token(toLength(1, i), 0 /* TokenKind.Text */, -1, SmallImmutableSet.getEmpty(), new TextAstNode(toLength(1, i))));
         }

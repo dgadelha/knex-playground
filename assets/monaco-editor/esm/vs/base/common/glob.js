@@ -12,7 +12,7 @@ import { isEqualOrParent } from './extpath.js';
 import { LRUCache } from './map.js';
 import { basename, extname, posix, sep } from './path.js';
 import { isLinux } from './platform.js';
-import { escapeRegExpCharacters } from './strings.js';
+import { escapeRegExpCharacters, ltrim } from './strings.js';
 export const GLOBSTAR = '**';
 export const GLOB_SPLIT = '/';
 const PATH_REGEX = '[/\\\\]'; // any slash or backslash
@@ -250,7 +250,11 @@ function wrapRelativePattern(parsedPattern, arg2) {
         // Given we have checked `base` being a parent of `path`,
         // we can now remove the `base` portion of the `path`
         // and only match on the remaining path components
-        return parsedPattern(path.substr(arg2.base.length + 1), basename);
+        // For that we try to extract the portion of the `path`
+        // that comes after the `base` portion. We have to account
+        // for the fact that `base` might end in a path separator
+        // (https://github.com/microsoft/vscode/issues/162498)
+        return parsedPattern(ltrim(path.substr(arg2.base.length), sep), basename);
     };
     // Make sure to preserve associated metadata
     wrappedPattern.allBasenames = parsedPattern.allBasenames;
@@ -512,7 +516,7 @@ function parseExpressionPattern(pattern, value, options) {
                 if (!hasSibling || !parsedPattern(path, basename)) {
                     return null;
                 }
-                const clausePattern = when.replace('$(basename)', name);
+                const clausePattern = when.replace('$(basename)', () => name);
                 const matched = hasSibling(clausePattern);
                 return isThenable(matched) ?
                     matched.then(match => match ? pattern : null) :

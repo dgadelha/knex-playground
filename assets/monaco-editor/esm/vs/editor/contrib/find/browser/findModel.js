@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { findFirstInSorted } from '../../../../base/common/arrays.js';
+import { findFirstIdxMonotonousOrArrLen } from '../../../../base/common/arraysFind.js';
 import { RunOnceScheduler, TimeoutTimer } from '../../../../base/common/async.js';
 import { DisposableStore, dispose } from '../../../../base/common/lifecycle.js';
 import { ReplaceCommand, ReplaceCommandThatPreservesSelection } from '../../../common/commands/replaceCommand.js';
@@ -45,6 +45,7 @@ export const FIND_IDS = {
     StartFindWithArgs: 'editor.actions.findWithArgs',
     NextMatchFindAction: 'editor.action.nextMatchFindAction',
     PreviousMatchFindAction: 'editor.action.previousMatchFindAction',
+    GoToMatchFindAction: 'editor.action.goToMatchFindAction',
     NextSelectionMatchFindAction: 'editor.action.nextSelectionMatchFindAction',
     PreviousSelectionMatchFindAction: 'editor.action.previousSelectionMatchFindAction',
     StartFindReplaceAction: 'editor.action.startFindReplaceAction',
@@ -171,11 +172,11 @@ export class FindModelBoundToEditorModel {
         if (currentMatchesPosition === 0 && findMatches.length > 0) {
             // current selection is not on top of a match
             // try to find its nearest result from the top of the document
-            const matchAfterSelection = findFirstInSorted(findMatches.map(match => match.range), range => Range.compareRangesUsingStarts(range, editorSelection) >= 0);
+            const matchAfterSelection = findFirstIdxMonotonousOrArrLen(findMatches.map(match => match.range), range => Range.compareRangesUsingStarts(range, editorSelection) >= 0);
             currentMatchesPosition = matchAfterSelection > 0 ? matchAfterSelection - 1 + 1 /** match position is one based */ : currentMatchesPosition;
         }
         this._state.changeMatchInfo(currentMatchesPosition, this._decorations.getCount(), undefined);
-        if (moveCursor && this._editor.getOption(37 /* EditorOption.find */).cursorMoveOnType) {
+        if (moveCursor && this._editor.getOption(41 /* EditorOption.find */).cursorMoveOnType) {
             this._moveToNextMatch(this._decorations.getStartPosition());
         }
     }
@@ -255,11 +256,11 @@ export class FindModelBoundToEditorModel {
         const { lineNumber, column } = before;
         const model = this._editor.getModel();
         let position = new Position(lineNumber, column);
-        let prevMatch = model.findPreviousMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(119 /* EditorOption.wordSeparators */) : null, false);
+        let prevMatch = model.findPreviousMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(129 /* EditorOption.wordSeparators */) : null, false);
         if (prevMatch && prevMatch.range.isEmpty() && prevMatch.range.getStartPosition().equals(position)) {
             // Looks like we're stuck at this position, unacceptable!
             position = this._prevSearchPosition(position);
-            prevMatch = model.findPreviousMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(119 /* EditorOption.wordSeparators */) : null, false);
+            prevMatch = model.findPreviousMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(129 /* EditorOption.wordSeparators */) : null, false);
         }
         if (!prevMatch) {
             // there is precisely one match and selection is on top of it
@@ -336,11 +337,11 @@ export class FindModelBoundToEditorModel {
         const { lineNumber, column } = after;
         const model = this._editor.getModel();
         let position = new Position(lineNumber, column);
-        let nextMatch = model.findNextMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(119 /* EditorOption.wordSeparators */) : null, captureMatches);
+        let nextMatch = model.findNextMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(129 /* EditorOption.wordSeparators */) : null, captureMatches);
         if (forceMove && nextMatch && nextMatch.range.isEmpty() && nextMatch.range.getStartPosition().equals(position)) {
             // Looks like we're stuck at this position, unacceptable!
             position = this._nextSearchPosition(position);
-            nextMatch = model.findNextMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(119 /* EditorOption.wordSeparators */) : null, captureMatches);
+            nextMatch = model.findNextMatch(this._state.searchString, position, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(129 /* EditorOption.wordSeparators */) : null, captureMatches);
         }
         if (!nextMatch) {
             // there is precisely one match and selection is on top of it
@@ -353,6 +354,15 @@ export class FindModelBoundToEditorModel {
     }
     moveToNextMatch() {
         this._moveToNextMatch(this._editor.getSelection().getEndPosition());
+    }
+    _moveToMatch(index) {
+        const decorationRange = this._decorations.getDecorationRangeAt(index);
+        if (decorationRange) {
+            this._setCurrentFindMatch(decorationRange);
+        }
+    }
+    moveToMatch(index) {
+        this._moveToMatch(index);
     }
     _getReplacePattern() {
         if (this._state.isRegex) {
@@ -384,7 +394,7 @@ export class FindModelBoundToEditorModel {
     }
     _findMatches(findScopes, captureMatches, limitResultCount) {
         const searchRanges = (findScopes || [null]).map((scope) => FindModelBoundToEditorModel._getSearchRange(this._editor.getModel(), scope));
-        return this._editor.getModel().findMatches(this._state.searchString, searchRanges, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(119 /* EditorOption.wordSeparators */) : null, captureMatches, limitResultCount);
+        return this._editor.getModel().findMatches(this._state.searchString, searchRanges, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(129 /* EditorOption.wordSeparators */) : null, captureMatches, limitResultCount);
     }
     replaceAll() {
         if (!this._hasMatches()) {
@@ -401,7 +411,7 @@ export class FindModelBoundToEditorModel {
         this.research(false);
     }
     _largeReplaceAll() {
-        const searchParams = new SearchParams(this._state.searchString, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(119 /* EditorOption.wordSeparators */) : null);
+        const searchParams = new SearchParams(this._state.searchString, this._state.isRegex, this._state.matchCase, this._state.wholeWord ? this._editor.getOption(129 /* EditorOption.wordSeparators */) : null);
         const searchData = searchParams.parseSearchRequest();
         if (!searchData) {
             return;

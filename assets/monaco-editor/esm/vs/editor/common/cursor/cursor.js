@@ -82,8 +82,9 @@ export class CursorsController extends Disposable {
     }
     setStates(eventsCollector, source, reason, states) {
         let reachedMaxCursorCount = false;
-        if (states !== null && states.length > CursorsController.MAX_CURSOR_COUNT) {
-            states = states.slice(0, CursorsController.MAX_CURSOR_COUNT);
+        const multiCursorLimit = this.context.cursorConfig.multiCursorLimit;
+        if (states !== null && states.length > multiCursorLimit) {
+            states = states.slice(0, multiCursorLimit);
             reachedMaxCursorCount = true;
         }
         const oldState = CursorModelState.from(this._model, this);
@@ -317,7 +318,7 @@ export class CursorsController extends Disposable {
         const selections = this._cursors.getSelections();
         const viewSelections = this._cursors.getViewSelections();
         // Let the view get the event first.
-        eventsCollector.emitViewEvent(new ViewCursorStateChangedEvent(viewSelections, selections));
+        eventsCollector.emitViewEvent(new ViewCursorStateChangedEvent(viewSelections, selections, reason));
         // Only after the view has been notified, let the rest of the world know...
         if (!oldState
             || oldState.cursorState.length !== newState.cursorState.length
@@ -499,17 +500,16 @@ export class CursorsController extends Disposable {
         }, eventsCollector, source);
     }
 }
-CursorsController.MAX_CURSOR_COUNT = 10000;
 /**
  * A snapshot of the cursor and the model state
  */
 class CursorModelState {
+    static from(model, cursor) {
+        return new CursorModelState(model.getVersionId(), cursor.getCursorStates());
+    }
     constructor(modelVersionId, cursorState) {
         this.modelVersionId = modelVersionId;
         this.cursorState = cursorState;
-    }
-    static from(model, cursor) {
-        return new CursorModelState(model.getVersionId(), cursor.getCursorStates());
     }
     equals(other) {
         if (!other) {
@@ -530,17 +530,17 @@ class CursorModelState {
     }
 }
 class AutoClosedAction {
-    constructor(model, autoClosedCharactersDecorations, autoClosedEnclosingDecorations) {
-        this._model = model;
-        this._autoClosedCharactersDecorations = autoClosedCharactersDecorations;
-        this._autoClosedEnclosingDecorations = autoClosedEnclosingDecorations;
-    }
     static getAllAutoClosedCharacters(autoClosedActions) {
         let autoClosedCharacters = [];
         for (const autoClosedAction of autoClosedActions) {
             autoClosedCharacters = autoClosedCharacters.concat(autoClosedAction.getAutoClosedCharactersRanges());
         }
         return autoClosedCharacters;
+    }
+    constructor(model, autoClosedCharactersDecorations, autoClosedEnclosingDecorations) {
+        this._model = model;
+        this._autoClosedCharactersDecorations = autoClosedCharactersDecorations;
+        this._autoClosedEnclosingDecorations = autoClosedEnclosingDecorations;
     }
     dispose() {
         this._autoClosedCharactersDecorations = this._model.deltaDecorations(this._autoClosedCharactersDecorations, []);
@@ -833,9 +833,6 @@ class CompositionLineState {
     }
 }
 class CompositionState {
-    constructor(textModel, selections) {
-        this._original = CompositionState._capture(textModel, selections);
-    }
     static _capture(textModel, selections) {
         const result = [];
         for (const selection of selections) {
@@ -845,6 +842,9 @@ class CompositionState {
             result.push(new CompositionLineState(textModel.getLineContent(selection.startLineNumber), selection.startColumn - 1, selection.endColumn - 1));
         }
         return result;
+    }
+    constructor(textModel, selections) {
+        this._original = CompositionState._capture(textModel, selections);
     }
     /**
      * Returns the inserted text during this composition.

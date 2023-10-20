@@ -86,6 +86,6 @@ function detectLanguageId(modelService, languageService, resource) {
     // otherwise fallback to path based detection
     return languageService.guessLanguageIdByFilepathOrFirstLine(resource);
 }
-export function cssEscape(str) {
+function cssEscape(str) {
     return str.replace(/[\11\12\14\15\40]/g, '/'); // HTML class names can not contain certain whitespace characters, use / instead, which doesn't exist in file names.
 }

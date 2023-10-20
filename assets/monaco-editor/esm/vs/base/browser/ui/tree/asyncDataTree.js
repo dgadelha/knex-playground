@@ -18,6 +18,7 @@ import { CompressibleObjectTree, ObjectTree } from './objectTree.js';
 import { TreeError, WeakMapper } from './tree.js';
 import { createCancelablePromise, Promises, timeout } from '../../../common/async.js';
 import { Codicon } from '../../../common/codicons.js';
+import { ThemeIcon } from '../../../common/themables.js';
 import { isCancellationError, onUnexpectedError } from '../../../common/errors.js';
 import { Emitter, Event } from '../../../common/event.js';
 import { Iterable } from '../../../common/iterator.js';
@@ -41,9 +42,6 @@ function intersects(node, other) {
     return node === other || isAncestor(node, other) || isAncestor(other, node);
 }
 class AsyncDataTreeNodeWrapper {
-    constructor(node) {
-        this.node = node;
-    }
     get element() { return this.node.element.element; }
     get children() { return this.node.children.map(node => new AsyncDataTreeNodeWrapper(node)); }
     get depth() { return this.node.depth; }
@@ -53,6 +51,9 @@ class AsyncDataTreeNodeWrapper {
     get collapsed() { return this.node.collapsed; }
     get visible() { return this.node.visible; }
     get filterData() { return this.node.filterData; }
+    constructor(node) {
+        this.node = node;
+    }
 }
 class AsyncDataTreeRenderer {
     constructor(renderer, nodeMapper, onDidChangeTwistieState) {
@@ -71,11 +72,11 @@ class AsyncDataTreeRenderer {
     }
     renderTwistie(element, twistieElement) {
         if (element.slow) {
-            twistieElement.classList.add(...Codicon.treeItemLoading.classNamesArray);
+            twistieElement.classList.add(...ThemeIcon.asClassNameArray(Codicon.treeItemLoading));
             return true;
         }
         else {
-            twistieElement.classList.remove(...Codicon.treeItemLoading.classNamesArray);
+            twistieElement.classList.remove(...ThemeIcon.asClassNameArray(Codicon.treeItemLoading));
             return false;
         }
     }
@@ -142,6 +143,9 @@ class AsyncDataTreeNodeListDragAndDrop {
         var _a, _b;
         (_b = (_a = this.dnd).onDragEnd) === null || _b === void 0 ? void 0 : _b.call(_a, originalEvent);
     }
+    dispose() {
+        this.dnd.dispose();
+    }
 }
 function asObjectTreeOptions(options) {
     return options && Object.assign(Object.assign({}, options), { collapseByDefault: true, identityProvider: options.identityProvider && {
@@ -175,13 +179,40 @@ function asObjectTreeOptions(options) {
             }
         }, keyboardNavigationLabelProvider: options.keyboardNavigationLabelProvider && Object.assign(Object.assign({}, options.keyboardNavigationLabelProvider), { getKeyboardNavigationLabel(e) {
                 return options.keyboardNavigationLabelProvider.getKeyboardNavigationLabel(e.element);
-            } }), sorter: undefined, expandOnlyOnTwistieClick: typeof options.expandOnlyOnTwistieClick === 'undefined' ? undefined : (typeof options.expandOnlyOnTwistieClick !== 'function' ? options.expandOnlyOnTwistieClick : (e => options.expandOnlyOnTwistieClick(e.element))), additionalScrollHeight: options.additionalScrollHeight });
+            } }), sorter: undefined, expandOnlyOnTwistieClick: typeof options.expandOnlyOnTwistieClick === 'undefined' ? undefined : (typeof options.expandOnlyOnTwistieClick !== 'function' ? options.expandOnlyOnTwistieClick : (e => options.expandOnlyOnTwistieClick(e.element))), defaultFindVisibility: e => {
+            if (e.hasChildren && e.stale) {
+                return 1 /* TreeVisibility.Visible */;
+            }
+            else if (typeof options.defaultFindVisibility === 'number') {
+                return options.defaultFindVisibility;
+            }
+            else if (typeof options.defaultFindVisibility === 'undefined') {
+                return 2 /* TreeVisibility.Recurse */;
+            }
+            else {
+                return options.defaultFindVisibility(e.element);
+            }
+        } });
 }
 function dfs(node, fn) {
     fn(node);
     node.children.forEach(child => dfs(child, fn));
 }
 export class AsyncDataTree {
+    get onDidScroll() { return this.tree.onDidScroll; }
+    get onDidChangeFocus() { return Event.map(this.tree.onDidChangeFocus, asTreeEvent); }
+    get onDidChangeSelection() { return Event.map(this.tree.onDidChangeSelection, asTreeEvent); }
+    get onMouseDblClick() { return Event.map(this.tree.onMouseDblClick, asTreeMouseEvent); }
+    get onPointer() { return Event.map(this.tree.onPointer, asTreeMouseEvent); }
+    get onDidFocus() { return this.tree.onDidFocus; }
+    /**
+     * To be used internally only!
+     * @deprecated
+     */
+    get onDidChangeModel() { return this.tree.onDidChangeModel; }
+    get onDidChangeCollapseState() { return this.tree.onDidChangeCollapseState; }
+    get onDidChangeFindOpenState() { return this.tree.onDidChangeFindOpenState; }
+    get onDidDispose() { return this.tree.onDidDispose; }
     constructor(user, container, delegate, renderers, dataSource, options = {}) {
         this.user = user;
         this.dataSource = dataSource;
@@ -209,15 +240,6 @@ export class AsyncDataTree {
         this.nodes.set(null, this.root);
         this.tree.onDidChangeCollapseState(this._onDidChangeCollapseState, this, this.disposables);
     }
-    get onDidChangeFocus() { return Event.map(this.tree.onDidChangeFocus, asTreeEvent); }
-    get onDidChangeSelection() { return Event.map(this.tree.onDidChangeSelection, asTreeEvent); }
-    get onMouseDblClick() { return Event.map(this.tree.onMouseDblClick, asTreeMouseEvent); }
-    get onPointer() { return Event.map(this.tree.onPointer, asTreeMouseEvent); }
-    get onDidFocus() { return this.tree.onDidFocus; }
-    get onDidChangeModel() { return this.tree.onDidChangeModel; }
-    get onDidChangeCollapseState() { return this.tree.onDidChangeCollapseState; }
-    get onDidChangeFindOpenState() { return this.tree.onDidChangeFindOpenState; }
-    get onDidDispose() { return this.tree.onDidDispose; }
     createTree(user, container, delegate, renderers, options) {
         const objectTreeDelegate = new ComposedTreeDelegate(delegate);
         const objectTreeRenderers = renderers.map(r => new AsyncDataTreeRenderer(r, this.nodeMapper, this._onDidChangeNodeSlowState.event));
@@ -236,6 +258,12 @@ export class AsyncDataTree {
     }
     set scrollTop(scrollTop) {
         this.tree.scrollTop = scrollTop;
+    }
+    get scrollHeight() {
+        return this.tree.scrollHeight;
+    }
+    get renderHeight() {
+        return this.tree.renderHeight;
     }
     domFocus() {
         this.tree.domFocus();
@@ -615,12 +643,10 @@ export class AsyncDataTree {
     }
     dispose() {
         this.disposables.dispose();
+        this.tree.dispose();
     }
 }
 class CompressibleAsyncDataTreeNodeWrapper {
-    constructor(node) {
-        this.node = node;
-    }
     get element() {
         return {
             elements: this.node.element.elements.map(e => e.element),
@@ -635,6 +661,9 @@ class CompressibleAsyncDataTreeNodeWrapper {
     get collapsed() { return this.node.collapsed; }
     get visible() { return this.node.visible; }
     get filterData() { return this.node.filterData; }
+    constructor(node) {
+        this.node = node;
+    }
 }
 class CompressibleAsyncDataTreeRenderer {
     constructor(renderer, nodeMapper, compressibleNodeMapperProvider, onDidChangeTwistieState) {
@@ -658,11 +687,11 @@ class CompressibleAsyncDataTreeRenderer {
     }
     renderTwistie(element, twistieElement) {
         if (element.slow) {
-            twistieElement.classList.add(...Codicon.treeItemLoading.classNamesArray);
+            twistieElement.classList.add(...ThemeIcon.asClassNameArray(Codicon.treeItemLoading));
             return true;
         }
         else {
-            twistieElement.classList.remove(...Codicon.treeItemLoading.classNamesArray);
+            twistieElement.classList.remove(...ThemeIcon.asClassNameArray(Codicon.treeItemLoading));
             return false;
         }
     }

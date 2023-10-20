@@ -123,7 +123,7 @@ SymbolNavigationService = __decorate([
     __param(2, INotificationService),
     __param(3, IKeybindingService)
 ], SymbolNavigationService);
-registerSingleton(ISymbolNavigationService, SymbolNavigationService, true);
+registerSingleton(ISymbolNavigationService, SymbolNavigationService, 1 /* InstantiationType.Delayed */);
 registerEditorCommand(new class extends EditorCommand {
     constructor() {
         super({

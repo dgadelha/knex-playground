@@ -71,19 +71,19 @@ export function righttest(node) {
     }
     return node;
 }
-export function calculateSize(node) {
+function calculateSize(node) {
     if (node === SENTINEL) {
         return 0;
     }
     return node.size_left + node.piece.length + calculateSize(node.right);
 }
-export function calculateLF(node) {
+function calculateLF(node) {
     if (node === SENTINEL) {
         return 0;
     }
     return node.lf_left + node.piece.lineFeedCnt + calculateLF(node.right);
 }
-export function resetSentinel() {
+function resetSentinel() {
     SENTINEL.parent = SENTINEL;
 }
 export function leftRotate(tree, x) {

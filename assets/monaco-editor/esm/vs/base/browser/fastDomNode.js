@@ -12,11 +12,13 @@ export class FastDomNode {
         this._left = '';
         this._bottom = '';
         this._right = '';
+        this._paddingLeft = '';
         this._fontFamily = '';
         this._fontWeight = '';
         this._fontSize = '';
         this._fontStyle = '';
         this._fontFeatureSettings = '';
+        this._fontVariationSettings = '';
         this._textDecoration = '';
         this._lineHeight = '';
         this._letterSpacing = '';
@@ -86,6 +88,14 @@ export class FastDomNode {
         this._right = right;
         this.domNode.style.right = this._right;
     }
+    setPaddingLeft(_paddingLeft) {
+        const paddingLeft = numberAsPixels(_paddingLeft);
+        if (this._paddingLeft === paddingLeft) {
+            return;
+        }
+        this._paddingLeft = paddingLeft;
+        this.domNode.style.paddingLeft = this._paddingLeft;
+    }
     setFontFamily(fontFamily) {
         if (this._fontFamily === fontFamily) {
             return;
@@ -121,6 +131,13 @@ export class FastDomNode {
         }
         this._fontFeatureSettings = fontFeatureSettings;
         this.domNode.style.fontFeatureSettings = this._fontFeatureSettings;
+    }
+    setFontVariationSettings(fontVariationSettings) {
+        if (this._fontVariationSettings === fontVariationSettings) {
+            return;
+        }
+        this._fontVariationSettings = fontVariationSettings;
+        this.domNode.style.fontVariationSettings = this._fontVariationSettings;
     }
     setTextDecoration(textDecoration) {
         if (this._textDecoration === textDecoration) {

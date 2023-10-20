@@ -6,34 +6,38 @@ import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { FoldingRegions, MAX_LINE_NUMBER } from './foldingRanges.js';
 const foldingContext = {};
-export const ID_SYNTAX_PROVIDER = 'syntax';
+const ID_SYNTAX_PROVIDER = 'syntax';
 export class SyntaxRangeProvider {
-    constructor(editorModel, providers, handleFoldingRangesChange, limit) {
+    constructor(editorModel, providers, handleFoldingRangesChange, foldingRangesLimit, fallbackRangeProvider // used when all providers return null
+    ) {
         this.editorModel = editorModel;
         this.providers = providers;
-        this.limit = limit;
+        this.handleFoldingRangesChange = handleFoldingRangesChange;
+        this.foldingRangesLimit = foldingRangesLimit;
+        this.fallbackRangeProvider = fallbackRangeProvider;
         this.id = ID_SYNTAX_PROVIDER;
+        this.disposables = new DisposableStore();
+        if (fallbackRangeProvider) {
+            this.disposables.add(fallbackRangeProvider);
+        }
         for (const provider of providers) {
             if (typeof provider.onDidChange === 'function') {
-                if (!this.disposables) {
-                    this.disposables = new DisposableStore();
-                }
                 this.disposables.add(provider.onDidChange(handleFoldingRangesChange));
             }
         }
     }
-    compute(cancellationToken, notifyTooManyRegions) {
+    compute(cancellationToken) {
         return collectSyntaxRanges(this.providers, this.editorModel, cancellationToken).then(ranges => {
+            var _a, _b;
             if (ranges) {
-                const res = sanitizeRanges(ranges, this.limit, notifyTooManyRegions);
+                const res = sanitizeRanges(ranges, this.foldingRangesLimit);
                 return res;
             }
-            return null;
+            return (_b = (_a = this.fallbackRangeProvider) === null || _a === void 0 ? void 0 : _a.compute(cancellationToken)) !== null && _b !== void 0 ? _b : null;
         });
     }
     dispose() {
-        var _a;
-        (_a = this.disposables) === null || _a === void 0 ? void 0 : _a.dispose();
+        this.disposables.dispose();
     }
 }
 function collectSyntaxRanges(providers, model, cancellationToken) {
@@ -60,9 +64,8 @@ function collectSyntaxRanges(providers, model, cancellationToken) {
         return rangeData;
     });
 }
-export class RangesCollector {
-    constructor(foldingRangesLimit, _notifyTooManyRegions) {
-        this._notifyTooManyRegions = _notifyTooManyRegions;
+class RangesCollector {
+    constructor(foldingRangesLimit) {
         this._startIndexes = [];
         this._endIndexes = [];
         this._nestingLevels = [];
@@ -86,8 +89,9 @@ export class RangesCollector {
         }
     }
     toIndentRanges() {
-        var _a;
-        if (this._length <= this._foldingRangesLimit) {
+        const limit = this._foldingRangesLimit.limit;
+        if (this._length <= limit) {
+            this._foldingRangesLimit.update(this._length, false);
             const startIndexes = new Uint32Array(this._length);
             const endIndexes = new Uint32Array(this._length);
             for (let i = 0; i < this._length; i++) {
@@ -97,25 +101,25 @@ export class RangesCollector {
             return new FoldingRegions(startIndexes, endIndexes, this._types);
         }
         else {
-            (_a = this._notifyTooManyRegions) === null || _a === void 0 ? void 0 : _a.call(this, this._foldingRangesLimit);
+            this._foldingRangesLimit.update(this._length, limit);
             let entries = 0;
             let maxLevel = this._nestingLevelCounts.length;
             for (let i = 0; i < this._nestingLevelCounts.length; i++) {
                 const n = this._nestingLevelCounts[i];
                 if (n) {
-                    if (n + entries > this._foldingRangesLimit) {
+                    if (n + entries > limit) {
                         maxLevel = i;
                         break;
                     }
                     entries += n;
                 }
             }
-            const startIndexes = new Uint32Array(this._foldingRangesLimit);
-            const endIndexes = new Uint32Array(this._foldingRangesLimit);
+            const startIndexes = new Uint32Array(limit);
+            const endIndexes = new Uint32Array(limit);
             const types = [];
             for (let i = 0, k = 0; i < this._length; i++) {
                 const level = this._nestingLevels[i];
-                if (level < maxLevel || (level === maxLevel && entries++ < this._foldingRangesLimit)) {
+                if (level < maxLevel || (level === maxLevel && entries++ < limit)) {
                     startIndexes[k] = this._startIndexes[i];
                     endIndexes[k] = this._endIndexes[i];
                     types[k] = this._types[i];
@@ -126,7 +130,7 @@ export class RangesCollector {
         }
     }
 }
-export function sanitizeRanges(rangeData, limit, notifyTooManyRegions) {
+export function sanitizeRanges(rangeData, foldingRangesLimit) {
     const sorted = rangeData.sort((d1, d2) => {
         let diff = d1.start - d2.start;
         if (diff === 0) {
@@ -134,7 +138,7 @@ export function sanitizeRanges(rangeData, limit, notifyTooManyRegions) {
         }
         return diff;
     });
-    const collector = new RangesCollector(limit, notifyTooManyRegions);
+    const collector = new RangesCollector(foldingRangesLimit);
     let top = undefined;
     const previous = [];
     for (const entry of sorted) {

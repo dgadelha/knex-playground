@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import './selections.css';
 import { DynamicViewOverlay } from '../../view/dynamicViewOverlay.js';
-import { editorInactiveSelection, editorSelectionBackground, editorSelectionForeground } from '../../../../platform/theme/common/colorRegistry.js';
+import { editorSelectionForeground } from '../../../../platform/theme/common/colorRegistry.js';
 import { registerThemingParticipant } from '../../../../platform/theme/common/themeService.js';
 class HorizontalRangeWithStyle {
     constructor(other) {
@@ -32,9 +32,9 @@ export class SelectionsOverlay extends DynamicViewOverlay {
         this._previousFrameVisibleRangesWithStyle = [];
         this._context = context;
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(61 /* EditorOption.lineHeight */);
-        this._roundedSelection = options.get(92 /* EditorOption.roundedSelection */);
-        this._typicalHalfwidthCharacterWidth = options.get(46 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
+        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._roundedSelection = options.get(100 /* EditorOption.roundedSelection */);
+        this._typicalHalfwidthCharacterWidth = options.get(50 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
         this._selections = [];
         this._renderResult = null;
         this._context.addEventHandler(this);
@@ -47,9 +47,9 @@ export class SelectionsOverlay extends DynamicViewOverlay {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(61 /* EditorOption.lineHeight */);
-        this._roundedSelection = options.get(92 /* EditorOption.roundedSelection */);
-        this._typicalHalfwidthCharacterWidth = options.get(46 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
+        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._roundedSelection = options.get(100 /* EditorOption.roundedSelection */);
+        this._typicalHalfwidthCharacterWidth = options.get(50 /* EditorOption.fontInfo */).typicalHalfwidthCharacterWidth;
         return true;
     }
     onCursorStateChanged(e) {
@@ -319,14 +319,6 @@ SelectionsOverlay.SELECTION_BOTTOM_RIGHT = 'bottom-right-radius';
 SelectionsOverlay.EDITOR_BACKGROUND_CLASS_NAME = 'monaco-editor-background';
 SelectionsOverlay.ROUNDED_PIECE_WIDTH = 10;
 registerThemingParticipant((theme, collector) => {
-    const editorSelectionColor = theme.getColor(editorSelectionBackground);
-    if (editorSelectionColor) {
-        collector.addRule(`.monaco-editor .focused .selected-text { background-color: ${editorSelectionColor}; }`);
-    }
-    const editorInactiveSelectionColor = theme.getColor(editorInactiveSelection);
-    if (editorInactiveSelectionColor) {
-        collector.addRule(`.monaco-editor .selected-text { background-color: ${editorInactiveSelectionColor}; }`);
-    }
     const editorSelectionForegroundColor = theme.getColor(editorSelectionForeground);
     if (editorSelectionForegroundColor && !editorSelectionForegroundColor.isTransparent()) {
         collector.addRule(`.monaco-editor .view-line span.inline-selected-text { color: ${editorSelectionForegroundColor}; }`);

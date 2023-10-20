@@ -9,12 +9,12 @@ import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { StandardMouseEvent } from '../../mouseEvent.js';
 import { ActionBar } from '../actionbar/actionbar.js';
 import { ActionViewItem, BaseActionViewItem } from '../actionbar/actionViewItems.js';
-import { formatRule } from '../codicons/codiconStyles.js';
 import { layout } from '../contextview/contextview.js';
 import { DomScrollableElement } from '../scrollbar/scrollableElement.js';
 import { EmptySubmenuAction, Separator, SubmenuAction } from '../../../common/actions.js';
 import { RunOnceScheduler } from '../../../common/async.js';
-import { Codicon } from '../../../common/codicons.js';
+import { Codicon, getCodiconFontCharacters } from '../../../common/codicons.js';
+import { ThemeIcon } from '../../../common/themables.js';
 import { stripIcons } from '../../../common/iconLabels.js';
 import { DisposableStore } from '../../../common/lifecycle.js';
 import { isLinux, isMacintosh } from '../../../common/platform.js';
@@ -27,7 +27,7 @@ export var Direction;
     Direction[Direction["Left"] = 1] = "Left";
 })(Direction || (Direction = {}));
 export class Menu extends ActionBar {
-    constructor(container, actions, options = {}) {
+    constructor(container, actions, options, menuStyles) {
         container.classList.add('monaco-menu-container');
         container.setAttribute('role', 'presentation');
         const menuElement = document.createElement('div');
@@ -43,10 +43,11 @@ export class Menu extends ActionBar {
             focusOnlyEnabledItems: true,
             triggerKeys: { keys: [3 /* KeyCode.Enter */, ...(isMacintosh || isLinux ? [10 /* KeyCode.Space */] : [])], keyDown: true }
         });
+        this.menuStyles = menuStyles;
         this.menuElement = menuElement;
         this.actionsList.tabIndex = 0;
         this.menuDisposables = this._register(new DisposableStore());
-        this.initializeOrUpdateStyleSheet(container, {});
+        this.initializeOrUpdateStyleSheet(container, menuStyles);
         this._register(Gesture.addTarget(menuElement));
         addDisposableListener(menuElement, EventType.KEY_DOWN, (e) => {
             const event = new StandardKeyboardEvent(e);
@@ -150,6 +151,7 @@ export class Menu extends ActionBar {
         }));
         const scrollElement = this.scrollableElement.getDomNode();
         scrollElement.style.position = '';
+        this.styleScrollElement(scrollElement, menuStyles);
         // Support scroll on menu drag
         this._register(addDisposableListener(menuElement, TouchEventType.Change, e => {
             EventHelper.stop(e, true);
@@ -191,26 +193,18 @@ export class Menu extends ActionBar {
         }
         this.styleSheet.textContent = getMenuWidgetCSS(style, isInShadowDOM(container));
     }
-    style(style) {
-        const container = this.getContainer();
-        this.initializeOrUpdateStyleSheet(container, style);
-        const fgColor = style.foregroundColor ? `${style.foregroundColor}` : '';
-        const bgColor = style.backgroundColor ? `${style.backgroundColor}` : '';
+    styleScrollElement(scrollElement, style) {
+        var _a, _b;
+        const fgColor = (_a = style.foregroundColor) !== null && _a !== void 0 ? _a : '';
+        const bgColor = (_b = style.backgroundColor) !== null && _b !== void 0 ? _b : '';
         const border = style.borderColor ? `1px solid ${style.borderColor}` : '';
         const borderRadius = '5px';
         const shadow = style.shadowColor ? `0 2px 8px ${style.shadowColor}` : '';
-        container.style.outline = border;
-        container.style.borderRadius = borderRadius;
-        container.style.color = fgColor;
-        container.style.backgroundColor = bgColor;
-        container.style.boxShadow = shadow;
-        if (this.viewItems) {
-            this.viewItems.forEach(item => {
-                if (item instanceof BaseMenuActionViewItem || item instanceof MenuSeparatorActionViewItem) {
-                    item.style(style);
-                }
-            });
-        }
+        scrollElement.style.outline = border;
+        scrollElement.style.borderRadius = borderRadius;
+        scrollElement.style.color = fgColor;
+        scrollElement.style.backgroundColor = bgColor;
+        scrollElement.style.boxShadow = shadow;
     }
     getContainer() {
         return this.scrollableElement.getDomNode();
@@ -247,10 +241,10 @@ export class Menu extends ActionBar {
     }
     doGetActionViewItem(action, options, parentData) {
         if (action instanceof Separator) {
-            return new MenuSeparatorActionViewItem(options.context, action, { icon: true });
+            return new MenuSeparatorActionViewItem(options.context, action, { icon: true }, this.menuStyles);
         }
         else if (action instanceof SubmenuAction) {
-            const menuActionViewItem = new SubmenuMenuActionViewItem(action, action.actions, parentData, Object.assign(Object.assign({}, options), { submenuIds: new Set([...(options.submenuIds || []), action.id]) }));
+            const menuActionViewItem = new SubmenuMenuActionViewItem(action, action.actions, parentData, Object.assign(Object.assign({}, options), { submenuIds: new Set([...(options.submenuIds || []), action.id]) }), this.menuStyles);
             if (options.enableMnemonics) {
                 const mnemonic = menuActionViewItem.getMnemonic();
                 if (mnemonic && menuActionViewItem.isEnabled()) {
@@ -275,7 +269,7 @@ export class Menu extends ActionBar {
                     }
                 }
             }
-            const menuActionViewItem = new BaseMenuActionViewItem(options.context, action, menuItemOptions);
+            const menuActionViewItem = new BaseMenuActionViewItem(options.context, action, menuItemOptions, this.menuStyles);
             if (options.enableMnemonics) {
                 const mnemonic = menuActionViewItem.getMnemonic();
                 if (mnemonic && menuActionViewItem.isEnabled()) {
@@ -292,16 +286,17 @@ export class Menu extends ActionBar {
     }
 }
 class BaseMenuActionViewItem extends BaseActionViewItem {
-    constructor(ctx, action, options = {}) {
+    constructor(ctx, action, options, menuStyle) {
         options.isMenu = true;
         super(action, action, options);
+        this.menuStyle = menuStyle;
         this.options = options;
         this.options.icon = options.icon !== undefined ? options.icon : false;
         this.options.label = options.label !== undefined ? options.label : true;
         this.cssClass = '';
         // Set mnemonic
         if (this.options.label && options.enableMnemonics) {
-            const label = this.getAction().label;
+            const label = this.action.label;
             if (label) {
                 const matches = MENU_MNEMONIC_REGEX.exec(label);
                 if (matches) {
@@ -367,7 +362,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
                 this.item.setAttribute('aria-keyshortcuts', `${this.mnemonic}`);
             }
         }
-        this.check = append(this.item, $('span.menu-item-check' + Codicon.menuSelection.cssSelector));
+        this.check = append(this.item, $('span.menu-item-check' + ThemeIcon.asCSSSelector(Codicon.menuSelection)));
         this.check.setAttribute('role', 'none');
         this.label = append(this.item, $('span.action-label'));
         if (this.options.label && this.options.keybinding) {
@@ -380,16 +375,16 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         this.updateTooltip();
         this.updateEnabled();
         this.updateChecked();
+        this.applyStyle();
     }
     blur() {
         super.blur();
         this.applyStyle();
     }
     focus() {
+        var _a;
         super.focus();
-        if (this.item) {
-            this.item.focus();
-        }
+        (_a = this.item) === null || _a === void 0 ? void 0 : _a.focus();
         this.applyStyle();
     }
     updatePositionInSet(pos, setSize) {
@@ -405,7 +400,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         }
         if (this.options.label) {
             clearNode(this.label);
-            let label = stripIcons(this.getAction().label);
+            let label = stripIcons(this.action.label);
             if (label) {
                 const cleanLabel = cleanMnemonic(label);
                 if (!this.options.enableMnemonics) {
@@ -445,7 +440,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
             this.item.classList.remove(...this.cssClass.split(' '));
         }
         if (this.options.icon && this.label) {
-            this.cssClass = this.getAction().class || '';
+            this.cssClass = this.action.class || '';
             this.label.classList.add('icon');
             if (this.cssClass) {
                 this.label.classList.add(...this.cssClass.split(' '));
@@ -457,7 +452,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         }
     }
     updateEnabled() {
-        if (this.getAction().enabled) {
+        if (this.action.enabled) {
             if (this.element) {
                 this.element.classList.remove('disabled');
                 this.element.removeAttribute('aria-disabled');
@@ -483,7 +478,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         if (!this.item) {
             return;
         }
-        const checked = this.getAction().checked;
+        const checked = this.action.checked;
         this.item.classList.toggle('checked', !!checked);
         if (checked !== undefined) {
             this.item.setAttribute('role', 'menuitemcheckbox');
@@ -498,32 +493,25 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
         return this.mnemonic;
     }
     applyStyle() {
-        if (!this.menuStyle) {
-            return;
-        }
         const isSelected = this.element && this.element.classList.contains('focused');
         const fgColor = isSelected && this.menuStyle.selectionForegroundColor ? this.menuStyle.selectionForegroundColor : this.menuStyle.foregroundColor;
         const bgColor = isSelected && this.menuStyle.selectionBackgroundColor ? this.menuStyle.selectionBackgroundColor : undefined;
         const outline = isSelected && this.menuStyle.selectionBorderColor ? `1px solid ${this.menuStyle.selectionBorderColor}` : '';
         const outlineOffset = isSelected && this.menuStyle.selectionBorderColor ? `-1px` : '';
         if (this.item) {
-            this.item.style.color = fgColor ? fgColor.toString() : '';
-            this.item.style.backgroundColor = bgColor ? bgColor.toString() : '';
+            this.item.style.color = fgColor !== null && fgColor !== void 0 ? fgColor : '';
+            this.item.style.backgroundColor = bgColor !== null && bgColor !== void 0 ? bgColor : '';
             this.item.style.outline = outline;
             this.item.style.outlineOffset = outlineOffset;
         }
         if (this.check) {
-            this.check.style.color = fgColor ? fgColor.toString() : '';
+            this.check.style.color = fgColor !== null && fgColor !== void 0 ? fgColor : '';
         }
-    }
-    style(style) {
-        this.menuStyle = style;
-        this.applyStyle();
     }
 }
 class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
-    constructor(action, submenuActions, parentData, submenuOptions) {
-        super(action, action, submenuOptions);
+    constructor(action, submenuActions, parentData, submenuOptions, menuStyles) {
+        super(action, action, submenuOptions, menuStyles);
         this.submenuActions = submenuActions;
         this.parentData = parentData;
         this.submenuOptions = submenuOptions;
@@ -554,7 +542,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             this.item.tabIndex = 0;
             this.item.setAttribute('aria-haspopup', 'true');
             this.updateAriaExpanded('false');
-            this.submenuIndicator = append(this.item, $('span.submenu-indicator' + Codicon.menuSubmenu.cssSelector));
+            this.submenuIndicator = append(this.item, $('span.submenu-indicator' + ThemeIcon.asCSSSelector(Codicon.menuSubmenu)));
             this.submenuIndicator.setAttribute('aria-hidden', 'true');
         }
         this._register(addDisposableListener(this.element, EventType.KEY_UP, e => {
@@ -656,10 +644,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             this.submenuContainer.style.position = 'fixed';
             this.submenuContainer.style.top = '0';
             this.submenuContainer.style.left = '0';
-            this.parentData.submenu = new Menu(this.submenuContainer, this.submenuActions.length ? this.submenuActions : [new EmptySubmenuAction()], this.submenuOptions);
-            if (this.menuStyle) {
-                this.parentData.submenu.style(this.menuStyle);
-            }
+            this.parentData.submenu = new Menu(this.submenuContainer, this.submenuActions.length ? this.submenuActions : [new EmptySubmenuAction()], this.submenuOptions, this.menuStyle);
             // layout submenu
             const entryBox = this.element.getBoundingClientRect();
             const entryBoxUpdated = {
@@ -705,17 +690,12 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
         }
     }
     applyStyle() {
-        var _a;
         super.applyStyle();
-        if (!this.menuStyle) {
-            return;
-        }
         const isSelected = this.element && this.element.classList.contains('focused');
         const fgColor = isSelected && this.menuStyle.selectionForegroundColor ? this.menuStyle.selectionForegroundColor : this.menuStyle.foregroundColor;
         if (this.submenuIndicator) {
-            this.submenuIndicator.style.color = fgColor ? `${fgColor}` : '';
+            this.submenuIndicator.style.color = fgColor !== null && fgColor !== void 0 ? fgColor : '';
         }
-        (_a = this.parentData.submenu) === null || _a === void 0 ? void 0 : _a.style(this.menuStyle);
     }
     dispose() {
         super.dispose();
@@ -730,9 +710,14 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
     }
 }
 class MenuSeparatorActionViewItem extends ActionViewItem {
-    style(style) {
+    constructor(context, action, options, menuStyles) {
+        super(context, action, options);
+        this.menuStyles = menuStyles;
+    }
+    render(container) {
+        super.render(container);
         if (this.label) {
-            this.label.style.borderBottomColor = style.separatorColor ? `${style.separatorColor}` : '';
+            this.label.style.borderBottomColor = this.menuStyles.separatorColor ? `${this.menuStyles.separatorColor}` : '';
         }
     }
 }
@@ -744,6 +729,10 @@ export function cleanMnemonic(label) {
     }
     const mnemonicInText = !matches[1];
     return label.replace(regex, mnemonicInText ? '$2$3' : '').trim();
+}
+export function formatRule(c) {
+    const fontCharacter = getCodiconFontCharacters()[c.id];
+    return `.codicon-${c.id}:before { content: '\\${fontCharacter.toString(16)}'; }`;
 }
 function getMenuWidgetCSS(style, isForShadowDom) {
     let result = /* css */ `
@@ -871,6 +860,8 @@ ${formatRule(Codicon.menuSubmenu)}
 	height: 2em;
 	align-items: center;
 	position: relative;
+	margin: 0 4px;
+	border-radius: 4px;
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-menu-item:hover .keybinding,
@@ -994,7 +985,7 @@ ${formatRule(Codicon.menuSubmenu)}
 /* Vertical Action Bar Styles */
 
 .monaco-menu .monaco-action-bar.vertical {
-	padding: .6em 0;
+	padding: 4px 0;
 }
 
 .monaco-menu .monaco-action-bar.vertical .action-menu-item {
@@ -1030,7 +1021,7 @@ ${formatRule(Codicon.menuSubmenu)}
 	padding: 0 1.8em;
 }
 
-.linux .monaco-menu .monaco-action-bar.vertical .submenu-indicator {
+.linux .monaco-menu .monaco-action-bar.vertical .submenu-indicator,
 :host-context(.linux) .monaco-menu .monaco-action-bar.vertical .submenu-indicator {
 	height: 100%;
 	mask-size: 10px 10px;

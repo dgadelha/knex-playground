@@ -11,31 +11,24 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import { coalesce } from '../../../../base/common/arrays.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { registerModelAndPositionCommand } from '../../../browser/editorExtensions.js';
-import { ReferencesModel } from './referencesModel.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
+import { ReferencesModel } from './referencesModel.js';
 function getLocationLinks(model, position, registry, provide) {
-    const provider = registry.ordered(model);
-    // get results
-    const promises = provider.map((provider) => {
-        return Promise.resolve(provide(provider, model, position)).then(undefined, err => {
-            onUnexpectedExternalError(err);
-            return undefined;
+    return __awaiter(this, void 0, void 0, function* () {
+        const provider = registry.ordered(model);
+        // get results
+        const promises = provider.map((provider) => {
+            return Promise.resolve(provide(provider, model, position)).then(undefined, err => {
+                onUnexpectedExternalError(err);
+                return undefined;
+            });
         });
-    });
-    return Promise.all(promises).then(values => {
-        const result = [];
-        for (const value of values) {
-            if (Array.isArray(value)) {
-                result.push(...value);
-            }
-            else if (value) {
-                result.push(value);
-            }
-        }
-        return result;
+        const values = yield Promise.all(promises);
+        return coalesce(values.flat());
     });
 }
 export function getDefinitionsAtPosition(registry, model, position, token) {

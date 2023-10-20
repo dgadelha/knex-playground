@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { CharacterClassifier } from '../core/characterClassifier.js';
-export class Uint8Matrix {
+class Uint8Matrix {
     constructor(rows, cols, defaultValue) {
         const data = new Uint8Array(rows * cols);
         for (let i = 0, len = rows * cols; i < len; i++) {
@@ -178,15 +178,20 @@ export class LinkComputer {
                         case 125 /* CharCode.CloseCurlyBrace */:
                             chClass = (hasOpenCurlyBracket ? 0 /* CharacterClass.None */ : 1 /* CharacterClass.ForceTermination */);
                             break;
-                        /* The following three rules make it that ' or " or ` are allowed inside links if the link didn't begin with them */
+                        // The following three rules make it that ' or " or ` are allowed inside links
+                        // only if the link is wrapped by some other quote character
                         case 39 /* CharCode.SingleQuote */:
-                            chClass = (linkBeginChCode === 39 /* CharCode.SingleQuote */ ? 1 /* CharacterClass.ForceTermination */ : 0 /* CharacterClass.None */);
-                            break;
                         case 34 /* CharCode.DoubleQuote */:
-                            chClass = (linkBeginChCode === 34 /* CharCode.DoubleQuote */ ? 1 /* CharacterClass.ForceTermination */ : 0 /* CharacterClass.None */);
-                            break;
                         case 96 /* CharCode.BackTick */:
-                            chClass = (linkBeginChCode === 96 /* CharCode.BackTick */ ? 1 /* CharacterClass.ForceTermination */ : 0 /* CharacterClass.None */);
+                            if (linkBeginChCode === chCode) {
+                                chClass = 1 /* CharacterClass.ForceTermination */;
+                            }
+                            else if (linkBeginChCode === 39 /* CharCode.SingleQuote */ || linkBeginChCode === 34 /* CharCode.DoubleQuote */ || linkBeginChCode === 96 /* CharCode.BackTick */) {
+                                chClass = 0 /* CharacterClass.None */;
+                            }
+                            else {
+                                chClass = 1 /* CharacterClass.ForceTermination */;
+                            }
                             break;
                         case 42 /* CharCode.Asterisk */:
                             // `*` terminates a link if the link began with `*`

@@ -1,17 +1,14 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
 import { Codicon } from '../../base/common/codicons.js';
 import { URI } from '../../base/common/uri.js';
 import { Range } from './core/range.js';
 import { TokenizationRegistry as TokenizationRegistryImpl } from './tokenizationRegistry.js';
+import { localize } from '../../nls.js';
 export class Token {
     constructor(offset, type, language) {
-        this._tokenBrand = undefined;
         this.offset = offset;
         this.type = type;
         this.language = language;
+        this._tokenBrand = undefined;
     }
     toString() {
         return '(' + this.offset + ', ' + this.type + ')';
@@ -22,19 +19,26 @@ export class Token {
  */
 export class TokenizationResult {
     constructor(tokens, endState) {
-        this._tokenizationResultBrand = undefined;
         this.tokens = tokens;
         this.endState = endState;
+        this._tokenizationResultBrand = undefined;
     }
 }
 /**
  * @internal
  */
 export class EncodedTokenizationResult {
-    constructor(tokens, endState) {
-        this._encodedTokenizationResultBrand = undefined;
+    constructor(
+    /**
+     * The tokens in binary format. Each token occupies two array indices. For token i:
+     *  - at offset 2*i => startIndex
+     *  - at offset 2*i + 1 => metadata
+     *
+     */
+    tokens, endState) {
         this.tokens = tokens;
         this.endState = endState;
+        this._encodedTokenizationResultBrand = undefined;
     }
 }
 /**
@@ -143,6 +147,20 @@ export var InlineCompletionTriggerKind;
      */
     InlineCompletionTriggerKind[InlineCompletionTriggerKind["Explicit"] = 1] = "Explicit";
 })(InlineCompletionTriggerKind || (InlineCompletionTriggerKind = {}));
+export class SelectedSuggestionInfo {
+    constructor(range, text, completionKind, isSnippetText) {
+        this.range = range;
+        this.text = text;
+        this.completionKind = completionKind;
+        this.isSnippetText = isSnippetText;
+    }
+    equals(other) {
+        return Range.lift(this.range).equalsRange(other.range)
+            && this.text === other.text
+            && this.completionKind === other.completionKind
+            && this.isSnippetText === other.isSnippetText;
+    }
+}
 export var SignatureHelpTriggerKind;
 (function (SignatureHelpTriggerKind) {
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["Invoke"] = 1] = "Invoke";
@@ -175,6 +193,43 @@ export function isLocationLink(thing) {
         && URI.isUri(thing.uri)
         && Range.isIRange(thing.range)
         && (Range.isIRange(thing.originSelectionRange) || Range.isIRange(thing.targetSelectionRange));
+}
+/**
+ * @internal
+ */
+export const symbolKindNames = {
+    [17 /* SymbolKind.Array */]: localize('Array', "array"),
+    [16 /* SymbolKind.Boolean */]: localize('Boolean', "boolean"),
+    [4 /* SymbolKind.Class */]: localize('Class', "class"),
+    [13 /* SymbolKind.Constant */]: localize('Constant', "constant"),
+    [8 /* SymbolKind.Constructor */]: localize('Constructor', "constructor"),
+    [9 /* SymbolKind.Enum */]: localize('Enum', "enumeration"),
+    [21 /* SymbolKind.EnumMember */]: localize('EnumMember', "enumeration member"),
+    [23 /* SymbolKind.Event */]: localize('Event', "event"),
+    [7 /* SymbolKind.Field */]: localize('Field', "field"),
+    [0 /* SymbolKind.File */]: localize('File', "file"),
+    [11 /* SymbolKind.Function */]: localize('Function', "function"),
+    [10 /* SymbolKind.Interface */]: localize('Interface', "interface"),
+    [19 /* SymbolKind.Key */]: localize('Key', "key"),
+    [5 /* SymbolKind.Method */]: localize('Method', "method"),
+    [1 /* SymbolKind.Module */]: localize('Module', "module"),
+    [2 /* SymbolKind.Namespace */]: localize('Namespace', "namespace"),
+    [20 /* SymbolKind.Null */]: localize('Null', "null"),
+    [15 /* SymbolKind.Number */]: localize('Number', "number"),
+    [18 /* SymbolKind.Object */]: localize('Object', "object"),
+    [24 /* SymbolKind.Operator */]: localize('Operator', "operator"),
+    [3 /* SymbolKind.Package */]: localize('Package', "package"),
+    [6 /* SymbolKind.Property */]: localize('Property', "property"),
+    [14 /* SymbolKind.String */]: localize('String', "string"),
+    [22 /* SymbolKind.Struct */]: localize('Struct', "struct"),
+    [25 /* SymbolKind.TypeParameter */]: localize('TypeParameter', "type parameter"),
+    [12 /* SymbolKind.Variable */]: localize('Variable', "variable"),
+};
+/**
+ * @internal
+ */
+export function getAriaLabelForSymbol(symbolName, kind) {
+    return localize('symbolAriaLabel', '{0} ({1})', symbolName, symbolKindNames[kind]);
 }
 /**
  * @internal
@@ -221,7 +276,23 @@ export var SymbolKinds;
     }
     SymbolKinds.toIcon = toIcon;
 })(SymbolKinds || (SymbolKinds = {}));
+/** @internal */
+export class TextEdit {
+}
 export class FoldingRangeKind {
+    /**
+     * Returns a {@link FoldingRangeKind} for the given value.
+     *
+     * @param value of the kind.
+     */
+    static fromValue(value) {
+        switch (value) {
+            case 'comment': return FoldingRangeKind.Comment;
+            case 'imports': return FoldingRangeKind.Imports;
+            case 'region': return FoldingRangeKind.Region;
+        }
+        return new FoldingRangeKind(value);
+    }
     /**
      * Creates a new {@link FoldingRangeKind}.
      *
@@ -266,6 +337,30 @@ export var InlayHintKind;
     InlayHintKind[InlayHintKind["Type"] = 1] = "Type";
     InlayHintKind[InlayHintKind["Parameter"] = 2] = "Parameter";
 })(InlayHintKind || (InlayHintKind = {}));
+/**
+ * @internal
+ */
+export class LazyTokenizationSupport {
+    constructor(createSupport) {
+        this.createSupport = createSupport;
+        this._tokenizationSupport = null;
+    }
+    dispose() {
+        if (this._tokenizationSupport) {
+            this._tokenizationSupport.then((support) => {
+                if (support) {
+                    support.dispose();
+                }
+            });
+        }
+    }
+    get tokenizationSupport() {
+        if (!this._tokenizationSupport) {
+            this._tokenizationSupport = this.createSupport();
+        }
+        return this._tokenizationSupport;
+    }
+}
 /**
  * @internal
  */

@@ -147,7 +147,7 @@ class AbstractMoveLinesAction extends EditorAction {
         const languageConfigurationService = accessor.get(ILanguageConfigurationService);
         const commands = [];
         const selections = editor.getSelections() || [];
-        const autoIndent = editor.getOption(9 /* EditorOption.autoIndent */);
+        const autoIndent = editor.getOption(12 /* EditorOption.autoIndent */);
         for (const selection of selections) {
             commands.push(new MoveLinesCommand(selection, this.down, autoIndent, languageConfigurationService));
         }
@@ -415,7 +415,7 @@ export class IndentLinesAction extends EditorAction {
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
-                primary: 2048 /* KeyMod.CtrlCmd */ | 89 /* KeyCode.BracketRight */,
+                primary: 2048 /* KeyMod.CtrlCmd */ | 94 /* KeyCode.BracketRight */,
                 weight: 100 /* KeybindingWeight.EditorContrib */
             }
         });
@@ -439,7 +439,7 @@ class OutdentLinesAction extends EditorAction {
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
-                primary: 2048 /* KeyMod.CtrlCmd */ | 87 /* KeyCode.BracketLeft */,
+                primary: 2048 /* KeyMod.CtrlCmd */ | 92 /* KeyCode.BracketLeft */,
                 weight: 100 /* KeybindingWeight.EditorContrib */
             }
         });
@@ -579,7 +579,7 @@ export class DeleteAllLeftAction extends AbstractDeleteAllToBoundaryAction {
             if (selection.isEmpty()) {
                 if (selection.startColumn === 1) {
                     const deleteFromLine = Math.max(1, selection.startLineNumber - 1);
-                    const deleteFromColumn = selection.startLineNumber === 1 ? 1 : model.getLineContent(deleteFromLine).length + 1;
+                    const deleteFromColumn = selection.startLineNumber === 1 ? 1 : model.getLineLength(deleteFromLine) + 1;
                     return new Range(deleteFromLine, deleteFromColumn, selection.startLineNumber, 1);
                 }
                 else {
@@ -718,7 +718,7 @@ export class JoinLinesAction extends EditorAction {
             const startColumn = 1;
             let columnDeltaOffset = 0;
             let endLineNumber, endColumn;
-            const selectionEndPositionOffset = model.getLineContent(selection.endLineNumber).length - selection.endColumn;
+            const selectionEndPositionOffset = model.getLineLength(selection.endLineNumber) - selection.endColumn;
             if (selection.isEmpty() || selection.startLineNumber === selection.endLineNumber) {
                 const position = selection.getStartPosition();
                 if (position.lineNumber < model.getLineCount()) {
@@ -797,8 +797,8 @@ export class TransposeAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.transpose',
-            label: nls.localize('editor.transpose', "Transpose characters around the cursor"),
-            alias: 'Transpose characters around the cursor',
+            label: nls.localize('editor.transpose', "Transpose Characters around the Cursor"),
+            alias: 'Transpose Characters around the Cursor',
             precondition: EditorContextKeys.writable
         });
     }
@@ -850,7 +850,7 @@ export class AbstractCaseAction extends EditorAction {
         if (model === null) {
             return;
         }
-        const wordSeparators = editor.getOption(119 /* EditorOption.wordSeparators */);
+        const wordSeparators = editor.getOption(129 /* EditorOption.wordSeparators */);
         const textEdits = [];
         for (const selection of selections) {
             if (selection.isEmpty()) {
@@ -967,15 +967,29 @@ export class SnakeCaseAction extends AbstractCaseAction {
 }
 SnakeCaseAction.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu');
 SnakeCaseAction.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu})(\\p{Ll})', 'gmu');
-export class KebabCaseAction extends AbstractCaseAction {
+export class CamelCaseAction extends AbstractCaseAction {
     constructor() {
         super({
-            id: 'editor.action.transformToKebabcase',
-            label: nls.localize('editor.transformToKebabcase', 'Transform to Kebab Case'),
-            alias: 'Transform to Kebab Case',
+            id: 'editor.action.transformToCamelcase',
+            label: nls.localize('editor.transformToCamelcase', "Transform to Camel Case"),
+            alias: 'Transform to Camel Case',
             precondition: EditorContextKeys.writable
         });
     }
+    _modifyText(text, wordSeparators) {
+        const wordBoundary = CamelCaseAction.wordBoundary.get();
+        if (!wordBoundary) {
+            // cannot support this
+            return text;
+        }
+        const words = text.split(wordBoundary);
+        const firstWord = words.shift();
+        return firstWord + words.map((word) => word.substring(0, 1).toLocaleUpperCase() + word.substring(1))
+            .join('');
+    }
+}
+CamelCaseAction.wordBoundary = new BackwardsCompatibleRegExp('[_\\s-]', 'gm');
+export class KebabCaseAction extends AbstractCaseAction {
     static isSupported() {
         const areAllRegexpsSupported = [
             this.caseBoundary,
@@ -983,6 +997,14 @@ export class KebabCaseAction extends AbstractCaseAction {
             this.underscoreBoundary,
         ].every((regexp) => regexp.isSupported());
         return areAllRegexpsSupported;
+    }
+    constructor() {
+        super({
+            id: 'editor.action.transformToKebabcase',
+            label: nls.localize('editor.transformToKebabcase', 'Transform to Kebab Case'),
+            alias: 'Transform to Kebab Case',
+            precondition: EditorContextKeys.writable
+        });
     }
     _modifyText(text, _) {
         const caseBoundary = KebabCaseAction.caseBoundary.get();
@@ -1024,6 +1046,9 @@ registerEditorAction(UpperCaseAction);
 registerEditorAction(LowerCaseAction);
 if (SnakeCaseAction.caseBoundary.isSupported() && SnakeCaseAction.singleLetters.isSupported()) {
     registerEditorAction(SnakeCaseAction);
+}
+if (CamelCaseAction.wordBoundary.isSupported()) {
+    registerEditorAction(CamelCaseAction);
 }
 if (TitleCaseAction.titleBoundary.isSupported()) {
     registerEditorAction(TitleCaseAction);

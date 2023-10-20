@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as browser from './browser.js';
 import { EVENT_KEY_CODE_MAP, KeyCodeUtils } from '../common/keyCodes.js';
-import { SimpleKeybinding } from '../common/keybindings.js';
+import { KeyCodeChord } from '../common/keybindings.js';
 import * as platform from '../common/platform.js';
 function extractKeyCode(e) {
     if (e.charCode) {
@@ -18,24 +18,27 @@ function extractKeyCode(e) {
         return 7 /* KeyCode.PauseBreak */;
     }
     else if (browser.isFirefox) {
-        if (keyCode === 59) {
-            return 80 /* KeyCode.Semicolon */;
-        }
-        else if (keyCode === 107) {
-            return 81 /* KeyCode.Equal */;
-        }
-        else if (keyCode === 109) {
-            return 83 /* KeyCode.Minus */;
-        }
-        else if (platform.isMacintosh && keyCode === 224) {
-            return 57 /* KeyCode.Meta */;
+        switch (keyCode) {
+            case 59: return 85 /* KeyCode.Semicolon */;
+            case 60:
+                if (platform.isLinux) {
+                    return 97 /* KeyCode.IntlBackslash */;
+                }
+                break;
+            case 61: return 86 /* KeyCode.Equal */;
+            // based on: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/keyCode#numpad_keys
+            case 107: return 109 /* KeyCode.NumpadAdd */;
+            case 109: return 111 /* KeyCode.NumpadSubtract */;
+            case 173: return 88 /* KeyCode.Minus */;
+            case 224:
+                if (platform.isMacintosh) {
+                    return 57 /* KeyCode.Meta */;
+                }
+                break;
         }
     }
     else if (browser.isWebKit) {
-        if (keyCode === 91) {
-            return 57 /* KeyCode.Meta */;
-        }
-        else if (platform.isMacintosh && keyCode === 93) {
+        if (platform.isMacintosh && keyCode === 93) {
             // the two meta keys in the Mac have different key codes (91 and 93)
             return 57 /* KeyCode.Meta */;
         }
@@ -60,6 +63,7 @@ export class StandardKeyboardEvent {
         this.shiftKey = e.shiftKey;
         this.altKey = e.altKey;
         this.metaKey = e.metaKey;
+        this.altGraphKey = e.getModifierState('AltGraph');
         this.keyCode = extractKeyCode(e);
         this.code = e.code;
         // console.info(e.type + ": keyCode: " + e.keyCode + ", which: " + e.which + ", charCode: " + e.charCode + ", detail: " + e.detail + " ====> " + this.keyCode + ' -- ' + KeyCode[this.keyCode]);
@@ -68,7 +72,7 @@ export class StandardKeyboardEvent {
         this.shiftKey = this.shiftKey || this.keyCode === 4 /* KeyCode.Shift */;
         this.metaKey = this.metaKey || this.keyCode === 57 /* KeyCode.Meta */;
         this._asKeybinding = this._computeKeybinding();
-        this._asRuntimeKeybinding = this._computeRuntimeKeybinding();
+        this._asKeyCodeChord = this._computeKeyCodeChord();
         // console.log(`code: ${e.code}, keyCode: ${e.keyCode}, key: ${e.key}`);
     }
     preventDefault() {
@@ -81,8 +85,8 @@ export class StandardKeyboardEvent {
             this.browserEvent.stopPropagation();
         }
     }
-    toKeybinding() {
-        return this._asRuntimeKeybinding;
+    toKeyCodeChord() {
+        return this._asKeyCodeChord;
     }
     equals(other) {
         return this._asKeybinding === other;
@@ -108,11 +112,11 @@ export class StandardKeyboardEvent {
         result |= key;
         return result;
     }
-    _computeRuntimeKeybinding() {
+    _computeKeyCodeChord() {
         let key = 0 /* KeyCode.Unknown */;
         if (this.keyCode !== 5 /* KeyCode.Ctrl */ && this.keyCode !== 4 /* KeyCode.Shift */ && this.keyCode !== 6 /* KeyCode.Alt */ && this.keyCode !== 57 /* KeyCode.Meta */) {
             key = this.keyCode;
         }
-        return new SimpleKeybinding(this.ctrlKey, this.shiftKey, this.altKey, this.metaKey, key);
+        return new KeyCodeChord(this.ctrlKey, this.shiftKey, this.altKey, this.metaKey, key);
     }
 }

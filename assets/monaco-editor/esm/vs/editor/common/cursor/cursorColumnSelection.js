@@ -36,14 +36,14 @@ export class ColumnSelection {
                     continue;
                 }
             }
-            result.push(new SingleCursorState(new Range(lineNumber, startColumn, lineNumber, startColumn), 0, new Position(lineNumber, endColumn), 0));
+            result.push(new SingleCursorState(new Range(lineNumber, startColumn, lineNumber, startColumn), 0 /* SelectionStartKind.Simple */, 0, new Position(lineNumber, endColumn), 0));
         }
         if (result.length === 0) {
             // We are after all the lines, so add cursor at the end of each line
             for (let i = 0; i < lineCount; i++) {
                 const lineNumber = fromLineNumber + (reversed ? -i : i);
                 const maxColumn = model.getLineMaxColumn(lineNumber);
-                result.push(new SingleCursorState(new Range(lineNumber, maxColumn, lineNumber, maxColumn), 0, new Position(lineNumber, maxColumn), 0));
+                result.push(new SingleCursorState(new Range(lineNumber, maxColumn, lineNumber, maxColumn), 0 /* SelectionStartKind.Simple */, 0, new Position(lineNumber, maxColumn), 0));
             }
         }
         return {

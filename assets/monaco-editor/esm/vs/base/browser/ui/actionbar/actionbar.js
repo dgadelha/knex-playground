@@ -16,25 +16,27 @@ import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { ActionViewItem, BaseActionViewItem } from './actionViewItems.js';
 import { ActionRunner, Separator } from '../../../common/actions.js';
 import { Emitter } from '../../../common/event.js';
-import { Disposable, dispose } from '../../../common/lifecycle.js';
+import { Disposable, DisposableMap, DisposableStore, dispose } from '../../../common/lifecycle.js';
 import * as types from '../../../common/types.js';
 import './actionbar.css';
 export class ActionBar extends Disposable {
     constructor(container, options = {}) {
         var _a, _b, _c, _d, _e, _f;
         super();
+        this._actionRunnerDisposables = this._register(new DisposableStore());
+        this.viewItemDisposables = this._register(new DisposableMap());
         // Trigger Key Tracking
         this.triggerKeyDown = false;
         this.focusable = true;
         this._onDidBlur = this._register(new Emitter());
         this.onDidBlur = this._onDidBlur.event;
-        this._onDidCancel = this._register(new Emitter({ onFirstListenerAdd: () => this.cancelHasListener = true }));
+        this._onDidCancel = this._register(new Emitter({ onWillAddFirstListener: () => this.cancelHasListener = true }));
         this.onDidCancel = this._onDidCancel.event;
         this.cancelHasListener = false;
         this._onDidRun = this._register(new Emitter());
         this.onDidRun = this._onDidRun.event;
-        this._onBeforeRun = this._register(new Emitter());
-        this.onBeforeRun = this._onBeforeRun.event;
+        this._onWillRun = this._register(new Emitter());
+        this.onWillRun = this._onWillRun.event;
         this.options = options;
         this._context = (_a = options.context) !== null && _a !== void 0 ? _a : null;
         this._orientation = (_b = this.options.orientation) !== null && _b !== void 0 ? _b : 0 /* ActionsOrientation.HORIZONTAL */;
@@ -47,13 +49,11 @@ export class ActionBar extends Disposable {
         }
         else {
             this._actionRunner = new ActionRunner();
-            this._register(this._actionRunner);
+            this._actionRunnerDisposables.add(this._actionRunner);
         }
-        this._register(this._actionRunner.onDidRun(e => this._onDidRun.fire(e)));
-        this._register(this._actionRunner.onBeforeRun(e => this._onBeforeRun.fire(e)));
-        this._actionIds = [];
+        this._actionRunnerDisposables.add(this._actionRunner.onDidRun(e => this._onDidRun.fire(e)));
+        this._actionRunnerDisposables.add(this._actionRunner.onWillRun(e => this._onWillRun.fire(e)));
         this.viewItems = [];
-        this.viewItemDisposables = new Map();
         this.focusedItem = undefined;
         this.domNode = document.createElement('div');
         this.domNode.className = 'monaco-action-bar';
@@ -132,14 +132,17 @@ export class ActionBar extends Disposable {
         this._register(this.focusTracker.onDidBlur(() => {
             if (DOM.getActiveElement() === this.domNode || !DOM.isAncestor(DOM.getActiveElement(), this.domNode)) {
                 this._onDidBlur.fire();
+                this.previouslyFocusedItem = this.focusedItem;
                 this.focusedItem = undefined;
-                this.previouslyFocusedItem = undefined;
                 this.triggerKeyDown = false;
             }
         }));
         this._register(this.focusTracker.onDidFocus(() => this.updateFocusedItem()));
         this.actionsList = document.createElement('ul');
         this.actionsList.className = 'actions-container';
+        if (this.options.highlightToggledItems) {
+            this.actionsList.classList.add('highlight-toggled');
+        }
         this.actionsList.setAttribute('role', this.options.ariaRole || 'toolbar');
         if (this.options.ariaLabel) {
             this.actionsList.setAttribute('aria-label', this.options.ariaLabel);
@@ -201,13 +204,38 @@ export class ActionBar extends Disposable {
         return this._actionRunner;
     }
     set actionRunner(actionRunner) {
-        if (actionRunner) {
-            this._actionRunner = actionRunner;
-            this.viewItems.forEach(item => item.actionRunner = actionRunner);
-        }
+        this._actionRunner = actionRunner;
+        // when setting a new `IActionRunner` make sure to dispose old listeners and
+        // start to forward events from the new listener
+        this._actionRunnerDisposables.clear();
+        this._actionRunnerDisposables.add(this._actionRunner.onDidRun(e => this._onDidRun.fire(e)));
+        this._actionRunnerDisposables.add(this._actionRunner.onWillRun(e => this._onWillRun.fire(e)));
+        this.viewItems.forEach(item => item.actionRunner = actionRunner);
     }
     getContainer() {
         return this.domNode;
+    }
+    getAction(indexOrElement) {
+        var _a;
+        // by index
+        if (typeof indexOrElement === 'number') {
+            return (_a = this.viewItems[indexOrElement]) === null || _a === void 0 ? void 0 : _a.action;
+        }
+        // by element
+        if (indexOrElement instanceof HTMLElement) {
+            while (indexOrElement.parentElement !== this.actionsList) {
+                if (!indexOrElement.parentElement) {
+                    return undefined;
+                }
+                indexOrElement = indexOrElement.parentElement;
+            }
+            for (let i = 0; i < this.actionsList.childNodes.length; i++) {
+                if (this.actionsList.childNodes[i] === indexOrElement) {
+                    return this.viewItems[i].action;
+                }
+            }
+        }
+        return undefined;
     }
     push(arg, options = {}) {
         const actions = Array.isArray(arg) ? arg : [arg];
@@ -217,11 +245,12 @@ export class ActionBar extends Disposable {
             actionViewItemElement.className = 'action-item';
             actionViewItemElement.setAttribute('role', 'presentation');
             let item;
+            const viewItemOptions = Object.assign({ hoverDelegate: this.options.hoverDelegate }, options);
             if (this.options.actionViewItemProvider) {
-                item = this.options.actionViewItemProvider(action);
+                item = this.options.actionViewItemProvider(action, viewItemOptions);
             }
             if (!item) {
-                item = new ActionViewItem(this.context, action, Object.assign({ hoverDelegate: this.options.hoverDelegate }, options));
+                item = new ActionViewItem(this.context, action, viewItemOptions);
             }
             // Prevent native context menu on actions
             if (!this.options.allowContextMenu) {
@@ -239,12 +268,10 @@ export class ActionBar extends Disposable {
             if (index === null || index < 0 || index >= this.actionsList.children.length) {
                 this.actionsList.appendChild(actionViewItemElement);
                 this.viewItems.push(item);
-                this._actionIds.push(action.id);
             }
             else {
                 this.actionsList.insertBefore(actionViewItemElement, this.actionsList.children[index]);
                 this.viewItems.splice(index, 0, item);
-                this._actionIds.splice(index, 0, action.id);
                 index++;
             }
         });
@@ -255,16 +282,19 @@ export class ActionBar extends Disposable {
         this.refreshRole();
     }
     clear() {
-        dispose(this.viewItems);
-        this.viewItemDisposables.forEach(d => d.dispose());
-        this.viewItemDisposables.clear();
-        this.viewItems = [];
-        this._actionIds = [];
+        if (this.isEmpty()) {
+            return;
+        }
+        this.viewItems = dispose(this.viewItems);
+        this.viewItemDisposables.clearAndDisposeAll();
         DOM.clearNode(this.actionsList);
         this.refreshRole();
     }
     length() {
         return this.viewItems.length;
+    }
+    isEmpty() {
+        return this.viewItems.length === 0;
     }
     focus(arg) {
         let selectFirst = false;
@@ -389,9 +419,8 @@ export class ActionBar extends Disposable {
         });
     }
     dispose() {
-        dispose(this.viewItems);
-        this.viewItems = [];
-        this._actionIds = [];
+        this._context = undefined;
+        this.viewItems = dispose(this.viewItems);
         this.getContainer().remove();
         super.dispose();
     }

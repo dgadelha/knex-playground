@@ -10,6 +10,7 @@ export class BlockDecorations extends ViewPart {
         super(context);
         this.blocks = [];
         this.contentWidth = -1;
+        this.contentLeft = 0;
         this.domNode = createFastDomNode(document.createElement('div'));
         this.domNode.setAttribute('role', 'presentation');
         this.domNode.setAttribute('aria-hidden', 'true');
@@ -19,10 +20,15 @@ export class BlockDecorations extends ViewPart {
     update() {
         let didChange = false;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(133 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         const newContentWidth = layoutInfo.contentWidth - layoutInfo.verticalScrollbarWidth;
         if (this.contentWidth !== newContentWidth) {
             this.contentWidth = newContentWidth;
+            didChange = true;
+        }
+        const newContentLeft = layoutInfo.contentLeft;
+        if (this.contentLeft !== newContentLeft) {
+            this.contentLeft = newContentLeft;
             didChange = true;
         }
         return didChange;
@@ -48,6 +54,7 @@ export class BlockDecorations extends ViewPart {
         // Nothing to read
     }
     render(ctx) {
+        var _a;
         let count = 0;
         const decorations = ctx.getDecorationsInViewport();
         for (const decoration of decorations) {
@@ -59,14 +66,25 @@ export class BlockDecorations extends ViewPart {
                 block = this.blocks[count] = createFastDomNode(document.createElement('div'));
                 this.domNode.appendChild(block);
             }
-            const top = ctx.getVerticalOffsetForLineNumber(decoration.range.startLineNumber);
-            // See https://github.com/microsoft/vscode/pull/152740#discussion_r902661546
-            const bottom = ctx.getVerticalOffsetForLineNumber(decoration.range.endLineNumber + 1);
+            let top;
+            let bottom;
+            if (decoration.options.blockIsAfterEnd) {
+                // range must be empty
+                top = ctx.getVerticalOffsetAfterLineNumber(decoration.range.endLineNumber, false);
+                bottom = ctx.getVerticalOffsetAfterLineNumber(decoration.range.endLineNumber, true);
+            }
+            else {
+                top = ctx.getVerticalOffsetForLineNumber(decoration.range.startLineNumber, true);
+                bottom = decoration.range.isEmpty() && !decoration.options.blockDoesNotCollapse
+                    ? ctx.getVerticalOffsetForLineNumber(decoration.range.startLineNumber, false)
+                    : ctx.getVerticalOffsetAfterLineNumber(decoration.range.endLineNumber, true);
+            }
+            const [paddingTop, paddingRight, paddingBottom, paddingLeft] = (_a = decoration.options.blockPadding) !== null && _a !== void 0 ? _a : [0, 0, 0, 0];
             block.setClassName('blockDecorations-block ' + decoration.options.blockClassName);
-            block.setLeft(ctx.scrollLeft);
-            block.setWidth(this.contentWidth);
-            block.setTop(top);
-            block.setHeight(bottom - top);
+            block.setLeft(this.contentLeft - paddingLeft);
+            block.setWidth(this.contentWidth + paddingLeft + paddingRight);
+            block.setTop(top - ctx.scrollTop - paddingTop);
+            block.setHeight(bottom - top + paddingTop + paddingBottom);
             count++;
         }
         for (let i = count; i < this.blocks.length; i++) {

@@ -4,14 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 import { asCSSPropertyValue, asCSSUrl } from '../../../base/browser/dom.js';
 import { Emitter } from '../../../base/common/event.js';
+import { DisposableStore } from '../../../base/common/lifecycle.js';
+import { ThemeIcon } from '../../../base/common/themables.js';
 import { getIconRegistry } from '../common/iconRegistry.js';
-import { ThemeIcon } from '../common/themeService.js';
 export function getIconsStyleSheet(themeService) {
-    const onDidChangeEmmiter = new Emitter();
+    const disposable = new DisposableStore();
+    const onDidChangeEmmiter = disposable.add(new Emitter());
     const iconRegistry = getIconRegistry();
-    iconRegistry.onDidChange(() => onDidChangeEmmiter.fire());
-    themeService === null || themeService === void 0 ? void 0 : themeService.onDidProductIconThemeChange(() => onDidChangeEmmiter.fire());
+    disposable.add(iconRegistry.onDidChange(() => onDidChangeEmmiter.fire()));
+    if (themeService) {
+        disposable.add(themeService.onDidProductIconThemeChange(() => onDidChangeEmmiter.fire()));
+    }
     return {
+        dispose: () => disposable.dispose(),
         onDidChange: onDidChangeEmmiter.event,
         getCSS() {
             const productIconTheme = themeService ? themeService.getProductIconTheme() : new UnthemedProductIconTheme();

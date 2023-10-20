@@ -14,7 +14,8 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 var _a;
 import { $, append, hide, show } from '../../../../base/browser/dom.js';
 import { IconLabel } from '../../../../base/browser/ui/iconLabel/iconLabel.js';
-import { Codicon, CSSIcon } from '../../../../base/common/codicons.js';
+import { Codicon } from '../../../../base/common/codicons.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { createMatches } from '../../../../base/common/filters.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
@@ -26,24 +27,24 @@ import { ILanguageService } from '../../../common/languages/language.js';
 import * as nls from '../../../../nls.js';
 import { FileKind } from '../../../../platform/files/common/files.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
-import { IThemeService, ThemeIcon } from '../../../../platform/theme/common/themeService.js';
+import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { canExpandCompletionItem } from './suggestWidgetDetails.js';
 export function getAriaId(index) {
     return `suggest-aria-id:${index}`;
 }
-export const suggestMoreInfoIcon = registerIcon('suggest-more-info', Codicon.chevronRight, nls.localize('suggestMoreInfoIcon', 'Icon for more information in the suggest widget.'));
+const suggestMoreInfoIcon = registerIcon('suggest-more-info', Codicon.chevronRight, nls.localize('suggestMoreInfoIcon', 'Icon for more information in the suggest widget.'));
 const _completionItemColor = new (_a = class ColorExtractor {
         extract(item, out) {
-            if (item.textLabel.match(ColorExtractor._regexStrict)) {
+            if (item.textLabel.match(_a._regexStrict)) {
                 out[0] = item.textLabel;
                 return true;
             }
-            if (item.completion.detail && item.completion.detail.match(ColorExtractor._regexStrict)) {
+            if (item.completion.detail && item.completion.detail.match(_a._regexStrict)) {
                 out[0] = item.completion.detail;
                 return true;
             }
             if (typeof item.completion.documentation === 'string') {
-                const match = ColorExtractor._regexRelaxed.exec(item.completion.documentation);
+                const match = _a._regexRelaxed.exec(item.completion.documentation);
                 if (match && (match.index === 0 || match.index + match[0].length === item.completion.documentation.length)) {
                     out[0] = match[0];
                     return true;
@@ -69,54 +70,53 @@ let ItemRenderer = class ItemRenderer {
         this._onDidToggleDetails.dispose();
     }
     renderTemplate(container) {
-        const data = Object.create(null);
-        data.disposables = new DisposableStore();
-        data.root = container;
-        data.root.classList.add('show-file-icons');
-        data.icon = append(container, $('.icon'));
-        data.colorspan = append(data.icon, $('span.colorspan'));
+        const disposables = new DisposableStore();
+        const root = container;
+        root.classList.add('show-file-icons');
+        const icon = append(container, $('.icon'));
+        const colorspan = append(icon, $('span.colorspan'));
         const text = append(container, $('.contents'));
         const main = append(text, $('.main'));
-        data.iconContainer = append(main, $('.icon-label.codicon'));
-        data.left = append(main, $('span.left'));
-        data.right = append(main, $('span.right'));
-        data.iconLabel = new IconLabel(data.left, { supportHighlights: true, supportIcons: true });
-        data.disposables.add(data.iconLabel);
-        data.parametersLabel = append(data.left, $('span.signature-label'));
-        data.qualifierLabel = append(data.left, $('span.qualifier-label'));
-        data.detailsLabel = append(data.right, $('span.details-label'));
-        data.readMore = append(data.right, $('span.readMore' + ThemeIcon.asCSSSelector(suggestMoreInfoIcon)));
-        data.readMore.title = nls.localize('readMore', "Read More");
+        const iconContainer = append(main, $('.icon-label.codicon'));
+        const left = append(main, $('span.left'));
+        const right = append(main, $('span.right'));
+        const iconLabel = new IconLabel(left, { supportHighlights: true, supportIcons: true });
+        disposables.add(iconLabel);
+        const parametersLabel = append(left, $('span.signature-label'));
+        const qualifierLabel = append(left, $('span.qualifier-label'));
+        const detailsLabel = append(right, $('span.details-label'));
+        const readMore = append(right, $('span.readMore' + ThemeIcon.asCSSSelector(suggestMoreInfoIcon)));
+        readMore.title = nls.localize('readMore', "Read More");
         const configureFont = () => {
             const options = this._editor.getOptions();
-            const fontInfo = options.get(46 /* EditorOption.fontInfo */);
+            const fontInfo = options.get(50 /* EditorOption.fontInfo */);
             const fontFamily = fontInfo.getMassagedFontFamily();
             const fontFeatureSettings = fontInfo.fontFeatureSettings;
-            const fontSize = options.get(109 /* EditorOption.suggestFontSize */) || fontInfo.fontSize;
-            const lineHeight = options.get(110 /* EditorOption.suggestLineHeight */) || fontInfo.lineHeight;
+            const fontSize = options.get(118 /* EditorOption.suggestFontSize */) || fontInfo.fontSize;
+            const lineHeight = options.get(119 /* EditorOption.suggestLineHeight */) || fontInfo.lineHeight;
             const fontWeight = fontInfo.fontWeight;
             const letterSpacing = fontInfo.letterSpacing;
             const fontSizePx = `${fontSize}px`;
             const lineHeightPx = `${lineHeight}px`;
             const letterSpacingPx = `${letterSpacing}px`;
-            data.root.style.fontSize = fontSizePx;
-            data.root.style.fontWeight = fontWeight;
-            data.root.style.letterSpacing = letterSpacingPx;
+            root.style.fontSize = fontSizePx;
+            root.style.fontWeight = fontWeight;
+            root.style.letterSpacing = letterSpacingPx;
             main.style.fontFamily = fontFamily;
             main.style.fontFeatureSettings = fontFeatureSettings;
             main.style.lineHeight = lineHeightPx;
-            data.icon.style.height = lineHeightPx;
-            data.icon.style.width = lineHeightPx;
-            data.readMore.style.height = lineHeightPx;
-            data.readMore.style.width = lineHeightPx;
+            icon.style.height = lineHeightPx;
+            icon.style.width = lineHeightPx;
+            readMore.style.height = lineHeightPx;
+            readMore.style.width = lineHeightPx;
         };
         configureFont();
-        data.disposables.add(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(46 /* EditorOption.fontInfo */) || e.hasChanged(109 /* EditorOption.suggestFontSize */) || e.hasChanged(110 /* EditorOption.suggestLineHeight */)) {
+        disposables.add(this._editor.onDidChangeConfiguration(e => {
+            if (e.hasChanged(50 /* EditorOption.fontInfo */) || e.hasChanged(118 /* EditorOption.suggestFontSize */) || e.hasChanged(119 /* EditorOption.suggestLineHeight */)) {
                 configureFont();
             }
         }));
-        return data;
+        return { root, left, right, icon, colorspan, iconLabel, iconContainer, parametersLabel, qualifierLabel, detailsLabel, readMore, disposables };
     }
     renderElement(element, index, data) {
         const { completion } = element;
@@ -154,7 +154,7 @@ let ItemRenderer = class ItemRenderer {
             // normal icon
             data.icon.className = 'icon hide';
             data.iconContainer.className = '';
-            data.iconContainer.classList.add('suggest-icon', ...CSSIcon.asClassNameArray(CompletionItemKinds.toIcon(completion.kind)));
+            data.iconContainer.classList.add('suggest-icon', ...ThemeIcon.asClassNameArray(CompletionItemKinds.toIcon(completion.kind)));
         }
         if (completion.tags && completion.tags.indexOf(1 /* CompletionItemTag.Deprecated */) >= 0) {
             labelOptions.extraClasses = (labelOptions.extraClasses || []).concat(['deprecated']);
@@ -171,7 +171,7 @@ let ItemRenderer = class ItemRenderer {
             data.detailsLabel.textContent = stripNewLines(completion.label.description || '');
             data.root.classList.remove('string-label');
         }
-        if (this._editor.getOption(108 /* EditorOption.suggest */).showInlineDetails) {
+        if (this._editor.getOption(117 /* EditorOption.suggest */).showInlineDetails) {
             show(data.detailsLabel);
         }
         else {

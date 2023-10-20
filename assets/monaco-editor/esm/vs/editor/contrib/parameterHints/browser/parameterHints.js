@@ -11,41 +11,60 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var ParameterHintsController_1;
+import { Lazy } from '../../../../base/common/lazy.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { EditorAction, EditorCommand, registerEditorAction, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import * as languages from '../../../common/languages.js';
+import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
+import { ParameterHintsModel } from './parameterHintsModel.js';
 import { Context } from './provideSignatureHelp.js';
 import * as nls from '../../../../nls.js';
 import { ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { ParameterHintsWidget } from './parameterHintsWidget.js';
-let ParameterHintsController = class ParameterHintsController extends Disposable {
-    constructor(editor, instantiationService) {
+let ParameterHintsController = ParameterHintsController_1 = class ParameterHintsController extends Disposable {
+    static get(editor) {
+        return editor.getContribution(ParameterHintsController_1.ID);
+    }
+    constructor(editor, instantiationService, languageFeaturesService) {
         super();
         this.editor = editor;
-        this.widget = this._register(instantiationService.createInstance(ParameterHintsWidget, this.editor));
-    }
-    static get(editor) {
-        return editor.getContribution(ParameterHintsController.ID);
+        this.model = this._register(new ParameterHintsModel(editor, languageFeaturesService.signatureHelpProvider));
+        this._register(this.model.onChangedHints(newParameterHints => {
+            var _a;
+            if (newParameterHints) {
+                this.widget.value.show();
+                this.widget.value.render(newParameterHints);
+            }
+            else {
+                (_a = this.widget.rawValue) === null || _a === void 0 ? void 0 : _a.hide();
+            }
+        }));
+        this.widget = new Lazy(() => this._register(instantiationService.createInstance(ParameterHintsWidget, this.editor, this.model)));
     }
     cancel() {
-        this.widget.cancel();
+        this.model.cancel();
     }
     previous() {
-        this.widget.previous();
+        var _a;
+        (_a = this.widget.rawValue) === null || _a === void 0 ? void 0 : _a.previous();
     }
     next() {
-        this.widget.next();
+        var _a;
+        (_a = this.widget.rawValue) === null || _a === void 0 ? void 0 : _a.next();
     }
     trigger(context) {
-        this.widget.trigger(context);
+        this.model.trigger(context, 0);
     }
 };
 ParameterHintsController.ID = 'editor.controller.parameterHints';
-ParameterHintsController = __decorate([
-    __param(1, IInstantiationService)
+ParameterHintsController = ParameterHintsController_1 = __decorate([
+    __param(1, IInstantiationService),
+    __param(2, ILanguageFeaturesService)
 ], ParameterHintsController);
+export { ParameterHintsController };
 export class TriggerParameterHintsAction extends EditorAction {
     constructor() {
         super({
@@ -62,14 +81,12 @@ export class TriggerParameterHintsAction extends EditorAction {
     }
     run(accessor, editor) {
         const controller = ParameterHintsController.get(editor);
-        if (controller) {
-            controller.trigger({
-                triggerKind: languages.SignatureHelpTriggerKind.Invoke
-            });
-        }
+        controller === null || controller === void 0 ? void 0 : controller.trigger({
+            triggerKind: languages.SignatureHelpTriggerKind.Invoke
+        });
     }
 }
-registerEditorContribution(ParameterHintsController.ID, ParameterHintsController);
+registerEditorContribution(ParameterHintsController.ID, ParameterHintsController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);
 registerEditorAction(TriggerParameterHintsAction);
 const weight = 100 /* KeybindingWeight.EditorContrib */ + 75;
 const ParameterHintsCommand = EditorCommand.bindToContribution(ParameterHintsController.get);

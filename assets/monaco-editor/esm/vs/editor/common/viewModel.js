@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import * as arrays from '../../base/common/arrays.js';
 import * as strings from '../../base/common/strings.js';
 import { Range } from './core/range.js';
 export class Viewport {
@@ -95,7 +96,7 @@ export class OverviewRulerDecorationsGroup {
         this.zIndex = zIndex;
         this.data = data;
     }
-    static cmp(a, b) {
+    static compareByRenderingProps(a, b) {
         if (a.zIndex === b.zIndex) {
             if (a.color < b.color) {
                 return -1;
@@ -106,5 +107,13 @@ export class OverviewRulerDecorationsGroup {
             return 0;
         }
         return a.zIndex - b.zIndex;
+    }
+    static equals(a, b) {
+        return (a.color === b.color
+            && a.zIndex === b.zIndex
+            && arrays.equals(a.data, b.data));
+    }
+    static equalsArr(a, b) {
+        return arrays.equals(a, b, OverviewRulerDecorationsGroup.equals);
     }
 }

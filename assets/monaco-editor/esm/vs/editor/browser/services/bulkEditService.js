@@ -23,12 +23,6 @@ export class ResourceEdit {
     }
 }
 export class ResourceTextEdit extends ResourceEdit {
-    constructor(resource, textEdit, versionId = undefined, metadata) {
-        super(metadata);
-        this.resource = resource;
-        this.textEdit = textEdit;
-        this.versionId = versionId;
-    }
     static is(candidate) {
         if (candidate instanceof ResourceTextEdit) {
             return true;
@@ -45,14 +39,14 @@ export class ResourceTextEdit extends ResourceEdit {
             return new ResourceTextEdit(edit.resource, edit.textEdit, edit.versionId, edit.metadata);
         }
     }
+    constructor(resource, textEdit, versionId = undefined, metadata) {
+        super(metadata);
+        this.resource = resource;
+        this.textEdit = textEdit;
+        this.versionId = versionId;
+    }
 }
 export class ResourceFileEdit extends ResourceEdit {
-    constructor(oldResource, newResource, options = {}, metadata) {
-        super(metadata);
-        this.oldResource = oldResource;
-        this.newResource = newResource;
-        this.options = options;
-    }
     static is(candidate) {
         if (candidate instanceof ResourceFileEdit) {
             return true;
@@ -69,5 +63,11 @@ export class ResourceFileEdit extends ResourceEdit {
         else {
             return new ResourceFileEdit(edit.oldResource, edit.newResource, edit.options, edit.metadata);
         }
+    }
+    constructor(oldResource, newResource, options = {}, metadata) {
+        super(metadata);
+        this.oldResource = oldResource;
+        this.newResource = newResource;
+        this.options = options;
     }
 }

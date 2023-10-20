@@ -45,7 +45,7 @@ export class ViewModelDecorations {
             const options = modelDecoration.options;
             let viewRange;
             if (options.isWholeLine) {
-                const start = this._coordinatesConverter.convertModelPositionToViewPosition(new Position(modelRange.startLineNumber, 1), 0 /* PositionAffinity.Left */);
+                const start = this._coordinatesConverter.convertModelPositionToViewPosition(new Position(modelRange.startLineNumber, 1), 0 /* PositionAffinity.Left */, false, true);
                 const end = this._coordinatesConverter.convertModelPositionToViewPosition(new Position(modelRange.endLineNumber, this.model.getLineMaxColumn(modelRange.endLineNumber)), 1 /* PositionAffinity.Right */);
                 viewRange = new Range(start.lineNumber, start.column, end.lineNumber, end.column);
             }
@@ -59,21 +59,24 @@ export class ViewModelDecorations {
         }
         return r;
     }
+    getMinimapDecorationsInRange(range) {
+        return this._getDecorationsInRange(range, true, false).decorations;
+    }
     getDecorationsViewportData(viewRange) {
         let cacheIsValid = (this._cachedModelDecorationsResolver !== null);
         cacheIsValid = cacheIsValid && (viewRange.equalsRange(this._cachedModelDecorationsResolverViewRange));
         if (!cacheIsValid) {
-            this._cachedModelDecorationsResolver = this._getDecorationsInRange(viewRange);
+            this._cachedModelDecorationsResolver = this._getDecorationsInRange(viewRange, false, false);
             this._cachedModelDecorationsResolverViewRange = viewRange;
         }
         return this._cachedModelDecorationsResolver;
     }
-    getInlineDecorationsOnLine(lineNumber) {
+    getInlineDecorationsOnLine(lineNumber, onlyMinimapDecorations = false, onlyMarginDecorations = false) {
         const range = new Range(lineNumber, this._linesCollection.getViewLineMinColumn(lineNumber), lineNumber, this._linesCollection.getViewLineMaxColumn(lineNumber));
-        return this._getDecorationsInRange(range).inlineDecorations[0];
+        return this._getDecorationsInRange(range, onlyMinimapDecorations, onlyMarginDecorations).inlineDecorations[0];
     }
-    _getDecorationsInRange(viewRange) {
-        const modelDecorations = this._linesCollection.getDecorationsInRange(viewRange, this.editorId, filterValidationDecorations(this.configuration.options));
+    _getDecorationsInRange(viewRange, onlyMinimapDecorations, onlyMarginDecorations) {
+        const modelDecorations = this._linesCollection.getDecorationsInRange(viewRange, this.editorId, filterValidationDecorations(this.configuration.options), onlyMinimapDecorations, onlyMarginDecorations);
         const startLineNumber = viewRange.startLineNumber;
         const endLineNumber = viewRange.endLineNumber;
         const decorationsInViewport = [];

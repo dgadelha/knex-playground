@@ -17,12 +17,11 @@ import { AbstractGotoSymbolQuickAccessProvider } from '../../../contrib/quickAcc
 import { Registry } from '../../../../platform/registry/common/platform.js';
 import { Extensions } from '../../../../platform/quickinput/common/quickAccess.js';
 import { ICodeEditorService } from '../../../browser/services/codeEditorService.js';
-import { withNullAsUndefined } from '../../../../base/common/types.js';
 import { QuickOutlineNLS } from '../../../common/standaloneStrings.js';
 import { Event } from '../../../../base/common/event.js';
 import { EditorAction, registerEditorAction } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
-import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
+import { IQuickInputService, ItemActivation } from '../../../../platform/quickinput/common/quickInput.js';
 import { IOutlineModelService } from '../../../contrib/documentSymbols/browser/outlineModel.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 let StandaloneGotoSymbolQuickAccessProvider = class StandaloneGotoSymbolQuickAccessProvider extends AbstractGotoSymbolQuickAccessProvider {
@@ -32,7 +31,8 @@ let StandaloneGotoSymbolQuickAccessProvider = class StandaloneGotoSymbolQuickAcc
         this.onDidActiveTextEditorControlChange = Event.None;
     }
     get activeTextEditorControl() {
-        return withNullAsUndefined(this.editorService.getFocusedCodeEditor());
+        var _a;
+        return (_a = this.editorService.getFocusedCodeEditor()) !== null && _a !== void 0 ? _a : undefined;
     }
 };
 StandaloneGotoSymbolQuickAccessProvider = __decorate([
@@ -60,7 +60,7 @@ export class GotoSymbolAction extends EditorAction {
         });
     }
     run(accessor) {
-        accessor.get(IQuickInputService).quickAccess.show(AbstractGotoSymbolQuickAccessProvider.PREFIX);
+        accessor.get(IQuickInputService).quickAccess.show(AbstractGotoSymbolQuickAccessProvider.PREFIX, { itemActivation: ItemActivation.NONE });
     }
 }
 GotoSymbolAction.ID = 'editor.action.quickOutline';

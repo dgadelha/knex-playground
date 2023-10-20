@@ -4,7 +4,7 @@ var _a;
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as nls from '../../nls.js';
-const LANGUAGE_DEFAULT = 'en';
+export const LANGUAGE_DEFAULT = 'en';
 let _isWindows = false;
 let _isMacintosh = false;
 let _isLinux = false;
@@ -14,10 +14,15 @@ let _isWeb = false;
 let _isElectron = false;
 let _isIOS = false;
 let _isCI = false;
+let _isMobile = false;
 let _locale = undefined;
 let _language = LANGUAGE_DEFAULT;
+let _platformLocale = LANGUAGE_DEFAULT;
 let _translationsConfigFile = undefined;
 let _userAgent = undefined;
+/**
+ * @deprecated use `globalThis` instead
+ */
 export const globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
 let nodeProcess = undefined;
 if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.process !== 'undefined') {
@@ -37,6 +42,7 @@ if (typeof navigator === 'object' && !isElectronRenderer) {
     _isMacintosh = _userAgent.indexOf('Macintosh') >= 0;
     _isIOS = (_userAgent.indexOf('Macintosh') >= 0 || _userAgent.indexOf('iPad') >= 0 || _userAgent.indexOf('iPhone') >= 0) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
     _isLinux = _userAgent.indexOf('Linux') >= 0;
+    _isMobile = (_userAgent === null || _userAgent === void 0 ? void 0 : _userAgent.indexOf('Mobi')) >= 0;
     _isWeb = true;
     const configuredLocale = nls.getConfiguredDefaultLocale(
     // This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
@@ -46,6 +52,7 @@ if (typeof navigator === 'object' && !isElectronRenderer) {
     nls.localize({ key: 'ensureLoaderPluginIsLoaded', comment: ['{Locked}'] }, '_'));
     _locale = configuredLocale || LANGUAGE_DEFAULT;
     _language = _locale;
+    _platformLocale = navigator.language;
 }
 // Native environment
 else if (typeof nodeProcess === 'object') {
@@ -63,6 +70,7 @@ else if (typeof nodeProcess === 'object') {
             const nlsConfig = JSON.parse(rawNlsConfig);
             const resolved = nlsConfig.availableLanguages['*'];
             _locale = nlsConfig.locale;
+            _platformLocale = nlsConfig.osLocale;
             // VSCode's default language is 'en'
             _language = resolved ? resolved : LANGUAGE_DEFAULT;
             _translationsConfigFile = nlsConfig._translationsConfigFile;
@@ -93,6 +101,7 @@ export const isNative = _isNative;
 export const isWeb = _isWeb;
 export const isWebWorker = (_isWeb && typeof globals.importScripts === 'function');
 export const isIOS = _isIOS;
+export const isMobile = _isMobile;
 export const userAgent = _userAgent;
 /**
  * The language used for the user interface. The format of

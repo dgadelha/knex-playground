@@ -5,8 +5,8 @@
 import { transformErrorForSerialization } from '../errors.js';
 import { Emitter } from '../event.js';
 import { Disposable } from '../lifecycle.js';
-import { globals, isWeb } from '../platform.js';
-import * as types from '../types.js';
+import { getAllMethodNames } from '../objects.js';
+import { isWeb } from '../platform.js';
 import * as strings from '../strings.js';
 const INITIALIZE = '$initialize';
 let webWorkerWarningLogged = false;
@@ -88,12 +88,12 @@ class SimpleWorkerProtocol {
     listen(eventName, arg) {
         let req = null;
         const emitter = new Emitter({
-            onFirstListenerAdd: () => {
+            onWillAddFirstListener: () => {
                 req = String(++this._lastSentReq);
                 this._pendingEmitters.set(req, emitter);
                 this._send(new SubscribeEventMessage(this._workerId, req, eventName, arg));
             },
-            onLastListenerRemove: () => {
+            onDidRemoveLastListener: () => {
                 this._pendingEmitters.delete(req);
                 this._send(new UnsubscribeEventMessage(this._workerId, req));
                 req = null;
@@ -246,15 +246,16 @@ export class SimpleWorkerClient extends Disposable {
         this._protocol.setWorkerId(this._worker.getId());
         // Gather loader configuration
         let loaderConfiguration = null;
-        if (typeof globals.require !== 'undefined' && typeof globals.require.getConfig === 'function') {
+        const globalRequire = globalThis.require;
+        if (typeof globalRequire !== 'undefined' && typeof globalRequire.getConfig === 'function') {
             // Get the configuration from the Monaco AMD Loader
-            loaderConfiguration = globals.require.getConfig();
+            loaderConfiguration = globalRequire.getConfig();
         }
-        else if (typeof globals.requirejs !== 'undefined') {
+        else if (typeof globalThis.requirejs !== 'undefined') {
             // Get the configuration from requirejs
-            loaderConfiguration = globals.requirejs.s.contexts._.config;
+            loaderConfiguration = globalThis.requirejs.s.contexts._.config;
         }
-        const hostMethods = types.getAllMethodNames(host);
+        const hostMethods = getAllMethodNames(host);
         // Send initialize message
         this._onModuleLoaded = this._protocol.sendMessage(INITIALIZE, [
             this._worker.getId(),
@@ -392,7 +393,7 @@ export class SimpleWorkerServer {
         if (this._requestHandlerFactory) {
             // static request handler
             this._requestHandler = this._requestHandlerFactory(hostProxy);
-            return Promise.resolve(types.getAllMethodNames(this._requestHandler));
+            return Promise.resolve(getAllMethodNames(this._requestHandler));
         }
         if (loaderConfig) {
             // Remove 'baseUrl', handling it is beyond scope for now
@@ -410,15 +411,15 @@ export class SimpleWorkerServer {
             }
             // Since this is in a web worker, enable catching errors
             loaderConfig.catchError = true;
-            globals.require.config(loaderConfig);
+            globalThis.require.config(loaderConfig);
         }
         return new Promise((resolve, reject) => {
             // Use the global require to be sure to get the global config
             // ESM-comment-begin
-            // 			const req = (globals.require || require);
+            // 			const req = (globalThis.require || require);
             // ESM-comment-end
             // ESM-uncomment-begin
-            const req = globals.require;
+            const req = globalThis.require;
             // ESM-uncomment-end
             req([moduleId], (module) => {
                 this._requestHandler = module.create(hostProxy);
@@ -426,13 +427,14 @@ export class SimpleWorkerServer {
                     reject(new Error(`No RequestHandler!`));
                     return;
                 }
-                resolve(types.getAllMethodNames(this._requestHandler));
+                resolve(getAllMethodNames(this._requestHandler));
             }, reject);
         });
     }
 }
 /**
  * Called on the worker side
+ * @skipMangle
  */
 export function create(postMessage) {
     return new SimpleWorkerServer(postMessage, null);

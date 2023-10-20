@@ -4,19 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 import { TokenMetadata } from '../encodedTokenAttributes.js';
 export class LineTokens {
-    constructor(tokens, text, decoder) {
-        this._lineTokensBrand = undefined;
-        this._tokens = tokens;
-        this._tokensCount = (this._tokens.length >>> 1);
-        this._text = text;
-        this._languageIdCodec = decoder;
-    }
     static createEmpty(lineContent, decoder) {
         const defaultMetadata = LineTokens.defaultTokenMetadata;
         const tokens = new Uint32Array(2);
         tokens[0] = lineContent.length;
         tokens[1] = defaultMetadata;
         return new LineTokens(tokens, lineContent, decoder);
+    }
+    constructor(tokens, text, decoder) {
+        this._lineTokensBrand = undefined;
+        this._tokens = tokens;
+        this._tokensCount = (this._tokens.length >>> 1);
+        this._text = text;
+        this._languageIdCodec = decoder;
     }
     equals(other) {
         if (other instanceof LineTokens) {

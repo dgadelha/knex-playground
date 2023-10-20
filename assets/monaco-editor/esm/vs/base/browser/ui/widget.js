@@ -36,6 +36,6 @@ export class Widget extends Disposable {
         this._register(dom.addDisposableListener(domNode, dom.EventType.FOCUS, listener));
     }
     ignoreGesture(domNode) {
-        Gesture.ignoreTarget(domNode);
+        return Gesture.ignoreTarget(domNode);
     }
 }

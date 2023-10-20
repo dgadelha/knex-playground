@@ -22,10 +22,11 @@ export class ViewConfigurationChangedEvent {
     }
 }
 export class ViewCursorStateChangedEvent {
-    constructor(selections, modelSelections) {
-        this.type = 3 /* ViewEventType.ViewCursorStateChanged */;
+    constructor(selections, modelSelections, reason) {
         this.selections = selections;
         this.modelSelections = modelSelections;
+        this.reason = reason;
+        this.type = 3 /* ViewEventType.ViewCursorStateChanged */;
     }
 }
 export class ViewDecorationsChangedEvent {
@@ -34,10 +35,12 @@ export class ViewDecorationsChangedEvent {
         if (source) {
             this.affectsMinimap = source.affectsMinimap;
             this.affectsOverviewRuler = source.affectsOverviewRuler;
+            this.affectsGlyphMargin = source.affectsGlyphMargin;
         }
         else {
             this.affectsMinimap = true;
             this.affectsOverviewRuler = true;
+            this.affectsGlyphMargin = true;
         }
     }
 }

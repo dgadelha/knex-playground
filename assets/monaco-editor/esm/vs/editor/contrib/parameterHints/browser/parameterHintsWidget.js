@@ -11,6 +11,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var ParameterHintsWidget_1;
 import * as dom from '../../../../base/browser/dom.js';
 import * as aria from '../../../../base/browser/ui/aria/aria.js';
 import { DomScrollableElement } from '../../../../base/browser/ui/scrollbar/scrollableElement.js';
@@ -21,42 +22,30 @@ import { escapeRegExpCharacters } from '../../../../base/common/strings.js';
 import { assertIsDefined } from '../../../../base/common/types.js';
 import './parameterHints.css';
 import { ILanguageService } from '../../../common/languages/language.js';
-import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
-import { ParameterHintsModel } from './parameterHintsModel.js';
 import { Context } from './provideSignatureHelp.js';
 import * as nls from '../../../../nls.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-import { editorHoverBackground, editorHoverBorder, editorHoverForeground, listHighlightForeground, registerColor, textCodeBlockBackground, textLinkActiveForeground, textLinkForeground } from '../../../../platform/theme/common/colorRegistry.js';
+import { listHighlightForeground, registerColor } from '../../../../platform/theme/common/colorRegistry.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
-import { isHighContrast } from '../../../../platform/theme/common/theme.js';
-import { registerThemingParticipant, ThemeIcon } from '../../../../platform/theme/common/themeService.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 const $ = dom.$;
 const parameterHintsNextIcon = registerIcon('parameter-hints-next', Codicon.chevronDown, nls.localize('parameterHintsNextIcon', 'Icon for show next parameter hint.'));
 const parameterHintsPreviousIcon = registerIcon('parameter-hints-previous', Codicon.chevronUp, nls.localize('parameterHintsPreviousIcon', 'Icon for show previous parameter hint.'));
-let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
-    constructor(editor, contextKeyService, openerService, languageService, languageFeaturesService) {
+let ParameterHintsWidget = ParameterHintsWidget_1 = class ParameterHintsWidget extends Disposable {
+    constructor(editor, model, contextKeyService, openerService, languageService) {
         super();
         this.editor = editor;
+        this.model = model;
         this.renderDisposeables = this._register(new DisposableStore());
         this.visible = false;
         this.announcedLabel = null;
         // Editor.IContentWidget.allowEditorOverflow
         this.allowEditorOverflow = true;
         this.markdownRenderer = this._register(new MarkdownRenderer({ editor }, languageService, openerService));
-        this.model = this._register(new ParameterHintsModel(editor, languageFeaturesService.signatureHelpProvider));
         this.keyVisible = Context.Visible.bindTo(contextKeyService);
         this.keyMultipleSignatures = Context.MultipleSignatures.bindTo(contextKeyService);
-        this._register(this.model.onChangedHints(newParameterHints => {
-            if (newParameterHints) {
-                this.show();
-                this.render(newParameterHints);
-            }
-            else {
-                this.hide();
-            }
-        }));
     }
     createParameterHintDOMNodes() {
         const element = $('.editor-widget.parameter-hints-widget');
@@ -101,14 +90,12 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
             if (!this.domNodes) {
                 return;
             }
-            const fontInfo = this.editor.getOption(46 /* EditorOption.fontInfo */);
+            const fontInfo = this.editor.getOption(50 /* EditorOption.fontInfo */);
             this.domNodes.element.style.fontSize = `${fontInfo.fontSize}px`;
             this.domNodes.element.style.lineHeight = `${fontInfo.lineHeight / fontInfo.fontSize}`;
         };
         updateFont();
-        this._register(Event.chain(this.editor.onDidChangeConfiguration.bind(this.editor))
-            .filter(e => e.hasChanged(46 /* EditorOption.fontInfo */))
-            .on(updateFont, null));
+        this._register(Event.chain(this.editor.onDidChangeConfiguration.bind(this.editor), $ => $.filter(e => e.hasChanged(50 /* EditorOption.fontInfo */)))(updateFont));
         this._register(this.editor.onDidLayoutChange(e => this.updateMaxHeight()));
         this.updateMaxHeight();
     }
@@ -164,7 +151,7 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
             return;
         }
         const code = dom.append(this.domNodes.signature, $('.code'));
-        const fontInfo = this.editor.getOption(46 /* EditorOption.fontInfo */);
+        const fontInfo = this.editor.getOption(50 /* EditorOption.fontInfo */);
         code.style.fontSize = `${fontInfo.fontSize}px`;
         code.style.fontFamily = fontInfo.fontFamily;
         const hasParameters = signature.parameters.length > 0;
@@ -292,9 +279,6 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
         this.editor.focus();
         this.model.previous();
     }
-    cancel() {
-        this.model.cancel();
-    }
     getDomNode() {
         if (!this.domNodes) {
             this.createParameterHintDOMNodes();
@@ -302,10 +286,7 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
         return this.domNodes.element;
     }
     getId() {
-        return ParameterHintsWidget.ID;
-    }
-    trigger(context) {
-        this.model.trigger(context, 0);
+        return ParameterHintsWidget_1.ID;
     }
     updateMaxHeight() {
         if (!this.domNodes) {
@@ -321,44 +302,10 @@ let ParameterHintsWidget = class ParameterHintsWidget extends Disposable {
     }
 };
 ParameterHintsWidget.ID = 'editor.widget.parameterHintsWidget';
-ParameterHintsWidget = __decorate([
-    __param(1, IContextKeyService),
-    __param(2, IOpenerService),
-    __param(3, ILanguageService),
-    __param(4, ILanguageFeaturesService)
+ParameterHintsWidget = ParameterHintsWidget_1 = __decorate([
+    __param(2, IContextKeyService),
+    __param(3, IOpenerService),
+    __param(4, ILanguageService)
 ], ParameterHintsWidget);
 export { ParameterHintsWidget };
-export const editorHoverWidgetHighlightForeground = registerColor('editorHoverWidget.highlightForeground', { dark: listHighlightForeground, light: listHighlightForeground, hcDark: listHighlightForeground, hcLight: listHighlightForeground }, nls.localize('editorHoverWidgetHighlightForeground', 'Foreground color of the active item in the parameter hint.'));
-registerThemingParticipant((theme, collector) => {
-    const border = theme.getColor(editorHoverBorder);
-    if (border) {
-        const borderWidth = isHighContrast(theme.type) ? 2 : 1;
-        collector.addRule(`.monaco-editor .parameter-hints-widget { border: ${borderWidth}px solid ${border}; }`);
-        collector.addRule(`.monaco-editor .parameter-hints-widget.multiple .body { border-left: 1px solid ${border.transparent(0.5)}; }`);
-        collector.addRule(`.monaco-editor .parameter-hints-widget .signature.has-docs { border-bottom: 1px solid ${border.transparent(0.5)}; }`);
-    }
-    const background = theme.getColor(editorHoverBackground);
-    if (background) {
-        collector.addRule(`.monaco-editor .parameter-hints-widget { background-color: ${background}; }`);
-    }
-    const link = theme.getColor(textLinkForeground);
-    if (link) {
-        collector.addRule(`.monaco-editor .parameter-hints-widget a { color: ${link}; }`);
-    }
-    const linkHover = theme.getColor(textLinkActiveForeground);
-    if (linkHover) {
-        collector.addRule(`.monaco-editor .parameter-hints-widget a:hover { color: ${linkHover}; }`);
-    }
-    const foreground = theme.getColor(editorHoverForeground);
-    if (foreground) {
-        collector.addRule(`.monaco-editor .parameter-hints-widget { color: ${foreground}; }`);
-    }
-    const codeBackground = theme.getColor(textCodeBlockBackground);
-    if (codeBackground) {
-        collector.addRule(`.monaco-editor .parameter-hints-widget code { background-color: ${codeBackground}; }`);
-    }
-    const parameterHighlightColor = theme.getColor(editorHoverWidgetHighlightForeground);
-    if (parameterHighlightColor) {
-        collector.addRule(`.monaco-editor .parameter-hints-widget .parameter.active { color: ${parameterHighlightColor}}`);
-    }
-});
+registerColor('editorHoverWidget.highlightForeground', { dark: listHighlightForeground, light: listHighlightForeground, hcDark: listHighlightForeground, hcLight: listHighlightForeground }, nls.localize('editorHoverWidgetHighlightForeground', 'Foreground color of the active item in the parameter hint.'));

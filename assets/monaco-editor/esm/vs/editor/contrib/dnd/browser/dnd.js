@@ -44,7 +44,7 @@ export class DragAndDropController extends Disposable {
         this._modifierPressed = false;
     }
     onEditorKeyDown(e) {
-        if (!this._editor.getOption(31 /* EditorOption.dragAndDrop */) || this._editor.getOption(18 /* EditorOption.columnSelection */)) {
+        if (!this._editor.getOption(35 /* EditorOption.dragAndDrop */) || this._editor.getOption(22 /* EditorOption.columnSelection */)) {
             return;
         }
         if (hasTriggerModifier(e)) {
@@ -57,7 +57,7 @@ export class DragAndDropController extends Disposable {
         }
     }
     onEditorKeyUp(e) {
-        if (!this._editor.getOption(31 /* EditorOption.dragAndDrop */) || this._editor.getOption(18 /* EditorOption.columnSelection */)) {
+        if (!this._editor.getOption(35 /* EditorOption.dragAndDrop */) || this._editor.getOption(22 /* EditorOption.columnSelection */)) {
             return;
         }
         if (hasTriggerModifier(e)) {
@@ -192,4 +192,4 @@ DragAndDropController._DECORATION_OPTIONS = ModelDecorationOptions.register({
     description: 'dnd-target',
     className: 'dnd-target'
 });
-registerEditorContribution(DragAndDropController.ID, DragAndDropController);
+registerEditorContribution(DragAndDropController.ID, DragAndDropController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);

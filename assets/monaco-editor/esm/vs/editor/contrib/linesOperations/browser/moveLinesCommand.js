@@ -95,7 +95,7 @@ let MoveLinesCommand = class MoveLinesCommand {
                         const oldIndentation = strings.getLeadingWhitespace(model.getLineContent(movingLineNumber));
                         const newSpaceCnt = movingLineMatchResult + indentUtils.getSpaceCnt(oldIndentation, tabSize);
                         const newIndentation = indentUtils.generateIndent(newSpaceCnt, tabSize, insertSpaces);
-                        insertingText = newIndentation + this.trimLeft(movingLineText);
+                        insertingText = newIndentation + this.trimStart(movingLineText);
                     }
                     else {
                         // no enter rule matches, let's check indentatin rules then.
@@ -114,7 +114,7 @@ let MoveLinesCommand = class MoveLinesCommand {
                             const oldSpaceCnt = indentUtils.getSpaceCnt(oldIndentation, tabSize);
                             if (newSpaceCnt !== oldSpaceCnt) {
                                 const newIndentation = indentUtils.generateIndent(newSpaceCnt, tabSize, insertSpaces);
-                                insertingText = newIndentation + this.trimLeft(movingLineText);
+                                insertingText = newIndentation + this.trimStart(movingLineText);
                             }
                         }
                     }
@@ -226,7 +226,7 @@ let MoveLinesCommand = class MoveLinesCommand {
                 enterPrefix = indentConverter.unshiftIndent(enter.indentation) + enter.appendText;
             }
             const movingLineText = model.getLineContent(line);
-            if (this.trimLeft(movingLineText).indexOf(this.trimLeft(enterPrefix)) >= 0) {
+            if (this.trimStart(movingLineText).indexOf(this.trimStart(enterPrefix)) >= 0) {
                 const oldIndentation = strings.getLeadingWhitespace(model.getLineContent(line));
                 let newIndentation = strings.getLeadingWhitespace(enterPrefix);
                 const indentMetadataOfMovelingLine = getIndentMetadata(model, line, this._languageConfigurationService);
@@ -299,7 +299,7 @@ let MoveLinesCommand = class MoveLinesCommand {
         const enter = getEnterAction(this._autoIndent, model, new Range(validPrecedingLine, maxColumn, validPrecedingLine, maxColumn), this._languageConfigurationService);
         return this.parseEnterResult(model, indentConverter, tabSize, line, enter);
     }
-    trimLeft(str) {
+    trimStart(str) {
         return str.replace(/^\s+/, '');
     }
     shouldAutoIndent(model, selection) {

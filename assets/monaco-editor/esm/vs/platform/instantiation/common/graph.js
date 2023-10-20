@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 export class Node {
-    constructor(data) {
+    constructor(key, data) {
+        this.key = key;
+        this.data = data;
         this.incoming = new Map();
         this.outgoing = new Map();
-        this.data = data;
     }
 }
 export class Graph {
@@ -27,8 +28,8 @@ export class Graph {
     insertEdge(from, to) {
         const fromNode = this.lookupOrInsertNode(from);
         const toNode = this.lookupOrInsertNode(to);
-        fromNode.outgoing.set(this._hashFn(to), toNode);
-        toNode.incoming.set(this._hashFn(from), fromNode);
+        fromNode.outgoing.set(toNode.key, toNode);
+        toNode.incoming.set(fromNode.key, fromNode);
     }
     removeNode(data) {
         const key = this._hashFn(data);
@@ -42,7 +43,7 @@ export class Graph {
         const key = this._hashFn(data);
         let node = this._nodes.get(key);
         if (!node) {
-            node = new Node(data);
+            node = new Node(key, data);
             this._nodes.set(key, node);
         }
         return node;
@@ -53,7 +54,7 @@ export class Graph {
     toString() {
         const data = [];
         for (const [key, value] of this._nodes) {
-            data.push(`${key}, (incoming)[${[...value.incoming.keys()].join(', ')}], (outgoing)[${[...value.outgoing.keys()].join(',')}]`);
+            data.push(`${key}\n\t(-> incoming)[${[...value.incoming.keys()].join(', ')}]\n\t(outgoing ->)[${[...value.outgoing.keys()].join(',')}]\n`);
         }
         return data.join('\n');
     }

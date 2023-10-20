@@ -3,19 +3,28 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { illegalArgument } from './errors.js';
-export function createKeybinding(keybinding, OS) {
-    if (keybinding === 0) {
-        return null;
+export function decodeKeybinding(keybinding, OS) {
+    if (typeof keybinding === 'number') {
+        if (keybinding === 0) {
+            return null;
+        }
+        const firstChord = (keybinding & 0x0000FFFF) >>> 0;
+        const secondChord = (keybinding & 0xFFFF0000) >>> 16;
+        if (secondChord !== 0) {
+            return new Keybinding([
+                createSimpleKeybinding(firstChord, OS),
+                createSimpleKeybinding(secondChord, OS)
+            ]);
+        }
+        return new Keybinding([createSimpleKeybinding(firstChord, OS)]);
     }
-    const firstPart = (keybinding & 0x0000FFFF) >>> 0;
-    const chordPart = (keybinding & 0xFFFF0000) >>> 16;
-    if (chordPart !== 0) {
-        return new ChordKeybinding([
-            createSimpleKeybinding(firstPart, OS),
-            createSimpleKeybinding(chordPart, OS)
-        ]);
+    else {
+        const chords = [];
+        for (let i = 0; i < keybinding.length; i++) {
+            chords.push(createSimpleKeybinding(keybinding[i], OS));
+        }
+        return new Keybinding(chords);
     }
-    return new ChordKeybinding([createSimpleKeybinding(firstPart, OS)]);
 }
 export function createSimpleKeybinding(keybinding, OS) {
     const ctrlCmd = (keybinding & 2048 /* BinaryKeybindingsMask.CtrlCmd */ ? true : false);
@@ -25,9 +34,13 @@ export function createSimpleKeybinding(keybinding, OS) {
     const altKey = (keybinding & 512 /* BinaryKeybindingsMask.Alt */ ? true : false);
     const metaKey = (OS === 2 /* OperatingSystem.Macintosh */ ? ctrlCmd : winCtrl);
     const keyCode = (keybinding & 255 /* BinaryKeybindingsMask.KeyCode */);
-    return new SimpleKeybinding(ctrlKey, shiftKey, altKey, metaKey, keyCode);
+    return new KeyCodeChord(ctrlKey, shiftKey, altKey, metaKey, keyCode);
 }
-export class SimpleKeybinding {
+/**
+ * Represents a chord which uses the `keyCode` field of keyboard events.
+ * A chord is a combination of keys pressed simultaneously.
+ */
+export class KeyCodeChord {
     constructor(ctrlKey, shiftKey, altKey, metaKey, keyCode) {
         this.ctrlKey = ctrlKey;
         this.shiftKey = shiftKey;
@@ -36,7 +49,8 @@ export class SimpleKeybinding {
         this.keyCode = keyCode;
     }
     equals(other) {
-        return (this.ctrlKey === other.ctrlKey
+        return (other instanceof KeyCodeChord
+            && this.ctrlKey === other.ctrlKey
             && this.shiftKey === other.shiftKey
             && this.altKey === other.altKey
             && this.metaKey === other.metaKey
@@ -49,9 +63,6 @@ export class SimpleKeybinding {
             || this.keyCode === 6 /* KeyCode.Alt */
             || this.keyCode === 4 /* KeyCode.Shift */);
     }
-    toChord() {
-        return new ChordKeybinding([this]);
-    }
     /**
      * Does this keybinding refer to the key code of a modifier and it also has the modifier flag?
      */
@@ -62,15 +73,11 @@ export class SimpleKeybinding {
             || (this.metaKey && this.keyCode === 57 /* KeyCode.Meta */));
     }
 }
-export class ChordKeybinding {
-    constructor(parts) {
-        if (parts.length === 0) {
-            throw illegalArgument(`parts`);
-        }
-        this.parts = parts;
-    }
-}
-export class ScanCodeBinding {
+/**
+ * Represents a chord which uses the `code` field of keyboard events.
+ * A chord is a combination of keys pressed simultaneously.
+ */
+export class ScanCodeChord {
     constructor(ctrlKey, shiftKey, altKey, metaKey, scanCode) {
         this.ctrlKey = ctrlKey;
         this.shiftKey = shiftKey;
@@ -88,18 +95,29 @@ export class ScanCodeBinding {
             || (this.metaKey && (this.scanCode === 160 /* ScanCode.MetaLeft */ || this.scanCode === 164 /* ScanCode.MetaRight */)));
     }
 }
-export class ResolvedKeybindingPart {
-    constructor(ctrlKey, shiftKey, altKey, metaKey, kbLabel, kbAriaLabel) {
+/**
+ * A keybinding is a sequence of chords.
+ */
+export class Keybinding {
+    constructor(chords) {
+        if (chords.length === 0) {
+            throw illegalArgument(`chords`);
+        }
+        this.chords = chords;
+    }
+}
+export class ResolvedChord {
+    constructor(ctrlKey, shiftKey, altKey, metaKey, keyLabel, keyAriaLabel) {
         this.ctrlKey = ctrlKey;
         this.shiftKey = shiftKey;
         this.altKey = altKey;
         this.metaKey = metaKey;
-        this.keyLabel = kbLabel;
-        this.keyAriaLabel = kbAriaLabel;
+        this.keyLabel = keyLabel;
+        this.keyAriaLabel = keyAriaLabel;
     }
 }
 /**
- * A resolved keybinding. Can be a simple keybinding or a chord keybinding.
+ * A resolved keybinding. Consists of one or multiple chords.
  */
 export class ResolvedKeybinding {
 }

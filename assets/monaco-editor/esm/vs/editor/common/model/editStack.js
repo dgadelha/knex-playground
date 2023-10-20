@@ -13,6 +13,11 @@ function uriGetComparisonKey(resource) {
     return resource.toString();
 }
 export class SingleModelEditStackData {
+    static create(model, beforeCursorState) {
+        const alternativeVersionId = model.getAlternativeVersionId();
+        const eol = getModelEOL(model);
+        return new SingleModelEditStackData(alternativeVersionId, alternativeVersionId, eol, eol, beforeCursorState, beforeCursorState, []);
+    }
     constructor(beforeVersionId, afterVersionId, beforeEOL, afterEOL, beforeCursorState, afterCursorState, changes) {
         this.beforeVersionId = beforeVersionId;
         this.afterVersionId = afterVersionId;
@@ -21,11 +26,6 @@ export class SingleModelEditStackData {
         this.beforeCursorState = beforeCursorState;
         this.afterCursorState = afterCursorState;
         this.changes = changes;
-    }
-    static create(model, beforeCursorState) {
-        const alternativeVersionId = model.getAlternativeVersionId();
-        const eol = getModelEOL(model);
-        return new SingleModelEditStackData(alternativeVersionId, alternativeVersionId, eol, eol, beforeCursorState, beforeCursorState, []);
     }
     append(model, textChanges, afterEOL, afterVersionId, afterCursorState) {
         if (textChanges.length > 0) {
@@ -127,12 +127,6 @@ export class SingleModelEditStackData {
     }
 }
 export class SingleModelEditStackElement {
-    constructor(label, code, model, beforeCursorState) {
-        this.label = label;
-        this.code = code;
-        this.model = model;
-        this._data = SingleModelEditStackData.create(model, beforeCursorState);
-    }
     get type() {
         return 0 /* UndoRedoElementType.Resource */;
     }
@@ -141,6 +135,12 @@ export class SingleModelEditStackElement {
             return this.model;
         }
         return this.model.uri;
+    }
+    constructor(label, code, model, beforeCursorState) {
+        this.label = label;
+        this.code = code;
+        this.model = model;
+        this._data = SingleModelEditStackData.create(model, beforeCursorState);
     }
     toString() {
         const data = (this._data instanceof SingleModelEditStackData ? this._data : SingleModelEditStackData.deserialize(this._data));
@@ -201,6 +201,9 @@ export class SingleModelEditStackElement {
     }
 }
 export class MultiModelEditStackElement {
+    get resources() {
+        return this._editStackElementsArr.map(editStackElement => editStackElement.resource);
+    }
     constructor(label, code, editStackElements) {
         this.label = label;
         this.code = code;
@@ -213,9 +216,6 @@ export class MultiModelEditStackElement {
             this._editStackElementsMap.set(key, editStackElement);
         }
         this._delegate = null;
-    }
-    get resources() {
-        return this._editStackElementsArr.map(editStackElement => editStackElement.resource);
     }
     prepareUndoRedo() {
         if (this._delegate) {
@@ -319,22 +319,22 @@ export class EditStack {
     clear() {
         this._undoRedoService.removeElements(this._model.uri);
     }
-    _getOrCreateEditStackElement(beforeCursorState) {
+    _getOrCreateEditStackElement(beforeCursorState, group) {
         const lastElement = this._undoRedoService.getLastElement(this._model.uri);
         if (isEditStackElement(lastElement) && lastElement.canAppend(this._model)) {
             return lastElement;
         }
         const newElement = new SingleModelEditStackElement(nls.localize('edit', "Typing"), 'undoredo.textBufferEdit', this._model, beforeCursorState);
-        this._undoRedoService.pushElement(newElement);
+        this._undoRedoService.pushElement(newElement, group);
         return newElement;
     }
     pushEOL(eol) {
-        const editStackElement = this._getOrCreateEditStackElement(null);
+        const editStackElement = this._getOrCreateEditStackElement(null, undefined);
         this._model.setEOL(eol);
         editStackElement.append(this._model, [], getModelEOL(this._model), this._model.getAlternativeVersionId(), null);
     }
-    pushEditOperation(beforeCursorState, editOperations, cursorStateComputer) {
-        const editStackElement = this._getOrCreateEditStackElement(beforeCursorState);
+    pushEditOperation(beforeCursorState, editOperations, cursorStateComputer, group) {
+        const editStackElement = this._getOrCreateEditStackElement(beforeCursorState, group);
         const inverseEditOperations = this._model.applyEdits(editOperations, true);
         const afterCursorState = EditStack._computeCursorState(cursorStateComputer, inverseEditOperations);
         const textChanges = inverseEditOperations.map((op, index) => ({ index: index, textChange: op.textChange }));

@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { onUnexpectedError } from '../../../base/common/errors.js';
 import { Emitter } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { regExpLeadsToEndlessLoop } from '../../../base/common/strings.js';
@@ -163,7 +162,7 @@ export class LanguagesRegistry extends Disposable {
             }
             catch (err) {
                 // Most likely, the regex was bad
-                onUnexpectedError(err);
+                console.warn(`[${lang.id}]: Invalid regular expression \`${firstLineRegexStr}\`: `, err);
             }
         }
         resolvedLanguage.aliases.push(langId);

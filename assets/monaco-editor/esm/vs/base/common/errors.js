@@ -118,7 +118,7 @@ export class NotSupportedError extends Error {
 export class ErrorNoTelemetry extends Error {
     constructor(msg) {
         super(msg);
-        this.name = 'ErrorNoTelemetry';
+        this.name = 'CodeExpectedError';
     }
     static fromError(err) {
         if (err instanceof ErrorNoTelemetry) {
@@ -130,7 +130,7 @@ export class ErrorNoTelemetry extends Error {
         return result;
     }
     static isErrorNoTelemetry(err) {
-        return err.name === 'ErrorNoTelemetry';
+        return err.name === 'CodeExpectedError';
     }
 }
 /**
@@ -145,6 +145,6 @@ export class BugIndicatingError extends Error {
         // Because we know for sure only buggy code throws this,
         // we definitely want to break here and fix the bug.
         // eslint-disable-next-line no-debugger
-        debugger;
+        // debugger;
     }
 }

@@ -85,6 +85,22 @@ const _regexp = /^(([^:/?#]+?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
  * ```
  */
 export class URI {
+    static isUri(thing) {
+        if (thing instanceof URI) {
+            return true;
+        }
+        if (!thing) {
+            return false;
+        }
+        return typeof thing.authority === 'string'
+            && typeof thing.fragment === 'string'
+            && typeof thing.path === 'string'
+            && typeof thing.query === 'string'
+            && typeof thing.scheme === 'string'
+            && typeof thing.fsPath === 'string'
+            && typeof thing.with === 'function'
+            && typeof thing.toString === 'function';
+    }
     /**
      * @internal
      */
@@ -107,22 +123,6 @@ export class URI {
             this.fragment = fragment || _empty;
             _validateUri(this, _strict);
         }
-    }
-    static isUri(thing) {
-        if (thing instanceof URI) {
-            return true;
-        }
-        if (!thing) {
-            return false;
-        }
-        return typeof thing.authority === 'string'
-            && typeof thing.fragment === 'string'
-            && typeof thing.path === 'string'
-            && typeof thing.query === 'string'
-            && typeof thing.scheme === 'string'
-            && typeof thing.fsPath === 'string'
-            && typeof thing.with === 'function'
-            && typeof thing.toString === 'function';
     }
     // ---- filesystem path -----------------------
     /**
@@ -258,9 +258,15 @@ export class URI {
         }
         return new Uri('file', authority, path, _empty, _empty);
     }
-    static from(components) {
-        const result = new Uri(components.scheme, components.authority, components.path, components.query, components.fragment);
-        _validateUri(result, true);
+    /**
+     * Creates new URI from uri components.
+     *
+     * Unless `strict` is `true` the scheme is defaults to be `file`. This function performs
+     * validation and should be used for untrusted uri components retrieved from storage,
+     * user input, command arguments etc
+     */
+    static from(components, strict) {
+        const result = new Uri(components.scheme, components.authority, components.path, components.query, components.fragment, strict);
         return result;
     }
     /**
@@ -302,6 +308,7 @@ export class URI {
         return this;
     }
     static revive(data) {
+        var _a, _b;
         if (!data) {
             return data;
         }
@@ -310,8 +317,8 @@ export class URI {
         }
         else {
             const result = new Uri(data);
-            result._formatted = data.external;
-            result._fsPath = data._sep === _pathSepMarker ? data.fsPath : null;
+            result._formatted = (_a = data.external) !== null && _a !== void 0 ? _a : null;
+            result._fsPath = data._sep === _pathSepMarker ? (_b = data.fsPath) !== null && _b !== void 0 ? _b : null : null;
             return result;
         }
     }
@@ -354,10 +361,14 @@ class Uri extends URI {
         if (this._formatted) {
             res.external = this._formatted;
         }
-        // uri components
+        //--- uri components
         if (this.path) {
             res.path = this.path;
         }
+        // TODO
+        // this isn't correct and can violate the UriComponents contract but
+        // this is part of the vscode.Uri API and we shouldn't change how that
+        // works anymore
         if (this.scheme) {
             res.scheme = this.scheme;
         }
@@ -375,14 +386,14 @@ class Uri extends URI {
 }
 // reserved characters: https://tools.ietf.org/html/rfc3986#section-2.2
 const encodeTable = {
-    [58 /* CharCode.Colon */]: '%3A',
+    [58 /* CharCode.Colon */]: '%3A', // gen-delims
     [47 /* CharCode.Slash */]: '%2F',
     [63 /* CharCode.QuestionMark */]: '%3F',
     [35 /* CharCode.Hash */]: '%23',
     [91 /* CharCode.OpenSquareBracket */]: '%5B',
     [93 /* CharCode.CloseSquareBracket */]: '%5D',
     [64 /* CharCode.AtSign */]: '%40',
-    [33 /* CharCode.ExclamationMark */]: '%21',
+    [33 /* CharCode.ExclamationMark */]: '%21', // sub-delims
     [36 /* CharCode.DollarSign */]: '%24',
     [38 /* CharCode.Ampersand */]: '%26',
     [39 /* CharCode.SingleQuote */]: '%27',
@@ -395,7 +406,7 @@ const encodeTable = {
     [61 /* CharCode.Equals */]: '%3D',
     [32 /* CharCode.Space */]: '%20',
 };
-function encodeURIComponentFast(uriComponent, allowSlash) {
+function encodeURIComponentFast(uriComponent, isPath, isAuthority) {
     let res = undefined;
     let nativeEncodePos = -1;
     for (let pos = 0; pos < uriComponent.length; pos++) {
@@ -408,7 +419,10 @@ function encodeURIComponentFast(uriComponent, allowSlash) {
             || code === 46 /* CharCode.Period */
             || code === 95 /* CharCode.Underline */
             || code === 126 /* CharCode.Tilde */
-            || (allowSlash && code === 47 /* CharCode.Slash */)) {
+            || (isPath && code === 47 /* CharCode.Slash */)
+            || (isAuthority && code === 91 /* CharCode.OpenSquareBracket */)
+            || (isAuthority && code === 93 /* CharCode.CloseSquareBracket */)
+            || (isAuthority && code === 58 /* CharCode.Colon */)) {
             // check if we are delaying native encode
             if (nativeEncodePos !== -1) {
                 res += encodeURIComponent(uriComponent.substring(nativeEncodePos, pos));
@@ -516,26 +530,26 @@ function _asFormatted(uri, skipEncoding) {
             // <user>@<auth>
             const userinfo = authority.substr(0, idx);
             authority = authority.substr(idx + 1);
-            idx = userinfo.indexOf(':');
+            idx = userinfo.lastIndexOf(':');
             if (idx === -1) {
-                res += encoder(userinfo, false);
+                res += encoder(userinfo, false, false);
             }
             else {
                 // <user>:<pass>@<auth>
-                res += encoder(userinfo.substr(0, idx), false);
+                res += encoder(userinfo.substr(0, idx), false, false);
                 res += ':';
-                res += encoder(userinfo.substr(idx + 1), false);
+                res += encoder(userinfo.substr(idx + 1), false, true);
             }
             res += '@';
         }
         authority = authority.toLowerCase();
-        idx = authority.indexOf(':');
+        idx = authority.lastIndexOf(':');
         if (idx === -1) {
-            res += encoder(authority, false);
+            res += encoder(authority, false, true);
         }
         else {
             // <auth>:<port>
-            res += encoder(authority.substr(0, idx), false);
+            res += encoder(authority.substr(0, idx), false, true);
             res += authority.substr(idx);
         }
     }
@@ -554,15 +568,15 @@ function _asFormatted(uri, skipEncoding) {
             }
         }
         // encode the rest of the path
-        res += encoder(path, true);
+        res += encoder(path, true, false);
     }
     if (query) {
         res += '?';
-        res += encoder(query, false);
+        res += encoder(query, false, false);
     }
     if (fragment) {
         res += '#';
-        res += !skipEncoding ? encodeURIComponentFast(fragment, false) : fragment;
+        res += !skipEncoding ? encodeURIComponentFast(fragment, false, false) : fragment;
     }
     return res;
 }

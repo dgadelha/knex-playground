@@ -110,7 +110,7 @@ export class CursorMoveCommands {
                 endLineNumber++;
                 endColumn = 1;
             }
-            result[i] = CursorState.fromModelState(new SingleCursorState(new Range(startLineNumber, 1, startLineNumber, 1), 0, new Position(endLineNumber, endColumn), 0));
+            result[i] = CursorState.fromModelState(new SingleCursorState(new Range(startLineNumber, 1, startLineNumber, 1), 0 /* SelectionStartKind.Simple */, 0, new Position(endLineNumber, endColumn), 0));
         }
         return result;
     }
@@ -133,14 +133,14 @@ export class CursorMoveCommands {
     static selectAll(viewModel, cursor) {
         const lineCount = viewModel.model.getLineCount();
         const maxColumn = viewModel.model.getLineMaxColumn(lineCount);
-        return CursorState.fromModelState(new SingleCursorState(new Range(1, 1, 1, 1), 0, new Position(lineCount, maxColumn), 0));
+        return CursorState.fromModelState(new SingleCursorState(new Range(1, 1, 1, 1), 0 /* SelectionStartKind.Simple */, 0, new Position(lineCount, maxColumn), 0));
     }
     static line(viewModel, cursor, inSelectionMode, _position, _viewPosition) {
         const position = viewModel.model.validatePosition(_position);
         const viewPosition = (_viewPosition
             ? viewModel.coordinatesConverter.validateViewPosition(new Position(_viewPosition.lineNumber, _viewPosition.column), position)
             : viewModel.coordinatesConverter.convertModelPositionToViewPosition(position));
-        if (!inSelectionMode || !cursor.modelState.hasSelection()) {
+        if (!inSelectionMode) {
             // Entering line selection for the first time
             const lineCount = viewModel.model.getLineCount();
             let selectToLineNumber = position.lineNumber + 1;
@@ -149,12 +149,12 @@ export class CursorMoveCommands {
                 selectToLineNumber = lineCount;
                 selectToColumn = viewModel.model.getLineMaxColumn(selectToLineNumber);
             }
-            return CursorState.fromModelState(new SingleCursorState(new Range(position.lineNumber, 1, selectToLineNumber, selectToColumn), 0, new Position(selectToLineNumber, selectToColumn), 0));
+            return CursorState.fromModelState(new SingleCursorState(new Range(position.lineNumber, 1, selectToLineNumber, selectToColumn), 2 /* SelectionStartKind.Line */, 0, new Position(selectToLineNumber, selectToColumn), 0));
         }
         // Continuing line selection
         const enteringLineNumber = cursor.modelState.selectionStart.getStartPosition().lineNumber;
         if (position.lineNumber < enteringLineNumber) {
-            return CursorState.fromViewState(cursor.viewState.move(cursor.modelState.hasSelection(), viewPosition.lineNumber, 1, 0));
+            return CursorState.fromViewState(cursor.viewState.move(true, viewPosition.lineNumber, 1, 0));
         }
         else if (position.lineNumber > enteringLineNumber) {
             const lineCount = viewModel.getLineCount();
@@ -164,11 +164,11 @@ export class CursorMoveCommands {
                 selectToViewLineNumber = lineCount;
                 selectToViewColumn = viewModel.getLineMaxColumn(selectToViewLineNumber);
             }
-            return CursorState.fromViewState(cursor.viewState.move(cursor.modelState.hasSelection(), selectToViewLineNumber, selectToViewColumn, 0));
+            return CursorState.fromViewState(cursor.viewState.move(true, selectToViewLineNumber, selectToViewColumn, 0));
         }
         else {
             const endPositionOfSelectionStart = cursor.modelState.selectionStart.getEndPosition();
-            return CursorState.fromModelState(cursor.modelState.move(cursor.modelState.hasSelection(), endPositionOfSelectionStart.lineNumber, endPositionOfSelectionStart.column, 0));
+            return CursorState.fromModelState(cursor.modelState.move(true, endPositionOfSelectionStart.lineNumber, endPositionOfSelectionStart.column, 0));
         }
     }
     static word(viewModel, cursor, inSelectionMode, _position) {
@@ -181,9 +181,17 @@ export class CursorMoveCommands {
         }
         const lineNumber = cursor.viewState.position.lineNumber;
         const column = cursor.viewState.position.column;
-        return CursorState.fromViewState(new SingleCursorState(new Range(lineNumber, column, lineNumber, column), 0, new Position(lineNumber, column), 0));
+        return CursorState.fromViewState(new SingleCursorState(new Range(lineNumber, column, lineNumber, column), 0 /* SelectionStartKind.Simple */, 0, new Position(lineNumber, column), 0));
     }
     static moveTo(viewModel, cursor, inSelectionMode, _position, _viewPosition) {
+        if (inSelectionMode) {
+            if (cursor.modelState.selectionStartKind === 1 /* SelectionStartKind.Word */) {
+                return this.word(viewModel, cursor, inSelectionMode, _position);
+            }
+            if (cursor.modelState.selectionStartKind === 2 /* SelectionStartKind.Line */) {
+                return this.line(viewModel, cursor, inSelectionMode, _position, _viewPosition);
+            }
+        }
         const position = viewModel.model.validatePosition(_position);
         const viewPosition = (_viewPosition
             ? viewModel.coordinatesConverter.validateViewPosition(new Position(_viewPosition.lineNumber, _viewPosition.column), position)

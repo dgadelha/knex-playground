@@ -12,7 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { runWhenIdle } from '../../../../base/common/async.js';
-import { once } from '../../../../base/common/functional.js';
+import { Event } from '../../../../base/common/event.js';
 import { LRUCache } from '../../../../base/common/map.js';
 import { Range } from '../../../common/core/range.js';
 import { CodeLensModel } from './codelens.js';
@@ -42,7 +42,7 @@ let CodeLensCache = class CodeLensCache {
         const raw = storageService.get(key, 1 /* StorageScope.WORKSPACE */, '{}');
         this._deserialize(raw);
         // store lens data on shutdown
-        once(storageService.onWillSaveState)(e => {
+        Event.once(storageService.onWillSaveState)(e => {
             if (e.reason === WillSaveStateReason.SHUTDOWN) {
                 storageService.store(key, this._serialize(), 1 /* StorageScope.WORKSPACE */, 1 /* StorageTarget.MACHINE */);
             }
@@ -108,4 +108,4 @@ CodeLensCache = __decorate([
     __param(0, IStorageService)
 ], CodeLensCache);
 export { CodeLensCache };
-registerSingleton(ICodeLensCache, CodeLensCache);
+registerSingleton(ICodeLensCache, CodeLensCache, 1 /* InstantiationType.Delayed */);

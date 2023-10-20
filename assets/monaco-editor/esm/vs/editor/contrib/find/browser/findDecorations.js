@@ -65,6 +65,13 @@ export class FindDecorations {
         }
         return 1;
     }
+    getDecorationRangeAt(index) {
+        const decorationId = index < this._decorations.length ? this._decorations[index] : null;
+        if (decorationId) {
+            return this._editor.getModel().getDecorationRange(decorationId);
+        }
+        return null;
+    }
     getCurrentMatchesPosition(desiredRange) {
         const candidates = this._editor.getModel().getDecorationsInRange(desiredRange);
         for (const candidate of candidates) {

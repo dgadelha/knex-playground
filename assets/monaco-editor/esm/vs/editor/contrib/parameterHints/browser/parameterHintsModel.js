@@ -96,7 +96,7 @@ export class ParameterHintsModel extends Disposable {
         const length = this.state.hints.signatures.length;
         const activeSignature = this.state.hints.activeSignature;
         const last = (activeSignature % length) === (length - 1);
-        const cycle = this.editor.getOption(78 /* EditorOption.parameterHints */).cycle;
+        const cycle = this.editor.getOption(85 /* EditorOption.parameterHints */).cycle;
         // If there is only one signature, or we're on last signature of list
         if ((length < 2 || last) && !cycle) {
             this.cancel();
@@ -111,7 +111,7 @@ export class ParameterHintsModel extends Disposable {
         const length = this.state.hints.signatures.length;
         const activeSignature = this.state.hints.activeSignature;
         const first = activeSignature === 0;
-        const cycle = this.editor.getOption(78 /* EditorOption.parameterHints */).cycle;
+        const cycle = this.editor.getOption(85 /* EditorOption.parameterHints */).cycle;
         // If there is only one signature, or we're on first signature of list
         if ((length < 2 || first) && !cycle) {
             this.cancel();
@@ -191,21 +191,25 @@ export class ParameterHintsModel extends Disposable {
     }
     onModelChanged() {
         this.cancel();
-        // Update trigger characters
-        this.triggerChars = new CharacterSet();
-        this.retriggerChars = new CharacterSet();
+        this.triggerChars.clear();
+        this.retriggerChars.clear();
         const model = this.editor.getModel();
         if (!model) {
             return;
         }
         for (const support of this.providers.ordered(model)) {
             for (const ch of support.signatureHelpTriggerCharacters || []) {
-                this.triggerChars.add(ch.charCodeAt(0));
-                // All trigger characters are also considered retrigger characters
-                this.retriggerChars.add(ch.charCodeAt(0));
+                if (ch.length) {
+                    const charCode = ch.charCodeAt(0);
+                    this.triggerChars.add(charCode);
+                    // All trigger characters are also considered retrigger characters
+                    this.retriggerChars.add(charCode);
+                }
             }
             for (const ch of support.signatureHelpRetriggerCharacters || []) {
-                this.retriggerChars.add(ch.charCodeAt(0));
+                if (ch.length) {
+                    this.retriggerChars.add(ch.charCodeAt(0));
+                }
             }
         }
     }
@@ -236,7 +240,7 @@ export class ParameterHintsModel extends Disposable {
         }
     }
     onEditorConfigurationChange() {
-        this.triggerOnType = this.editor.getOption(78 /* EditorOption.parameterHints */).enabled;
+        this.triggerOnType = this.editor.getOption(85 /* EditorOption.parameterHints */).enabled;
         if (!this.triggerOnType) {
             this.cancel();
         }

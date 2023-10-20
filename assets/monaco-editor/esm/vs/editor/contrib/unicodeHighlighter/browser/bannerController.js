@@ -20,7 +20,7 @@ import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRendere
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { Link } from '../../../../platform/opener/browser/link.js';
 import { widgetClose } from '../../../../platform/theme/common/iconRegistry.js';
-import { ThemeIcon } from '../../../../platform/theme/common/themeService.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
 const BANNER_ELEMENT_HEIGHT = 26;
 let BannerController = class BannerController extends Disposable {
     constructor(_editor, instantiationService) {

@@ -5,6 +5,7 @@
 import { GlobalPointerMoveMonitor } from '../../globalPointerMoveMonitor.js';
 import { Widget } from '../widget.js';
 import { IntervalTimer, TimeoutTimer } from '../../../common/async.js';
+import { ThemeIcon } from '../../../common/themables.js';
 import * as dom from '../../dom.js';
 /**
  * The arrow image size.
@@ -33,7 +34,7 @@ export class ScrollbarArrow extends Widget {
         }
         this.domNode = document.createElement('div');
         this.domNode.className = opts.className;
-        this.domNode.classList.add(...opts.icon.classNamesArray);
+        this.domNode.classList.add(...ThemeIcon.asClassNameArray(opts.icon));
         this.domNode.style.position = 'absolute';
         this.domNode.style.width = ARROW_IMG_SIZE + 'px';
         this.domNode.style.height = ARROW_IMG_SIZE + 'px';

@@ -8,16 +8,12 @@ export class Lazy {
         this._didRun = false;
     }
     /**
-     * True if the lazy value has been resolved.
-     */
-    hasValue() { return this._didRun; }
-    /**
      * Get the wrapped value.
      *
      * This will force evaluation of the lazy value if it has not been resolved yet. Lazy values are only
      * resolved once. `getValue` will re-throw exceptions that are hit while resolving the value
      */
-    getValue() {
+    get value() {
         if (!this._didRun) {
             try {
                 this._value = this.executor();

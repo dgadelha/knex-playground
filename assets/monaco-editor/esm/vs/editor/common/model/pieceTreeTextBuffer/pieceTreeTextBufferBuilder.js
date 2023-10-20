@@ -5,7 +5,7 @@
 import * as strings from '../../../../base/common/strings.js';
 import { StringBuffer, createLineStarts, createLineStartsFast } from './pieceTreeBase.js';
 import { PieceTreeTextBuffer } from './pieceTreeTextBuffer.js';
-export class PieceTreeTextBufferFactory {
+class PieceTreeTextBufferFactory {
     constructor(_chunks, _bom, _cr, _lf, _crlf, _containsRTL, _containsUnusualLineTerminators, _isBasicASCII, _normalizeEOL) {
         this._chunks = _chunks;
         this._bom = _bom;
@@ -103,16 +103,15 @@ export class PieceTreeTextBufferBuilder {
         this.cr += lineStarts.cr;
         this.lf += lineStarts.lf;
         this.crlf += lineStarts.crlf;
-        if (this.isBasicASCII) {
-            this.isBasicASCII = lineStarts.isBasicASCII;
-        }
-        if (!this.isBasicASCII && !this.containsRTL) {
-            // No need to check if it is basic ASCII
-            this.containsRTL = strings.containsRTL(chunk);
-        }
-        if (!this.isBasicASCII && !this.containsUnusualLineTerminators) {
-            // No need to check if it is basic ASCII
-            this.containsUnusualLineTerminators = strings.containsUnusualLineTerminators(chunk);
+        if (!lineStarts.isBasicASCII) {
+            // this chunk contains non basic ASCII characters
+            this.isBasicASCII = false;
+            if (!this.containsRTL) {
+                this.containsRTL = strings.containsRTL(chunk);
+            }
+            if (!this.containsUnusualLineTerminators) {
+                this.containsUnusualLineTerminators = strings.containsUnusualLineTerminators(chunk);
+            }
         }
     }
     finish(normalizeEOL = true) {

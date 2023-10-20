@@ -15,10 +15,10 @@ export class ViewCursors extends ViewPart {
     constructor(context) {
         super(context);
         const options = this._context.configuration.options;
-        this._readOnly = options.get(83 /* EditorOption.readOnly */);
-        this._cursorBlinking = options.get(22 /* EditorOption.cursorBlinking */);
-        this._cursorStyle = options.get(24 /* EditorOption.cursorStyle */);
-        this._cursorSmoothCaretAnimation = options.get(23 /* EditorOption.cursorSmoothCaretAnimation */);
+        this._readOnly = options.get(90 /* EditorOption.readOnly */);
+        this._cursorBlinking = options.get(26 /* EditorOption.cursorBlinking */);
+        this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
+        this._cursorSmoothCaretAnimation = options.get(27 /* EditorOption.cursorSmoothCaretAnimation */);
         this._selectionIsEmpty = true;
         this._isComposingInput = false;
         this._isVisible = false;
@@ -57,10 +57,10 @@ export class ViewCursors extends ViewPart {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._readOnly = options.get(83 /* EditorOption.readOnly */);
-        this._cursorBlinking = options.get(22 /* EditorOption.cursorBlinking */);
-        this._cursorStyle = options.get(24 /* EditorOption.cursorStyle */);
-        this._cursorSmoothCaretAnimation = options.get(23 /* EditorOption.cursorSmoothCaretAnimation */);
+        this._readOnly = options.get(90 /* EditorOption.readOnly */);
+        this._cursorBlinking = options.get(26 /* EditorOption.cursorBlinking */);
+        this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
+        this._cursorSmoothCaretAnimation = options.get(27 /* EditorOption.cursorSmoothCaretAnimation */);
         this._updateBlinking();
         this._updateDomClassName();
         this._primaryCursor.onConfigurationChanged(e);
@@ -69,8 +69,10 @@ export class ViewCursors extends ViewPart {
         }
         return true;
     }
-    _onCursorPositionChanged(position, secondaryPositions) {
-        this._primaryCursor.onCursorPositionChanged(position);
+    _onCursorPositionChanged(position, secondaryPositions, reason) {
+        const pauseAnimation = (this._secondaryCursors.length !== secondaryPositions.length
+            || (this._cursorSmoothCaretAnimation === 'explicit' && reason !== 3 /* CursorChangeReason.Explicit */));
+        this._primaryCursor.onCursorPositionChanged(position, pauseAnimation);
         this._updateBlinking();
         if (this._secondaryCursors.length < secondaryPositions.length) {
             // Create new cursors
@@ -90,7 +92,7 @@ export class ViewCursors extends ViewPart {
             }
         }
         for (let i = 0; i < secondaryPositions.length; i++) {
-            this._secondaryCursors[i].onCursorPositionChanged(secondaryPositions[i]);
+            this._secondaryCursors[i].onCursorPositionChanged(secondaryPositions[i], pauseAnimation);
         }
     }
     onCursorStateChanged(e) {
@@ -98,7 +100,7 @@ export class ViewCursors extends ViewPart {
         for (let i = 0, len = e.selections.length; i < len; i++) {
             positions[i] = e.selections[i].getPosition();
         }
-        this._onCursorPositionChanged(positions[0], positions.slice(1));
+        this._onCursorPositionChanged(positions[0], positions.slice(1), e.reason);
         const selectionIsEmpty = e.selections[0].isEmpty();
         if (this._selectionIsEmpty !== selectionIsEmpty) {
             this._selectionIsEmpty = selectionIsEmpty;
@@ -257,7 +259,7 @@ export class ViewCursors extends ViewPart {
         else {
             result += ' cursor-solid';
         }
-        if (this._cursorSmoothCaretAnimation) {
+        if (this._cursorSmoothCaretAnimation === 'on' || this._cursorSmoothCaretAnimation === 'explicit') {
             result += ' cursor-smooth-caret-animation';
         }
         return result;
@@ -310,7 +312,6 @@ registerThemingParticipant((theme, collector) => {
         if (!caretBackground) {
             caretBackground = caret.opposite();
         }
-        collector.addRule(`.monaco-editor .inputarea.ime-input { caret-color: ${caret}; }`);
         collector.addRule(`.monaco-editor .cursors-layer .cursor { background-color: ${caret}; border-color: ${caret}; color: ${caretBackground}; }`);
         if (isHighContrast(theme.type)) {
             collector.addRule(`.monaco-editor .cursors-layer.has-selection .cursor { border-left: 1px solid ${caretBackground}; border-right: 1px solid ${caretBackground}; }`);

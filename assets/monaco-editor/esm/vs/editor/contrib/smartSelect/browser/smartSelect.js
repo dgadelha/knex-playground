@@ -20,6 +20,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var SmartSelectController_1;
 import * as arrays from '../../../../base/common/arrays.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
@@ -55,14 +56,14 @@ class SelectionRanges {
         return res;
     }
 }
-let SmartSelectController = class SmartSelectController {
+let SmartSelectController = SmartSelectController_1 = class SmartSelectController {
+    static get(editor) {
+        return editor.getContribution(SmartSelectController_1.ID);
+    }
     constructor(_editor, _languageFeaturesService) {
         this._editor = _editor;
         this._languageFeaturesService = _languageFeaturesService;
         this._ignoreSelection = false;
-    }
-    static get(editor) {
-        return editor.getContribution(SmartSelectController.ID);
     }
     dispose() {
         var _a;
@@ -76,7 +77,7 @@ let SmartSelectController = class SmartSelectController {
             const selections = this._editor.getSelections();
             const model = this._editor.getModel();
             if (!this._state) {
-                yield provideSelectionRanges(this._languageFeaturesService.selectionRangeProvider, model, selections.map(s => s.getPosition()), this._editor.getOption(104 /* EditorOption.smartSelect */), CancellationToken.None).then(ranges => {
+                yield provideSelectionRanges(this._languageFeaturesService.selectionRangeProvider, model, selections.map(s => s.getPosition()), this._editor.getOption(112 /* EditorOption.smartSelect */), CancellationToken.None).then(ranges => {
                     var _a;
                     if (!arrays.isNonEmptyArray(ranges) || ranges.length !== selections.length) {
                         // invalid result
@@ -123,9 +124,10 @@ let SmartSelectController = class SmartSelectController {
     }
 };
 SmartSelectController.ID = 'editor.contrib.smartSelectController';
-SmartSelectController = __decorate([
+SmartSelectController = SmartSelectController_1 = __decorate([
     __param(1, ILanguageFeaturesService)
 ], SmartSelectController);
+export { SmartSelectController };
 class AbstractSmartSelect extends EditorAction {
     constructor(forward, opts) {
         super(opts);
@@ -192,13 +194,13 @@ class ShrinkSelectionAction extends AbstractSmartSelect {
         });
     }
 }
-registerEditorContribution(SmartSelectController.ID, SmartSelectController);
+registerEditorContribution(SmartSelectController.ID, SmartSelectController, 4 /* EditorContributionInstantiation.Lazy */);
 registerEditorAction(GrowSelectionAction);
 registerEditorAction(ShrinkSelectionAction);
 export function provideSelectionRanges(registry, model, positions, options, token) {
     return __awaiter(this, void 0, void 0, function* () {
         const providers = registry.all(model)
-            .concat(new WordSelectionRangeProvider()); // ALWAYS have word based selection range
+            .concat(new WordSelectionRangeProvider(options.selectSubwords)); // ALWAYS have word based selection range
         if (providers.length === 1) {
             // add word selection and bracket selection when no provider exists
             providers.unshift(new BracketSelectionRangeProvider());
@@ -288,7 +290,7 @@ CommandsRegistry.registerCommand('_executeSelectionRangeProvider', function (acc
         const registry = accessor.get(ILanguageFeaturesService).selectionRangeProvider;
         const reference = yield accessor.get(ITextModelService).createModelReference(resource);
         try {
-            return provideSelectionRanges(registry, reference.object.textEditorModel, positions, { selectLeadingAndTrailingWhitespace: true }, CancellationToken.None);
+            return provideSelectionRanges(registry, reference.object.textEditorModel, positions, { selectLeadingAndTrailingWhitespace: true, selectSubwords: true }, CancellationToken.None);
         }
         finally {
             reference.dispose();

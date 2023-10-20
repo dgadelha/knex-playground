@@ -49,7 +49,7 @@ registerSingleton(IEditorCancellationTokens, class {
             data.key.set(!data.tokens.isEmpty());
         }
     }
-}, true);
+}, 1 /* InstantiationType.Delayed */);
 export class EditorKeybindingCancellationTokenSource extends CancellationTokenSource {
     constructor(editor, parent) {
         super(parent);

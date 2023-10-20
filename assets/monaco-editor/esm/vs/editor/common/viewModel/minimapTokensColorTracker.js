@@ -7,6 +7,12 @@ import { Disposable, markAsSingleton } from '../../../base/common/lifecycle.js';
 import { RGBA8 } from '../core/rgba.js';
 import { TokenizationRegistry } from '../languages.js';
 export class MinimapTokensColorTracker extends Disposable {
+    static getInstance() {
+        if (!this._INSTANCE) {
+            this._INSTANCE = markAsSingleton(new MinimapTokensColorTracker());
+        }
+        return this._INSTANCE;
+    }
     constructor() {
         super();
         this._onDidChange = new Emitter();
@@ -17,12 +23,6 @@ export class MinimapTokensColorTracker extends Disposable {
                 this._updateColorMap();
             }
         }));
-    }
-    static getInstance() {
-        if (!this._INSTANCE) {
-            this._INSTANCE = markAsSingleton(new MinimapTokensColorTracker());
-        }
-        return this._INSTANCE;
     }
     _updateColorMap() {
         const colorMap = TokenizationRegistry.getColorMap();

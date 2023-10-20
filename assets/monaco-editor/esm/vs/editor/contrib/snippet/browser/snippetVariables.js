@@ -19,7 +19,7 @@ import { generateUuid } from '../../../../base/common/uuid.js';
 import { ILanguageConfigurationService } from '../../../common/languages/languageConfigurationRegistry.js';
 import { Text } from './snippetParser.js';
 import * as nls from '../../../../nls.js';
-import { WORKSPACE_EXTENSION, isSingleFolderWorkspaceIdentifier, toWorkspaceIdentifier } from '../../../../platform/workspace/common/workspace.js';
+import { WORKSPACE_EXTENSION, isSingleFolderWorkspaceIdentifier, toWorkspaceIdentifier, isEmptyWorkspaceIdentifier } from '../../../../platform/workspace/common/workspace.js';
 export const KnownSnippetVariableNames = Object.freeze({
     'CURRENT_YEAR': true,
     'CURRENT_YEAR_SHORT': true,
@@ -33,6 +33,7 @@ export const KnownSnippetVariableNames = Object.freeze({
     'CURRENT_MONTH_NAME': true,
     'CURRENT_MONTH_NAME_SHORT': true,
     'CURRENT_SECONDS_UNIX': true,
+    'CURRENT_TIMEZONE_OFFSET': true,
     'SELECTION': true,
     'CLIPBOARD': true,
     'TM_SELECTED_TEXT': true,
@@ -44,8 +45,8 @@ export const KnownSnippetVariableNames = Object.freeze({
     'TM_FILENAME_BASE': true,
     'TM_DIRECTORY': true,
     'TM_FILEPATH': true,
-    'CURSOR_INDEX': true,
-    'CURSOR_NUMBER': true,
+    'CURSOR_INDEX': true, // 0-offset
+    'CURSOR_NUMBER': true, // 1-offset
     'RELATIVE_FILEPATH': true,
     'BLOCK_COMMENT_START': true,
     'BLOCK_COMMENT_END': true,
@@ -275,6 +276,15 @@ export class TimeBasedVariableResolver {
         else if (name === 'CURRENT_SECONDS_UNIX') {
             return String(Math.floor(this._date.getTime() / 1000));
         }
+        else if (name === 'CURRENT_TIMEZONE_OFFSET') {
+            const rawTimeOffset = this._date.getTimezoneOffset();
+            const sign = rawTimeOffset > 0 ? '-' : '+';
+            const hours = Math.trunc(Math.abs(rawTimeOffset / 60));
+            const hoursString = (hours < 10 ? '0' + hours : hours);
+            const minutes = Math.abs(rawTimeOffset) - hours * 60;
+            const minutesString = (minutes < 10 ? '0' + minutes : minutes);
+            return sign + hoursString + ':' + minutesString;
+        }
         return undefined;
     }
 }
@@ -292,7 +302,7 @@ export class WorkspaceBasedVariableResolver {
             return undefined;
         }
         const workspaceIdentifier = toWorkspaceIdentifier(this._workspaceService.getWorkspace());
-        if (!workspaceIdentifier) {
+        if (isEmptyWorkspaceIdentifier(workspaceIdentifier)) {
             return undefined;
         }
         if (variable.name === 'WORKSPACE_NAME') {

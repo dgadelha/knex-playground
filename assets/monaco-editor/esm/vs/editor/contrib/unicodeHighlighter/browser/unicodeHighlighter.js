@@ -25,7 +25,7 @@ import { Codicon } from '../../../../base/common/codicons.js';
 import { MarkdownString } from '../../../../base/common/htmlContent.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import * as platform from '../../../../base/common/platform.js';
-import { InvisibleCharacters } from '../../../../base/common/strings.js';
+import { InvisibleCharacters, isBasicASCII } from '../../../../base/common/strings.js';
 import './unicodeHighlighter.css';
 import { EditorAction, registerEditorAction, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { inUntrustedWorkspace, unicodeHighlightConfigKeys } from '../../../common/config/editorOptions.js';
@@ -106,13 +106,13 @@ let UnicodeHighlighter = class UnicodeHighlighter extends Disposable {
             this._bannerClosed = false;
             this._updateHighlighter();
         }));
-        this._options = _editor.getOption(115 /* EditorOption.unicodeHighlighting */);
+        this._options = _editor.getOption(124 /* EditorOption.unicodeHighlighting */);
         this._register(_workspaceTrustService.onDidChangeTrust(e => {
             this._updateHighlighter();
         }));
         this._register(_editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(115 /* EditorOption.unicodeHighlighting */)) {
-                this._options = _editor.getOption(115 /* EditorOption.unicodeHighlighting */);
+            if (e.hasChanged(124 /* EditorOption.unicodeHighlighting */)) {
+                this._options = _editor.getOption(124 /* EditorOption.unicodeHighlighting */);
                 this._updateHighlighter();
             }
         }));
@@ -350,7 +350,7 @@ let UnicodeHighlighterHoverParticipant = class UnicodeHighlighterHoverParticipan
         this._editor = _editor;
         this._languageService = _languageService;
         this._openerService = _openerService;
-        this.hoverOrdinal = 4;
+        this.hoverOrdinal = 5;
     }
     computeSync(anchor, lineDecorations) {
         if (!this._editor.hasModel() || anchor.type !== 1 /* HoverAnchorType.Range */) {
@@ -362,6 +362,7 @@ let UnicodeHighlighterHoverParticipant = class UnicodeHighlighterHoverParticipan
             return [];
         }
         const result = [];
+        const existedReason = new Set();
         let index = 300;
         for (const d of lineDecorations) {
             const highlightInfo = unicodeHighlighter.getDecorationInfo(d);
@@ -374,9 +375,15 @@ let UnicodeHighlighterHoverParticipant = class UnicodeHighlighterHoverParticipan
             const codePointStr = formatCodePointMarkdown(codePoint);
             let reason;
             switch (highlightInfo.reason.kind) {
-                case 0 /* UnicodeHighlighterReasonKind.Ambiguous */:
-                    reason = nls.localize('unicodeHighlight.characterIsAmbiguous', 'The character {0} could be confused with the character {1}, which is more common in source code.', codePointStr, formatCodePointMarkdown(highlightInfo.reason.confusableWith.codePointAt(0)));
+                case 0 /* UnicodeHighlighterReasonKind.Ambiguous */: {
+                    if (isBasicASCII(highlightInfo.reason.confusableWith)) {
+                        reason = nls.localize('unicodeHighlight.characterIsAmbiguousASCII', 'The character {0} could be confused with the ASCII character {1}, which is more common in source code.', codePointStr, formatCodePointMarkdown(highlightInfo.reason.confusableWith.codePointAt(0)));
+                    }
+                    else {
+                        reason = nls.localize('unicodeHighlight.characterIsAmbiguous', 'The character {0} could be confused with the character {1}, which is more common in source code.', codePointStr, formatCodePointMarkdown(highlightInfo.reason.confusableWith.codePointAt(0)));
+                    }
                     break;
+                }
                 case 1 /* UnicodeHighlighterReasonKind.Invisible */:
                     reason = nls.localize('unicodeHighlight.characterIsInvisible', 'The character {0} is invisible.', codePointStr);
                     break;
@@ -384,6 +391,10 @@ let UnicodeHighlighterHoverParticipant = class UnicodeHighlighterHoverParticipan
                     reason = nls.localize('unicodeHighlight.characterIsNonBasicAscii', 'The character {0} is not a basic ASCII character.', codePointStr);
                     break;
             }
+            if (existedReason.has(reason)) {
+                continue;
+            }
+            existedReason.add(reason);
             const adjustSettingsArgs = {
                 codePoint: codePoint,
                 reason: highlightInfo.reason,
@@ -396,7 +407,7 @@ let UnicodeHighlighterHoverParticipant = class UnicodeHighlighterHoverParticipan
                 .appendMarkdown(reason)
                 .appendText(' ')
                 .appendLink(uri, adjustSettings);
-            result.push(new MarkdownHover(this, d.range, [markdown], index++));
+            result.push(new MarkdownHover(this, d.range, [markdown], false, index++));
         }
         return result;
     }
@@ -687,5 +698,5 @@ registerEditorAction(DisableHighlightingOfAmbiguousCharactersAction);
 registerEditorAction(DisableHighlightingOfInvisibleCharactersAction);
 registerEditorAction(DisableHighlightingOfNonBasicAsciiCharactersAction);
 registerEditorAction(ShowExcludeOptions);
-registerEditorContribution(UnicodeHighlighter.ID, UnicodeHighlighter);
+registerEditorContribution(UnicodeHighlighter.ID, UnicodeHighlighter, 1 /* EditorContributionInstantiation.AfterFirstRender */);
 HoverParticipantRegistry.register(UnicodeHighlighterHoverParticipant);

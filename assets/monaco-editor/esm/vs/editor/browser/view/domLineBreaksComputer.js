@@ -2,20 +2,20 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var _a;
-import { createStringBuilder } from '../../common/core/stringBuilder.js';
+import { createTrustedTypesPolicy } from '../../../base/browser/trustedTypes.js';
 import * as strings from '../../../base/common/strings.js';
 import { applyFontInfo } from '../config/domFontInfo.js';
-import { LineInjectedText } from '../../common/textModelEvents.js';
+import { StringBuilder } from '../../common/core/stringBuilder.js';
 import { ModelLineProjectionData } from '../../common/modelLineProjectionData.js';
-const ttPolicy = (_a = window.trustedTypes) === null || _a === void 0 ? void 0 : _a.createPolicy('domLineBreaksComputer', { createHTML: value => value });
+import { LineInjectedText } from '../../common/textModelEvents.js';
+const ttPolicy = createTrustedTypesPolicy('domLineBreaksComputer', { createHTML: value => value });
 export class DOMLineBreaksComputerFactory {
     static create() {
         return new DOMLineBreaksComputerFactory();
     }
     constructor() {
     }
-    createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent) {
+    createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak) {
         const requests = [];
         const injectedTexts = [];
         return {
@@ -24,12 +24,12 @@ export class DOMLineBreaksComputerFactory {
                 injectedTexts.push(injectedText);
             },
             finalize: () => {
-                return createLineBreaks(requests, fontInfo, tabSize, wrappingColumn, wrappingIndent, injectedTexts);
+                return createLineBreaks(requests, fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak, injectedTexts);
             }
         };
     }
 }
-function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, injectedTextsPerLine) {
+function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, wordBreak, injectedTextsPerLine) {
     var _a;
     function createEmptyLineBreakWithPossiblyInjectedText(requestIdx) {
         const injectedTexts = injectedTextsPerLine[requestIdx];
@@ -58,7 +58,7 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
     const additionalIndentLength = Math.ceil(fontInfo.spaceWidth * additionalIndentSize);
     const containerDomNode = document.createElement('div');
     applyFontInfo(containerDomNode, fontInfo);
-    const sb = createStringBuilder(10000);
+    const sb = new StringBuilder(10000);
     const firstNonWhitespaceIndices = [];
     const wrappedTextIndentLengths = [];
     const renderLineContents = [];
@@ -107,7 +107,16 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
     containerDomNode.innerHTML = trustedhtml;
     containerDomNode.style.position = 'absolute';
     containerDomNode.style.top = '10000';
-    containerDomNode.style.wordWrap = 'break-word';
+    if (wordBreak === 'keepAll') {
+        // word-break: keep-all; overflow-wrap: anywhere
+        containerDomNode.style.wordBreak = 'keep-all';
+        containerDomNode.style.overflowWrap = 'anywhere';
+    }
+    else {
+        // overflow-wrap: break-word
+        containerDomNode.style.wordBreak = 'inherit';
+        containerDomNode.style.overflowWrap = 'break-word';
+    }
     document.body.appendChild(containerDomNode);
     const range = document.createRange();
     const lineDomNodes = Array.prototype.slice.call(containerDomNode.children, 0);
@@ -151,17 +160,17 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
 function renderLine(lineContent, initialVisibleColumn, tabSize, width, sb, wrappingIndentLength) {
     if (wrappingIndentLength !== 0) {
         const hangingOffset = String(wrappingIndentLength);
-        sb.appendASCIIString('<div style="text-indent: -');
-        sb.appendASCIIString(hangingOffset);
-        sb.appendASCIIString('px; padding-left: ');
-        sb.appendASCIIString(hangingOffset);
-        sb.appendASCIIString('px; box-sizing: border-box; width:');
+        sb.appendString('<div style="text-indent: -');
+        sb.appendString(hangingOffset);
+        sb.appendString('px; padding-left: ');
+        sb.appendString(hangingOffset);
+        sb.appendString('px; box-sizing: border-box; width:');
     }
     else {
-        sb.appendASCIIString('<div style="width:');
+        sb.appendString('<div style="width:');
     }
-    sb.appendASCIIString(String(width));
-    sb.appendASCIIString('px;">');
+    sb.appendString(String(width));
+    sb.appendString('px;">');
     // if (containsRTL) {
     // 	sb.appendASCIIString('" dir="ltr');
     // }
@@ -171,10 +180,10 @@ function renderLine(lineContent, initialVisibleColumn, tabSize, width, sb, wrapp
     const charOffsets = [];
     const visibleColumns = [];
     let nextCharCode = (0 < len ? lineContent.charCodeAt(0) : 0 /* CharCode.Null */);
-    sb.appendASCIIString('<span>');
+    sb.appendString('<span>');
     for (let charIndex = 0; charIndex < len; charIndex++) {
         if (charIndex !== 0 && charIndex % 16384 /* Constants.SPAN_MODULO_LIMIT */ === 0) {
-            sb.appendASCIIString('</span><span>');
+            sb.appendString('</span><span>');
         }
         charOffsets[charIndex] = charOffset;
         visibleColumns[charIndex] = visibleColumn;
@@ -188,57 +197,57 @@ function renderLine(lineContent, initialVisibleColumn, tabSize, width, sb, wrapp
                 charWidth = producedCharacters;
                 for (let space = 1; space <= producedCharacters; space++) {
                     if (space < producedCharacters) {
-                        sb.write1(0xA0); // &nbsp;
+                        sb.appendCharCode(0xA0); // &nbsp;
                     }
                     else {
-                        sb.appendASCII(32 /* CharCode.Space */);
+                        sb.appendASCIICharCode(32 /* CharCode.Space */);
                     }
                 }
                 break;
             case 32 /* CharCode.Space */:
                 if (nextCharCode === 32 /* CharCode.Space */) {
-                    sb.write1(0xA0); // &nbsp;
+                    sb.appendCharCode(0xA0); // &nbsp;
                 }
                 else {
-                    sb.appendASCII(32 /* CharCode.Space */);
+                    sb.appendASCIICharCode(32 /* CharCode.Space */);
                 }
                 break;
             case 60 /* CharCode.LessThan */:
-                sb.appendASCIIString('&lt;');
+                sb.appendString('&lt;');
                 break;
             case 62 /* CharCode.GreaterThan */:
-                sb.appendASCIIString('&gt;');
+                sb.appendString('&gt;');
                 break;
             case 38 /* CharCode.Ampersand */:
-                sb.appendASCIIString('&amp;');
+                sb.appendString('&amp;');
                 break;
             case 0 /* CharCode.Null */:
-                sb.appendASCIIString('&#00;');
+                sb.appendString('&#00;');
                 break;
             case 65279 /* CharCode.UTF8_BOM */:
             case 8232 /* CharCode.LINE_SEPARATOR */:
             case 8233 /* CharCode.PARAGRAPH_SEPARATOR */:
             case 133 /* CharCode.NEXT_LINE */:
-                sb.write1(0xFFFD);
+                sb.appendCharCode(0xFFFD);
                 break;
             default:
                 if (strings.isFullWidthCharacter(charCode)) {
                     charWidth++;
                 }
                 if (charCode < 32) {
-                    sb.write1(9216 + charCode);
+                    sb.appendCharCode(9216 + charCode);
                 }
                 else {
-                    sb.write1(charCode);
+                    sb.appendCharCode(charCode);
                 }
         }
         charOffset += producedCharacters;
         visibleColumn += charWidth;
     }
-    sb.appendASCIIString('</span>');
+    sb.appendString('</span>');
     charOffsets[lineContent.length] = charOffset;
     visibleColumns[lineContent.length] = visibleColumn;
-    sb.appendASCIIString('</div>');
+    sb.appendString('</div>');
     return [charOffsets, visibleColumns];
 }
 function readLineBreaks(range, lineDomNode, lineContent, charOffsets) {

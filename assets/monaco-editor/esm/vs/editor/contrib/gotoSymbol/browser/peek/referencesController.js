@@ -20,6 +20,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var ReferencesController_1;
 import { createCancelablePromise } from '../../../../../base/common/async.js';
 import { onUnexpectedError } from '../../../../../base/common/errors.js';
 import { KeyChord } from '../../../../../base/common/keyCodes.js';
@@ -40,7 +41,10 @@ import { IStorageService } from '../../../../../platform/storage/common/storage.
 import { OneReference } from '../referencesModel.js';
 import { LayoutData, ReferenceWidget } from './referencesWidget.js';
 export const ctxReferenceSearchVisible = new RawContextKey('referenceSearchVisible', false, nls.localize('referenceSearchVisible', "Whether reference peek is visible, like 'Peek References' or 'Peek Definition'"));
-let ReferencesController = class ReferencesController {
+let ReferencesController = ReferencesController_1 = class ReferencesController {
+    static get(editor) {
+        return editor.getContribution(ReferencesController_1.ID);
+    }
     constructor(_defaultTreeKeyboardSupport, _editor, contextKeyService, _editorService, _notificationService, _instantiationService, _storageService, _configurationService) {
         this._defaultTreeKeyboardSupport = _defaultTreeKeyboardSupport;
         this._editor = _editor;
@@ -53,9 +57,6 @@ let ReferencesController = class ReferencesController {
         this._requestIdPool = 0;
         this._ignoreModelChangeEvent = false;
         this._referenceSearchVisible = ctxReferenceSearchVisible.bindTo(contextKeyService);
-    }
-    static get(editor) {
-        return editor.getContribution(ReferencesController.ID);
     }
     dispose() {
         var _a, _b;
@@ -116,7 +117,7 @@ let ReferencesController = class ReferencesController {
                     break;
                 case 'goto':
                     if (peekMode) {
-                        this._gotoReference(element);
+                        this._gotoReference(element, true);
                     }
                     else {
                         this.openReference(element, false, true);
@@ -150,7 +151,7 @@ let ReferencesController = class ReferencesController {
                     const selection = this._model.nearestReference(uri, pos);
                     if (selection) {
                         return this._widget.setSelection(selection).then(() => {
-                            if (this._widget && this._editor.getOption(79 /* EditorOption.peekWidgetDefaultFocus */) === 'editor') {
+                            if (this._widget && this._editor.getOption(86 /* EditorOption.peekWidgetDefaultFocus */) === 'editor') {
                                 this._widget.focusOnPreviewEditor();
                             }
                         });
@@ -192,7 +193,7 @@ let ReferencesController = class ReferencesController {
             const editorFocus = this._editor.hasTextFocus();
             const previewEditorFocus = this._widget.isPreviewEditorFocused();
             yield this._widget.setSelection(target);
-            yield this._gotoReference(target);
+            yield this._gotoReference(target, false);
             if (editorFocus) {
                 this._editor.focus();
             }
@@ -223,15 +224,14 @@ let ReferencesController = class ReferencesController {
         }
         this._requestIdPool += 1; // Cancel pending requests
     }
-    _gotoReference(ref) {
-        if (this._widget) {
-            this._widget.hide();
-        }
+    _gotoReference(ref, pinned) {
+        var _a;
+        (_a = this._widget) === null || _a === void 0 ? void 0 : _a.hide();
         this._ignoreModelChangeEvent = true;
         const range = Range.lift(ref.range).collapseToStart();
         return this._editorService.openCodeEditor({
             resource: ref.uri,
-            options: { selection: range, selectionSource: "code.jump" /* TextEditorSelectionSource.JUMP */ }
+            options: { selection: range, selectionSource: "code.jump" /* TextEditorSelectionSource.JUMP */, pinned }
         }, this._editor).then(openedEditor => {
             var _a;
             this._ignoreModelChangeEvent = false;
@@ -248,7 +248,7 @@ let ReferencesController = class ReferencesController {
             else {
                 // we opened a different editor instance which means a different controller instance.
                 // therefore we stop with this controller and continue with the other
-                const other = ReferencesController.get(openedEditor);
+                const other = ReferencesController_1.get(openedEditor);
                 const model = this._model.clone();
                 this.closeWidget();
                 openedEditor.focus();
@@ -272,7 +272,7 @@ let ReferencesController = class ReferencesController {
     }
 };
 ReferencesController.ID = 'editor.contrib.referencesController';
-ReferencesController = __decorate([
+ReferencesController = ReferencesController_1 = __decorate([
     __param(2, IContextKeyService),
     __param(3, ICodeEditorService),
     __param(4, INotificationService),

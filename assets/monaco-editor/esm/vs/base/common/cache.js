@@ -22,12 +22,12 @@ export class LRUCachedFunction {
  * Uses an unbounded cache (referential equality) to memoize the results of the given function.
 */
 export class CachedFunction {
+    get cachedValues() {
+        return this._map;
+    }
     constructor(fn) {
         this.fn = fn;
         this._map = new Map();
-    }
-    get cachedValues() {
-        return this._map;
     }
     get(arg) {
         if (this._map.has(arg)) {

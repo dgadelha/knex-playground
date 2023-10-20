@@ -9,6 +9,7 @@ import { ResourceMap } from '../../../base/common/map.js';
 import { Schemas } from '../../../base/common/network.js';
 import { URI } from '../../../base/common/uri.js';
 import { MarkerSeverity } from './markers.js';
+export const unsupportedSchemas = new Set([Schemas.inMemory, Schemas.vscodeSourceControl, Schemas.walkThrough, Schemas.walkThroughSnippet]);
 class DoubleResourceMap {
     constructor() {
         this._byResource = new ResourceMap();
@@ -86,7 +87,7 @@ class MarkerStats {
     _resourceStats(resource) {
         const result = { errors: 0, warnings: 0, infos: 0, unknowns: 0 };
         // TODO this is a hack
-        if (resource.scheme === Schemas.inMemory || resource.scheme === Schemas.walkThrough || resource.scheme === Schemas.walkThroughSnippet || resource.scheme === Schemas.vscodeSourceControl) {
+        if (unsupportedSchemas.has(resource.scheme)) {
             return result;
         }
         for (const { severity } of this._service.read({ resource })) {

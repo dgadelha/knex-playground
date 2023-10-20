@@ -26,17 +26,19 @@ import { FocusChangedEvent, HiddenAreasChangedEvent, ModelContentChangedEvent, M
 import { ViewModelLinesFromModelAsIs, ViewModelLinesFromProjectedModel } from './viewModelLines.js';
 const USE_IDENTITY_LINES_COLLECTION = true;
 export class ViewModel extends Disposable {
-    constructor(editorId, configuration, model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, scheduleAtNextAnimationFrame, languageConfigurationService, _themeService) {
+    constructor(editorId, configuration, model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, scheduleAtNextAnimationFrame, languageConfigurationService, _themeService, _attachedView) {
         super();
         this.languageConfigurationService = languageConfigurationService;
         this._themeService = _themeService;
+        this._attachedView = _attachedView;
+        this.hiddenAreasModel = new HiddenAreasModel();
+        this.previousHiddenAreas = [];
         this._editorId = editorId;
         this._configuration = configuration;
         this.model = model;
         this._eventDispatcher = new ViewModelEventDispatcher();
         this.onEvent = this._eventDispatcher.onEvent;
         this.cursorConfig = new CursorConfiguration(this.model.getLanguageId(), this.model.getOptions(), this._configuration, this.languageConfigurationService);
-        this._tokenizeViewportSoon = this._register(new RunOnceScheduler(() => this.tokenizeViewport(), 50));
         this._updateConfigurationViewLineCount = this._register(new RunOnceScheduler(() => this._updateConfigurationViewLineCountNow(), 0));
         this._hasFocus = false;
         this._viewportStart = ViewportStart.create(this.model);
@@ -45,18 +47,19 @@ export class ViewModel extends Disposable {
         }
         else {
             const options = this._configuration.options;
-            const fontInfo = options.get(46 /* EditorOption.fontInfo */);
-            const wrappingStrategy = options.get(127 /* EditorOption.wrappingStrategy */);
-            const wrappingInfo = options.get(134 /* EditorOption.wrappingInfo */);
-            const wrappingIndent = options.get(126 /* EditorOption.wrappingIndent */);
-            this._lines = new ViewModelLinesFromProjectedModel(this._editorId, this.model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, fontInfo, this.model.getOptions().tabSize, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent);
+            const fontInfo = options.get(50 /* EditorOption.fontInfo */);
+            const wrappingStrategy = options.get(137 /* EditorOption.wrappingStrategy */);
+            const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
+            const wrappingIndent = options.get(136 /* EditorOption.wrappingIndent */);
+            const wordBreak = options.get(128 /* EditorOption.wordBreak */);
+            this._lines = new ViewModelLinesFromProjectedModel(this._editorId, this.model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, fontInfo, this.model.getOptions().tabSize, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent, wordBreak);
         }
         this.coordinatesConverter = this._lines.createCoordinatesConverter();
         this._cursor = this._register(new CursorsController(model, this, this.coordinatesConverter, this.cursorConfig));
         this.viewLayout = this._register(new ViewLayout(this._configuration, this.getLineCount(), scheduleAtNextAnimationFrame));
         this._register(this.viewLayout.onDidScroll((e) => {
             if (e.scrollTopChanged) {
-                this._tokenizeViewportSoon.schedule();
+                this._handleVisibleLinesChanged();
             }
             if (e.scrollTopChanged) {
                 this._viewportStart.invalidate();
@@ -108,13 +111,19 @@ export class ViewModel extends Disposable {
     _updateConfigurationViewLineCountNow() {
         this._configuration.setViewLineCount(this._lines.getViewLineCount());
     }
-    tokenizeViewport() {
+    getModelVisibleRanges() {
         const linesViewportData = this.viewLayout.getLinesViewportData();
         const viewVisibleRange = new Range(linesViewportData.startLineNumber, this.getLineMinColumn(linesViewportData.startLineNumber), linesViewportData.endLineNumber, this.getLineMaxColumn(linesViewportData.endLineNumber));
         const modelVisibleRanges = this._toModelVisibleRanges(viewVisibleRange);
-        for (const modelVisibleRange of modelVisibleRanges) {
-            this.model.tokenization.tokenizeViewport(modelVisibleRange.startLineNumber, modelVisibleRange.endLineNumber);
-        }
+        return modelVisibleRanges;
+    }
+    visibleLinesStabilized() {
+        const modelVisibleRanges = this.getModelVisibleRanges();
+        this._attachedView.setVisibleLines(modelVisibleRanges, true);
+    }
+    _handleVisibleLinesChanged() {
+        const modelVisibleRanges = this.getModelVisibleRanges();
+        this._attachedView.setVisibleLines(modelVisibleRanges, false);
     }
     setHasFocus(hasFocus) {
         this._hasFocus = hasFocus;
@@ -128,44 +137,41 @@ export class ViewModel extends Disposable {
     onCompositionEnd() {
         this._eventDispatcher.emitSingleViewEvent(new viewEvents.ViewCompositionEndEvent());
     }
-    _onConfigurationChanged(eventsCollector, e) {
-        // We might need to restore the current centered view range, so save it (if available)
-        let previousViewportStartModelPosition = null;
-        if (this._viewportStart.isValid) {
+    _captureStableViewport() {
+        // We might need to restore the current start view range, so save it (if available)
+        // But only if the scroll position is not at the top of the file
+        if (this._viewportStart.isValid && this.viewLayout.getCurrentScrollTop() > 0) {
             const previousViewportStartViewPosition = new Position(this._viewportStart.viewLineNumber, this.getLineMinColumn(this._viewportStart.viewLineNumber));
-            previousViewportStartModelPosition = this.coordinatesConverter.convertViewPositionToModelPosition(previousViewportStartViewPosition);
+            const previousViewportStartModelPosition = this.coordinatesConverter.convertViewPositionToModelPosition(previousViewportStartViewPosition);
+            return new StableViewport(previousViewportStartModelPosition, this._viewportStart.startLineDelta);
         }
-        let restorePreviousViewportStart = false;
+        return new StableViewport(null, 0);
+    }
+    _onConfigurationChanged(eventsCollector, e) {
+        const stableViewport = this._captureStableViewport();
         const options = this._configuration.options;
-        const fontInfo = options.get(46 /* EditorOption.fontInfo */);
-        const wrappingStrategy = options.get(127 /* EditorOption.wrappingStrategy */);
-        const wrappingInfo = options.get(134 /* EditorOption.wrappingInfo */);
-        const wrappingIndent = options.get(126 /* EditorOption.wrappingIndent */);
-        if (this._lines.setWrappingSettings(fontInfo, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent)) {
+        const fontInfo = options.get(50 /* EditorOption.fontInfo */);
+        const wrappingStrategy = options.get(137 /* EditorOption.wrappingStrategy */);
+        const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
+        const wrappingIndent = options.get(136 /* EditorOption.wrappingIndent */);
+        const wordBreak = options.get(128 /* EditorOption.wordBreak */);
+        if (this._lines.setWrappingSettings(fontInfo, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent, wordBreak)) {
             eventsCollector.emitViewEvent(new viewEvents.ViewFlushedEvent());
             eventsCollector.emitViewEvent(new viewEvents.ViewLineMappingChangedEvent());
             eventsCollector.emitViewEvent(new viewEvents.ViewDecorationsChangedEvent(null));
             this._cursor.onLineMappingChanged(eventsCollector);
             this._decorations.onLineMappingChanged();
             this.viewLayout.onFlushed(this.getLineCount());
-            if (this.viewLayout.getCurrentScrollTop() !== 0) {
-                // Never change the scroll position from 0 to something else...
-                restorePreviousViewportStart = true;
-            }
             this._updateConfigurationViewLineCount.schedule();
         }
-        if (e.hasChanged(83 /* EditorOption.readOnly */)) {
+        if (e.hasChanged(90 /* EditorOption.readOnly */)) {
             // Must read again all decorations due to readOnly filtering
             this._decorations.reset();
             eventsCollector.emitViewEvent(new viewEvents.ViewDecorationsChangedEvent(null));
         }
         eventsCollector.emitViewEvent(new viewEvents.ViewConfigurationChangedEvent(e));
         this.viewLayout.onConfigurationChanged(e);
-        if (restorePreviousViewportStart && previousViewportStartModelPosition) {
-            const viewPosition = this.coordinatesConverter.convertModelPositionToViewPosition(previousViewportStartModelPosition);
-            const viewPositionTop = this.viewLayout.getVerticalOffsetForLineNumber(viewPosition.lineNumber);
-            this.viewLayout.setScrollPosition({ scrollTop: viewPositionTop + this._viewportStart.startLineDelta }, 1 /* ScrollType.Immediate */);
-        }
+        stableViewport.recoverViewportStart(this.coordinatesConverter, this.viewLayout);
         if (CursorConfiguration.shouldRecreate(e)) {
             this.cursorConfig = new CursorConfiguration(this.model.getLanguageId(), this.model.getOptions(), this._configuration, this.languageConfigurationService);
             this._cursor.updateConfiguration(this.cursorConfig);
@@ -296,7 +302,7 @@ export class ViewModel extends Disposable {
             finally {
                 this._eventDispatcher.endEmitViewEvents();
             }
-            this._tokenizeViewportSoon.schedule();
+            this._handleVisibleLinesChanged();
         }));
         this._register(this.model.onDidChangeTokens((e) => {
             const viewRanges = [];
@@ -310,9 +316,6 @@ export class ViewModel extends Disposable {
                 };
             }
             this._eventDispatcher.emitSingleViewEvent(new viewEvents.ViewTokensChangedEvent(viewRanges));
-            if (e.tokenizationSupportChanged) {
-                this._tokenizeViewportSoon.schedule();
-            }
             this._eventDispatcher.emitOutgoingEvent(new ModelTokensChangedEvent(e));
         }));
         this._register(this.model.onDidChangeLanguageConfiguration((e) => {
@@ -353,11 +356,18 @@ export class ViewModel extends Disposable {
             this._eventDispatcher.emitOutgoingEvent(new ModelDecorationsChangedEvent(e));
         }));
     }
-    setHiddenAreas(ranges) {
+    setHiddenAreas(ranges, source) {
+        this.hiddenAreasModel.setHiddenAreas(source, ranges);
+        const mergedRanges = this.hiddenAreasModel.getMergedRanges();
+        if (mergedRanges === this.previousHiddenAreas) {
+            return;
+        }
+        this.previousHiddenAreas = mergedRanges;
+        const stableViewport = this._captureStableViewport();
         let lineMappingChanged = false;
         try {
             const eventsCollector = this._eventDispatcher.beginEmitViewEvents();
-            lineMappingChanged = this._lines.setHiddenAreas(ranges);
+            lineMappingChanged = this._lines.setHiddenAreas(mergedRanges);
             if (lineMappingChanged) {
                 eventsCollector.emitViewEvent(new viewEvents.ViewFlushedEvent());
                 eventsCollector.emitViewEvent(new viewEvents.ViewLineMappingChangedEvent());
@@ -367,6 +377,7 @@ export class ViewModel extends Disposable {
                 this.viewLayout.onFlushed(this.getLineCount());
                 this.viewLayout.onHeightMaybeChanged();
             }
+            stableViewport.recoverViewportStart(this.coordinatesConverter, this.viewLayout);
         }
         finally {
             this._eventDispatcher.endEmitViewEvents();
@@ -377,8 +388,8 @@ export class ViewModel extends Disposable {
         }
     }
     getVisibleRangesPlusViewportAboveBelow() {
-        const layoutInfo = this._configuration.options.get(133 /* EditorOption.layoutInfo */);
-        const lineHeight = this._configuration.options.get(61 /* EditorOption.lineHeight */);
+        const layoutInfo = this._configuration.options.get(143 /* EditorOption.layoutInfo */);
+        const lineHeight = this._configuration.options.get(66 /* EditorOption.lineHeight */);
         const linesAround = Math.max(20, Math.round(layoutInfo.height / lineHeight));
         const partialData = this.viewLayout.getLinesViewportData();
         const startViewLineNumber = Math.max(1, partialData.completelyVisibleStartLineNumber - linesAround);
@@ -514,6 +525,9 @@ export class ViewModel extends Disposable {
         }
         return result + 2;
     }
+    getMinimapDecorationsInRange(range) {
+        return this._decorations.getMinimapDecorationsInRange(range);
+    }
     getDecorationsInViewport(visibleRange) {
         return this._decorations.getDecorationsViewportData(visibleRange).decorations;
     }
@@ -573,18 +587,22 @@ export class ViewModel extends Disposable {
         const decorations = this.model.getOverviewRulerDecorations();
         for (const decoration of decorations) {
             const opts1 = decoration.options.overviewRuler;
-            if (opts1) {
-                opts1.invalidateCachedColor();
-            }
+            opts1 === null || opts1 === void 0 ? void 0 : opts1.invalidateCachedColor();
             const opts2 = decoration.options.minimap;
-            if (opts2) {
-                opts2.invalidateCachedColor();
-            }
+            opts2 === null || opts2 === void 0 ? void 0 : opts2.invalidateCachedColor();
         }
     }
     getValueInRange(range, eol) {
         const modelRange = this.coordinatesConverter.convertViewRangeToModelRange(range);
         return this.model.getValueInRange(modelRange, eol);
+    }
+    getValueLengthInRange(range, eol) {
+        const modelRange = this.coordinatesConverter.convertViewRangeToModelRange(range);
+        return this.model.getValueLengthInRange(modelRange, eol);
+    }
+    modifyPosition(position, offset) {
+        const modelPosition = this.coordinatesConverter.convertViewPositionToModelPosition(position);
+        return this.model.modifyPosition(modelPosition, offset);
     }
     deduceModelPositionRelativeToViewPosition(viewAnchorPosition, deltaOffset, lineFeedCnt) {
         const modelAnchor = this.coordinatesConverter.convertViewPositionToModelPosition(viewAnchorPosition);
@@ -674,7 +692,7 @@ export class ViewModel extends Disposable {
             const lineNumber = range.startLineNumber;
             range = new Range(lineNumber, this.model.getLineMinColumn(lineNumber), lineNumber, this.model.getLineMaxColumn(lineNumber));
         }
-        const fontInfo = this._configuration.options.get(46 /* EditorOption.fontInfo */);
+        const fontInfo = this._configuration.options.get(50 /* EditorOption.fontInfo */);
         const colorMap = this._getColorMap();
         const hasBadChars = (/[:;\\\/<>]/.test(fontInfo.fontFamily));
         const useDefaultFontFamily = (hasBadChars || fontInfo.fontFamily === EDITOR_FONT_DEFAULTS.fontFamily);
@@ -868,13 +886,6 @@ export class ViewModel extends Disposable {
     }
 }
 class ViewportStart {
-    constructor(_model, _viewLineNumber, _isValid, _modelTrackedRange, _startLineDelta) {
-        this._model = _model;
-        this._viewLineNumber = _viewLineNumber;
-        this._isValid = _isValid;
-        this._modelTrackedRange = _modelTrackedRange;
-        this._startLineDelta = _startLineDelta;
-    }
     static create(model) {
         const viewportStartLineTrackedRange = model._setTrackedRange(null, new Range(1, 1, 1, 1), 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */);
         return new ViewportStart(model, 1, false, viewportStartLineTrackedRange, 0);
@@ -890,6 +901,13 @@ class ViewportStart {
     }
     get startLineDelta() {
         return this._startLineDelta;
+    }
+    constructor(_model, _viewLineNumber, _isValid, _modelTrackedRange, _startLineDelta) {
+        this._model = _model;
+        this._viewLineNumber = _viewLineNumber;
+        this._isValid = _isValid;
+        this._modelTrackedRange = _modelTrackedRange;
+        this._startLineDelta = _startLineDelta;
     }
     dispose() {
         this._model._setTrackedRange(this._modelTrackedRange, null, 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */);
@@ -934,5 +952,92 @@ class OverviewRulerDecorations {
             this._asMap[color] = group;
             this.asArray.push(group);
         }
+    }
+}
+class HiddenAreasModel {
+    constructor() {
+        this.hiddenAreas = new Map();
+        this.shouldRecompute = false;
+        this.ranges = [];
+    }
+    setHiddenAreas(source, ranges) {
+        const existing = this.hiddenAreas.get(source);
+        if (existing && rangeArraysEqual(existing, ranges)) {
+            return;
+        }
+        this.hiddenAreas.set(source, ranges);
+        this.shouldRecompute = true;
+    }
+    /**
+     * The returned array is immutable.
+    */
+    getMergedRanges() {
+        if (!this.shouldRecompute) {
+            return this.ranges;
+        }
+        this.shouldRecompute = false;
+        const newRanges = Array.from(this.hiddenAreas.values()).reduce((r, hiddenAreas) => mergeLineRangeArray(r, hiddenAreas), []);
+        if (rangeArraysEqual(this.ranges, newRanges)) {
+            return this.ranges;
+        }
+        this.ranges = newRanges;
+        return this.ranges;
+    }
+}
+function mergeLineRangeArray(arr1, arr2) {
+    const result = [];
+    let i = 0;
+    let j = 0;
+    while (i < arr1.length && j < arr2.length) {
+        const item1 = arr1[i];
+        const item2 = arr2[j];
+        if (item1.endLineNumber < item2.startLineNumber - 1) {
+            result.push(arr1[i++]);
+        }
+        else if (item2.endLineNumber < item1.startLineNumber - 1) {
+            result.push(arr2[j++]);
+        }
+        else {
+            const startLineNumber = Math.min(item1.startLineNumber, item2.startLineNumber);
+            const endLineNumber = Math.max(item1.endLineNumber, item2.endLineNumber);
+            result.push(new Range(startLineNumber, 1, endLineNumber, 1));
+            i++;
+            j++;
+        }
+    }
+    while (i < arr1.length) {
+        result.push(arr1[i++]);
+    }
+    while (j < arr2.length) {
+        result.push(arr2[j++]);
+    }
+    return result;
+}
+function rangeArraysEqual(arr1, arr2) {
+    if (arr1.length !== arr2.length) {
+        return false;
+    }
+    for (let i = 0; i < arr1.length; i++) {
+        if (!arr1[i].equalsRange(arr2[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+/**
+ * Maintain a stable viewport by trying to keep the first line in the viewport constant.
+ */
+class StableViewport {
+    constructor(viewportStartModelPosition, startLineDelta) {
+        this.viewportStartModelPosition = viewportStartModelPosition;
+        this.startLineDelta = startLineDelta;
+    }
+    recoverViewportStart(coordinatesConverter, viewLayout) {
+        if (!this.viewportStartModelPosition) {
+            return;
+        }
+        const viewPosition = coordinatesConverter.convertModelPositionToViewPosition(this.viewportStartModelPosition);
+        const viewPositionTop = viewLayout.getVerticalOffsetForLineNumber(viewPosition.lineNumber);
+        viewLayout.setScrollPosition({ scrollTop: viewPositionTop + this.startLineDelta }, 1 /* ScrollType.Immediate */);
     }
 }

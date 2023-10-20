@@ -2,12 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { SingleCursorState } from '../cursorCommon.js';
+import * as strings from '../../../base/common/strings.js';
 import { CursorColumns } from '../core/cursorColumns.js';
 import { Position } from '../core/position.js';
 import { Range } from '../core/range.js';
-import * as strings from '../../../base/common/strings.js';
 import { AtomicTabMoveOperations } from './cursorAtomicMoveOperations.js';
+import { SingleCursorState } from '../cursorCommon.js';
 export class CursorPosition {
     constructor(lineNumber, column, leftoverVisibleColumns) {
         this._cursorPositionBrand = undefined;
@@ -185,14 +185,22 @@ export class MoveOperations {
             lineNumber = cursor.position.lineNumber;
             column = cursor.position.column;
         }
-        const r = MoveOperations.down(config, model, lineNumber, column, cursor.leftoverVisibleColumns, linesCount, true);
+        let i = 0;
+        let r;
+        do {
+            r = MoveOperations.down(config, model, lineNumber + i, column, cursor.leftoverVisibleColumns, linesCount, true);
+            const np = model.normalizePosition(new Position(r.lineNumber, r.column), 2 /* PositionAffinity.None */);
+            if (np.lineNumber > lineNumber) {
+                break;
+            }
+        } while (i++ < 10 && lineNumber + i < model.getLineCount());
         return cursor.move(inSelectionMode, r.lineNumber, r.column, r.leftoverVisibleColumns);
     }
     static translateDown(config, model, cursor) {
         const selection = cursor.selection;
         const selectionStart = MoveOperations.down(config, model, selection.selectionStartLineNumber, selection.selectionStartColumn, cursor.selectionStartLeftoverVisibleColumns, 1, false);
         const position = MoveOperations.down(config, model, selection.positionLineNumber, selection.positionColumn, cursor.leftoverVisibleColumns, 1, false);
-        return new SingleCursorState(new Range(selectionStart.lineNumber, selectionStart.column, selectionStart.lineNumber, selectionStart.column), selectionStart.leftoverVisibleColumns, new Position(position.lineNumber, position.column), position.leftoverVisibleColumns);
+        return new SingleCursorState(new Range(selectionStart.lineNumber, selectionStart.column, selectionStart.lineNumber, selectionStart.column), 0 /* SelectionStartKind.Simple */, selectionStart.leftoverVisibleColumns, new Position(position.lineNumber, position.column), position.leftoverVisibleColumns);
     }
     static up(config, model, lineNumber, column, leftoverVisibleColumns, count, allowMoveOnFirstLine) {
         return this.vertical(config, model, lineNumber, column, leftoverVisibleColumns, lineNumber - count, allowMoveOnFirstLine, 3 /* PositionAffinity.LeftOfInjectedText */);
@@ -215,7 +223,7 @@ export class MoveOperations {
         const selection = cursor.selection;
         const selectionStart = MoveOperations.up(config, model, selection.selectionStartLineNumber, selection.selectionStartColumn, cursor.selectionStartLeftoverVisibleColumns, 1, false);
         const position = MoveOperations.up(config, model, selection.positionLineNumber, selection.positionColumn, cursor.leftoverVisibleColumns, 1, false);
-        return new SingleCursorState(new Range(selectionStart.lineNumber, selectionStart.column, selectionStart.lineNumber, selectionStart.column), selectionStart.leftoverVisibleColumns, new Position(position.lineNumber, position.column), position.leftoverVisibleColumns);
+        return new SingleCursorState(new Range(selectionStart.lineNumber, selectionStart.column, selectionStart.lineNumber, selectionStart.column), 0 /* SelectionStartKind.Simple */, selectionStart.leftoverVisibleColumns, new Position(position.lineNumber, position.column), position.leftoverVisibleColumns);
     }
     static _isBlankLine(model, lineNumber) {
         if (model.getLineFirstNonWhitespaceColumn(lineNumber) === 0) {

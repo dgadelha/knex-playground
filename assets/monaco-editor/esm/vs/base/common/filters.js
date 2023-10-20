@@ -266,7 +266,15 @@ function _matchesWords(word, target, i, j, contiguous) {
                 nextWordIndex++;
             }
         }
-        return result === null ? null : join({ start: j, end: j + 1 }, result);
+        if (!result) {
+            return null;
+        }
+        // If the characters don't exactly match, then they must be word separators (see charactersMatch(...)).
+        // We don't want to include this in the matches but we don't want to throw the target out all together so we return `result`.
+        if (word.charCodeAt(i) !== target.charCodeAt(j)) {
+            return result;
+        }
+        return join({ start: j, end: j + 1 }, result);
     }
 }
 function nextWord(word, start) {
@@ -300,10 +308,18 @@ export function matchesFuzzy(word, wordToMatchAgainst, enableSeparateSubstringMa
     // Default Filter
     return enableSeparateSubstringMatching ? fuzzySeparateFilter(word, wordToMatchAgainst) : fuzzyContiguousFilter(word, wordToMatchAgainst);
 }
+/**
+ * Match pattern against word in a fuzzy way. As in IntelliSense and faster and more
+ * powerful than `matchesFuzzy`
+ */
+export function matchesFuzzy2(pattern, word) {
+    const score = fuzzyScore(pattern, pattern.toLowerCase(), 0, word, word.toLowerCase(), 0, { firstMatchCanBeWeak: true, boostFullMatch: true });
+    return score ? createMatches(score) : null;
+}
 export function anyScore(pattern, lowPattern, patternPos, word, lowWord, wordPos) {
     const max = Math.min(13, pattern.length);
     for (; patternPos < max; patternPos++) {
-        const result = fuzzyScore(pattern, lowPattern, patternPos, word, lowWord, wordPos, { firstMatchCanBeWeak: false, boostFullMatch: true });
+        const result = fuzzyScore(pattern, lowPattern, patternPos, word, lowWord, wordPos, { firstMatchCanBeWeak: true, boostFullMatch: true });
         if (result) {
             return result;
         }

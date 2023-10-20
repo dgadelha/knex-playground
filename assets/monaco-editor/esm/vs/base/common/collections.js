@@ -2,33 +2,34 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-export class SetMap {
-    constructor() {
-        this.map = new Map();
-    }
-    add(key, value) {
-        let values = this.map.get(key);
-        if (!values) {
-            values = new Set();
-            this.map.set(key, values);
-        }
-        values.add(value);
-    }
-    delete(key, value) {
-        const values = this.map.get(key);
-        if (!values) {
-            return;
-        }
-        values.delete(value);
-        if (values.size === 0) {
-            this.map.delete(key);
+export function diffSets(before, after) {
+    const removed = [];
+    const added = [];
+    for (const element of before) {
+        if (!after.has(element)) {
+            removed.push(element);
         }
     }
-    forEach(key, fn) {
-        const values = this.map.get(key);
-        if (!values) {
-            return;
+    for (const element of after) {
+        if (!before.has(element)) {
+            added.push(element);
         }
-        values.forEach(fn);
     }
+    return { removed, added };
+}
+/**
+ * Computes the intersection of two sets.
+ *
+ * @param setA - The first set.
+ * @param setB - The second iterable.
+ * @returns A new set containing the elements that are in both `setA` and `setB`.
+ */
+export function intersection(setA, setB) {
+    const result = new Set();
+    for (const elem of setB) {
+        if (setA.has(elem)) {
+            result.add(elem);
+        }
+    }
+    return result;
 }

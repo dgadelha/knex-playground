@@ -54,6 +54,7 @@ export class PointerEventHandler extends MouseHandler {
                 position: target.position,
                 mouseColumn: target.position.column,
                 startedOnLineNumbers: false,
+                revealType: 1 /* NavigationCommandRevealType.Minimal */,
                 mouseDownCount: event.tapCount,
                 inSelectionMode: false,
                 altKey: false,
@@ -95,7 +96,7 @@ class TouchHandler extends MouseHandler {
             const event = document.createEvent('CustomEvent');
             event.initEvent(TextAreaSyntethicEvents.Tap, false, true);
             this.viewHelper.dispatchTextAreaEvent(event);
-            this.viewController.moveTo(target.position);
+            this.viewController.moveTo(target.position, 1 /* NavigationCommandRevealType.Minimal */);
         }
     }
     onChange(e) {

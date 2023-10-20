@@ -55,6 +55,17 @@ export class MouseWheelClassifier {
         } while (true);
         return (score <= 0.5);
     }
+    acceptStandardWheelEvent(e) {
+        const osZoomFactor = window.devicePixelRatio / getZoomFactor();
+        if (platform.isWindows || platform.isLinux) {
+            // On Windows and Linux, the incoming delta events are multiplied with the OS zoom factor.
+            // The OS zoom factor can be reverse engineered by using the device pixel ratio and the configured zoom factor into account.
+            this.accept(Date.now(), e.deltaX / osZoomFactor, e.deltaY / osZoomFactor);
+        }
+        else {
+            this.accept(Date.now(), e.deltaX, e.deltaY);
+        }
+    }
     accept(timestamp, deltaX, deltaY) {
         const item = new MouseWheelClassifierItem(timestamp, deltaX, deltaY);
         item.score = this._computeScore(item);
@@ -108,6 +119,9 @@ export class MouseWheelClassifier {
 }
 MouseWheelClassifier.INSTANCE = new MouseWheelClassifier();
 export class AbstractScrollableElement extends Widget {
+    get options() {
+        return this._options;
+    }
     constructor(element, options, scrollable) {
         super();
         this._onScroll = this._register(new Emitter());
@@ -162,9 +176,6 @@ export class AbstractScrollableElement extends Widget {
         this._mouseIsOver = false;
         this._shouldRender = true;
         this._revealOnScroll = true;
-    }
-    get options() {
-        return this._options;
     }
     dispose() {
         this._mouseWheelToDispose = dispose(this._mouseWheelToDispose);
@@ -244,6 +255,9 @@ export class AbstractScrollableElement extends Widget {
             this._render();
         }
     }
+    delegateScrollFromMouseWheelEvent(browserEvent) {
+        this._onMouseWheel(new StandardWheelEvent(browserEvent));
+    }
     // -------------------- mouse wheel scrolling --------------------
     _setListeningToMouseWheel(shouldListen) {
         const isListening = (this._mouseWheelToDispose.length > 0);
@@ -262,17 +276,13 @@ export class AbstractScrollableElement extends Widget {
         }
     }
     _onMouseWheel(e) {
+        var _a;
+        if ((_a = e.browserEvent) === null || _a === void 0 ? void 0 : _a.defaultPrevented) {
+            return;
+        }
         const classifier = MouseWheelClassifier.INSTANCE;
         if (SCROLL_WHEEL_SMOOTH_SCROLL_ENABLED) {
-            const osZoomFactor = window.devicePixelRatio / getZoomFactor();
-            if (platform.isWindows || platform.isLinux) {
-                // On Windows and Linux, the incoming delta events are multiplied with the OS zoom factor.
-                // The OS zoom factor can be reverse engineered by using the device pixel ratio and the configured zoom factor into account.
-                classifier.accept(Date.now(), e.deltaX / osZoomFactor, e.deltaY / osZoomFactor);
-            }
-            else {
-                classifier.accept(Date.now(), e.deltaX, e.deltaY);
-            }
+            classifier.acceptStandardWheelEvent(e);
         }
         // console.log(`${Date.now()}, ${e.deltaY}, ${e.deltaX}`);
         let didScroll = false;
@@ -280,7 +290,14 @@ export class AbstractScrollableElement extends Widget {
             let deltaY = e.deltaY * this._options.mouseWheelScrollSensitivity;
             let deltaX = e.deltaX * this._options.mouseWheelScrollSensitivity;
             if (this._options.scrollPredominantAxis) {
-                if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+                if (this._options.scrollYToX && deltaX + deltaY === 0) {
+                    // when configured to map Y to X and we both see
+                    // no dominant axis and X and Y are competing with
+                    // identical values into opposite directions, we
+                    // ignore the delta as we cannot make a decision then
+                    deltaX = deltaY = 0;
+                }
+                else if (Math.abs(deltaY) >= Math.abs(deltaX)) {
                     deltaX = 0;
                 }
                 else {
@@ -456,21 +473,21 @@ export class DomScrollableElement extends AbstractScrollableElement {
         options = options || {};
         options.mouseWheelSmoothScroll = false;
         const scrollable = new Scrollable({
-            forceIntegerValues: false,
+            forceIntegerValues: false, // See https://github.com/microsoft/vscode/issues/139877
             smoothScrollDuration: 0,
             scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(callback)
         });
         super(element, options, scrollable);
         this._register(scrollable);
         this._element = element;
-        this.onScroll((e) => {
+        this._register(this.onScroll((e) => {
             if (e.scrollTopChanged) {
                 this._element.scrollTop = e.scrollTop;
             }
             if (e.scrollLeftChanged) {
                 this._element.scrollLeft = e.scrollLeft;
             }
-        });
+        }));
         this.scanDomNode();
     }
     setScrollPosition(update) {

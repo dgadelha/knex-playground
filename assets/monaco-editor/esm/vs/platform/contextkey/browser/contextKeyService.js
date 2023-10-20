@@ -13,14 +13,14 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { PauseableEmitter } from '../../../base/common/event.js';
 import { Iterable } from '../../../base/common/iterator.js';
-import { DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
-import { TernarySearchTree } from '../../../base/common/map.js';
+import { Disposable, MutableDisposable } from '../../../base/common/lifecycle.js';
 import { cloneAndChange } from '../../../base/common/objects.js';
+import { TernarySearchTree } from '../../../base/common/ternarySearchTree.js';
 import { URI } from '../../../base/common/uri.js';
 import { localize } from '../../../nls.js';
 import { CommandsRegistry } from '../../commands/common/commands.js';
 import { IConfigurationService } from '../../configuration/common/configuration.js';
-import { IContextKeyService, RawContextKey, SET_CONTEXT_COMMAND_ID } from '../common/contextkey.js';
+import { IContextKeyService, RawContextKey } from '../common/contextkey.js';
 const KEYBINDING_CONTEXT_ATTR = 'data-keybinding-context';
 export class Context {
     constructor(id, parent) {
@@ -79,7 +79,7 @@ class ConfigAwareContextValuesContainer extends Context {
         this._listener = this._configurationService.onDidChangeConfiguration(event => {
             if (event.source === 7 /* ConfigurationTarget.DEFAULT */) {
                 // new setting, reset everything
-                const allKeys = Array.from(Iterable.map(this._values, ([k]) => k));
+                const allKeys = Array.from(this._values, ([k]) => k);
                 this._values.clear();
                 emitter.fire(new ArrayContextKeyChangeEvent(allKeys));
             }
@@ -207,9 +207,10 @@ class CompositeContextKeyChangeEvent {
 function allEventKeysInContext(event, context) {
     return event.allKeysContainedIn(new Set(Object.keys(context)));
 }
-export class AbstractContextKeyService {
+export class AbstractContextKeyService extends Disposable {
     constructor(myContextId) {
-        this._onDidChangeContext = new PauseableEmitter({ merge: input => new CompositeContextKeyChangeEvent(input) });
+        super();
+        this._onDidChangeContext = this._register(new PauseableEmitter({ merge: input => new CompositeContextKeyChangeEvent(input) }));
         this.onDidChangeContext = this._onDidChangeContext.event;
         this._isDisposed = false;
         this._myContextId = myContextId;
@@ -278,16 +279,18 @@ export class AbstractContextKeyService {
         }
         return this.getContextValuesContainer(findContextAttr(target));
     }
+    dispose() {
+        super.dispose();
+        this._isDisposed = true;
+    }
 }
 let ContextKeyService = class ContextKeyService extends AbstractContextKeyService {
     constructor(configurationService) {
         super(0);
         this._contexts = new Map();
-        this._toDispose = new DisposableStore();
         this._lastContextId = 0;
-        const myContext = new ConfigAwareContextValuesContainer(this._myContextId, configurationService, this._onDidChangeContext);
+        const myContext = this._register(new ConfigAwareContextValuesContainer(this._myContextId, configurationService, this._onDidChangeContext));
         this._contexts.set(this._myContextId, myContext);
-        this._toDispose.add(myContext);
         // Uncomment this to see the contexts continuously logged
         // let lastLoggedValue: string | null = null;
         // setInterval(() => {
@@ -298,11 +301,6 @@ let ContextKeyService = class ContextKeyService extends AbstractContextKeyServic
         // 		console.log(lastLoggedValue);
         // 	}
         // }, 2000);
-    }
-    dispose() {
-        this._onDidChangeContext.dispose();
-        this._isDisposed = true;
-        this._toDispose.dispose();
     }
     getContextValuesContainer(contextId) {
         if (this._isDisposed) {
@@ -331,7 +329,7 @@ export { ContextKeyService };
 class ScopedContextKeyService extends AbstractContextKeyService {
     constructor(parent, domNode) {
         super(parent.createChildContext());
-        this._parentChangeListener = new MutableDisposable();
+        this._parentChangeListener = this._register(new MutableDisposable());
         this._parent = parent;
         this._updateParentChangeListener();
         this._domNode = domNode;
@@ -358,11 +356,9 @@ class ScopedContextKeyService extends AbstractContextKeyService {
         if (this._isDisposed) {
             return;
         }
-        this._onDidChangeContext.dispose();
         this._parent.disposeContext(this._myContextId);
-        this._parentChangeListener.dispose();
         this._domNode.removeAttribute(KEYBINDING_CONTEXT_ATTR);
-        this._isDisposed = true;
+        super.dispose();
     }
     getContextValuesContainer(contextId) {
         if (this._isDisposed) {
@@ -397,7 +393,8 @@ function findContextAttr(domNode) {
     return 0;
 }
 export function setContext(accessor, contextKey, contextValue) {
-    accessor.get(IContextKeyService).createKey(String(contextKey), stringifyURIs(contextValue));
+    const contextKeyService = accessor.get(IContextKeyService);
+    contextKeyService.createKey(String(contextKey), stringifyURIs(contextValue));
 }
 function stringifyURIs(contextValue) {
     return cloneAndChange(contextValue, (obj) => {
@@ -410,7 +407,7 @@ function stringifyURIs(contextValue) {
         return undefined;
     });
 }
-CommandsRegistry.registerCommand(SET_CONTEXT_COMMAND_ID, setContext);
+CommandsRegistry.registerCommand('_setContext', setContext);
 CommandsRegistry.registerCommand({
     id: 'getContextKeyInfo',
     handler() {

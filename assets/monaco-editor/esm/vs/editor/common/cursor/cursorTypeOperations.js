@@ -489,12 +489,6 @@ export class TypeOperations {
         return result;
     }
     static _getAutoClosingPairClose(config, model, selections, ch, chIsAlreadyTyped) {
-        const chIsQuote = isQuote(ch);
-        const autoCloseConfig = (chIsQuote ? config.autoClosingQuotes : config.autoClosingBrackets);
-        const shouldAutoCloseBefore = (chIsQuote ? config.shouldAutoCloseBefore.quote : config.shouldAutoCloseBefore.bracket);
-        if (autoCloseConfig === 'never') {
-            return null;
-        }
         for (const selection of selections) {
             if (!selection.isEmpty()) {
                 return null;
@@ -520,6 +514,27 @@ export class TypeOperations {
         // e.g. when having [f","] and [","], it picks [f","] if the character before is f
         const pair = this._findAutoClosingPairOpen(config, model, positions.map(p => new Position(p.lineNumber, p.beforeColumn)), ch);
         if (!pair) {
+            return null;
+        }
+        let autoCloseConfig;
+        let shouldAutoCloseBefore;
+        const chIsQuote = isQuote(ch);
+        if (chIsQuote) {
+            autoCloseConfig = config.autoClosingQuotes;
+            shouldAutoCloseBefore = config.shouldAutoCloseBefore.quote;
+        }
+        else {
+            const pairIsForComments = config.blockCommentStartToken ? pair.open.includes(config.blockCommentStartToken) : false;
+            if (pairIsForComments) {
+                autoCloseConfig = config.autoClosingComments;
+                shouldAutoCloseBefore = config.shouldAutoCloseBefore.comment;
+            }
+            else {
+                autoCloseConfig = config.autoClosingBrackets;
+                shouldAutoCloseBefore = config.shouldAutoCloseBefore.bracket;
+            }
+        }
+        if (autoCloseConfig === 'never') {
             return null;
         }
         // Sometimes, it is possible to have two auto-closing pairs that have a containment relationship
@@ -769,7 +784,7 @@ export class TypeOperations {
             }
             const commands = [];
             for (let i = 0, len = positions.length; i < len; i++) {
-                commands.push(new CompositionSurroundSelectionCommand(positions[i], compositions[i].deletedText, ch));
+                commands.push(new CompositionSurroundSelectionCommand(positions[i], compositions[i].deletedText, config.surroundingPairs[ch]));
             }
             return new EditOperationResult(4 /* EditOperationType.TypingOther */, commands, {
                 shouldPushStackElementBefore: true,

@@ -12,11 +12,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { DataTransfers } from '../../base/browser/dnd.js';
-import { distinct } from '../../base/common/arrays.js';
-import { createFileDataTransferItem, createStringDataTransferItem, VSDataTransfer } from '../../base/common/dataTransfer.js';
+import { createFileDataTransferItem, createStringDataTransferItem, UriList, VSDataTransfer } from '../../base/common/dataTransfer.js';
 import { Mimes } from '../../base/common/mime.js';
 import { URI } from '../../base/common/uri.js';
-import { CodeDataTransfers, extractEditorsDropData } from '../../platform/dnd/browser/dnd.js';
+import { CodeDataTransfers } from '../../platform/dnd/browser/dnd.js';
 export function toVSDataTransfer(dataTransfer) {
     const vsDataTransfer = new VSDataTransfer();
     for (const item of dataTransfer.items) {
@@ -34,7 +33,7 @@ export function toVSDataTransfer(dataTransfer) {
     }
     return vsDataTransfer;
 }
-export function createFileDataTransferItemFromFile(file) {
+function createFileDataTransferItemFromFile(file) {
     const uri = file.path ? URI.parse(file.path) : undefined;
     return createFileDataTransferItem(file.name, uri, () => __awaiter(this, void 0, void 0, function* () {
         return new Uint8Array(yield file.arrayBuffer());
@@ -44,34 +43,43 @@ const INTERNAL_DND_MIME_TYPES = Object.freeze([
     CodeDataTransfers.EDITORS,
     CodeDataTransfers.FILES,
     DataTransfers.RESOURCES,
+    DataTransfers.INTERNAL_URI_LIST,
 ]);
-export function addExternalEditorsDropData(dataTransfer, dragEvent, overwriteUriList = false) {
-    var _a;
-    if (dragEvent.dataTransfer && (overwriteUriList || !dataTransfer.has(Mimes.uriList))) {
-        const editorData = extractEditorsDropData(dragEvent)
-            .filter(input => input.resource)
-            .map(input => input.resource.toString());
-        // Also add in the files
-        for (const item of (_a = dragEvent.dataTransfer) === null || _a === void 0 ? void 0 : _a.items) {
-            const file = item.getAsFile();
-            if (file) {
-                editorData.push(file.path ? URI.file(file.path).toString() : file.name);
+export function toExternalVSDataTransfer(sourceDataTransfer, overwriteUriList = false) {
+    const vsDataTransfer = toVSDataTransfer(sourceDataTransfer);
+    // Try to expose the internal uri-list type as the standard type
+    const uriList = vsDataTransfer.get(DataTransfers.INTERNAL_URI_LIST);
+    if (uriList) {
+        vsDataTransfer.replace(Mimes.uriList, uriList);
+    }
+    else {
+        if (overwriteUriList || !vsDataTransfer.has(Mimes.uriList)) {
+            // Otherwise, fallback to adding dragged resources to the uri list
+            const editorData = [];
+            for (const item of sourceDataTransfer.items) {
+                const file = item.getAsFile();
+                if (file) {
+                    const path = file.path;
+                    try {
+                        if (path) {
+                            editorData.push(URI.file(path).toString());
+                        }
+                        else {
+                            editorData.push(URI.parse(file.name, true).toString());
+                        }
+                    }
+                    catch (_a) {
+                        // Parsing failed. Leave out from list
+                    }
+                }
             }
-        }
-        if (editorData.length) {
-            dataTransfer.replace(Mimes.uriList, createStringDataTransferItem(UriList.create(editorData)));
+            if (editorData.length) {
+                vsDataTransfer.replace(Mimes.uriList, createStringDataTransferItem(UriList.create(editorData)));
+            }
         }
     }
     for (const internal of INTERNAL_DND_MIME_TYPES) {
-        dataTransfer.delete(internal);
+        vsDataTransfer.delete(internal);
     }
+    return vsDataTransfer;
 }
-export const UriList = Object.freeze({
-    // http://amundsen.com/hypermedia/urilist/
-    create: (entries) => {
-        return distinct(entries.map(x => x.toString())).join('\r\n');
-    },
-    parse: (str) => {
-        return str.split('\r\n').filter(value => !value.startsWith('#'));
-    }
-});

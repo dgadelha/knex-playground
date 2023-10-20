@@ -16,6 +16,22 @@ function effectiveOptionValue(override, value) {
     return value;
 }
 export class FindReplaceState extends Disposable {
+    get searchString() { return this._searchString; }
+    get replaceString() { return this._replaceString; }
+    get isRevealed() { return this._isRevealed; }
+    get isReplaceRevealed() { return this._isReplaceRevealed; }
+    get isRegex() { return effectiveOptionValue(this._isRegexOverride, this._isRegex); }
+    get wholeWord() { return effectiveOptionValue(this._wholeWordOverride, this._wholeWord); }
+    get matchCase() { return effectiveOptionValue(this._matchCaseOverride, this._matchCase); }
+    get preserveCase() { return effectiveOptionValue(this._preserveCaseOverride, this._preserveCase); }
+    get actualIsRegex() { return this._isRegex; }
+    get actualWholeWord() { return this._wholeWord; }
+    get actualMatchCase() { return this._matchCase; }
+    get actualPreserveCase() { return this._preserveCase; }
+    get searchScope() { return this._searchScope; }
+    get matchesPosition() { return this._matchesPosition; }
+    get matchesCount() { return this._matchesCount; }
+    get currentMatch() { return this._currentMatch; }
     constructor() {
         super();
         this._onFindReplaceStateChange = this._register(new Emitter());
@@ -40,22 +56,6 @@ export class FindReplaceState extends Disposable {
         this._isSearching = false;
         this._filters = null;
     }
-    get searchString() { return this._searchString; }
-    get replaceString() { return this._replaceString; }
-    get isRevealed() { return this._isRevealed; }
-    get isReplaceRevealed() { return this._isReplaceRevealed; }
-    get isRegex() { return effectiveOptionValue(this._isRegexOverride, this._isRegex); }
-    get wholeWord() { return effectiveOptionValue(this._wholeWordOverride, this._wholeWord); }
-    get matchCase() { return effectiveOptionValue(this._matchCaseOverride, this._matchCase); }
-    get preserveCase() { return effectiveOptionValue(this._preserveCaseOverride, this._preserveCase); }
-    get actualIsRegex() { return this._isRegex; }
-    get actualWholeWord() { return this._wholeWord; }
-    get actualMatchCase() { return this._matchCase; }
-    get actualPreserveCase() { return this._preserveCase; }
-    get searchScope() { return this._searchScope; }
-    get matchesPosition() { return this._matchesPosition; }
-    get matchesCount() { return this._matchesCount; }
-    get currentMatch() { return this._currentMatch; }
     changeMatchInfo(matchesPosition, matchesCount, currentMatch) {
         const changeEvent = {
             moveCursor: false,

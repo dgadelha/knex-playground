@@ -74,6 +74,27 @@ export class InlayHintItem {
     }
 }
 export class InlayHintsFragments {
+    static create(registry, model, ranges, token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const data = [];
+            const promises = registry.ordered(model).reverse().map(provider => ranges.map((range) => __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const result = yield provider.provideInlayHints(model, range, token);
+                    if (result === null || result === void 0 ? void 0 : result.hints.length) {
+                        data.push([result, provider]);
+                    }
+                }
+                catch (err) {
+                    onUnexpectedExternalError(err);
+                }
+            })));
+            yield Promise.all(promises.flat());
+            if (token.isCancellationRequested || model.isDisposed()) {
+                throw new CancellationError();
+            }
+            return new InlayHintsFragments(ranges, data, model);
+        });
+    }
     constructor(ranges, data, model) {
         this._disposables = new DisposableStore();
         this.ranges = ranges;
@@ -100,27 +121,6 @@ export class InlayHintsFragments {
             }
         }
         this.items = items.sort((a, b) => Position.compare(a.hint.position, b.hint.position));
-    }
-    static create(registry, model, ranges, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const data = [];
-            const promises = registry.ordered(model).reverse().map(provider => ranges.map((range) => __awaiter(this, void 0, void 0, function* () {
-                try {
-                    const result = yield provider.provideInlayHints(model, range, token);
-                    if (result === null || result === void 0 ? void 0 : result.hints.length) {
-                        data.push([result, provider]);
-                    }
-                }
-                catch (err) {
-                    onUnexpectedExternalError(err);
-                }
-            })));
-            yield Promise.all(promises.flat());
-            if (token.isCancellationRequested || model.isDisposed()) {
-                throw new CancellationError();
-            }
-            return new InlayHintsFragments(ranges, data, model);
-        });
     }
     dispose() {
         this._disposables.dispose();

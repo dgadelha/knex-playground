@@ -11,11 +11,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var GotoDefinitionAtPositionEditorContribution_1;
 import { createCancelablePromise } from '../../../../../base/common/async.js';
 import { onUnexpectedError } from '../../../../../base/common/errors.js';
 import { MarkdownString } from '../../../../../base/common/htmlContent.js';
 import { DisposableStore } from '../../../../../base/common/lifecycle.js';
-import { withNullAsUndefined } from '../../../../../base/common/types.js';
 import './goToDefinitionAtPosition.css';
 import { EditorState } from '../../../editorState/browser/editorState.js';
 import { registerEditorContribution } from '../../../../browser/editorExtensions.js';
@@ -26,12 +35,11 @@ import { ClickLinkGesture } from './clickLinkGesture.js';
 import { PeekContext } from '../../../peekView/browser/peekView.js';
 import * as nls from '../../../../../nls.js';
 import { IContextKeyService } from '../../../../../platform/contextkey/common/contextkey.js';
-import { editorActiveLinkForeground } from '../../../../../platform/theme/common/colorRegistry.js';
-import { registerThemingParticipant } from '../../../../../platform/theme/common/themeService.js';
 import { DefinitionAction } from '../goToCommands.js';
 import { getDefinitionsAtPosition } from '../goToSymbol.js';
 import { ILanguageFeaturesService } from '../../../../common/services/languageFeatures.js';
-let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionEditorContribution {
+import { ModelDecorationInjectedTextOptions } from '../../../../common/model/textModel.js';
+let GotoDefinitionAtPositionEditorContribution = GotoDefinitionAtPositionEditorContribution_1 = class GotoDefinitionAtPositionEditorContribution {
     constructor(editor, textModelResolverService, languageService, languageFeaturesService) {
         this.textModelResolverService = textModelResolverService;
         this.languageService = languageService;
@@ -45,15 +53,16 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
         const linkGesture = new ClickLinkGesture(editor);
         this.toUnhook.add(linkGesture);
         this.toUnhook.add(linkGesture.onMouseMoveOrRelevantKeyDown(([mouseEvent, keyboardEvent]) => {
-            this.startFindDefinitionFromMouse(mouseEvent, withNullAsUndefined(keyboardEvent));
+            this.startFindDefinitionFromMouse(mouseEvent, keyboardEvent !== null && keyboardEvent !== void 0 ? keyboardEvent : undefined);
         }));
         this.toUnhook.add(linkGesture.onExecute((mouseEvent) => {
             if (this.isEnabled(mouseEvent)) {
-                this.gotoDefinition(mouseEvent.target.position, mouseEvent.hasSideBySideModifier).then(() => {
-                    this.removeLinkDecorations();
-                }, (error) => {
-                    this.removeLinkDecorations();
+                this.gotoDefinition(mouseEvent.target.position, mouseEvent.hasSideBySideModifier)
+                    .catch((error) => {
                     onUnexpectedError(error);
+                })
+                    .finally(() => {
+                    this.removeLinkDecorations();
                 });
             }
         }));
@@ -63,14 +72,15 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
         }));
     }
     static get(editor) {
-        return editor.getContribution(GotoDefinitionAtPositionEditorContribution.ID);
+        return editor.getContribution(GotoDefinitionAtPositionEditorContribution_1.ID);
     }
     startFindDefinitionFromCursor(position) {
-        // For issue: https://github.com/microsoft/vscode/issues/46257
-        // equivalent to mouse move with meta/ctrl key
-        // First find the definition and add decorations
-        // to the editor to be shown with the content hover widget
-        return this.startFindDefinition(position).then(() => {
+        return __awaiter(this, void 0, void 0, function* () {
+            // For issue: https://github.com/microsoft/vscode/issues/46257
+            // equivalent to mouse move with meta/ctrl key
+            // First find the definition and add decorations
+            // to the editor to be shown with the content hover widget
+            yield this.startFindDefinition(position);
             // Add listeners for editor cursor move and key down events
             // Dismiss the "extended" editor decorations when the user hides
             // the hover widget. There is no event for the widget itself so these
@@ -105,38 +115,55 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
     }
     startFindDefinition(position) {
         var _a;
-        // Dispose listeners for updating decorations when using keyboard to show definition hover
-        this.toUnhookForKeyboard.clear();
-        // Find word at mouse position
-        const word = position ? (_a = this.editor.getModel()) === null || _a === void 0 ? void 0 : _a.getWordAtPosition(position) : null;
-        if (!word) {
-            this.currentWordAtPosition = null;
-            this.removeLinkDecorations();
-            return Promise.resolve(0);
-        }
-        // Return early if word at position is still the same
-        if (this.currentWordAtPosition && this.currentWordAtPosition.startColumn === word.startColumn && this.currentWordAtPosition.endColumn === word.endColumn && this.currentWordAtPosition.word === word.word) {
-            return Promise.resolve(0);
-        }
-        this.currentWordAtPosition = word;
-        // Find definition and decorate word if found
-        const state = new EditorState(this.editor, 4 /* CodeEditorStateFlag.Position */ | 1 /* CodeEditorStateFlag.Value */ | 2 /* CodeEditorStateFlag.Selection */ | 8 /* CodeEditorStateFlag.Scroll */);
-        if (this.previousPromise) {
-            this.previousPromise.cancel();
-            this.previousPromise = null;
-        }
-        this.previousPromise = createCancelablePromise(token => this.findDefinition(position, token));
-        return this.previousPromise.then(results => {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Dispose listeners for updating decorations when using keyboard to show definition hover
+            this.toUnhookForKeyboard.clear();
+            // Find word at mouse position
+            const word = position ? (_a = this.editor.getModel()) === null || _a === void 0 ? void 0 : _a.getWordAtPosition(position) : null;
+            if (!word) {
+                this.currentWordAtPosition = null;
+                this.removeLinkDecorations();
+                return;
+            }
+            // Return early if word at position is still the same
+            if (this.currentWordAtPosition && this.currentWordAtPosition.startColumn === word.startColumn && this.currentWordAtPosition.endColumn === word.endColumn && this.currentWordAtPosition.word === word.word) {
+                return;
+            }
+            this.currentWordAtPosition = word;
+            // Find definition and decorate word if found
+            const state = new EditorState(this.editor, 4 /* CodeEditorStateFlag.Position */ | 1 /* CodeEditorStateFlag.Value */ | 2 /* CodeEditorStateFlag.Selection */ | 8 /* CodeEditorStateFlag.Scroll */);
+            if (this.previousPromise) {
+                this.previousPromise.cancel();
+                this.previousPromise = null;
+            }
+            this.previousPromise = createCancelablePromise(token => this.findDefinition(position, token));
+            let results;
+            try {
+                results = yield this.previousPromise;
+            }
+            catch (error) {
+                onUnexpectedError(error);
+                return;
+            }
             if (!results || !results.length || !state.validate(this.editor)) {
                 this.removeLinkDecorations();
                 return;
             }
+            const linkRange = results[0].originSelectionRange
+                ? Range.lift(results[0].originSelectionRange)
+                : new Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
             // Multiple results
             if (results.length > 1) {
-                this.addDecoration(new Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn), new MarkdownString().appendText(nls.localize('multipleResults', "Click to show {0} definitions.", results.length)));
+                let combinedRange = linkRange;
+                for (const { originSelectionRange } of results) {
+                    if (originSelectionRange) {
+                        combinedRange = Range.plusRange(combinedRange, originSelectionRange);
+                    }
+                }
+                this.addDecoration(combinedRange, new MarkdownString().appendText(nls.localize('multipleResults', "Click to show {0} definitions.", results.length)));
             }
-            // Single result
             else {
+                // Single result
                 const result = results[0];
                 if (!result.uri) {
                     return;
@@ -154,24 +181,17 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
                         return;
                     }
                     const previewValue = this.getPreviewValue(textEditorModel, startLineNumber, result);
-                    let wordRange;
-                    if (result.originSelectionRange) {
-                        wordRange = Range.lift(result.originSelectionRange);
-                    }
-                    else {
-                        wordRange = new Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
-                    }
                     const languageId = this.languageService.guessLanguageIdByFilepathOrFirstLine(textEditorModel.uri);
-                    this.addDecoration(wordRange, new MarkdownString().appendCodeblock(languageId ? languageId : '', previewValue));
+                    this.addDecoration(linkRange, previewValue ? new MarkdownString().appendCodeblock(languageId ? languageId : '', previewValue) : undefined);
                     ref.dispose();
                 });
             }
-        }).then(undefined, onUnexpectedError);
+        });
     }
     getPreviewValue(textEditorModel, startLineNumber, result) {
         let rangeToUse = result.range;
         const numberOfLinesInRange = rangeToUse.endLineNumber - rangeToUse.startLineNumber;
-        if (numberOfLinesInRange >= GotoDefinitionAtPositionEditorContribution.MAX_SOURCE_PREVIEW_LINES) {
+        if (numberOfLinesInRange >= GotoDefinitionAtPositionEditorContribution_1.MAX_SOURCE_PREVIEW_LINES) {
             rangeToUse = this.getPreviewRangeBasedOnIndentation(textEditorModel, startLineNumber);
         }
         const previewValue = this.stripIndentationFromPreviewRange(textEditorModel, startLineNumber, rangeToUse);
@@ -189,7 +209,7 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
     }
     getPreviewRangeBasedOnIndentation(textEditorModel, startLineNumber) {
         const startIndent = textEditorModel.getLineFirstNonWhitespaceColumn(startLineNumber);
-        const maxLineNumber = Math.min(textEditorModel.getLineCount(), startLineNumber + GotoDefinitionAtPositionEditorContribution.MAX_SOURCE_PREVIEW_LINES);
+        const maxLineNumber = Math.min(textEditorModel.getLineCount(), startLineNumber + GotoDefinitionAtPositionEditorContribution_1.MAX_SOURCE_PREVIEW_LINES);
         let endLineNumber = startLineNumber + 1;
         for (; endLineNumber < maxLineNumber; endLineNumber++) {
             const endIndent = textEditorModel.getLineFirstNonWhitespaceColumn(endLineNumber);
@@ -214,11 +234,14 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
         this.linkDecorations.clear();
     }
     isEnabled(mouseEvent, withKey) {
-        return this.editor.hasModel() &&
-            mouseEvent.isNoneOrSingleMouseDown &&
-            (mouseEvent.target.type === 6 /* MouseTargetType.CONTENT_TEXT */) &&
-            (mouseEvent.hasTriggerModifier || (withKey ? withKey.keyCodeIsTriggerKey : false)) &&
-            this.languageFeaturesService.definitionProvider.has(this.editor.getModel());
+        var _a;
+        return this.editor.hasModel()
+            && mouseEvent.isLeftClick
+            && mouseEvent.isNoneOrSingleMouseDown
+            && mouseEvent.target.type === 6 /* MouseTargetType.CONTENT_TEXT */
+            && !(((_a = mouseEvent.target.detail.injectedText) === null || _a === void 0 ? void 0 : _a.options) instanceof ModelDecorationInjectedTextOptions)
+            && (mouseEvent.hasTriggerModifier || (withKey ? withKey.keyCodeIsTriggerKey : false))
+            && this.languageFeaturesService.definitionProvider.has(this.editor.getModel());
     }
     findDefinition(position, token) {
         const model = this.editor.getModel();
@@ -230,9 +253,9 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
     gotoDefinition(position, openToSide) {
         this.editor.setPosition(position);
         return this.editor.invokeWithinContext((accessor) => {
-            const canPeek = !openToSide && this.editor.getOption(80 /* EditorOption.definitionLinkOpensInPeek */) && !this.isInPeekEditor(accessor);
-            const action = new DefinitionAction({ openToSide, openInPeek: canPeek, muteMessage: true }, { alias: '', label: '', id: '', precondition: undefined });
-            return action.run(accessor, this.editor);
+            const canPeek = !openToSide && this.editor.getOption(87 /* EditorOption.definitionLinkOpensInPeek */) && !this.isInPeekEditor(accessor);
+            const action = new DefinitionAction({ openToSide, openInPeek: canPeek, muteMessage: true }, { title: { value: '', original: '' }, id: '', precondition: undefined });
+            return action.run(accessor);
         });
     }
     isInPeekEditor(accessor) {
@@ -241,20 +264,15 @@ let GotoDefinitionAtPositionEditorContribution = class GotoDefinitionAtPositionE
     }
     dispose() {
         this.toUnhook.dispose();
+        this.toUnhookForKeyboard.dispose();
     }
 };
 GotoDefinitionAtPositionEditorContribution.ID = 'editor.contrib.gotodefinitionatposition';
 GotoDefinitionAtPositionEditorContribution.MAX_SOURCE_PREVIEW_LINES = 8;
-GotoDefinitionAtPositionEditorContribution = __decorate([
+GotoDefinitionAtPositionEditorContribution = GotoDefinitionAtPositionEditorContribution_1 = __decorate([
     __param(1, ITextModelService),
     __param(2, ILanguageService),
     __param(3, ILanguageFeaturesService)
 ], GotoDefinitionAtPositionEditorContribution);
 export { GotoDefinitionAtPositionEditorContribution };
-registerEditorContribution(GotoDefinitionAtPositionEditorContribution.ID, GotoDefinitionAtPositionEditorContribution);
-registerThemingParticipant((theme, collector) => {
-    const activeLinkForeground = theme.getColor(editorActiveLinkForeground);
-    if (activeLinkForeground) {
-        collector.addRule(`.monaco-editor .goto-definition-link { color: ${activeLinkForeground} !important; }`);
-    }
-});
+registerEditorContribution(GotoDefinitionAtPositionEditorContribution.ID, GotoDefinitionAtPositionEditorContribution, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);

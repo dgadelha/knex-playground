@@ -8,11 +8,6 @@ import { toLength } from './length.js';
 import { identityKeyProvider, SmallImmutableSet } from './smallImmutableSet.js';
 import { Token } from './tokenizer.js';
 export class BracketTokens {
-    constructor(map) {
-        this.map = map;
-        this.hasRegExp = false;
-        this._regExpGlobal = null;
-    }
     static createFromLanguage(configuration, denseKeyProvider) {
         function getId(bracketInfo) {
             return denseKeyProvider.getKey(`${bracketInfo.languageId}:::${bracketInfo.bracketText}`);
@@ -27,13 +22,18 @@ export class BracketTokens {
         for (const closingBracket of configuration.bracketsNew.closingBrackets) {
             const length = toLength(0, closingBracket.bracketText.length);
             let bracketIds = SmallImmutableSet.getEmpty();
-            const closingBrackets = closingBracket.getClosedBrackets();
+            const closingBrackets = closingBracket.getOpeningBrackets();
             for (const bracket of closingBrackets) {
                 bracketIds = bracketIds.add(getId(bracket), identityKeyProvider);
             }
             map.set(closingBracket.bracketText, new Token(length, 2 /* TokenKind.ClosingBracket */, getId(closingBrackets[0]), bracketIds, BracketAstNode.create(length, closingBracket, bracketIds)));
         }
         return new BracketTokens(map);
+    }
+    constructor(map) {
+        this.map = map;
+        this.hasRegExp = false;
+        this._regExpGlobal = null;
     }
     getRegExpStr() {
         if (this.isEmpty) {
