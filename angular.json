@@ -42,7 +42,8 @@
           "options": {
             "allowedCommonJsDependencies": [
               "knex",
-              "sql-formatter"
+              "sql-formatter",
+              "nearley"
             ],
             "outputPath": "dist",
             "index": "src/index.html",

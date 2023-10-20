@@ -7,10 +7,10 @@ import { Component, OnInit, Input, Output, EventEmitter } from "@angular/core";
 })
 export class FooterComponent {
   @Input()
-  knexVersion: string;
+  knexVersion?: string;
 
   @Input()
-  client: string;
+  client?: string;
 
   @Output()
   clientChange: EventEmitter<string> = new EventEmitter<string>();

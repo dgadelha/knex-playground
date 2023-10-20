@@ -20,6 +20,7 @@
     margin-right: 5px;
     font-size: 12px;
 
+    -webkit-user-select: none;
     user-select: none;
 
     height: 22px;
@@ -62,6 +63,7 @@
 
     -webkit-appearance: none;
     -moz-appearance: none;
+    appearance: none;
     text-indent: 0;
     text-overflow: '';
 

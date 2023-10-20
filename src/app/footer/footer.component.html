@@ -6,7 +6,7 @@
 
   <span (click)="clientSelect.click()">
     <img [src]="'./assets/clients/' + client + '.png'" alt="Knex Client Icon">
-    <select #clientSelect [ngModel]="client" (ngModelChange)="clientChange.emit($event)">
+    <select #clientSelect [ngModel]="client" (ngModelChange)="clientChange.emit($event)" title="Knex Client">
       <option *ngFor="let option of clients" [value]="option.id">{{ option.name }}</option>
     </select>
   </span>

@@ -8,6 +8,16 @@ import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
 import { Subscription } from "rxjs";
 import { ResponsiveService } from "./responsive.service";
 
+const knexClientSqlFormatterLanguageMapping: Record<string, string> = {
+  pg: "postgresql",
+  mysql: "mysql",
+  cockroachdb: "postgresql",
+  redshift: "redshift",
+  sqlite3: "sqlite",
+  oracledb: "plsql",
+  mssql: "tsql",
+};
+
 @Component({
   selector: "app-root",
   templateUrl: "app.component.html",
@@ -41,7 +51,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   isBelowMd = false;
 
-  constructor(private monacoService: MonacoService, private responsiveService: ResponsiveService) {}
+  constructor(
+    private monacoService: MonacoService,
+    private responsiveService: ResponsiveService,
+  ) {}
 
   editorInit(editor: MonacoStandaloneCodeEditor) {
     editor.focus();
@@ -76,7 +89,9 @@ export class AppComponent implements OnInit, OnDestroy {
       let generatedCode = eval(newCode).toQuery();
 
       try {
-        generatedCode = sqlFormatter.format(generatedCode);
+        generatedCode = sqlFormatter.format(generatedCode, {
+          language: knexClientSqlFormatterLanguageMapping[this.client],
+        });
       } catch (e) {
         sql += `--- sqlFormatter failed to run: ${e?.toString() ?? e}\n`;
       }
