@@ -6,12 +6,12 @@
 
   <span (click)="clientSelect.click()">
     <img [src]="'./assets/clients/' + client + '.png'" alt="Knex Client Icon">
-    <select #clientSelect [ngModel]="client" (ngModelChange)="clientChange.emit($event)" title="Knex Client">
-      <option *ngFor="let option of clients" [value]="option.id">{{ option.name }}</option>
+    <select #clientSelect [ngModel]="client" (ngModelChange)="this.state.setState({ client: $event })" title="Knex Client">
+      <option *ngFor="let option of knexClients" [value]="option.id">{{ option.name }}</option>
     </select>
   </span>
 
-  <span (click)="prettify.emit()" title="Prettify code (Ctrl + Shift + p)">
+  <span (click)="prettify.emit()" title="Prettify code (Ctrl + Shift + P)">
     <img src="./assets/prettier-icon.svg" alt="Prettier Icon">
     Prettify
   </span>

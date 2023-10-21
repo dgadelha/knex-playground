@@ -6,6 +6,7 @@ import { AngularSplitModule } from "angular-split";
 
 import { AppComponent } from "./app.component";
 import { FooterComponent } from './footer/footer.component';
+import { RouterModule } from "@angular/router";
 
 @NgModule({
   declarations: [
@@ -15,6 +16,9 @@ import { FooterComponent } from './footer/footer.component';
   imports: [
     BrowserModule,
     FormsModule,
+    RouterModule.forRoot([
+      { path: "", pathMatch: "prefix", component: AppComponent },
+    ]),
     MonacoEditorModule,
     AngularSplitModule,
   ],

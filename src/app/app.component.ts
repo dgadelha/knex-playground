@@ -1,22 +1,13 @@
 import { Component, HostListener, OnDestroy, OnInit } from "@angular/core";
-import Knex from "knex";
-import * as sqlFormatter from "sql-formatter";
-import knexInfo from "../../node_modules/knex/package.json";
-import { MonacoService } from "./monaco.service";
-import { js_beautify } from "js-beautify";
 import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
+import { js_beautify } from "js-beautify";
+import Knex from "knex";
 import { Subscription } from "rxjs";
+import * as sqlFormatter from "sql-formatter";
+import { knexClients } from "../helpers/clients";
+import { MonacoService } from "./monaco.service";
 import { ResponsiveService } from "./responsive.service";
-
-const knexClientSqlFormatterLanguageMapping: Record<string, string> = {
-  pg: "postgresql",
-  mysql: "mysql",
-  cockroachdb: "postgresql",
-  redshift: "redshift",
-  sqlite3: "sqlite",
-  oracledb: "plsql",
-  mssql: "tsql",
-};
+import { StateService } from "./state.service";
 
 @Component({
   selector: "app-root",
@@ -26,10 +17,8 @@ const knexClientSqlFormatterLanguageMapping: Record<string, string> = {
 export class AppComponent implements OnInit, OnDestroy {
   private _responsive$?: Subscription;
 
-  client = "pg";
-
-  knex = Knex({ client: this.client });
-  knexVersion = knexInfo.version;
+  client = knexClients[0];
+  knex = Knex({ client: this.client.id });
 
   knexEditorOptions = {
     language: "typescript",
@@ -52,16 +41,23 @@ export class AppComponent implements OnInit, OnDestroy {
   isBelowMd = false;
 
   constructor(
-    private monacoService: MonacoService,
+    private _monacoService: MonacoService,
     private responsiveService: ResponsiveService,
-  ) {}
+    public state: StateService,
+  ) {
+    this.state.state$.subscribe(state => {
+      this.client = knexClients.find(client => client.id === state.client) ?? this.client;
+      this.knex = Knex({ client: state.client });
+      this.code = state.code;
+      this.onCodeChange();
+    });
+  }
 
   editorInit(editor: MonacoStandaloneCodeEditor) {
     editor.focus();
   }
 
   ngOnInit() {
-    this.hashChangeHandler();
     this._responsive$ = this.responsiveService.isBelowMd().subscribe(isBelowMd => {
       this.isBelowMd = isBelowMd.matches;
     });
@@ -71,26 +67,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this._responsive$?.unsubscribe();
   }
 
-  @HostListener("window:hashchange")
-  hashChangeHandler() {
-    if (window.location.hash.length > 1) {
-      this.code = atob(window.location.hash.substring(1));
-      this.onCodeChange(this.code);
-    }
-  }
-
-  onCodeChange(newCode: string) {
-    history.replaceState(null, document.title, `#${btoa(newCode)}`);
-
+  onCodeChange() {
     const knex = this.knex;
 
     try {
       let sql = "--- generated SQL code\n";
-      let generatedCode = eval(newCode).toQuery();
+      let generatedCode = eval(this.code).toQuery();
 
       try {
         generatedCode = sqlFormatter.format(generatedCode, {
-          language: knexClientSqlFormatterLanguageMapping[this.client],
+          language: this.client.formatter,
         });
       } catch (e) {
         sql += `--- sqlFormatter failed to run: ${e?.toString() ?? e}\n`;
@@ -100,11 +86,6 @@ export class AppComponent implements OnInit, OnDestroy {
     } catch (err) {
       this.sql = `--- ${err?.toString() ?? err}\n`;
     }
-  }
-
-  onClientChange(client: string) {
-    this.knex = Knex({ client });
-    this.onCodeChange(this.code);
   }
 
   @HostListener("window:keydown.control.shift.p", ["$event"])

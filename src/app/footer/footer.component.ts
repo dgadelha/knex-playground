@@ -1,4 +1,7 @@
-import { Component, OnInit, Input, Output, EventEmitter } from "@angular/core";
+import { Component, EventEmitter, Output } from "@angular/core";
+import { knexClients } from "src/helpers/clients";
+import knexInfo from "../../../node_modules/knex/package.json";
+import { StateService } from "../state.service";
 
 @Component({
   selector: "app-footer",
@@ -6,25 +9,17 @@ import { Component, OnInit, Input, Output, EventEmitter } from "@angular/core";
   styleUrls: ["./footer.component.scss"],
 })
 export class FooterComponent {
-  @Input()
-  knexVersion?: string;
+  knexClients = knexClients;
+  knexVersion = knexInfo.version;
 
-  @Input()
-  client?: string;
-
-  @Output()
-  clientChange: EventEmitter<string> = new EventEmitter<string>();
+  client = knexClients[0].id;
 
   @Output()
   prettify: EventEmitter<void> = new EventEmitter<void>();
 
-  clients = [
-    { id: "mysql", name: "MySQL / MariaDB" },
-    { id: "cockroachdb", name: "CockroachDB" },
-    { id: "pg", name: "PostgreSQL" },
-    { id: "redshift", name: "Amazon Redshift" },
-    { id: "sqlite3", name: "SQLite3" },
-    { id: "oracledb", name: "Oracle" },
-    { id: "mssql", name: "MSSQL" },
-  ];
+  constructor(public state: StateService) {
+    this.state.state$.subscribe(state => {
+      this.client = state.client;
+    });
+  }
 }
