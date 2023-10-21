@@ -1,8 +1,7 @@
-import { Component, HostListener, OnDestroy, OnInit } from "@angular/core";
+import { Component, HostListener } from "@angular/core";
 import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
 import { js_beautify } from "js-beautify";
 import Knex from "knex";
-import { Subscription } from "rxjs";
 import * as sqlFormatter from "sql-formatter";
 import { knexClients } from "../helpers/clients";
 import { MonacoService } from "./monaco.service";
@@ -14,9 +13,7 @@ import { StateService } from "./state.service";
   templateUrl: "app.component.html",
   styleUrls: ["app.component.scss"],
 })
-export class AppComponent implements OnInit, OnDestroy {
-  private _responsive$?: Subscription;
-
+export class AppComponent {
   client = knexClients[0];
   knex = Knex({ client: this.client.id });
 
@@ -42,8 +39,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     private _monacoService: MonacoService,
-    private responsiveService: ResponsiveService,
     public state: StateService,
+    responsiveService: ResponsiveService,
   ) {
     this.state.state$.subscribe(state => {
       this.client = knexClients.find(client => client.id === state.client) ?? this.client;
@@ -51,20 +48,14 @@ export class AppComponent implements OnInit, OnDestroy {
       this.code = state.code;
       this.onCodeChange();
     });
-  }
 
-  editorInit(editor: MonacoStandaloneCodeEditor) {
-    editor.focus();
-  }
-
-  ngOnInit() {
-    this._responsive$ = this.responsiveService.isBelowMd().subscribe(isBelowMd => {
+    responsiveService.isBelowMd().subscribe(isBelowMd => {
       this.isBelowMd = isBelowMd.matches;
     });
   }
 
-  ngOnDestroy() {
-    this._responsive$?.unsubscribe();
+  editorInit(editor: MonacoStandaloneCodeEditor) {
+    editor.focus();
   }
 
   onCodeChange() {
