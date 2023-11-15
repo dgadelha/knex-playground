@@ -18,7 +18,7 @@
     "@angular/platform-browser-dynamic": "^16.2.10",
     "@angular/router": "^16.2.10",
     "@materia-ui/ngx-monaco-editor": "^6.0.0",
-    "angular-split": "^16.2.1",
+    "angular-split": "^17.0.0",
     "assert": "^2.1.0",
     "fs-browser-stub": "^1.0.1",
     "js-beautify": "^1.14.9",
