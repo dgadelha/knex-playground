@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import * as dom from '../../dom.js';
 import { TimeoutTimer } from '../../../common/async.js';
 import { CancellationTokenSource } from '../../../common/cancellation.js';
@@ -28,59 +37,50 @@ class UpdatableHoverWidget {
         this.target = target;
         this.fadeInAnimation = fadeInAnimation;
     }
-    async update(content, focus, options) {
+    update(content, focus, options) {
         var _a;
-        if (this._cancellationTokenSource) {
-            // there's an computation ongoing, cancel it
-            this._cancellationTokenSource.dispose(true);
-            this._cancellationTokenSource = undefined;
-        }
-        if (this.isDisposed) {
-            return;
-        }
-        let resolvedContent;
-        if (content === undefined || isString(content) || content instanceof HTMLElement) {
-            resolvedContent = content;
-        }
-        else if (!isFunction(content.markdown)) {
-            resolvedContent = (_a = content.markdown) !== null && _a !== void 0 ? _a : content.markdownNotSupportedFallback;
-        }
-        else {
-            // compute the content, potentially long-running
-            // show 'Loading' if no hover is up yet
-            if (!this._hoverWidget) {
-                this.show(localize('iconLabel.loading', "Loading..."), focus);
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._cancellationTokenSource) {
+                // there's an computation ongoing, cancel it
+                this._cancellationTokenSource.dispose(true);
+                this._cancellationTokenSource = undefined;
             }
-            // compute the content
-            this._cancellationTokenSource = new CancellationTokenSource();
-            const token = this._cancellationTokenSource.token;
-            resolvedContent = await content.markdown(token);
-            if (resolvedContent === undefined) {
-                resolvedContent = content.markdownNotSupportedFallback;
-            }
-            if (this.isDisposed || token.isCancellationRequested) {
-                // either the widget has been closed in the meantime
-                // or there has been a new call to `update`
+            if (this.isDisposed) {
                 return;
             }
-        }
-        this.show(resolvedContent, focus, options);
+            let resolvedContent;
+            if (content === undefined || isString(content) || content instanceof HTMLElement) {
+                resolvedContent = content;
+            }
+            else if (!isFunction(content.markdown)) {
+                resolvedContent = (_a = content.markdown) !== null && _a !== void 0 ? _a : content.markdownNotSupportedFallback;
+            }
+            else {
+                // compute the content, potentially long-running
+                // show 'Loading' if no hover is up yet
+                if (!this._hoverWidget) {
+                    this.show(localize('iconLabel.loading', "Loading..."), focus);
+                }
+                // compute the content
+                this._cancellationTokenSource = new CancellationTokenSource();
+                const token = this._cancellationTokenSource.token;
+                resolvedContent = yield content.markdown(token);
+                if (resolvedContent === undefined) {
+                    resolvedContent = content.markdownNotSupportedFallback;
+                }
+                if (this.isDisposed || token.isCancellationRequested) {
+                    // either the widget has been closed in the meantime
+                    // or there has been a new call to `update`
+                    return;
+                }
+            }
+            this.show(resolvedContent, focus, options);
+        });
     }
     show(content, focus, options) {
         const oldHoverWidget = this._hoverWidget;
         if (this.hasContent(content)) {
-            const hoverOptions = {
-                content,
-                target: this.target,
-                appearance: {
-                    showPointer: this.hoverDelegate.placement === 'element',
-                    skipFadeInAnimation: !this.fadeInAnimation || !!oldHoverWidget, // do not fade in if the hover is already showing
-                },
-                position: {
-                    hoverPosition: 2 /* HoverPosition.BELOW */,
-                },
-                ...options
-            };
+            const hoverOptions = Object.assign({ content, target: this.target, showPointer: this.hoverDelegate.placement === 'element', hoverPosition: 2 /* HoverPosition.BELOW */, skipFadeInAnimation: !this.fadeInAnimation || !!oldHoverWidget }, options);
             this._hoverWidget = this.hoverDelegate.showHover(hoverOptions, focus);
         }
         oldHoverWidget === null || oldHoverWidget === void 0 ? void 0 : oldHoverWidget.dispose();
@@ -121,34 +121,25 @@ export function setupCustomHover(hoverDelegate, htmlElement, content, options) {
         }
         if (hadHover) {
             (_a = hoverDelegate.onDidHideHover) === null || _a === void 0 ? void 0 : _a.call(hoverDelegate);
-            hoverWidget = undefined;
         }
     };
     const triggerShowHover = (delay, focus, target) => {
-        return new TimeoutTimer(async () => {
+        return new TimeoutTimer(() => __awaiter(this, void 0, void 0, function* () {
             if (!hoverWidget || hoverWidget.isDisposed) {
                 hoverWidget = new UpdatableHoverWidget(hoverDelegate, target || htmlElement, delay > 0);
-                await hoverWidget.update(typeof content === 'function' ? content() : content, focus, options);
+                yield hoverWidget.update(content, focus, options);
             }
-        }, delay);
+        }), delay);
     };
-    let isMouseDown = false;
-    const mouseDownEmitter = dom.addDisposableListener(htmlElement, dom.EventType.MOUSE_DOWN, () => {
-        isMouseDown = true;
-        hideHover(true, true);
-    }, true);
-    const mouseUpEmitter = dom.addDisposableListener(htmlElement, dom.EventType.MOUSE_UP, () => {
-        isMouseDown = false;
-    }, true);
-    const mouseLeaveEmitter = dom.addDisposableListener(htmlElement, dom.EventType.MOUSE_LEAVE, (e) => {
-        isMouseDown = false;
-        hideHover(false, e.fromElement === htmlElement);
-    }, true);
     const onMouseOver = () => {
         if (hoverPreparation) {
             return;
         }
         const toDispose = new DisposableStore();
+        const onMouseLeave = (e) => hideHover(false, e.fromElement === htmlElement);
+        toDispose.add(dom.addDisposableListener(htmlElement, dom.EventType.MOUSE_LEAVE, onMouseLeave, true));
+        const onMouseDown = () => hideHover(true, true);
+        toDispose.add(dom.addDisposableListener(htmlElement, dom.EventType.MOUSE_DOWN, onMouseDown, true));
         const target = {
             targetElements: [htmlElement],
             dispose: () => { }
@@ -167,21 +158,6 @@ export function setupCustomHover(hoverDelegate, htmlElement, content, options) {
         hoverPreparation = toDispose;
     };
     const mouseOverDomEmitter = dom.addDisposableListener(htmlElement, dom.EventType.MOUSE_OVER, onMouseOver, true);
-    const onFocus = () => {
-        if (isMouseDown || hoverPreparation) {
-            return;
-        }
-        const target = {
-            targetElements: [htmlElement],
-            dispose: () => { }
-        };
-        const toDispose = new DisposableStore();
-        const onBlur = () => hideHover(true, true);
-        toDispose.add(dom.addDisposableListener(htmlElement, dom.EventType.BLUR, onBlur, true));
-        toDispose.add(triggerShowHover(hoverDelegate.delay, false, target));
-        hoverPreparation = toDispose;
-    };
-    const focusDomEmitter = dom.addDisposableListener(htmlElement, dom.EventType.FOCUS, onFocus, true);
     const hover = {
         show: focus => {
             hideHover(false, true); // terminate a ongoing mouse over preparation
@@ -190,16 +166,12 @@ export function setupCustomHover(hoverDelegate, htmlElement, content, options) {
         hide: () => {
             hideHover(true, true);
         },
-        update: async (newContent, hoverOptions) => {
+        update: (newContent, hoverOptions) => __awaiter(this, void 0, void 0, function* () {
             content = newContent;
-            await (hoverWidget === null || hoverWidget === void 0 ? void 0 : hoverWidget.update(content, undefined, hoverOptions));
-        },
+            yield (hoverWidget === null || hoverWidget === void 0 ? void 0 : hoverWidget.update(content, undefined, hoverOptions));
+        }),
         dispose: () => {
             mouseOverDomEmitter.dispose();
-            mouseLeaveEmitter.dispose();
-            mouseDownEmitter.dispose();
-            mouseUpEmitter.dispose();
-            focusDomEmitter.dispose();
             hideHover(true, true);
         }
     };

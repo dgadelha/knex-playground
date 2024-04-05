@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { coalesce, equals, isNonEmptyArray } from '../../../../base/common/arrays.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { illegalArgument, isCancellationError, onUnexpectedExternalError } from '../../../../base/common/errors.js';
@@ -39,12 +48,6 @@ class ManagedCodeActionSet extends Disposable {
         }
     }
     static codeActionsComparator({ action: a }, { action: b }) {
-        if (a.isAI && !b.isAI) {
-            return 1;
-        }
-        else if (!a.isAI && b.isAI) {
-            return -1;
-        }
         if (isNonEmptyArray(a.diagnostics)) {
             return isNonEmptyArray(b.diagnostics) ? ManagedCodeActionSet.codeActionsPreferredComparator(a, b) : -1;
         }
@@ -65,74 +68,67 @@ class ManagedCodeActionSet extends Disposable {
     get hasAutoFix() {
         return this.validActions.some(({ action: fix }) => !!fix.kind && CodeActionKind.QuickFix.contains(new CodeActionKind(fix.kind)) && !!fix.isPreferred);
     }
-    get hasAIFix() {
-        return this.validActions.some(({ action: fix }) => !!fix.isAI);
-    }
-    get allAIFixes() {
-        return this.validActions.every(({ action: fix }) => !!fix.isAI);
-    }
 }
 const emptyCodeActionsResponse = { actions: [], documentation: undefined };
-export async function getCodeActions(registry, model, rangeOrSelection, trigger, progress, token) {
+export function getCodeActions(registry, model, rangeOrSelection, trigger, progress, token) {
     var _a;
-    const filter = trigger.filter || {};
-    const notebookFilter = {
-        ...filter,
-        excludes: [...(filter.excludes || []), CodeActionKind.Notebook],
-    };
-    const codeActionContext = {
-        only: (_a = filter.include) === null || _a === void 0 ? void 0 : _a.value,
-        trigger: trigger.type,
-    };
-    const cts = new TextModelCancellationTokenSource(model, token);
-    // if the trigger is auto (autosave, lightbulb, etc), we should exclude notebook codeActions
-    const excludeNotebookCodeActions = (trigger.type === 2 /* languages.CodeActionTriggerType.Auto */);
-    const providers = getCodeActionProviders(registry, model, (excludeNotebookCodeActions) ? notebookFilter : filter);
-    const disposables = new DisposableStore();
-    const promises = providers.map(async (provider) => {
-        try {
-            progress.report(provider);
-            const providedCodeActions = await provider.provideCodeActions(model, rangeOrSelection, codeActionContext, cts.token);
-            if (providedCodeActions) {
-                disposables.add(providedCodeActions);
+    return __awaiter(this, void 0, void 0, function* () {
+        const filter = trigger.filter || {};
+        const notebookFilter = Object.assign(Object.assign({}, filter), { excludes: [...(filter.excludes || []), CodeActionKind.Notebook] });
+        const codeActionContext = {
+            only: (_a = filter.include) === null || _a === void 0 ? void 0 : _a.value,
+            trigger: trigger.type,
+        };
+        const cts = new TextModelCancellationTokenSource(model, token);
+        // if the trigger is auto (autosave, lightbulb, etc), we should exclude notebook codeActions
+        const excludeNotebookCodeActions = (trigger.type === 2 /* languages.CodeActionTriggerType.Auto */);
+        const providers = getCodeActionProviders(registry, model, (excludeNotebookCodeActions) ? notebookFilter : filter);
+        const disposables = new DisposableStore();
+        const promises = providers.map((provider) => __awaiter(this, void 0, void 0, function* () {
+            try {
+                progress.report(provider);
+                const providedCodeActions = yield provider.provideCodeActions(model, rangeOrSelection, codeActionContext, cts.token);
+                if (providedCodeActions) {
+                    disposables.add(providedCodeActions);
+                }
+                if (cts.token.isCancellationRequested) {
+                    return emptyCodeActionsResponse;
+                }
+                const filteredActions = ((providedCodeActions === null || providedCodeActions === void 0 ? void 0 : providedCodeActions.actions) || []).filter(action => action && filtersAction(filter, action));
+                const documentation = getDocumentationFromProvider(provider, filteredActions, filter.include);
+                return {
+                    actions: filteredActions.map(action => new CodeActionItem(action, provider)),
+                    documentation
+                };
             }
-            if (cts.token.isCancellationRequested) {
+            catch (err) {
+                if (isCancellationError(err)) {
+                    throw err;
+                }
+                onUnexpectedExternalError(err);
                 return emptyCodeActionsResponse;
             }
-            const filteredActions = ((providedCodeActions === null || providedCodeActions === void 0 ? void 0 : providedCodeActions.actions) || []).filter(action => action && filtersAction(filter, action));
-            const documentation = getDocumentationFromProvider(provider, filteredActions, filter.include);
-            return {
-                actions: filteredActions.map(action => new CodeActionItem(action, provider)),
-                documentation
-            };
-        }
-        catch (err) {
-            if (isCancellationError(err)) {
-                throw err;
+        }));
+        const listener = registry.onDidChange(() => {
+            const newProviders = registry.all(model);
+            if (!equals(newProviders, providers)) {
+                cts.cancel();
             }
-            onUnexpectedExternalError(err);
-            return emptyCodeActionsResponse;
+        });
+        try {
+            const actions = yield Promise.all(promises);
+            const allActions = actions.map(x => x.actions).flat();
+            const allDocumentation = [
+                ...coalesce(actions.map(x => x.documentation)),
+                ...getAdditionalDocumentationForShowingActions(registry, model, trigger, allActions)
+            ];
+            return new ManagedCodeActionSet(allActions, allDocumentation, disposables);
+        }
+        finally {
+            listener.dispose();
+            cts.dispose();
         }
     });
-    const listener = registry.onDidChange(() => {
-        const newProviders = registry.all(model);
-        if (!equals(newProviders, providers)) {
-            cts.cancel();
-        }
-    });
-    try {
-        const actions = await Promise.all(promises);
-        const allActions = actions.map(x => x.actions).flat();
-        const allDocumentation = [
-            ...coalesce(actions.map(x => x.documentation)),
-            ...getAdditionalDocumentationForShowingActions(registry, model, trigger, allActions)
-        ];
-        return new ManagedCodeActionSet(allActions, allDocumentation, disposables);
-    }
-    finally {
-        listener.dispose();
-        cts.dispose();
-    }
 }
 function getCodeActionProviders(registry, model, filter) {
     return registry.all(model)
@@ -197,48 +193,49 @@ export var ApplyCodeActionReason;
     ApplyCodeActionReason["OnSave"] = "onSave";
     ApplyCodeActionReason["FromProblemsView"] = "fromProblemsView";
     ApplyCodeActionReason["FromCodeActions"] = "fromCodeActions";
-    ApplyCodeActionReason["FromAILightbulb"] = "fromAILightbulb"; // direct invocation when clicking on the AI lightbulb
 })(ApplyCodeActionReason || (ApplyCodeActionReason = {}));
-export async function applyCodeAction(accessor, item, codeActionReason, options, token = CancellationToken.None) {
+export function applyCodeAction(accessor, item, codeActionReason, options, token = CancellationToken.None) {
     var _a;
-    const bulkEditService = accessor.get(IBulkEditService);
-    const commandService = accessor.get(ICommandService);
-    const telemetryService = accessor.get(ITelemetryService);
-    const notificationService = accessor.get(INotificationService);
-    telemetryService.publicLog2('codeAction.applyCodeAction', {
-        codeActionTitle: item.action.title,
-        codeActionKind: item.action.kind,
-        codeActionIsPreferred: !!item.action.isPreferred,
-        reason: codeActionReason,
-    });
-    await item.resolve(token);
-    if (token.isCancellationRequested) {
-        return;
-    }
-    if ((_a = item.action.edit) === null || _a === void 0 ? void 0 : _a.edits.length) {
-        const result = await bulkEditService.apply(item.action.edit, {
-            editor: options === null || options === void 0 ? void 0 : options.editor,
-            label: item.action.title,
-            quotableLabel: item.action.title,
-            code: 'undoredo.codeAction',
-            respectAutoSaveConfig: codeActionReason !== ApplyCodeActionReason.OnSave,
-            showPreview: options === null || options === void 0 ? void 0 : options.preview,
+    return __awaiter(this, void 0, void 0, function* () {
+        const bulkEditService = accessor.get(IBulkEditService);
+        const commandService = accessor.get(ICommandService);
+        const telemetryService = accessor.get(ITelemetryService);
+        const notificationService = accessor.get(INotificationService);
+        telemetryService.publicLog2('codeAction.applyCodeAction', {
+            codeActionTitle: item.action.title,
+            codeActionKind: item.action.kind,
+            codeActionIsPreferred: !!item.action.isPreferred,
+            reason: codeActionReason,
         });
-        if (!result.isApplied) {
+        yield item.resolve(token);
+        if (token.isCancellationRequested) {
             return;
         }
-    }
-    if (item.action.command) {
-        try {
-            await commandService.executeCommand(item.action.command.id, ...(item.action.command.arguments || []));
+        if ((_a = item.action.edit) === null || _a === void 0 ? void 0 : _a.edits.length) {
+            const result = yield bulkEditService.apply(item.action.edit, {
+                editor: options === null || options === void 0 ? void 0 : options.editor,
+                label: item.action.title,
+                quotableLabel: item.action.title,
+                code: 'undoredo.codeAction',
+                respectAutoSaveConfig: codeActionReason !== ApplyCodeActionReason.OnSave,
+                showPreview: options === null || options === void 0 ? void 0 : options.preview,
+            });
+            if (!result.isApplied) {
+                return;
+            }
         }
-        catch (err) {
-            const message = asMessage(err);
-            notificationService.error(typeof message === 'string'
-                ? message
-                : nls.localize('applyCodeActionFailed', "An unknown error occurred while applying the code action"));
+        if (item.action.command) {
+            try {
+                yield commandService.executeCommand(item.action.command.id, ...(item.action.command.arguments || []));
+            }
+            catch (err) {
+                const message = asMessage(err);
+                notificationService.error(typeof message === 'string'
+                    ? message
+                    : nls.localize('applyCodeActionFailed', "An unknown error occurred while applying the code action"));
+            }
         }
-    }
+    });
 }
 function asMessage(err) {
     if (typeof err === 'string') {
@@ -251,35 +248,37 @@ function asMessage(err) {
         return undefined;
     }
 }
-CommandsRegistry.registerCommand('_executeCodeActionProvider', async function (accessor, resource, rangeOrSelection, kind, itemResolveCount) {
-    if (!(resource instanceof URI)) {
-        throw illegalArgument();
-    }
-    const { codeActionProvider } = accessor.get(ILanguageFeaturesService);
-    const model = accessor.get(IModelService).getModel(resource);
-    if (!model) {
-        throw illegalArgument();
-    }
-    const validatedRangeOrSelection = Selection.isISelection(rangeOrSelection)
-        ? Selection.liftSelection(rangeOrSelection)
-        : Range.isIRange(rangeOrSelection)
-            ? model.validateRange(rangeOrSelection)
-            : undefined;
-    if (!validatedRangeOrSelection) {
-        throw illegalArgument();
-    }
-    const include = typeof kind === 'string' ? new CodeActionKind(kind) : undefined;
-    const codeActionSet = await getCodeActions(codeActionProvider, model, validatedRangeOrSelection, { type: 1 /* languages.CodeActionTriggerType.Invoke */, triggerAction: CodeActionTriggerSource.Default, filter: { includeSourceActions: true, include } }, Progress.None, CancellationToken.None);
-    const resolving = [];
-    const resolveCount = Math.min(codeActionSet.validActions.length, typeof itemResolveCount === 'number' ? itemResolveCount : 0);
-    for (let i = 0; i < resolveCount; i++) {
-        resolving.push(codeActionSet.validActions[i].resolve(CancellationToken.None));
-    }
-    try {
-        await Promise.all(resolving);
-        return codeActionSet.validActions.map(item => item.action);
-    }
-    finally {
-        setTimeout(() => codeActionSet.dispose(), 100);
-    }
+CommandsRegistry.registerCommand('_executeCodeActionProvider', function (accessor, resource, rangeOrSelection, kind, itemResolveCount) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!(resource instanceof URI)) {
+            throw illegalArgument();
+        }
+        const { codeActionProvider } = accessor.get(ILanguageFeaturesService);
+        const model = accessor.get(IModelService).getModel(resource);
+        if (!model) {
+            throw illegalArgument();
+        }
+        const validatedRangeOrSelection = Selection.isISelection(rangeOrSelection)
+            ? Selection.liftSelection(rangeOrSelection)
+            : Range.isIRange(rangeOrSelection)
+                ? model.validateRange(rangeOrSelection)
+                : undefined;
+        if (!validatedRangeOrSelection) {
+            throw illegalArgument();
+        }
+        const include = typeof kind === 'string' ? new CodeActionKind(kind) : undefined;
+        const codeActionSet = yield getCodeActions(codeActionProvider, model, validatedRangeOrSelection, { type: 1 /* languages.CodeActionTriggerType.Invoke */, triggerAction: CodeActionTriggerSource.Default, filter: { includeSourceActions: true, include } }, Progress.None, CancellationToken.None);
+        const resolving = [];
+        const resolveCount = Math.min(codeActionSet.validActions.length, typeof itemResolveCount === 'number' ? itemResolveCount : 0);
+        for (let i = 0; i < resolveCount; i++) {
+            resolving.push(codeActionSet.validActions[i].resolve(CancellationToken.None));
+        }
+        try {
+            yield Promise.all(resolving);
+            return codeActionSet.validActions.map(item => item.action);
+        }
+        finally {
+            setTimeout(() => codeActionSet.dispose(), 100);
+        }
+    });
 });

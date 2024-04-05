@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { EditorAction, EditorCommand, registerEditorAction, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
-import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { registerEditorFeature } from '../../../common/editorFeatures.js';
 import { CopyPasteController, changePasteTypeCommandId, pasteWidgetVisibleCtx } from './copyPasteController.js';
 import { DefaultPasteProvidersFeature } from './defaultProviders.js';
@@ -32,8 +31,8 @@ registerEditorAction(class extends EditorAction {
             id: 'editor.action.pasteAs',
             label: nls.localize('pasteAs', "Paste As..."),
             alias: 'Paste As...',
-            precondition: EditorContextKeys.writable,
-            metadata: {
+            precondition: undefined,
+            description: {
                 description: 'Paste as',
                 args: [{
                         name: 'args',
@@ -54,19 +53,5 @@ registerEditorAction(class extends EditorAction {
         var _a;
         const id = typeof (args === null || args === void 0 ? void 0 : args.id) === 'string' ? args.id : undefined;
         return (_a = CopyPasteController.get(editor)) === null || _a === void 0 ? void 0 : _a.pasteAs(id);
-    }
-});
-registerEditorAction(class extends EditorAction {
-    constructor() {
-        super({
-            id: 'editor.action.pasteAsText',
-            label: nls.localize('pasteAsText', "Paste as Text"),
-            alias: 'Paste as Text',
-            precondition: EditorContextKeys.writable,
-        });
-    }
-    run(_accessor, editor, args) {
-        var _a;
-        return (_a = CopyPasteController.get(editor)) === null || _a === void 0 ? void 0 : _a.pasteAs('text');
     }
 });

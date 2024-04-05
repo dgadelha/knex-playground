@@ -89,6 +89,9 @@ export class ConsoleLogger extends AbstractLogger {
             }
         }
     }
+    dispose() {
+        // noop
+    }
 }
 export class MultiplexLogger extends AbstractLogger {
     constructor(loggers) {
@@ -133,7 +136,6 @@ export class MultiplexLogger extends AbstractLogger {
         for (const logger of this.loggers) {
             logger.dispose();
         }
-        super.dispose();
     }
 }
 export function LogLevelToString(logLevel) {

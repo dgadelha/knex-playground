@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/javascript/javascript", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -18,7 +18,7 @@ var moduleExports = (() => {
   }) : x)(function(x) {
     if (typeof require !== "undefined")
       return require.apply(this, arguments);
-    throw Error('Dynamic require of "' + x + '" is not supported');
+    throw new Error('Dynamic require of "' + x + '" is not supported');
   });
   var __commonJS = (cb, mod) => function __require2() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -36,14 +36,7 @@ var moduleExports = (() => {
     return to;
   };
   var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-    mod
-  ));
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target, mod));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/fillers/monaco-editor-core-amd.ts
@@ -79,7 +72,6 @@ var moduleExports = (() => {
     ],
     onEnterRules: [
       {
-        // e.g. /** | */
         beforeText: /^\s*\/\*\*(?!\/)([^\*]|\*(?!\/))*$/,
         afterText: /^\s*\*\/$/,
         action: {
@@ -88,7 +80,6 @@ var moduleExports = (() => {
         }
       },
       {
-        // e.g. /** ...|
         beforeText: /^\s*\/\*\*(?!\/)([^\*]|\*(?!\/))*$/,
         action: {
           indentAction: monaco_editor_core_exports.languages.IndentAction.None,
@@ -96,7 +87,6 @@ var moduleExports = (() => {
         }
       },
       {
-        // e.g.  * ...|
         beforeText: /^(\t|(\ \ ))*\ \*(\ ([^\*]|\*(?!\/))*)?$/,
         action: {
           indentAction: monaco_editor_core_exports.languages.IndentAction.None,
@@ -104,7 +94,6 @@ var moduleExports = (() => {
         }
       },
       {
-        // e.g.  */|
         beforeText: /^(\t|(\ \ ))*\ \*\/\s*$/,
         action: {
           indentAction: monaco_editor_core_exports.languages.IndentAction.None,
@@ -129,12 +118,9 @@ var moduleExports = (() => {
     }
   };
   var language = {
-    // Set defaultToken to invalid to see what you do not tokenize yet
     defaultToken: "invalid",
     tokenPostfix: ".ts",
     keywords: [
-      // Should match the keys of textToKeywordObj in
-      // https://github.com/microsoft/TypeScript/blob/master/src/compiler/scanner.ts
       "abstract",
       "any",
       "as",
@@ -260,7 +246,6 @@ var moduleExports = (() => {
       "^=",
       "@"
     ],
-    // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
     digits: /\d+(_+\d+)*/,
@@ -269,11 +254,9 @@ var moduleExports = (() => {
     hexdigits: /[[0-9a-fA-F]+(_+[0-9a-fA-F]+)*/,
     regexpctl: /[(){}\[\]\$\^|\-*+?\.]/,
     regexpesc: /\\(?:[bBdDfnrstvwWn0\\\/]|@regexpctl|c[A-Z]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4})/,
-    // The main tokenizer for our languages
     tokenizer: {
       root: [[/[{}]/, "delimiter.bracket"], { include: "common" }],
       common: [
-        // identifiers and keywords
         [
           /#?[a-z_$][\w$]*/,
           {
@@ -284,16 +267,11 @@ var moduleExports = (() => {
           }
         ],
         [/[A-Z][\w\$]*/, "type.identifier"],
-        // to show class names nicely
-        // [/[A-Z][\w\$]*/, 'identifier'],
-        // whitespace
         { include: "@whitespace" },
-        // regular expression: ensure it is terminated before beginning (otherwise it is an opeator)
         [
           /\/(?=([^\\\/]|\\.)+\/([dgimsuy]*)(\s*)(\.|;|,|\)|\]|\}|$))/,
           { token: "regexp", bracket: "@open", next: "@regexp" }
         ],
-        // delimiters and operators
         [/[()\[\]]/, "@brackets"],
         [/[<>](?!@symbols)/, "@brackets"],
         [/!(?=([^=]|$))/, "delimiter"],
@@ -306,20 +284,15 @@ var moduleExports = (() => {
             }
           }
         ],
-        // numbers
         [/(@digits)[eE]([\-+]?(@digits))?/, "number.float"],
         [/(@digits)\.(@digits)([eE][\-+]?(@digits))?/, "number.float"],
         [/0[xX](@hexdigits)n?/, "number.hex"],
         [/0[oO]?(@octaldigits)n?/, "number.octal"],
         [/0[bB](@binarydigits)n?/, "number.binary"],
         [/(@digits)n?/, "number"],
-        // delimiter: after number because of .\d floats
         [/[;,.]/, "delimiter"],
-        // strings
         [/"([^"\\]|\\.)*$/, "string.invalid"],
-        // non-teminated string
         [/'([^'\\]|\\.)*$/, "string.invalid"],
-        // non-teminated string
         [/"/, "string", "@string_double"],
         [/'/, "string", "@string_single"],
         [/`/, "string", "@string_backtick"]
@@ -340,7 +313,6 @@ var moduleExports = (() => {
         [/\*\//, "comment.doc", "@pop"],
         [/[\/*]/, "comment.doc"]
       ],
-      // We match regular expression quite precisely
       regexp: [
         [
           /(\{)(\d+(?:,\d*)?)(\})/,
@@ -402,7 +374,6 @@ var moduleExports = (() => {
   // src/basic-languages/javascript/javascript.ts
   var conf2 = conf;
   var language2 = {
-    // Set defaultToken to invalid to see what you do not tokenize yet
     defaultToken: "invalid",
     tokenPostfix: ".js",
     keywords: [

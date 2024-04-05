@@ -8,6 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import * as dom from '../../../base/browser/dom.js';
 import { StandardKeyboardEvent } from '../../../base/browser/keyboardEvent.js';
 import { ActionBar } from '../../../base/browser/ui/actionbar/actionbar.js';
@@ -25,7 +34,7 @@ import * as platform from '../../../base/common/platform.js';
 import { ltrim } from '../../../base/common/strings.js';
 import './media/quickInput.css';
 import { localize } from '../../../nls.js';
-import { quickInputButtonToAction } from './quickInputUtils.js';
+import { getIconClass } from './quickInputUtils.js';
 import { Lazy } from '../../../base/common/lazy.js';
 import { URI } from '../../../base/common/uri.js';
 import { isDark } from '../../theme/common/theme.js';
@@ -133,9 +142,8 @@ class ListElement {
     }
 }
 class ListElementRenderer {
-    constructor(themeService, hoverDelegate) {
+    constructor(themeService) {
         this.themeService = themeService;
-        this.hoverDelegate = hoverDelegate;
     }
     get templateId() {
         return ListElementRenderer.ID;
@@ -162,7 +170,7 @@ class ListElementRenderer {
         const row1 = dom.append(rows, $('.quick-input-list-row'));
         const row2 = dom.append(rows, $('.quick-input-list-row'));
         // Label
-        data.label = new IconLabel(row1, { supportHighlights: true, supportDescriptionHighlights: true, supportIcons: true, hoverDelegate: this.hoverDelegate });
+        data.label = new IconLabel(row1, { supportHighlights: true, supportDescriptionHighlights: true, supportIcons: true });
         data.toDisposeTemplate.push(data.label);
         data.icon = dom.prepend(data.label.element, $('.quick-input-list-icon'));
         // Keybinding
@@ -170,12 +178,12 @@ class ListElementRenderer {
         data.keybinding = new KeybindingLabel(keybindingContainer, platform.OS);
         // Detail
         const detailContainer = dom.append(row2, $('.quick-input-list-label-meta'));
-        data.detail = new IconLabel(detailContainer, { supportHighlights: true, supportIcons: true, hoverDelegate: this.hoverDelegate });
+        data.detail = new IconLabel(detailContainer, { supportHighlights: true, supportIcons: true });
         data.toDisposeTemplate.push(data.detail);
         // Separator
         data.separator = dom.append(data.entry, $('.quick-input-list-separator'));
         // Actions
-        data.actionBar = new ActionBar(data.entry, this.hoverDelegate ? { hoverDelegate: this.hoverDelegate } : undefined);
+        data.actionBar = new ActionBar(data.entry);
         data.actionBar.domNode.classList.add('quick-input-list-entry-action-bar');
         data.toDisposeTemplate.push(data.actionBar);
         return data;
@@ -199,23 +207,9 @@ class ListElementRenderer {
             data.icon.className = ((_d = element.item) === null || _d === void 0 ? void 0 : _d.iconClass) ? `quick-input-list-icon ${element.item.iconClass}` : '';
         }
         // Label
-        let descriptionTitle;
-        // if we have a tooltip, that will be the hover,
-        // with the saneDescription as fallback if it
-        // is defined
-        if (!element.saneTooltip && element.saneDescription) {
-            descriptionTitle = {
-                markdown: {
-                    value: element.saneDescription,
-                    supportThemeIcons: true
-                },
-                markdownNotSupportedFallback: element.saneDescription
-            };
-        }
         const options = {
             matches: labelHighlights || [],
-            // If we have a tooltip, we want that to be shown and not any other hover
-            descriptionTitle,
+            descriptionTitle: element.saneDescription,
             descriptionMatches: descriptionHighlights || [],
             labelEscapeNewLines: true
         };
@@ -233,21 +227,10 @@ class ListElementRenderer {
         data.keybinding.set(mainItem.type === 'separator' ? undefined : mainItem.keybinding);
         // Detail
         if (element.saneDetail) {
-            let title;
-            // If we have a tooltip, we want that to be shown and not any other hover
-            if (!element.saneTooltip) {
-                title = {
-                    markdown: {
-                        value: element.saneDetail,
-                        supportThemeIcons: true
-                    },
-                    markdownNotSupportedFallback: element.saneDetail
-                };
-            }
             data.detail.element.style.display = '';
             data.detail.setLabel(element.saneDetail, undefined, {
                 matches: detailHighlights,
-                title,
+                title: element.saneDetail,
                 labelEscapeNewLines: true
             });
         }
@@ -266,9 +249,30 @@ class ListElementRenderer {
         // Actions
         const buttons = mainItem.buttons;
         if (buttons && buttons.length) {
-            data.actionBar.push(buttons.map((button, index) => quickInputButtonToAction(button, `id-${index}`, () => mainItem.type !== 'separator'
-                ? element.fireButtonTriggered({ button, item: mainItem })
-                : element.fireSeparatorButtonTriggered({ button, separator: mainItem }))), { icon: true, label: false });
+            data.actionBar.push(buttons.map((button, index) => {
+                let cssClasses = button.iconClass || (button.iconPath ? getIconClass(button.iconPath) : undefined);
+                if (button.alwaysVisible) {
+                    cssClasses = cssClasses ? `${cssClasses} always-visible` : 'always-visible';
+                }
+                return {
+                    id: `id-${index}`,
+                    class: cssClasses,
+                    enabled: true,
+                    label: '',
+                    tooltip: button.tooltip || '',
+                    run: () => {
+                        mainItem.type !== 'separator'
+                            ? element.fireButtonTriggered({
+                                button,
+                                item: mainItem
+                            })
+                            : element.fireSeparatorButtonTriggered({
+                                button,
+                                separator: mainItem
+                            });
+                    }
+                };
+            }), { icon: true, label: false });
             data.entry.classList.add('has-actions');
         }
         else {
@@ -343,7 +347,7 @@ export class QuickInputList {
         this.container = dom.append(this.parent, $('.quick-input-list'));
         const delegate = new ListElementDelegate();
         const accessibilityProvider = new QuickInputAccessibilityProvider();
-        this.list = options.createList('QuickInput', this.container, delegate, [new ListElementRenderer(themeService, options.hoverDelegate)], {
+        this.list = options.createList('QuickInput', this.container, delegate, [new ListElementRenderer(themeService)], {
             identityProvider: {
                 getId: element => {
                     var _a, _b, _c, _d, _e, _f, _g, _h;
@@ -412,49 +416,51 @@ export class QuickInputList {
                 this.list.setSelection([e.index]);
             }
         }));
-        const delayer = new ThrottledDelayer(options.hoverDelegate.delay);
-        // onMouseOver triggers every time a new element has been moused over
-        // even if it's on the same list item.
-        this.disposables.push(this.list.onMouseOver(async (e) => {
-            var _a;
-            // If we hover over an anchor element, we don't want to show the hover because
-            // the anchor may have a tooltip that we want to show instead.
-            if (e.browserEvent.target instanceof HTMLAnchorElement) {
-                delayer.cancel();
-                return;
-            }
-            if (
-            // anchors are an exception as called out above so we skip them here
-            !(e.browserEvent.relatedTarget instanceof HTMLAnchorElement) &&
-                // check if the mouse is still over the same element
-                dom.isAncestor(e.browserEvent.relatedTarget, (_a = e.element) === null || _a === void 0 ? void 0 : _a.element)) {
-                return;
-            }
-            try {
-                await delayer.trigger(async () => {
-                    if (e.element) {
-                        this.showHover(e.element);
-                    }
-                });
-            }
-            catch (e) {
-                // Ignore cancellation errors due to mouse out
-                if (!isCancellationError(e)) {
-                    throw e;
+        if (options.hoverDelegate) {
+            const delayer = new ThrottledDelayer(options.hoverDelegate.delay);
+            // onMouseOver triggers every time a new element has been moused over
+            // even if it's on the same list item.
+            this.disposables.push(this.list.onMouseOver((e) => __awaiter(this, void 0, void 0, function* () {
+                var _a;
+                // If we hover over an anchor element, we don't want to show the hover because
+                // the anchor may have a tooltip that we want to show instead.
+                if (e.browserEvent.target instanceof HTMLAnchorElement) {
+                    delayer.cancel();
+                    return;
                 }
-            }
-        }));
-        this.disposables.push(this.list.onMouseOut(e => {
-            var _a;
-            // onMouseOut triggers every time a new element has been moused over
-            // even if it's on the same list item. We only want one event, so we
-            // check if the mouse is still over the same element.
-            if (dom.isAncestor(e.browserEvent.relatedTarget, (_a = e.element) === null || _a === void 0 ? void 0 : _a.element)) {
-                return;
-            }
-            delayer.cancel();
-        }));
-        this.disposables.push(delayer);
+                if (
+                // anchors are an exception as called out above so we skip them here
+                !(e.browserEvent.relatedTarget instanceof HTMLAnchorElement) &&
+                    // check if the mouse is still over the same element
+                    dom.isAncestor(e.browserEvent.relatedTarget, (_a = e.element) === null || _a === void 0 ? void 0 : _a.element)) {
+                    return;
+                }
+                try {
+                    yield delayer.trigger(() => __awaiter(this, void 0, void 0, function* () {
+                        if (e.element) {
+                            this.showHover(e.element);
+                        }
+                    }));
+                }
+                catch (e) {
+                    // Ignore cancellation errors due to mouse out
+                    if (!isCancellationError(e)) {
+                        throw e;
+                    }
+                }
+            })));
+            this.disposables.push(this.list.onMouseOut(e => {
+                var _a;
+                // onMouseOut triggers every time a new element has been moused over
+                // even if it's on the same list item. We only want one event, so we
+                // check if the mouse is still over the same element.
+                if (dom.isAncestor(e.browserEvent.relatedTarget, (_a = e.element) === null || _a === void 0 ? void 0 : _a.element)) {
+                    return;
+                }
+                delayer.cancel();
+            }));
+            this.disposables.push(delayer);
+        }
         this.disposables.push(this._listElementChecked.event(_ => this.fireCheckedEvents()));
         this.disposables.push(this._onChangedAllVisibleChecked, this._onChangedCheckedCount, this._onChangedVisibleCount, this._onChangedCheckedElements, this._onButtonTriggered, this._onSeparatorButtonTriggered, this._onLeave, this._onKeyDown);
     }
@@ -661,6 +667,9 @@ export class QuickInputList {
      */
     showHover(element) {
         var _a, _b, _c;
+        if (this.options.hoverDelegate === undefined) {
+            return;
+        }
         if (this._lastHover && !this._lastHover.isDisposed) {
             (_b = (_a = this.options.hoverDelegate).onDidHideHover) === null || _b === void 0 ? void 0 : _b.call(_a);
             (_c = this._lastHover) === null || _c === void 0 ? void 0 : _c.dispose();
@@ -674,13 +683,9 @@ export class QuickInputList {
             linkHandler: (url) => {
                 this.options.linkOpenerDelegate(url);
             },
-            appearance: {
-                showPointer: true,
-            },
+            showPointer: true,
             container: this.container,
-            position: {
-                hoverPosition: 1 /* HoverPosition.RIGHT */
-            }
+            hoverPosition: 1 /* HoverPosition.RIGHT */
         }, false);
     }
     layout(maxHeight) {

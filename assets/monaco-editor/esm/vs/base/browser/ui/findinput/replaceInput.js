@@ -64,11 +64,7 @@ export class ReplaceInput extends Widget {
             flexibleMaxHeight,
             inputBoxStyles: options.inputBoxStyles
         }));
-        this.preserveCase = this._register(new PreserveCaseToggle({
-            appendTitle: appendPreserveCaseLabel,
-            isChecked: false,
-            ...options.toggleStyles
-        }));
+        this.preserveCase = this._register(new PreserveCaseToggle(Object.assign({ appendTitle: appendPreserveCaseLabel, isChecked: false }, options.toggleStyles)));
         this._register(this.preserveCase.onChange(viaKeyboard => {
             this._onDidOptionChange.fire(viaKeyboard);
             if (!viaKeyboard && this.fixFocusOnOptionClickEnabled) {
@@ -89,7 +85,7 @@ export class ReplaceInput extends Widget {
         const indexes = [this.preserveCase.domNode];
         this.onkeydown(this.domNode, (event) => {
             if (event.equals(15 /* KeyCode.LeftArrow */) || event.equals(17 /* KeyCode.RightArrow */) || event.equals(9 /* KeyCode.Escape */)) {
-                const index = indexes.indexOf(this.domNode.ownerDocument.activeElement);
+                const index = indexes.indexOf(document.activeElement);
                 if (index >= 0) {
                     let newIndex = -1;
                     if (event.equals(17 /* KeyCode.RightArrow */)) {

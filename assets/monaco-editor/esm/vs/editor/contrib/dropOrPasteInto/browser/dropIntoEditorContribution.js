@@ -28,9 +28,7 @@ registerEditorCommand(new class extends EditorCommand {
     }
 });
 registerEditorFeature(DefaultDropProvidersFeature);
-Registry.as(ConfigurationExtensions.Configuration).registerConfiguration({
-    ...editorConfigurationBaseNode,
-    properties: {
+Registry.as(ConfigurationExtensions.Configuration).registerConfiguration(Object.assign(Object.assign({}, editorConfigurationBaseNode), { properties: {
         [defaultProviderConfig]: {
             type: 'object',
             scope: 5 /* ConfigurationScope.LANGUAGE_OVERRIDABLE */,
@@ -40,5 +38,4 @@ Registry.as(ConfigurationExtensions.Configuration).registerConfiguration({
                 type: 'string',
             },
         },
-    }
-});
+    } }));

@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/scss/scss.ts
 var conf = {
@@ -43,7 +42,6 @@ var language = {
   defaultToken: "",
   tokenPostfix: ".scss",
   ws: "[ 	\n\r\f]*",
-  // whitespaces (referenced in several rules)
   identifier: "-?-?([a-zA-Z]|(\\\\(([0-9a-fA-F]{1,6}\\s?)|[^[0-9a-fA-F])))([\\w\\-]|(\\\\(([0-9a-fA-F]{1,6}\\s?)|[^[0-9a-fA-F])))*",
   brackets: [
     { open: "{", close: "}", token: "delimiter.curly" },
@@ -58,44 +56,33 @@ var language = {
       { include: "@import" },
       { include: "@variabledeclaration" },
       { include: "@warndebug" },
-      // sass: log statements
       ["[@](include)", { token: "keyword", next: "@includedeclaration" }],
-      // sass: include statement
       [
         "[@](keyframes|-webkit-keyframes|-moz-keyframes|-o-keyframes)",
         { token: "keyword", next: "@keyframedeclaration" }
       ],
       ["[@](page|content|font-face|-moz-document)", { token: "keyword" }],
-      // sass: placeholder for includes
       ["[@](charset|namespace)", { token: "keyword", next: "@declarationbody" }],
       ["[@](function)", { token: "keyword", next: "@functiondeclaration" }],
       ["[@](mixin)", { token: "keyword", next: "@mixindeclaration" }],
       ["url(\\-prefix)?\\(", { token: "meta", next: "@urldeclaration" }],
       { include: "@controlstatement" },
-      // sass control statements
       { include: "@selectorname" },
       ["[&\\*]", "tag"],
-      // selector symbols
       ["[>\\+,]", "delimiter"],
-      // selector operators
       ["\\[", { token: "delimiter.bracket", next: "@selectorattribute" }],
       ["{", { token: "delimiter.curly", next: "@selectorbody" }]
     ],
     selectorbody: [
       ["[*_]?@identifier@ws:(?=(\\s|\\d|[^{;}]*[;}]))", "attribute.name", "@rulevalue"],
-      // rule definition: to distinguish from a nested selector check for whitespace, number or a semicolon
       { include: "@selector" },
-      // sass: nested selectors
       ["[@](extend)", { token: "keyword", next: "@extendbody" }],
-      // sass: extend other selectors
       ["[@](return)", { token: "keyword", next: "@declarationbody" }],
       ["}", { token: "delimiter.curly", next: "@pop" }]
     ],
     selectorname: [
       ["#{", { token: "meta", next: "@variableinterpolation" }],
-      // sass: interpolation
       ["(\\.|#(?=[^{])|%|(@identifier)|:)+", "tag"]
-      // selector (.foo, div, ...)
     ],
     selectorattribute: [{ include: "@term" }, ["]", { token: "delimiter.bracket", next: "@pop" }]],
     term: [
@@ -117,9 +104,7 @@ var language = {
       ["!important", "literal"],
       [";", "delimiter", "@pop"],
       ["{", { token: "delimiter.curly", switchTo: "@nestedproperty" }],
-      // sass: nested properties
       ["(?=})", { token: "", next: "@pop" }]
-      // missing semicolon
     ],
     nestedproperty: [
       ["[*_]?@identifier@ws:", "attribute.name", "@rulevalue"],
@@ -129,7 +114,6 @@ var language = {
     warndebug: [["[@](warn|debug)", { token: "keyword", next: "@declarationbody" }]],
     import: [["[@](import)", { token: "keyword", next: "@declarationbody" }]],
     variabledeclaration: [
-      // sass variables
       ["\\$@identifier@ws:", "variable.decl", "@declarationbody"]
     ],
     urldeclaration: [
@@ -145,22 +129,17 @@ var language = {
       { include: "@term" },
       [";", "delimiter", "@pop"],
       ["(?=})", { token: "", next: "@pop" }]
-      // missing semicolon
     ],
     extendbody: [
       { include: "@selectorname" },
       ["!optional", "literal"],
       [";", "delimiter", "@pop"],
       ["(?=})", { token: "", next: "@pop" }]
-      // missing semicolon
     ],
     variablereference: [
-      // sass variable reference
       ["\\$@identifier", "variable.ref"],
       ["\\.\\.\\.", "operator"],
-      // var args in reference
       ["#{", { token: "meta", next: "@variableinterpolation" }]
-      // sass var resolve
     ],
     variableinterpolation: [
       { include: "@variablereference" },
@@ -191,16 +170,13 @@ var language = {
       ["{", { token: "delimiter.curly", switchTo: "@functionbody" }]
     ],
     mixindeclaration: [
-      // mixin with parameters
       ["@identifier@ws\\(", { token: "meta", next: "@parameterdeclaration" }],
-      // mixin without parameters
       ["@identifier", "meta"],
       ["{", { token: "delimiter.curly", switchTo: "@selectorbody" }]
     ],
     parameterdeclaration: [
       ["\\$@identifier@ws:", "variable.decl"],
       ["\\.\\.\\.", "operator"],
-      // var args in declaration
       [",", "delimiter"],
       { include: "@term" },
       ["\\)", { token: "meta", next: "@pop" }]
@@ -210,7 +186,6 @@ var language = {
       ["@identifier", "meta"],
       [";", "delimiter", "@pop"],
       ["(?=})", { token: "", next: "@pop" }],
-      // missing semicolon
       ["{", { token: "delimiter.curly", switchTo: "@selectorbody" }]
     ],
     keyframedeclaration: [

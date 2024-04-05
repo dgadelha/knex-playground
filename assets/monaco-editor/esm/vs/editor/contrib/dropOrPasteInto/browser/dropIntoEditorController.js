@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var DropIntoEditorController_1;
 import { coalesce } from '../../../../base/common/arrays.js';
 import { createCancelablePromise, raceCancellation } from '../../../../base/common/async.js';
@@ -50,70 +59,74 @@ let DropIntoEditorController = DropIntoEditorController_1 = class DropIntoEditor
     changeDropType() {
         this._postDropWidgetManager.tryShowSelector();
     }
-    async onDropIntoEditor(editor, position, dragEvent) {
+    onDropIntoEditor(editor, position, dragEvent) {
         var _a;
-        if (!dragEvent.dataTransfer || !editor.hasModel()) {
-            return;
-        }
-        (_a = this._currentOperation) === null || _a === void 0 ? void 0 : _a.cancel();
-        editor.focus();
-        editor.setPosition(position);
-        const p = createCancelablePromise(async (token) => {
-            const tokenSource = new EditorStateCancellationTokenSource(editor, 1 /* CodeEditorStateFlag.Value */, undefined, token);
-            try {
-                const ourDataTransfer = await this.extractDataTransferData(dragEvent);
-                if (ourDataTransfer.size === 0 || tokenSource.token.isCancellationRequested) {
-                    return;
-                }
-                const model = editor.getModel();
-                if (!model) {
-                    return;
-                }
-                const providers = this._languageFeaturesService.documentOnDropEditProvider
-                    .ordered(model)
-                    .filter(provider => {
-                    if (!provider.dropMimeTypes) {
-                        // Keep all providers that don't specify mime types
-                        return true;
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!dragEvent.dataTransfer || !editor.hasModel()) {
+                return;
+            }
+            (_a = this._currentOperation) === null || _a === void 0 ? void 0 : _a.cancel();
+            editor.focus();
+            editor.setPosition(position);
+            const p = createCancelablePromise((token) => __awaiter(this, void 0, void 0, function* () {
+                const tokenSource = new EditorStateCancellationTokenSource(editor, 1 /* CodeEditorStateFlag.Value */, undefined, token);
+                try {
+                    const ourDataTransfer = yield this.extractDataTransferData(dragEvent);
+                    if (ourDataTransfer.size === 0 || tokenSource.token.isCancellationRequested) {
+                        return;
                     }
-                    return provider.dropMimeTypes.some(mime => ourDataTransfer.matches(mime));
-                });
-                const edits = await this.getDropEdits(providers, model, position, ourDataTransfer, tokenSource);
-                if (tokenSource.token.isCancellationRequested) {
-                    return;
+                    const model = editor.getModel();
+                    if (!model) {
+                        return;
+                    }
+                    const providers = this._languageFeaturesService.documentOnDropEditProvider
+                        .ordered(model)
+                        .filter(provider => {
+                        if (!provider.dropMimeTypes) {
+                            // Keep all providers that don't specify mime types
+                            return true;
+                        }
+                        return provider.dropMimeTypes.some(mime => ourDataTransfer.matches(mime));
+                    });
+                    const edits = yield this.getDropEdits(providers, model, position, ourDataTransfer, tokenSource);
+                    if (tokenSource.token.isCancellationRequested) {
+                        return;
+                    }
+                    if (edits.length) {
+                        const activeEditIndex = this.getInitialActiveEditIndex(model, edits);
+                        const canShowWidget = editor.getOption(36 /* EditorOption.dropIntoEditor */).showDropSelector === 'afterDrop';
+                        // Pass in the parent token here as it tracks cancelling the entire drop operation
+                        yield this._postDropWidgetManager.applyEditAndShowIfNeeded([Range.fromPositions(position)], { activeEditIndex, allEdits: edits }, canShowWidget, token);
+                    }
                 }
-                if (edits.length) {
-                    const activeEditIndex = this.getInitialActiveEditIndex(model, edits);
-                    const canShowWidget = editor.getOption(36 /* EditorOption.dropIntoEditor */).showDropSelector === 'afterDrop';
-                    // Pass in the parent token here as it tracks cancelling the entire drop operation
-                    await this._postDropWidgetManager.applyEditAndShowIfNeeded([Range.fromPositions(position)], { activeEditIndex, allEdits: edits }, canShowWidget, token);
+                finally {
+                    tokenSource.dispose();
+                    if (this._currentOperation === p) {
+                        this._currentOperation = undefined;
+                    }
                 }
-            }
-            finally {
-                tokenSource.dispose();
-                if (this._currentOperation === p) {
-                    this._currentOperation = undefined;
-                }
-            }
+            }));
+            this._dropProgressManager.showWhile(position, localize('dropIntoEditorProgress', "Running drop handlers. Click to cancel"), p);
+            this._currentOperation = p;
         });
-        this._dropProgressManager.showWhile(position, localize('dropIntoEditorProgress', "Running drop handlers. Click to cancel"), p);
-        this._currentOperation = p;
     }
-    async getDropEdits(providers, model, position, dataTransfer, tokenSource) {
-        const results = await raceCancellation(Promise.all(providers.map(async (provider) => {
-            try {
-                const edit = await provider.provideDocumentOnDropEdits(model, position, dataTransfer, tokenSource.token);
-                if (edit) {
-                    return { ...edit, providerId: provider.id };
+    getDropEdits(providers, model, position, dataTransfer, tokenSource) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const results = yield raceCancellation(Promise.all(providers.map((provider) => __awaiter(this, void 0, void 0, function* () {
+                try {
+                    const edit = yield provider.provideDocumentOnDropEdits(model, position, dataTransfer, tokenSource.token);
+                    if (edit) {
+                        return Object.assign(Object.assign({}, edit), { providerId: provider.id });
+                    }
                 }
-            }
-            catch (err) {
-                console.error(err);
-            }
-            return undefined;
-        })), tokenSource.token);
-        const edits = coalesce(results !== null && results !== void 0 ? results : []);
-        return sortEditsByYieldTo(edits);
+                catch (err) {
+                    console.error(err);
+                }
+                return undefined;
+            }))), tokenSource.token);
+            const edits = coalesce(results !== null && results !== void 0 ? results : []);
+            return sortEditsByYieldTo(edits);
+        });
     }
     getInitialActiveEditIndex(model, edits) {
         const preferredProviders = this._configService.getValue(defaultProviderConfig, { resource: model.uri });
@@ -126,25 +139,27 @@ let DropIntoEditorController = DropIntoEditorController_1 = class DropIntoEditor
         }
         return 0;
     }
-    async extractDataTransferData(dragEvent) {
-        if (!dragEvent.dataTransfer) {
-            return new VSDataTransfer();
-        }
-        const dataTransfer = toExternalVSDataTransfer(dragEvent.dataTransfer);
-        if (this.treeItemsTransfer.hasData(DraggedTreeItemsIdentifier.prototype)) {
-            const data = this.treeItemsTransfer.getData(DraggedTreeItemsIdentifier.prototype);
-            if (Array.isArray(data)) {
-                for (const id of data) {
-                    const treeDataTransfer = await this._treeViewsDragAndDropService.removeDragOperationTransfer(id.identifier);
-                    if (treeDataTransfer) {
-                        for (const [type, value] of treeDataTransfer) {
-                            dataTransfer.replace(type, value);
+    extractDataTransferData(dragEvent) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!dragEvent.dataTransfer) {
+                return new VSDataTransfer();
+            }
+            const dataTransfer = toExternalVSDataTransfer(dragEvent.dataTransfer);
+            if (this.treeItemsTransfer.hasData(DraggedTreeItemsIdentifier.prototype)) {
+                const data = this.treeItemsTransfer.getData(DraggedTreeItemsIdentifier.prototype);
+                if (Array.isArray(data)) {
+                    for (const id of data) {
+                        const treeDataTransfer = yield this._treeViewsDragAndDropService.removeDragOperationTransfer(id.identifier);
+                        if (treeDataTransfer) {
+                            for (const [type, value] of treeDataTransfer) {
+                                dataTransfer.replace(type, value);
+                            }
                         }
                     }
                 }
             }
-        }
-        return dataTransfer;
+            return dataTransfer;
+        });
     }
 };
 DropIntoEditorController.ID = 'editor.contrib.dropIntoEditorController';

@@ -2,15 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { findLast } from '../../../../base/common/arraysFind.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { isHotReloadEnabled, registerHotReloadHandler } from '../../../../base/common/hotReload.js';
 import { Disposable, DisposableStore, toDisposable } from '../../../../base/common/lifecycle.js';
-import { autorun, autorunHandleChanges, autorunOpts, autorunWithStore, observableSignalFromEvent, observableValue, transaction } from '../../../../base/common/observable.js';
+import { autorun, autorunHandleChanges, autorunOpts, observableSignalFromEvent, observableValue, transaction } from '../../../../base/common/observable.js';
 import { ElementSizeObserver } from '../../config/elementSizeObserver.js';
-import { Position } from '../../../common/core/position.js';
-import { Range } from '../../../common/core/range.js';
-import { LengthObj } from '../../../common/model/bracketPairsTextModelPart/bracketPairsTree/length.js';
 export function joinCombine(arr1, arr2, keySelector, combine) {
     if (arr1.length === 0) {
         return arr2;
@@ -97,7 +93,7 @@ export class ObservableElementSizeObserver extends Disposable {
         }
     }
 }
-export function animatedObservable(targetWindow, base, store) {
+export function animatedObservable(base, store) {
     let targetVal = base.get();
     let startVal = targetVal;
     let curVal = targetVal;
@@ -116,7 +112,7 @@ export function animatedObservable(targetWindow, base, store) {
     }, (reader, s) => {
         /** @description update value */
         if (animationFrame !== undefined) {
-            targetWindow.cancelAnimationFrame(animationFrame);
+            cancelAnimationFrame(animationFrame);
             animationFrame = undefined;
         }
         startVal = curVal;
@@ -128,7 +124,7 @@ export function animatedObservable(targetWindow, base, store) {
         const passedMs = Date.now() - animationStartMs;
         curVal = Math.floor(easeOutExpo(passedMs, startVal, targetVal - startVal, durationMs));
         if (passedMs < durationMs) {
-            animationFrame = targetWindow.requestAnimationFrame(update);
+            animationFrame = requestAnimationFrame(update);
         }
         else {
             curVal = targetVal;
@@ -208,7 +204,7 @@ export function readHotReloadableExport(value, reader) {
 }
 export function observeHotReloadableExports(values, reader) {
     if (isHotReloadEnabled()) {
-        const o = observableSignalFromEvent('reload', event => registerHotReloadHandler(({ oldExports }) => {
+        const o = observableSignalFromEvent('reload', event => registerHotReloadHandler(oldExports => {
             if (![...Object.values(oldExports)].some(v => values.includes(v))) {
                 return undefined;
             }
@@ -220,46 +216,39 @@ export function observeHotReloadableExports(values, reader) {
         o.read(reader);
     }
 }
-export function applyViewZones(editor, viewZones, setIsUpdating, zoneIds) {
+export function applyViewZones(editor, viewZones, setIsUpdating) {
     const store = new DisposableStore();
     const lastViewZoneIds = [];
-    store.add(autorunWithStore((reader, store) => {
+    store.add(autorun(reader => {
         /** @description applyViewZones */
         const curViewZones = viewZones.read(reader);
         const viewZonIdsPerViewZone = new Map();
         const viewZoneIdPerOnChangeObservable = new Map();
-        // Add/remove view zones
         if (setIsUpdating) {
             setIsUpdating(true);
         }
         editor.changeViewZones(a => {
             for (const id of lastViewZoneIds) {
                 a.removeZone(id);
-                zoneIds === null || zoneIds === void 0 ? void 0 : zoneIds.delete(id);
             }
             lastViewZoneIds.length = 0;
             for (const z of curViewZones) {
                 const id = a.addZone(z);
-                if (z.setZoneId) {
-                    z.setZoneId(id);
-                }
                 lastViewZoneIds.push(id);
-                zoneIds === null || zoneIds === void 0 ? void 0 : zoneIds.add(id);
                 viewZonIdsPerViewZone.set(z, id);
             }
         });
         if (setIsUpdating) {
             setIsUpdating(false);
         }
-        // Layout zone on change
         store.add(autorunHandleChanges({
             createEmptyChangeSummary() {
-                return { zoneIds: [] };
+                return [];
             },
             handleChange(context, changeSummary) {
                 const id = viewZoneIdPerOnChangeObservable.get(context.changedObservable);
                 if (id !== undefined) {
-                    changeSummary.zoneIds.push(id);
+                    changeSummary.push(id);
                 }
                 return true;
             },
@@ -274,7 +263,7 @@ export function applyViewZones(editor, viewZones, setIsUpdating, zoneIds) {
             if (setIsUpdating) {
                 setIsUpdating(true);
             }
-            editor.changeViewZones(a => { for (const id of changeSummary.zoneIds) {
+            editor.changeViewZones(a => { for (const id of changeSummary) {
                 a.layoutZone(id);
             } });
             if (setIsUpdating) {
@@ -290,7 +279,6 @@ export function applyViewZones(editor, viewZones, setIsUpdating, zoneIds) {
             editor.changeViewZones(a => { for (const id of lastViewZoneIds) {
                 a.removeZone(id);
             } });
-            zoneIds === null || zoneIds === void 0 ? void 0 : zoneIds.clear();
             if (setIsUpdating) {
                 setIsUpdating(false);
             }
@@ -302,61 +290,4 @@ export class DisposableCancellationTokenSource extends CancellationTokenSource {
     dispose() {
         super.dispose(true);
     }
-}
-export function translatePosition(posInOriginal, mappings) {
-    const mapping = findLast(mappings, m => m.original.startLineNumber <= posInOriginal.lineNumber);
-    if (!mapping) {
-        // No changes before the position
-        return Range.fromPositions(posInOriginal);
-    }
-    if (mapping.original.endLineNumberExclusive <= posInOriginal.lineNumber) {
-        const newLineNumber = posInOriginal.lineNumber - mapping.original.endLineNumberExclusive + mapping.modified.endLineNumberExclusive;
-        return Range.fromPositions(new Position(newLineNumber, posInOriginal.column));
-    }
-    if (!mapping.innerChanges) {
-        // Only for legacy algorithm
-        return Range.fromPositions(new Position(mapping.modified.startLineNumber, 1));
-    }
-    const innerMapping = findLast(mapping.innerChanges, m => m.originalRange.getStartPosition().isBeforeOrEqual(posInOriginal));
-    if (!innerMapping) {
-        const newLineNumber = posInOriginal.lineNumber - mapping.original.startLineNumber + mapping.modified.startLineNumber;
-        return Range.fromPositions(new Position(newLineNumber, posInOriginal.column));
-    }
-    if (innerMapping.originalRange.containsPosition(posInOriginal)) {
-        return innerMapping.modifiedRange;
-    }
-    else {
-        const l = lengthBetweenPositions(innerMapping.originalRange.getEndPosition(), posInOriginal);
-        return Range.fromPositions(addLength(innerMapping.modifiedRange.getEndPosition(), l));
-    }
-}
-function lengthBetweenPositions(position1, position2) {
-    if (position1.lineNumber === position2.lineNumber) {
-        return new LengthObj(0, position2.column - position1.column);
-    }
-    else {
-        return new LengthObj(position2.lineNumber - position1.lineNumber, position2.column - 1);
-    }
-}
-function addLength(position, length) {
-    if (length.lineCount === 0) {
-        return new Position(position.lineNumber, position.column + length.columnCount);
-    }
-    else {
-        return new Position(position.lineNumber + length.lineCount, length.columnCount + 1);
-    }
-}
-export function bindContextKey(key, service, computeValue) {
-    const boundKey = key.bindTo(service);
-    return autorunOpts({ debugName: () => `Set Context Key "${key.key}"` }, reader => {
-        boundKey.set(computeValue(reader));
-    });
-}
-export function filterWithPrevious(arr, filter) {
-    let prev;
-    return arr.filter(cur => {
-        const result = filter(cur, prev);
-        prev = cur;
-        return result;
-    });
 }

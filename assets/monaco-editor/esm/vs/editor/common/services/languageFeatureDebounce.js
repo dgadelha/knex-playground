@@ -18,7 +18,7 @@ import { IEnvironmentService } from '../../../platform/environment/common/enviro
 import { registerSingleton } from '../../../platform/instantiation/common/extensions.js';
 import { createDecorator } from '../../../platform/instantiation/common/instantiation.js';
 import { ILogService } from '../../../platform/log/common/log.js';
-import { matchesScheme } from '../../../base/common/network.js';
+import { matchesScheme } from '../../../platform/opener/common/opener.js';
 export const ILanguageFeatureDebounceService = createDecorator('ILanguageFeatureDebounceService');
 var IdentityHash;
 (function (IdentityHash) {
@@ -102,7 +102,7 @@ let LanguageFeatureDebounceService = class LanguageFeatureDebounceService {
     for(feature, name, config) {
         var _a, _b, _c;
         const min = (_a = config === null || config === void 0 ? void 0 : config.min) !== null && _a !== void 0 ? _a : 50;
-        const max = (_b = config === null || config === void 0 ? void 0 : config.max) !== null && _b !== void 0 ? _b : min ** 2;
+        const max = (_b = config === null || config === void 0 ? void 0 : config.max) !== null && _b !== void 0 ? _b : Math.pow(min, 2);
         const extra = (_c = config === null || config === void 0 ? void 0 : config.key) !== null && _c !== void 0 ? _c : undefined;
         const key = `${IdentityHash.of(feature)},${min}${extra ? ',' + extra : ''}`;
         let info = this._data.get(key);

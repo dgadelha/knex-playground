@@ -315,10 +315,6 @@ FoldingRangeKind.Imports = new FoldingRangeKind('imports');
  * The value of the kind is 'region'.
  */
 FoldingRangeKind.Region = new FoldingRangeKind('region');
-export var NewSymbolNameTag;
-(function (NewSymbolNameTag) {
-    NewSymbolNameTag[NewSymbolNameTag["AIGenerated"] = 1] = "AIGenerated";
-})(NewSymbolNameTag || (NewSymbolNameTag = {}));
 /**
  * @internal
  */
@@ -369,8 +365,3 @@ export class LazyTokenizationSupport {
  * @internal
  */
 export const TokenizationRegistry = new TokenizationRegistryImpl();
-export var InlineEditTriggerKind;
-(function (InlineEditTriggerKind) {
-    InlineEditTriggerKind[InlineEditTriggerKind["Invoke"] = 0] = "Invoke";
-    InlineEditTriggerKind[InlineEditTriggerKind["Automatic"] = 1] = "Automatic";
-})(InlineEditTriggerKind || (InlineEditTriggerKind = {}));

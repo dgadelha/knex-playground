@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var MarkerController_1;
 import { Codicon } from '../../../../base/common/codicons.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
@@ -114,31 +123,33 @@ let MarkerController = MarkerController_1 = class MarkerController {
             }
         }
     }
-    async nagivate(next, multiFile) {
+    nagivate(next, multiFile) {
         var _a, _b;
-        if (this._editor.hasModel()) {
-            const model = this._getOrCreateModel(multiFile ? undefined : this._editor.getModel().uri);
-            model.move(next, this._editor.getModel(), this._editor.getPosition());
-            if (!model.selected) {
-                return;
-            }
-            if (model.selected.marker.resource.toString() !== this._editor.getModel().uri.toString()) {
-                // show in different editor
-                this._cleanUp();
-                const otherEditor = await this._editorService.openCodeEditor({
-                    resource: model.selected.marker.resource,
-                    options: { pinned: false, revealIfOpened: true, selectionRevealType: 2 /* TextEditorSelectionRevealType.NearTop */, selection: model.selected.marker }
-                }, this._editor);
-                if (otherEditor) {
-                    (_a = MarkerController_1.get(otherEditor)) === null || _a === void 0 ? void 0 : _a.close();
-                    (_b = MarkerController_1.get(otherEditor)) === null || _b === void 0 ? void 0 : _b.nagivate(next, multiFile);
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._editor.hasModel()) {
+                const model = this._getOrCreateModel(multiFile ? undefined : this._editor.getModel().uri);
+                model.move(next, this._editor.getModel(), this._editor.getPosition());
+                if (!model.selected) {
+                    return;
+                }
+                if (model.selected.marker.resource.toString() !== this._editor.getModel().uri.toString()) {
+                    // show in different editor
+                    this._cleanUp();
+                    const otherEditor = yield this._editorService.openCodeEditor({
+                        resource: model.selected.marker.resource,
+                        options: { pinned: false, revealIfOpened: true, selectionRevealType: 2 /* TextEditorSelectionRevealType.NearTop */, selection: model.selected.marker }
+                    }, this._editor);
+                    if (otherEditor) {
+                        (_a = MarkerController_1.get(otherEditor)) === null || _a === void 0 ? void 0 : _a.close();
+                        (_b = MarkerController_1.get(otherEditor)) === null || _b === void 0 ? void 0 : _b.nagivate(next, multiFile);
+                    }
+                }
+                else {
+                    // show in this editor
+                    this._widget.showAtMarker(model.selected.marker, model.selected.index, model.selected.total);
                 }
             }
-            else {
-                // show in this editor
-                this._widget.showAtMarker(model.selected.marker, model.selected.index, model.selected.total);
-            }
-        }
+        });
     }
 };
 MarkerController.ID = 'editor.contrib.markerController';
@@ -155,11 +166,13 @@ class MarkerNavigationAction extends EditorAction {
         this._next = _next;
         this._multiFile = _multiFile;
     }
-    async run(_accessor, editor) {
+    run(_accessor, editor) {
         var _a;
-        if (editor.hasModel()) {
-            (_a = MarkerController.get(editor)) === null || _a === void 0 ? void 0 : _a.nagivate(this._next, this._multiFile);
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            if (editor.hasModel()) {
+                (_a = MarkerController.get(editor)) === null || _a === void 0 ? void 0 : _a.nagivate(this._next, this._multiFile);
+            }
+        });
     }
 }
 export class NextMarkerAction extends MarkerNavigationAction {

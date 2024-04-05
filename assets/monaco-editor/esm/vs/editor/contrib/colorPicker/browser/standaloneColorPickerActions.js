@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { EditorAction, EditorAction2, registerEditorAction } from '../../../browser/editorExtensions.js';
-import { localize, localize2 } from '../../../../nls.js';
+import { localize } from '../../../../nls.js';
 import { StandaloneColorPickerController } from './standaloneColorPickerWidget.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { MenuId, registerAction2 } from '../../../../platform/actions/common/actions.js';
@@ -13,8 +13,9 @@ export class ShowOrFocusStandaloneColorPicker extends EditorAction2 {
         super({
             id: 'editor.action.showOrFocusStandaloneColorPicker',
             title: {
-                ...localize2('showOrFocusStandaloneColorPicker', "Show or Focus Standalone Color Picker"),
+                value: localize('showOrFocusStandaloneColorPicker', "Show or Focus Standalone Color Picker"),
                 mnemonicTitle: localize({ key: 'mishowOrFocusStandaloneColorPicker', comment: ['&& denotes a mnemonic'] }, "&&Show or Focus Standalone Color Picker"),
+                original: 'Show or Focus Standalone Color Picker',
             },
             precondition: undefined,
             menu: [

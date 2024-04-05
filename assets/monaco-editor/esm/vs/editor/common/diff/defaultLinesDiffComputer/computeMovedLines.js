@@ -23,21 +23,11 @@ export function computeMovedLines(changes, originalLines, modifiedLines, hashedO
     moves = joinCloseConsecutiveMoves(moves);
     // Ignore too short moves
     moves = moves.filter(current => {
-        const lines = current.original.toOffsetRange().slice(originalLines).map(l => l.trim());
-        const originalText = lines.join('\n');
-        return originalText.length >= 15 && countWhere(lines, l => l.length >= 2) >= 2;
+        const originalText = current.original.toOffsetRange().slice(originalLines).map(l => l.trim()).join('\n');
+        return originalText.length >= 10;
     });
     moves = removeMovesInSameDiff(changes, moves);
     return moves;
-}
-function countWhere(arr, predicate) {
-    let count = 0;
-    for (const t of arr) {
-        if (predicate(t)) {
-            count++;
-        }
-    }
-    return count;
 }
 function computeMovesFromSimpleDeletionsToSimpleInsertions(changes, originalLines, modifiedLines, timeout) {
     const moves = [];
@@ -236,9 +226,9 @@ function joinCloseConsecutiveMoves(moves) {
 function removeMovesInSameDiff(changes, moves) {
     const changesMonotonous = new MonotonousArray(changes);
     moves = moves.filter(m => {
-        const diffBeforeEndOfMoveOriginal = changesMonotonous.findLastMonotonous(c => c.original.startLineNumber < m.original.endLineNumberExclusive)
+        const diffBeforeEndOfMoveOriginal = changesMonotonous.findLastMonotonous(c => c.original.endLineNumberExclusive < m.original.endLineNumberExclusive)
             || new LineRangeMapping(new LineRange(1, 1), new LineRange(1, 1));
-        const diffBeforeEndOfMoveModified = findLastMonotonous(changes, c => c.modified.startLineNumber < m.modified.endLineNumberExclusive);
+        const diffBeforeEndOfMoveModified = findLastMonotonous(changes, c => c.modified.endLineNumberExclusive < m.modified.endLineNumberExclusive);
         const differentDiffs = diffBeforeEndOfMoveOriginal !== diffBeforeEndOfMoveModified;
         return differentDiffs;
     });

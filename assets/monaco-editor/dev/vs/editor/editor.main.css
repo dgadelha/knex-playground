@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/vscode/blob/main/LICENSE.txt
  *-----------------------------------------------------------*/
@@ -65,7 +65,7 @@
 .monaco-action-bar .action-item.disabled .action-label,
 .monaco-action-bar .action-item.disabled .action-label::before,
 .monaco-action-bar .action-item.disabled .action-label:hover {
-	color: var(--vscode-disabledForeground);
+	opacity: 0.6;
 }
 
 /* Vertical actions */
@@ -238,8 +238,6 @@
 	border: 1px solid var(--vscode-button-border, transparent);
 	border-left-width: 0 !important;
 	border-radius: 0 2px 2px 0;
-	display: flex;
-	align-items: center;
 }
 
 .monaco-button-dropdown > .monaco-button.monaco-text-button {
@@ -766,11 +764,6 @@
 	opacity: 0.5;
 }
 
-.monaco-icon-label > .monaco-icon-label-container > .monaco-icon-suffix-container > .label-suffix {
-	opacity: .7;
-	white-space: pre;
-}
-
 .monaco-icon-label > .monaco-icon-label-container > .monaco-icon-description-container > .label-description {
 	opacity: .7;
 	margin-left: 0.5em;
@@ -1016,12 +1009,6 @@
 	touch-action: none;
 }
 
-/* Make sure the scrollbar renders above overlays (sticky scroll) */
-.monaco-list .monaco-scrollable-element > .scrollbar.vertical,
-.monaco-pane-view > .monaco-split-view2.vertical > .monaco-scrollable-element > .scrollbar.vertical {
-	z-index: 14;
-}
-
 /* for OS X ballistic scrolling */
 .monaco-list-row.scrolling {
 	display: none !important;
@@ -1080,13 +1067,13 @@
 
 .monaco-progress-container {
 	width: 100%;
-	height: 2px;
+	height: 5px;
 	overflow: hidden; /* keep progress bit in bounds */
 }
 
 .monaco-progress-container .progress-bit {
 	width: 2%;
-	height: 2px;
+	height: 5px;
 	position: absolute;
 	left: 0;
 	display: none;
@@ -1700,19 +1687,6 @@
 	background-size: 16px !important;
 }
 
-.monaco-action-bar .checkbox-action-item {
-	display: flex;
-	align-items: center;
-}
-
-.monaco-action-bar .checkbox-action-item > .monaco-custom-toggle.monaco-checkbox {
-	margin-right: 4px;
-}
-
-.monaco-action-bar .checkbox-action-item > .checkbox-label {
-	font-size: 12px;
-}
-
 /* hide check when unchecked */
 .monaco-custom-toggle.monaco-checkbox:not(.checked)::before {
 	visibility: hidden;
@@ -1861,51 +1835,6 @@
 
 .monaco-tree-type-filter-actionbar .monaco-action-bar .action-label {
 	padding: 2px;
-}
-
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container{
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 0;
-	z-index: 13; /* Settings editor uses z-index: 12 */
-
-	/* TODO@benibenj temporary solution, all lists should provide their background */
-	background-color: var(--vscode-sideBar-background);
-}
-
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container .monaco-tree-sticky-row.monaco-list-row{
-	position: absolute;
-	width: 100%;
-	opacity: 1 !important; /* Settings editor uses opacity < 1 */
-	overflow: hidden;
-
-	/* TODO@benibenj temporary solution, all lists should provide their background */
-	background-color: var(--vscode-sideBar-background);
-}
-
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container .monaco-tree-sticky-row:hover{
-	background-color: var(--vscode-list-hoverBackground) !important;
-	cursor: pointer;
-}
-
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container.empty,
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container.empty .monaco-tree-sticky-container-shadow {
-	display: none;
-}
-
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container .monaco-tree-sticky-container-shadow{
-	position: absolute;
-	bottom: -3px;
-	left: 0px;
-	height: 3px;
-	width: 100%;
-	box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px inset;
-}
-
-.monaco-list .monaco-scrollable-element .monaco-tree-sticky-container[tabindex="0"]:focus{
-	outline: none;
 }
 
 /*---------------------------------------------------------------------------------------------
@@ -2427,57 +2356,53 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-.monaco-component.diff-review {
-	user-select: none;
-	-webkit-user-select: none;
-	z-index: 99;
-}
-
-.monaco-diff-editor .diff-review {
-	position: absolute;
-
-}
-
-.monaco-component.diff-review .diff-review-line-number {
+.monaco-diff-editor .diff-review-line-number {
 	text-align: right;
 	display: inline-block;
 	color: var(--vscode-editorLineNumber-foreground);
 }
 
-.monaco-component.diff-review .diff-review-summary {
+.monaco-diff-editor .diff-review {
+	position: absolute;
+	user-select: none;
+	-webkit-user-select: none;
+	z-index: 99;
+}
+
+.monaco-diff-editor .diff-review-summary {
 	padding-left: 10px;
 }
 
-.monaco-component.diff-review .diff-review-shadow {
+.monaco-diff-editor .diff-review-shadow {
 	position: absolute;
 	box-shadow: var(--vscode-scrollbar-shadow) 0 -6px 6px -6px inset;
 }
 
-.monaco-component.diff-review .diff-review-row {
+.monaco-diff-editor .diff-review-row {
 	white-space: pre;
 }
 
-.monaco-component.diff-review .diff-review-table {
+.monaco-diff-editor .diff-review-table {
 	display: table;
 	min-width: 100%;
 }
 
-.monaco-component.diff-review .diff-review-row {
+.monaco-diff-editor .diff-review-row {
 	display: table-row;
 	width: 100%;
 }
 
-.monaco-component.diff-review .diff-review-spacer {
+.monaco-diff-editor .diff-review-spacer {
 	display: inline-block;
 	width: 10px;
 	vertical-align: middle;
 }
 
-.monaco-component.diff-review .diff-review-spacer > .codicon {
+.monaco-diff-editor .diff-review-spacer > .codicon {
 	font-size: 9px !important;
 }
 
-.monaco-component.diff-review .diff-review-actions {
+.monaco-diff-editor .diff-review-actions {
 	display: inline-block;
 	position: absolute;
 	right: 10px;
@@ -2485,14 +2410,10 @@
 	z-index: 100;
 }
 
-.monaco-component.diff-review .diff-review-actions .action-label {
+.monaco-diff-editor .diff-review-actions .action-label {
 	width: 16px;
 	height: 16px;
 	margin: 2px 0;
-}
-
-.monaco-component.diff-review .revertButton {
-	cursor: pointer;
 }
 
 /*---------------------------------------------------------------------------------------------
@@ -2526,25 +2447,7 @@
 	background-clip: padding-box;
 	border-bottom: 2px solid transparent;
 	border-top: 4px solid transparent;
-	/*cursor: n-resize;*/
-}
-
-.monaco-editor.draggingUnchangedRegion.canMoveTop:not(.canMoveBottom) *,
-.monaco-editor .diff-hidden-lines .top.canMoveTop:not(.canMoveBottom),
-.monaco-editor .diff-hidden-lines .bottom.canMoveTop:not(.canMoveBottom) {
-	cursor: n-resize !important;
-}
-
-.monaco-editor.draggingUnchangedRegion:not(.canMoveTop).canMoveBottom *,
-.monaco-editor .diff-hidden-lines .top:not(.canMoveTop).canMoveBottom,
-.monaco-editor .diff-hidden-lines .bottom:not(.canMoveTop).canMoveBottom {
-	cursor: s-resize !important;
-}
-
-.monaco-editor.draggingUnchangedRegion.canMoveTop.canMoveBottom *,
-.monaco-editor .diff-hidden-lines .top.canMoveTop.canMoveBottom,
-.monaco-editor .diff-hidden-lines .bottom.canMoveTop.canMoveBottom {
-	cursor: ns-resize !important;
+	cursor: ns-resize;
 }
 
 .monaco-editor .diff-hidden-lines .top {
@@ -2578,7 +2481,6 @@
 	white-space: nowrap;
 
 	height: 24px;
-	box-shadow: inset 0 -5px 5px -7px var(--vscode-diffEditor-unchangedRegionShadow), inset 0 5px 5px -7px var(--vscode-diffEditor-unchangedRegionShadow);
 }
 
 .monaco-editor .diff-hidden-lines .center span.codicon {
@@ -2819,157 +2721,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-.monaco-workbench .workbench-hover {
-	position: relative;
-	font-size: 13px;
-	line-height: 19px;
-	/* Must be higher than sash's z-index and terminal canvases */
-	z-index: 40;
-	overflow: hidden;
-	max-width: 700px;
-	background: var(--vscode-editorHoverWidget-background);
-	border: 1px solid var(--vscode-editorHoverWidget-border);
-	border-radius: 3px;
-	color: var(--vscode-editorHoverWidget-foreground);
-	box-shadow: 0 2px 8px var(--vscode-widget-shadow);
-}
-
-.monaco-workbench .workbench-hover hr {
-	border-bottom: none;
-}
-
-.monaco-workbench .workbench-hover:not(.skip-fade-in) {
-	animation: fadein 100ms linear;
-}
-
-.monaco-workbench .workbench-hover.compact {
-	font-size: 12px;
-}
-
-.monaco-workbench .workbench-hover.compact .hover-contents {
-	padding: 2px 8px;
-}
-
-.monaco-workbench .workbench-hover-container.locked .workbench-hover {
-	outline: 1px solid var(--vscode-editorHoverWidget-border);
-}
-.monaco-workbench .workbench-hover-container.locked .workbench-hover:focus,
-.monaco-workbench .workbench-hover-lock:focus {
-	outline: 1px solid var(--vscode-focusBorder);
-}
-.monaco-workbench .workbench-hover-container.locked .workbench-hover-lock:hover {
-	background: var(--vscode-toolbar-hoverBackground);
-}
-
-.monaco-workbench .workbench-hover-pointer {
-	position: absolute;
-	/* Must be higher than workbench hover z-index */
-	z-index: 41;
-	pointer-events: none;
-}
-
-.monaco-workbench .workbench-hover-pointer:after {
-	content: '';
-	position: absolute;
-	width: 5px;
-	height: 5px;
-	background-color: var(--vscode-editorHoverWidget-background);
-	border-right: 1px solid var(--vscode-editorHoverWidget-border);
-	border-bottom: 1px solid var(--vscode-editorHoverWidget-border);
-}
-.monaco-workbench .locked .workbench-hover-pointer:after {
-	width: 4px;
-	height: 4px;
-	border-right-width: 2px;
-	border-bottom-width: 2px;
-}
-
-.monaco-workbench .workbench-hover-pointer.left   { left: -3px; }
-.monaco-workbench .workbench-hover-pointer.right  { right: 3px; }
-.monaco-workbench .workbench-hover-pointer.top    { top: -3px; }
-.monaco-workbench .workbench-hover-pointer.bottom { bottom: 3px; }
-
-.monaco-workbench .workbench-hover-pointer.left:after {
-	transform: rotate(135deg);
-}
-
-.monaco-workbench .workbench-hover-pointer.right:after {
-	transform: rotate(315deg);
-}
-
-.monaco-workbench .workbench-hover-pointer.top:after {
-	transform: rotate(225deg);
-}
-
-.monaco-workbench .workbench-hover-pointer.bottom:after {
-	transform: rotate(45deg);
-}
-
-.monaco-workbench .workbench-hover a {
-	color: var(--vscode-textLink-foreground);
-}
-
-.monaco-workbench .workbench-hover a:focus {
-	outline: 1px solid;
-	outline-offset: -1px;
-	text-decoration: underline;
-	outline-color: var(--vscode-focusBorder);
-}
-
-.monaco-workbench .workbench-hover a:hover,
-.monaco-workbench .workbench-hover a:active {
-	color: var(--vscode-textLink-activeForeground);
-}
-
-.monaco-workbench .workbench-hover code {
-	background: var(--vscode-textCodeBlock-background);
-}
-
-.monaco-workbench .workbench-hover .hover-row .actions {
-	background: var(--vscode-editorHoverWidget-statusBarBackground);
-}
-
-.monaco-workbench .workbench-hover.right-aligned {
-	/* The context view service wraps strangely when it's right up against the edge without this */
-	left: 1px;
-}
-
-.monaco-workbench .workbench-hover.right-aligned .hover-row.status-bar .actions {
-	flex-direction: row-reverse;
-}
-
-.monaco-workbench .workbench-hover.right-aligned .hover-row.status-bar .actions .action-container {
-	margin-right: 0;
-	margin-left: 16px;
-}
-
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-.monaco-editor .rendered-markdown kbd {
-	background-color: var(--vscode-keybindingLabel-background);
-	color: var(--vscode-keybindingLabel-foreground);
-	border-style: solid;
-	border-width: 1px;
-	border-radius: 3px;
-	border-color: var(--vscode-keybindingLabel-border);
-	border-bottom-color: var(--vscode-keybindingLabel-bottomBorder);
-	box-shadow: inset 0 -1px 0 var(--vscode-widget-shadow);
-	vertical-align: middle;
-	padding: 1px 3px;
-}
-
-.rendered-markdown li:has(input[type=checkbox]) {
-	list-style-type: none;
-}
-
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
 /* -------------------- IE10 remove auto clear button -------------------- */
 
 ::-ms-clear {
@@ -3076,130 +2827,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-.monaco-component.multiDiffEditor {
-	background: var(--vscode-multiDiffEditor-background);
-	overflow-y: hidden;
-}
-
-.monaco-component.multiDiffEditor .focused {
-		--vscode-multiDiffEditor-border: var(--vscode-focusBorder);
-	}
-
-.monaco-component.multiDiffEditor .multiDiffEntry {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		overflow: hidden;
-	}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .collapse-button {
-			margin: 0 5px;
-			cursor: pointer;
-		}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .collapse-button a {
-				display: block;
-			}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header {
-			z-index: 1000;
-			background: var(--vscode-editor-background);
-
-
-		}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header:not(.collapsed) .header-content {
-				border-bottom: 1px solid var(--vscode-sideBarSectionHeader-border);
-			}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content {
-				margin: 8px 8px 0px 8px;
-				padding: 8px 5px;
-
-				border-top: 1px solid var(--vscode-multiDiffEditor-border);
-				border-right: 1px solid var(--vscode-multiDiffEditor-border);
-				border-left: 1px solid var(--vscode-multiDiffEditor-border);
-				border-top-left-radius: 2px;
-				border-top-right-radius: 2px;
-
-				display: flex;
-				align-items: center;
-
-				color: var(--vscode-foreground);
-				background: var(--vscode-multiDiffEditor-headerBackground);
-			}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content.shadow {
-					box-shadow: var(--vscode-scrollbar-shadow) 0px 6px 6px -6px;
-				}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content .file-path {
-					display: flex;
-					flex: 1;
-					min-width: 0;
-				}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content .file-path .title {
-						font-size: 14px;
-						line-height: 22px;
-					}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content .file-path .title.original {
-							flex: 1;
-							min-width: 0;
-							text-overflow: ellipsis;
-						}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content .file-path .status {
-						font-weight: 600;
-						opacity: 0.75;
-						margin: 0px 10px;
-						line-height: 22px;
-
-						/*
-							TODO@hediet: move colors from git extension to core!
-						&.renamed {
-							color: v ar(--vscode-gitDecoration-renamedResourceForeground);
-						}
-
-						&.deleted {
-							color: v ar(--vscode-gitDecoration-deletedResourceForeground);
-						}
-
-						&.added {
-							color: v ar(--vscode-gitDecoration-addedResourceForeground);
-						}
-						*/
-					}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .header .header-content .actions {
-					padding: 0 8px;
-				}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .editorParent {
-			flex: 1;
-			display: flex;
-			flex-direction: column;
-
-			margin-right: 8px;
-			margin-left: 8px;
-
-			border-right: 1px solid var(--vscode-multiDiffEditor-border);
-			border-left: 1px solid var(--vscode-multiDiffEditor-border);
-			border-bottom: 1px solid var(--vscode-multiDiffEditor-border);
-			border-radius: 2px;
-			overflow: hidden;
-		}
-
-.monaco-component.multiDiffEditor .multiDiffEntry .editorContainer {
-			flex: 1;
-		}
-
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
 .monaco-editor .selection-anchor {
 	background-color: #007ACC;
 	width: 2px !important;
@@ -3231,18 +2858,12 @@
 	cursor: pointer;
 }
 
-.monaco-editor .lightBulbWidget.codicon-light-bulb,
-.monaco-editor .lightBulbWidget.codicon-lightbulb-sparkle {
+.monaco-editor .lightBulbWidget.codicon-light-bulb {
 	color: var(--vscode-editorLightBulb-foreground);
 }
 
-.monaco-editor .lightBulbWidget.codicon-lightbulb-autofix,
-.monaco-editor .lightBulbWidget.codicon-lightbulb-sparkle-autofix {
+.monaco-editor .lightBulbWidget.codicon-lightbulb-autofix {
 	color: var(--vscode-editorLightBulbAutoFix-foreground, var(--vscode-editorLightBulb-foreground));
-}
-
-.monaco-editor .lightBulbWidget.codicon-sparkle-filled {
-	color: var(--vscode-editorLightBulbAi-foreground, var(--vscode-icon-foreground));
 }
 
 .monaco-editor .lightBulbWidget:before {
@@ -3281,24 +2902,24 @@
 	font-family: var(--vscode-editorCodeLens-fontFamily), var(--vscode-editorCodeLens-fontFamilyDefault);
 }
 
-.monaco-editor .codelens-decoration > span,
-.monaco-editor .codelens-decoration > a {
+.monaco-editor .codelens-decoration>span,
+.monaco-editor .codelens-decoration>a {
 	user-select: none;
 	-webkit-user-select: none;
 	white-space: nowrap;
 	vertical-align: sub;
 }
 
-.monaco-editor .codelens-decoration > a {
+.monaco-editor .codelens-decoration>a {
 	text-decoration: none;
 }
 
-.monaco-editor .codelens-decoration > a:hover {
+.monaco-editor .codelens-decoration>a:hover {
 	cursor: pointer;
 	color: var(--vscode-editorLink-activeForeground) !important;
 }
 
-.monaco-editor .codelens-decoration > a:hover .codicon {
+.monaco-editor .codelens-decoration>a:hover .codicon {
 	color: var(--vscode-editorLink-activeForeground) !important;
 }
 
@@ -3310,7 +2931,7 @@
 	font-size: var(--vscode-editorCodeLens-fontSize);
 }
 
-.monaco-editor .codelens-decoration > a:hover .codicon::before {
+.monaco-editor .codelens-decoration>a:hover .codicon::before {
 	cursor: pointer;
 }
 
@@ -3628,14 +3249,8 @@
 	padding: 0 4px;
 	box-sizing: border-box;
 	transform: translateY(calc(-100% - 10px)); /* shadow (10px) */
-	box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
-	color: var(--vscode-editorWidget-foreground);
-	border-left: 1px solid var(--vscode-widget-border);
-	border-right: 1px solid var(--vscode-widget-border);
-	border-bottom: 1px solid var(--vscode-widget-border);
 	border-bottom-left-radius: 4px;
 	border-bottom-right-radius: 4px;
-	background-color: var(--vscode-editorWidget-background);
 }
 
 .monaco-workbench.reduce-motion .monaco-editor .find-widget {
@@ -3659,11 +3274,9 @@
 	transform: translateY(0);
 }
 
-/* This outline-color rule is used to override the outline color for synthetic-focus find input. */
 .monaco-editor .find-widget .monaco-inputbox.synthetic-focus {
 	outline: 1px solid -webkit-focus-ring-color;
 	outline-offset: -1px;
-	outline-color: var(--vscode-focusBorder);
 }
 
 .monaco-editor .find-widget .monaco-inputbox .input {
@@ -3836,58 +3449,19 @@
 	display:none;
 }
 
-.monaco-editor .find-widget.no-results .matchesCount {
-	color: var(--vscode-errorForeground);
-}
-
 .monaco-editor .findMatch {
 	animation-duration: 0;
 	animation-name: inherit !important;
-	background-color: var(--vscode-editor-findMatchHighlightBackground);
-}
-
-.monaco-editor .currentFindMatch {
-	background-color: var(--vscode-editor-findMatchBackground);
-	border: 2px solid var(--vscode-editor-findMatchBorder);
-	padding: 1px;
-	box-sizing: border-box;
-}
-
-.monaco-editor .findScope {
-	background-color: var(--vscode-editor-findRangeHighlightBackground);
 }
 
 .monaco-editor .find-widget .monaco-sash {
 	left: 0 !important;
-	background-color: var(--vscode-editorWidget-resizeBorder, var(--vscode-editorWidget-border));
 }
 
 .monaco-editor.hc-black .find-widget .button:before {
 	position: relative;
 	top: 1px;
 	left: 2px;
-}
-
-/* Action bars */
-.monaco-editor .find-widget .button:not(.disabled):hover,
-.monaco-editor .find-widget .codicon-find-selection:hover {
-	background-color: var(--vscode-toolbar-hoverBackground) !important;
-}
-
-.monaco-editor.findMatch {
-	background-color: var(--vscode-editor-findMatchHighlightBackground);
-}
-
-.monaco-editor.currentFindMatch {
-	background-color: var(--vscode-editor-findMatchBackground);
-}
-
-.monaco-editor.findScope {
-	background-color: var(--vscode-editor-findRangeHighlightBackground);
-}
-
-.monaco-editor.findMatch {
-	background-color: var(--vscode-editorWidget-background);
 }
 
 /* Close button position. */
@@ -4018,12 +3592,15 @@
 	/** Hack to force underline to show **/
 	border-bottom: 1px solid transparent;
 	text-underline-position: under;
+	color: var(--vscode-textLink-foreground);
+}
+
+.monaco-editor .marker-widget .descriptioncontainer .message a.code-link > span {
 	color: var(--vscode-textLink-activeForeground);
 }
 
 .monaco-editor .marker-widget .descriptioncontainer .filename {
 	cursor: pointer;
-	color: var(--vscode-textLink-activeForeground);
 }
 
 /*---------------------------------------------------------------------------------------------
@@ -4257,80 +3834,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-.monaco-editor .inline-edit-remove {
-	background-color: var(--vscode-editorGhostText-background);
-	font-style: italic;
-	text-decoration: line-through;
-}
-
-.monaco-editor .inline-edit-remove.backgroundColoring {
-	background-color: var(--vscode-diffEditor-removedLineBackground);
-}
-
-.monaco-editor .inline-edit-hidden {
-	opacity: 0;
-	font-size: 0;
-}
-
-.monaco-editor .inline-edit-decoration, .monaco-editor .suggest-preview-text .inline-edit {
-	font-style: italic;
-}
-
-.monaco-editor .inline-completion-text-to-replace {
-	text-decoration: underline;
-	text-underline-position: under;
-}
-
-.monaco-editor .inline-edit-decoration,
-.monaco-editor .inline-edit-decoration-preview,
-.monaco-editor .suggest-preview-text .inline-edit {
-	color: var(--vscode-editorGhostText-foreground) !important;
-	background-color: var(--vscode-editorGhostText-background);
-	border: 1px solid var(--vscode-editorGhostText-border);
-}
-
-
-
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-.monaco-editor .inlineEditHints.withBorder {
-	z-index: 39;
-	color: var(--vscode-editorHoverWidget-foreground);
-	background-color: var(--vscode-editorHoverWidget-background);
-	border: 1px solid var(--vscode-editorHoverWidget-border);
-}
-
-.monaco-editor .inlineEditHints a {
-	color: var(--vscode-foreground);
-}
-
-.monaco-editor .inlineEditHints a:hover {
-	color: var(--vscode-foreground);
-}
-
-.monaco-editor .inlineEditHints .keybinding {
-	display: flex;
-	margin-left: 4px;
-	opacity: 0.6;
-}
-
-.monaco-editor .inlineEditHints .keybinding .monaco-keybinding-key {
-	font-size: 8px;
-	padding: 2px 3px;
-}
-
-.monaco-editor .inlineEditStatusBarItemLabel {
-	margin-right: 2px;
-}
-
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
 .inline-editor-progress-decoration {
 	display: inline-block;
 	width: 1em;
@@ -4381,6 +3884,24 @@
 .monaco-editor .detected-link-active {
 	cursor: pointer;
 	color: var(--vscode-editorLink-activeForeground) !important;
+}
+
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-editor .rendered-markdown kbd {
+	background-color: var(--vscode-keybindingLabel-background);
+	color: var(--vscode-keybindingLabel-foreground);
+	border-style: solid;
+	border-width: 1px;
+	border-radius: 3px;
+	border-color: var(--vscode-keybindingLabel-border);
+	border-bottom-color: var(--vscode-keybindingLabel-bottomBorder);
+	box-shadow: inset 0 -1px 0 var(--vscode-widget-shadow);
+	vertical-align: middle;
+	padding: 1px 3px;
 }
 
 /*---------------------------------------------------------------------------------------------
@@ -4716,7 +4237,6 @@
 .monaco-editor .rename-box .rename-input {
 	padding: 3px;
 	border-radius: 2px;
-	width: calc(100% - 8px); /* 4px padding on each side */
 }
 
 .monaco-editor .rename-box .rename-label {
@@ -4800,8 +4320,9 @@
 	text-align: right;
 }
 
-.monaco-editor .sticky-widget {
-	border-bottom: 1px solid var(--vscode-editorStickyScroll-border);
+.monaco-editor.hc-black .sticky-widget,
+.monaco-editor.hc-light .sticky-widget {
+	border-bottom: 1px solid var(--vscode-contrastBorder);
 }
 
 .monaco-editor .sticky-line-content:hover {
@@ -4811,7 +4332,7 @@
 
 .monaco-editor .sticky-widget {
 	width: 100%;
-	box-shadow: var(--vscode-editorStickyScroll-shadow) 0 3px 2px -2px;
+	box-shadow: var(--vscode-scrollbar-shadow) 0 3px 2px -2px;
 	z-index: 4;
 	background-color: var(--vscode-editorStickyScroll-background);
 }
@@ -4893,24 +4414,24 @@
 	margin-right: 0.3em;
 }
 
-.monaco-editor .suggest-widget.with-status-bar .monaco-list .monaco-list-row > .contents > .main > .right > .readMore,
-.monaco-editor .suggest-widget.with-status-bar .monaco-list .monaco-list-row.focused.string-label > .contents > .main > .right > .readMore {
+.monaco-editor .suggest-widget.with-status-bar .monaco-list .monaco-list-row>.contents>.main>.right>.readMore,
+.monaco-editor .suggest-widget.with-status-bar .monaco-list .monaco-list-row.focused.string-label>.contents>.main>.right>.readMore {
 	display: none;
 }
 
-.monaco-editor .suggest-widget.with-status-bar:not(.docs-side) .monaco-list .monaco-list-row:hover > .contents > .main > .right.can-expand-details > .details-label {
+.monaco-editor .suggest-widget.with-status-bar:not(.docs-side) .monaco-list .monaco-list-row:hover>.contents>.main>.right.can-expand-details>.details-label {
 	width: 100%;
 }
 
 /* Styles for Message element for when widget is loading or is empty */
 
-.monaco-editor .suggest-widget > .message {
+.monaco-editor .suggest-widget>.message {
 	padding-left: 22px;
 }
 
 /** Styles for the list element **/
 
-.monaco-editor .suggest-widget > .tree {
+.monaco-editor .suggest-widget>.tree {
 	height: 100%;
 	width: 100%;
 }
@@ -4942,14 +4463,14 @@
 	color: var(--vscode-editorSuggestWidget-selectedIconForeground);
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents {
 	flex: 1;
 	height: 100%;
 	overflow: hidden;
 	padding-left: 2px;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main {
 	display: flex;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -4957,12 +4478,12 @@
 	justify-content: space-between;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .left,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.left,
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right {
 	display: flex;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.focused) > .contents > .main .monaco-icon-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.focused)>.contents>.main .monaco-icon-label {
 	color: var(--vscode-editorSuggestWidget-foreground);
 }
 
@@ -4970,48 +4491,48 @@
 	font-weight: bold;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main .monaco-highlighted-label .highlight {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main .monaco-highlighted-label .highlight {
 	color: var(--vscode-editorSuggestWidget-highlightForeground);
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused > .contents > .main .monaco-highlighted-label .highlight {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused>.contents>.main .monaco-highlighted-label .highlight {
 	color: var(--vscode-editorSuggestWidget-focusHighlightForeground);
 }
 
 /** ReadMore Icon styles **/
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .header > .codicon-close,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .readMore::before {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.header>.codicon-close,
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.readMore::before {
 	color: inherit;
 	opacity: 1;
 	font-size: 14px;
 	cursor: pointer;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .header > .codicon-close {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.header>.codicon-close {
 	position: absolute;
 	top: 6px;
 	right: 2px;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .header > .codicon-close:hover,
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .readMore:hover {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.header>.codicon-close:hover,
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.readMore:hover {
 	opacity: 1;
 }
 
 /** signature, qualifier, type/details opacity **/
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .details-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.details-label {
 	opacity: 0.7;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .left > .signature-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.left>.signature-label {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	opacity: 0.6;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .left > .qualifier-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.left>.qualifier-label {
 	margin-left: 12px;
 	opacity: 0.4;
 	font-size: 85%;
@@ -5023,7 +4544,7 @@
 
 /** Type Info and icon next to the label in the focused completion item **/
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .details-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.details-label {
 	font-size: 85%;
 	margin-left: 1.1em;
 	overflow: hidden;
@@ -5031,58 +4552,58 @@
 	white-space: nowrap;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .details-label > .monaco-tokenized-source {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.details-label>.monaco-tokenized-source {
 	display: inline;
 }
 
 /** Details: if using CompletionItem#details, show on focus **/
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .details-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.details-label {
 	display: none;
 }
 
-.monaco-editor .suggest-widget:not(.shows-details) .monaco-list .monaco-list-row.focused > .contents > .main > .right > .details-label {
+.monaco-editor .suggest-widget:not(.shows-details) .monaco-list .monaco-list-row.focused>.contents>.main>.right>.details-label {
 	display: inline;
 }
 
 /** Details: if using CompletionItemLabel#details, always show **/
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.string-label) > .contents > .main > .right > .details-label,
-.monaco-editor .suggest-widget.docs-side .monaco-list .monaco-list-row.focused:not(.string-label) > .contents > .main > .right > .details-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.string-label)>.contents>.main>.right>.details-label,
+.monaco-editor .suggest-widget.docs-side .monaco-list .monaco-list-row.focused:not(.string-label)>.contents>.main>.right>.details-label {
 	display: inline;
 }
 
 /** Ellipsis on hover **/
 
-.monaco-editor .suggest-widget:not(.docs-side) .monaco-list .monaco-list-row.focused:hover > .contents > .main > .right.can-expand-details > .details-label {
+.monaco-editor .suggest-widget:not(.docs-side) .monaco-list .monaco-list-row.focused:hover>.contents>.main>.right.can-expand-details>.details-label {
 	width: calc(100% - 26px);
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .left {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.left {
 	flex-shrink: 1;
 	flex-grow: 1;
 	overflow: hidden;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .left > .monaco-icon-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.left>.monaco-icon-label {
 	flex-shrink: 0;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.string-label) > .contents > .main > .left > .monaco-icon-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row:not(.string-label)>.contents>.main>.left>.monaco-icon-label {
 	max-width: 100%;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.string-label > .contents > .main > .left > .monaco-icon-label {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.string-label>.contents>.main>.left>.monaco-icon-label {
 	flex-shrink: 1;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right {
 	overflow: hidden;
 	flex-shrink: 4;
 	max-width: 70%;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row > .contents > .main > .right > .readMore {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row>.contents>.main>.right>.readMore {
 	display: inline-block;
 	position: absolute;
 	right: 10px;
@@ -5093,23 +4614,23 @@
 
 /** Do NOT display ReadMore when docs is side/below **/
 
-.monaco-editor .suggest-widget.docs-side .monaco-list .monaco-list-row > .contents > .main > .right > .readMore {
+.monaco-editor .suggest-widget.docs-side .monaco-list .monaco-list-row>.contents>.main>.right>.readMore {
 	display: none !important;
 }
 
 /** Do NOT display ReadMore when using plain CompletionItemLabel (details/documentation might not be resolved) **/
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.string-label > .contents > .main > .right > .readMore {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.string-label>.contents>.main>.right>.readMore {
 	display: none;
 }
 
 /** Focused item can show ReadMore, but can't when docs is side/below **/
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused.string-label > .contents > .main > .right > .readMore {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused.string-label>.contents>.main>.right>.readMore {
 	display: inline-block;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused:hover > .contents > .main > .right > .readMore {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused:hover>.contents>.main>.right>.readMore {
 	visibility: visible;
 }
 
@@ -5120,7 +4641,7 @@
 	text-decoration: unset;
 }
 
-.monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-icon-label.deprecated > .monaco-icon-label-container > .monaco-icon-name-container {
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row .monaco-icon-label.deprecated>.monaco-icon-label-container>.monaco-icon-name-container {
 	text-decoration: line-through;
 }
 
@@ -5194,17 +4715,17 @@
 	display: none;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element {
+.monaco-editor .suggest-details>.monaco-scrollable-element {
 	flex: 1;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body {
 	box-sizing: border-box;
 	height: 100%;
 	width: 100%;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .header > .type {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.header>.type {
 	flex: 2;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -5214,55 +4735,55 @@
 	padding: 4px 0 12px 5px;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .header > .type.auto-wrap {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.header>.type.auto-wrap {
 	white-space: normal;
 	word-break: break-all;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs {
 	margin: 0;
 	padding: 4px 5px;
 	white-space: pre-wrap;
 }
 
-.monaco-editor .suggest-details.no-type > .monaco-scrollable-element > .body > .docs {
+.monaco-editor .suggest-details.no-type>.monaco-scrollable-element>.body>.docs {
 	margin-right: 24px;
 	overflow: hidden;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs {
 	padding: 0;
 	white-space: initial;
 	min-height: calc(1rem + 8px);
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs > div,
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs > span:not(:empty) {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs>div,
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs>span:not(:empty) {
 	padding: 4px 5px;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs > div > p:first-child {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs>div>p:first-child {
 	margin-top: 0;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs > div > p:last-child {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs>div>p:last-child {
 	margin-bottom: 0;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs .monaco-tokenized-source {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs .monaco-tokenized-source {
 	white-space: pre;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs .code {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs .code {
 	white-space: pre-wrap;
 	word-wrap: break-word;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > .docs.markdown-docs .codicon {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>.docs.markdown-docs .codicon {
 	vertical-align: sub;
 }
 
-.monaco-editor .suggest-details > .monaco-scrollable-element > .body > p:empty {
+.monaco-editor .suggest-details>.monaco-scrollable-element>.body>p:empty {
 	display: none;
 }
 
@@ -5687,22 +5208,17 @@
 	clip-path: inset(50%);
 }
 
-.monaco-editor, .monaco-diff-editor .synthetic-focus,
-.monaco-editor, .monaco-diff-editor [tabindex="0"]:focus,
-.monaco-editor, .monaco-diff-editor [tabindex="-1"]:focus,
-.monaco-editor, .monaco-diff-editor button:focus,
-.monaco-editor, .monaco-diff-editor input[type=button]:focus,
-.monaco-editor, .monaco-diff-editor input[type=checkbox]:focus,
-.monaco-editor, .monaco-diff-editor input[type=search]:focus,
-.monaco-editor, .monaco-diff-editor input[type=text]:focus,
-.monaco-editor, .monaco-diff-editor select:focus,
-.monaco-editor, .monaco-diff-editor textarea:focus {
-	outline-width: 1px;
-	outline-style: solid;
+/*.monaco-editor.vs [tabindex="0"]:focus {
+	outline: 1px solid rgba(0, 122, 204, 0.4);
 	outline-offset: -1px;
-	outline-color: var(--vscode-focusBorder);
-	opacity: 1
+	opacity: 1 !important;
 }
+
+.monaco-editor.vs-dark [tabindex="0"]:focus {
+	outline: 1px solid rgba(14, 99, 156, 0.6);
+	outline-offset: -1px;
+	opacity: 1 !important;
+}*/
 
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
@@ -5816,17 +5332,6 @@
 	text-overflow: ellipsis;
 }
 
-.action-widget .monaco-list-row.action .monaco-keybinding > .monaco-keybinding-key {
-		background-color: var(--vscode-keybindingLabel-background);
-		color: var(--vscode-keybindingLabel-foreground);
-		border-style: solid;
-		border-width: 1px;
-		border-radius: 3px;
-		border-color: var(--vscode-keybindingLabel-border);
-		border-bottom-color: var(--vscode-keybindingLabel-bottomBorder);
-		box-shadow: inset 0 -1px 0 var(--vscode-widget-shadow);
-}
-
 /* Action bar */
 
 .action-widget .action-widget-action-bar {
@@ -5895,10 +5400,6 @@
 	background-repeat: no-repeat;
 	background-position: 50%;
 	background-size: 16px;
-}
-
-.monaco-dropdown-with-default:hover {
-	background-color: var(--vscode-toolbar-hoverBackground);
 }
 
 .monaco-dropdown-with-default > .dropdown-action-container > .monaco-dropdown > .dropdown-label .codicon[class*='codicon-'] {
@@ -6080,6 +5581,11 @@
 
 .quick-input-progress.monaco-progress-container {
 	position: relative;
+}
+
+.quick-input-progress.monaco-progress-container,
+.quick-input-progress.monaco-progress-container .progress-bit {
+	height: 2px;
 }
 
 .quick-input-list {

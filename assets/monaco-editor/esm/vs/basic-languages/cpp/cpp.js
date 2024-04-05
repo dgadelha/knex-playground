@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/cpp/cpp.ts
 var conf = {
@@ -146,7 +145,6 @@ var language = {
     "where",
     "while",
     "_asm",
-    // reserved word with one underscores
     "_based",
     "_cdecl",
     "_declspec",
@@ -161,7 +159,6 @@ var language = {
     "_virtual_inheritance",
     "_w64",
     "__abstract",
-    // reserved word with two underscores
     "__alignof",
     "__asm",
     "__assume",
@@ -257,6 +254,7 @@ var language = {
     "%",
     "<<",
     ">>",
+    ">>>",
     "+=",
     "-=",
     "*=",
@@ -266,20 +264,17 @@ var language = {
     "^=",
     "%=",
     "<<=",
-    ">>="
+    ">>=",
+    ">>>="
   ],
-  // we include these common regular expressions
   symbols: /[=><!~?:&|+\-*\/\^%]+/,
   escapes: /\\(?:[0abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
   integersuffix: /([uU](ll|LL|l|L)|(ll|LL|l|L)?[uU]?)/,
   floatsuffix: /[fFlL]?/,
   encoding: /u|u8|U|L/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // C++ 11 Raw String
       [/@encoding?R\"(?:([^ ()\\\t]*))\(/, { token: "string.raw.begin", next: "@raw.$1" }],
-      // identifiers and keywords
       [
         /[a-zA-Z_]\w*/,
         {
@@ -289,18 +284,12 @@ var language = {
           }
         }
       ],
-      // The preprocessor checks must be before whitespace as they check /^\s*#/ which
-      // otherwise fails to match later after other whitespace has been removed.
-      // Inclusion
       [/^\s*#\s*include/, { token: "keyword.directive.include", next: "@include" }],
-      // Preprocessor directive
       [/^\s*#\s*\w+/, "keyword.directive"],
-      // whitespace
       { include: "@whitespace" },
-      // [[ attributes ]].
       [/\[\s*\[/, { token: "annotation", next: "@annotation" }],
-      // delimiters and operators
-      [/[{}()<>\[\]]/, "@brackets"],
+      [/[{}()\[\]]/, "@brackets"],
+      [/[<>](?!@symbols)/, "@brackets"],
       [
         /@symbols/,
         {
@@ -310,7 +299,6 @@ var language = {
           }
         }
       ],
-      // numbers
       [/\d*\d+[eE]([\-+]?\d+)?(@floatsuffix)/, "number.float"],
       [/\d*\.\d+([eE][\-+]?\d+)?(@floatsuffix)/, "number.float"],
       [/0[xX][0-9a-fA-F']*[0-9a-fA-F](@integersuffix)/, "number.hex"],
@@ -318,13 +306,9 @@ var language = {
       [/0[bB][0-1']*[0-1](@integersuffix)/, "number.binary"],
       [/\d[\d']*\d(@integersuffix)/, "number"],
       [/\d(@integersuffix)/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
-      // strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/"/, "string", "@string"],
-      // characters
       [/'[^\\']'/, "string"],
       [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
       [/'/, "string.invalid"]
@@ -341,12 +325,10 @@ var language = {
       [/\*\//, "comment", "@pop"],
       [/[\/*]/, "comment"]
     ],
-    //For use with continuous line comments
     linecomment: [
       [/.*[^\\]$/, "comment", "@pop"],
       [/[^]+/, "comment"]
     ],
-    //Identical copy of comment above, except for the addition of .doc
     doccomment: [
       [/[^\/*]+/, "comment.doc"],
       [/\*\//, "comment.doc", "@pop"],

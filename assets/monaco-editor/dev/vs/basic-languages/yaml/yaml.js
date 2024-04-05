@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/yaml/yaml", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -18,7 +18,7 @@ var moduleExports = (() => {
   }) : x)(function(x) {
     if (typeof require !== "undefined")
       return require.apply(this, arguments);
-    throw Error('Dynamic require of "' + x + '" is not supported');
+    throw new Error('Dynamic require of "' + x + '" is not supported');
   });
   var __commonJS = (cb, mod) => function __require2() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -36,14 +36,7 @@ var moduleExports = (() => {
     return to;
   };
   var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-    mod
-  ));
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target, mod));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/fillers/monaco-editor-core-amd.ts
@@ -120,18 +113,14 @@ var moduleExports = (() => {
       root: [
         { include: "@whitespace" },
         { include: "@comment" },
-        // Directive
         [/%[^ ]+.*$/, "meta.directive"],
-        // Document Markers
         [/---/, "operators.directivesEnd"],
         [/\.{3}/, "operators.documentEnd"],
-        // Block Structure Indicators
         [/[-?:](?= )/, "operators"],
         { include: "@anchor" },
         { include: "@tagHandle" },
         { include: "@flowCollections" },
         { include: "@blockStyle" },
-        // Numbers
         [/@numberInteger(?![ \t]*\S+)/, "number"],
         [/@numberFloat(?![ \t]*\S+)/, "number.float"],
         [/@numberOctal(?![ \t]*\S+)/, "number.octal"],
@@ -139,10 +128,8 @@ var moduleExports = (() => {
         [/@numberInfinity(?![ \t]*\S+)/, "number.infinity"],
         [/@numberNaN(?![ \t]*\S+)/, "number.nan"],
         [/@numberDate(?![ \t]*\S+)/, "number.date"],
-        // Key:Value pair
         [/(".*?"|'.*?'|[^#'"]*?)([ \t]*)(:)( |$)/, ["type", "white", "operators", "white"]],
         { include: "@flowScalars" },
-        // String nodes
         [
           /.+?(?=(\s+#|$))/,
           {
@@ -153,26 +140,18 @@ var moduleExports = (() => {
           }
         ]
       ],
-      // Flow Collection: Flow Mapping
       object: [
         { include: "@whitespace" },
         { include: "@comment" },
-        // Flow Mapping termination
         [/\}/, "@brackets", "@pop"],
-        // Flow Mapping delimiter
         [/,/, "delimiter.comma"],
-        // Flow Mapping Key:Value delimiter
         [/:(?= )/, "operators"],
-        // Flow Mapping Key:Value key
         [/(?:".*?"|'.*?'|[^,\{\[]+?)(?=: )/, "type"],
-        // Start Flow Style
         { include: "@flowCollections" },
         { include: "@flowScalars" },
-        // Scalar Data types
         { include: "@tagHandle" },
         { include: "@anchor" },
         { include: "@flowNumber" },
-        // Other value (keyword or string)
         [
           /[^\},]+/,
           {
@@ -183,22 +162,16 @@ var moduleExports = (() => {
           }
         ]
       ],
-      // Flow Collection: Flow Sequence
       array: [
         { include: "@whitespace" },
         { include: "@comment" },
-        // Flow Sequence termination
         [/\]/, "@brackets", "@pop"],
-        // Flow Sequence delimiter
         [/,/, "delimiter.comma"],
-        // Start Flow Style
         { include: "@flowCollections" },
         { include: "@flowScalars" },
-        // Scalar Data types
         { include: "@tagHandle" },
         { include: "@anchor" },
         { include: "@flowNumber" },
-        // Other value (keyword or string)
         [
           /[^\],]+/,
           {
@@ -209,10 +182,7 @@ var moduleExports = (() => {
           }
         ]
       ],
-      // First line of a Block Style
       multiString: [[/^( +).+$/, "string", "@multiStringContinued.$1"]],
-      // Further lines of a Block Style
-      //   Workaround for indentation detection
       multiStringContinued: [
         [
           /^( *).+$/,
@@ -225,14 +195,11 @@ var moduleExports = (() => {
         ]
       ],
       whitespace: [[/[ \t\r\n]+/, "white"]],
-      // Only line comments
       comment: [[/#.*$/, "comment"]],
-      // Start Flow Collections
       flowCollections: [
         [/\[/, "@brackets", "@array"],
         [/\{/, "@brackets", "@object"]
       ],
-      // Start Flow Scalars (quoted strings)
       flowScalars: [
         [/"([^"\\]|\\.)*$/, "string.invalid"],
         [/'([^'\\]|\\.)*$/, "string.invalid"],
@@ -245,9 +212,7 @@ var moduleExports = (() => {
         [/\\./, "string.escape.invalid"],
         [/"/, "string", "@pop"]
       ],
-      // Start Block Scalar
       blockStyle: [[/[>|][0-9]*[+-]?$/, "operators", "@multiString"]],
-      // Numbers in Flow Collections (terminate with ,]})
       flowNumber: [
         [/@numberInteger(?=[ \t]*[,\]\}])/, "number"],
         [/@numberFloat(?=[ \t]*[,\]\}])/, "number.float"],

@@ -22,7 +22,7 @@ import { escapeRegExpCharacters } from '../../../../base/common/strings.js';
 import { assertIsDefined } from '../../../../base/common/types.js';
 import './parameterHints.css';
 import { ILanguageService } from '../../../common/languages/language.js';
-import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
 import { Context } from './provideSignatureHelp.js';
 import * as nls from '../../../../nls.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';

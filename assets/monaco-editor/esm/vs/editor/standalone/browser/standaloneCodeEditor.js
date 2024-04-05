@@ -38,10 +38,7 @@ import { PLAINTEXT_LANGUAGE_ID } from '../../common/languages/modesRegistry.js';
 import { ILanguageConfigurationService } from '../../common/languages/languageConfigurationRegistry.js';
 import { ILanguageFeaturesService } from '../../common/services/languageFeatures.js';
 import { DiffEditorWidget } from '../../browser/widget/diffEditor/diffEditorWidget.js';
-import { IAccessibilitySignalService } from '../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
-import { mainWindow } from '../../../base/browser/window.js';
-import { setHoverDelegateFactory } from '../../../base/browser/ui/hover/hoverDelegate.js';
-import { WorkbenchHoverDelegate } from '../../../platform/hover/browser/hover.js';
+import { IAudioCueService } from '../../../platform/audioCues/browser/audioCueService.js';
 let LAST_GENERATED_COMMAND_ID = 0;
 let ariaDomNodeCreated = false;
 /**
@@ -56,14 +53,14 @@ function createAriaDomNode(parent) {
         }
         ariaDomNodeCreated = true;
     }
-    aria.setARIAContainer(parent || mainWindow.document.body);
+    aria.setARIAContainer(parent || document.body);
 }
 /**
  * A code editor to be used both by the standalone editor and the standalone diff editor.
  */
 let StandaloneCodeEditor = class StandaloneCodeEditor extends CodeEditorWidget {
     constructor(domElement, _options, instantiationService, codeEditorService, commandService, contextKeyService, keybindingService, themeService, notificationService, accessibilityService, languageConfigurationService, languageFeaturesService) {
-        const options = { ..._options };
+        const options = Object.assign({}, _options);
         options.ariaLabel = options.ariaLabel || StandaloneCodeEditorNLS.editorViewAccessibleLabel;
         options.ariaLabel = options.ariaLabel + ';' + (StandaloneCodeEditorNLS.accessibilityHelpMessage);
         super(domElement, options, {}, instantiationService, codeEditorService, commandService, contextKeyService, themeService, notificationService, accessibilityService, languageConfigurationService, languageFeaturesService);
@@ -74,7 +71,6 @@ let StandaloneCodeEditor = class StandaloneCodeEditor extends CodeEditorWidget {
             this._standaloneKeybindingService = null;
         }
         createAriaDomNode(options.ariaContainerElement);
-        setHoverDelegateFactory((placement, enableInstantHover) => instantiationService.createInstance(WorkbenchHoverDelegate, placement, enableInstantHover, {}));
     }
     addCommand(keybinding, handler, context) {
         if (!this._standaloneKeybindingService) {
@@ -133,7 +129,7 @@ let StandaloneCodeEditor = class StandaloneCodeEditor extends CodeEditorWidget {
             }
         }
         // Finally, register an internal editor action
-        const internalAction = new InternalEditorAction(uniqueId, label, label, undefined, precondition, (...args) => Promise.resolve(_descriptor.run(this, ...args)), this._contextKeyService);
+        const internalAction = new InternalEditorAction(uniqueId, label, label, precondition, (...args) => Promise.resolve(_descriptor.run(this, ...args)), this._contextKeyService);
         // Store it under the original id, such that trigger with the original id will work
         this._actions.set(id, internalAction);
         toDispose.add(toDisposable(() => {
@@ -172,7 +168,7 @@ StandaloneCodeEditor = __decorate([
 export { StandaloneCodeEditor };
 let StandaloneEditor = class StandaloneEditor extends StandaloneCodeEditor {
     constructor(domElement, _options, instantiationService, codeEditorService, commandService, contextKeyService, keybindingService, themeService, notificationService, configurationService, accessibilityService, modelService, languageService, languageConfigurationService, languageFeaturesService) {
-        const options = { ..._options };
+        const options = Object.assign({}, _options);
         updateConfigurationService(configurationService, options, false);
         const themeDomRegistration = themeService.registerEditorContainer(domElement);
         if (typeof options.theme === 'string') {
@@ -244,8 +240,8 @@ StandaloneEditor = __decorate([
 ], StandaloneEditor);
 export { StandaloneEditor };
 let StandaloneDiffEditor2 = class StandaloneDiffEditor2 extends DiffEditorWidget {
-    constructor(domElement, _options, instantiationService, contextKeyService, codeEditorService, themeService, notificationService, configurationService, contextMenuService, editorProgressService, clipboardService, accessibilitySignalService) {
-        const options = { ..._options };
+    constructor(domElement, _options, instantiationService, contextKeyService, codeEditorService, themeService, notificationService, configurationService, contextMenuService, editorProgressService, clipboardService, audioCueService) {
+        const options = Object.assign({}, _options);
         updateConfigurationService(configurationService, options, true);
         const themeDomRegistration = themeService.registerEditorContainer(domElement);
         if (typeof options.theme === 'string') {
@@ -254,7 +250,7 @@ let StandaloneDiffEditor2 = class StandaloneDiffEditor2 extends DiffEditorWidget
         if (typeof options.autoDetectHighContrast !== 'undefined') {
             themeService.setAutoDetectHighContrast(Boolean(options.autoDetectHighContrast));
         }
-        super(domElement, options, {}, contextKeyService, instantiationService, codeEditorService, accessibilitySignalService, editorProgressService);
+        super(domElement, options, {}, contextKeyService, instantiationService, codeEditorService, audioCueService, editorProgressService);
         this._configurationService = configurationService;
         this._standaloneThemeService = themeService;
         this._register(themeDomRegistration);
@@ -301,7 +297,7 @@ StandaloneDiffEditor2 = __decorate([
     __param(8, IContextMenuService),
     __param(9, IEditorProgressService),
     __param(10, IClipboardService),
-    __param(11, IAccessibilitySignalService)
+    __param(11, IAudioCueService)
 ], StandaloneDiffEditor2);
 export { StandaloneDiffEditor2 };
 /**

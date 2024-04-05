@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { equals } from '../../../../base/common/arrays.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
@@ -212,48 +221,50 @@ let OutlineModelService = class OutlineModelService {
     dispose() {
         this._disposables.dispose();
     }
-    async getOrCreate(textModel, token) {
-        const registry = this._languageFeaturesService.documentSymbolProvider;
-        const provider = registry.ordered(textModel);
-        let data = this._cache.get(textModel.id);
-        if (!data || data.versionId !== textModel.getVersionId() || !equals(data.provider, provider)) {
-            const source = new CancellationTokenSource();
-            data = {
-                versionId: textModel.getVersionId(),
-                provider,
-                promiseCnt: 0,
-                source,
-                promise: OutlineModel.create(registry, textModel, source.token),
-                model: undefined,
-            };
-            this._cache.set(textModel.id, data);
-            const now = Date.now();
-            data.promise.then(outlineModel => {
-                data.model = outlineModel;
-                this._debounceInformation.update(textModel, Date.now() - now);
-            }).catch(_err => {
-                this._cache.delete(textModel.id);
+    getOrCreate(textModel, token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const registry = this._languageFeaturesService.documentSymbolProvider;
+            const provider = registry.ordered(textModel);
+            let data = this._cache.get(textModel.id);
+            if (!data || data.versionId !== textModel.getVersionId() || !equals(data.provider, provider)) {
+                const source = new CancellationTokenSource();
+                data = {
+                    versionId: textModel.getVersionId(),
+                    provider,
+                    promiseCnt: 0,
+                    source,
+                    promise: OutlineModel.create(registry, textModel, source.token),
+                    model: undefined,
+                };
+                this._cache.set(textModel.id, data);
+                const now = Date.now();
+                data.promise.then(outlineModel => {
+                    data.model = outlineModel;
+                    this._debounceInformation.update(textModel, Date.now() - now);
+                }).catch(_err => {
+                    this._cache.delete(textModel.id);
+                });
+            }
+            if (data.model) {
+                // resolved -> return data
+                return data.model;
+            }
+            // increase usage counter
+            data.promiseCnt += 1;
+            const listener = token.onCancellationRequested(() => {
+                // last -> cancel provider request, remove cached promise
+                if (--data.promiseCnt === 0) {
+                    data.source.cancel();
+                    this._cache.delete(textModel.id);
+                }
             });
-        }
-        if (data.model) {
-            // resolved -> return data
-            return data.model;
-        }
-        // increase usage counter
-        data.promiseCnt += 1;
-        const listener = token.onCancellationRequested(() => {
-            // last -> cancel provider request, remove cached promise
-            if (--data.promiseCnt === 0) {
-                data.source.cancel();
-                this._cache.delete(textModel.id);
+            try {
+                return yield data.promise;
+            }
+            finally {
+                listener.dispose();
             }
         });
-        try {
-            return await data.promise;
-        }
-        finally {
-            listener.dispose();
-        }
     }
 };
 OutlineModelService = __decorate([

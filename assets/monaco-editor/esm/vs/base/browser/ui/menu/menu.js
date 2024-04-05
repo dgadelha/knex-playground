@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { isFirefox } from '../../browser.js';
 import { EventType as TouchEventType, Gesture } from '../../touch.js';
-import { $, addDisposableListener, append, clearNode, createStyleSheet, Dimension, EventHelper, EventType, getActiveElement, getWindow, isAncestor, isInShadowDOM } from '../../dom.js';
+import { $, addDisposableListener, append, clearNode, createStyleSheet, Dimension, EventHelper, EventType, getActiveElement, isAncestor, isInShadowDOM } from '../../dom.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { StandardMouseEvent } from '../../mouseEvent.js';
 import { ActionBar } from '../actionbar/actionbar.js';
@@ -46,17 +46,18 @@ export class Menu extends ActionBar {
         this.menuStyles = menuStyles;
         this.menuElement = menuElement;
         this.actionsList.tabIndex = 0;
+        this.menuDisposables = this._register(new DisposableStore());
         this.initializeOrUpdateStyleSheet(container, menuStyles);
         this._register(Gesture.addTarget(menuElement));
-        this._register(addDisposableListener(menuElement, EventType.KEY_DOWN, (e) => {
+        addDisposableListener(menuElement, EventType.KEY_DOWN, (e) => {
             const event = new StandardKeyboardEvent(e);
             // Stop tab navigation of menus
             if (event.equals(2 /* KeyCode.Tab */)) {
                 e.preventDefault();
             }
-        }));
+        });
         if (options.enableMnemonics) {
-            this._register(addDisposableListener(menuElement, EventType.KEY_DOWN, (e) => {
+            this.menuDisposables.add(addDisposableListener(menuElement, EventType.KEY_DOWN, (e) => {
                 const key = e.key.toLocaleLowerCase();
                 if (this.mnemonics.has(key)) {
                     EventHelper.stop(e, true);
@@ -162,23 +163,12 @@ export class Menu extends ActionBar {
             // We do this on the scroll element so the scroll bar doesn't dismiss the menu either
             e.preventDefault();
         }));
-        const window = getWindow(container);
         menuElement.style.maxHeight = `${Math.max(10, window.innerHeight - container.getBoundingClientRect().top - 35)}px`;
-        actions = actions.filter((a, idx) => {
+        actions = actions.filter(a => {
             var _a;
             if ((_a = options.submenuIds) === null || _a === void 0 ? void 0 : _a.has(a.id)) {
                 console.warn(`Found submenu cycle: ${a.id}`);
                 return false;
-            }
-            // Filter out consecutive or useless separators
-            if (a instanceof Separator) {
-                if (idx === actions.length - 1 || idx === 0) {
-                    return false;
-                }
-                const prevAction = actions[idx - 1];
-                if (prevAction instanceof Separator) {
-                    return false;
-                }
             }
             return true;
         });
@@ -254,7 +244,7 @@ export class Menu extends ActionBar {
             return new MenuSeparatorActionViewItem(options.context, action, { icon: true }, this.menuStyles);
         }
         else if (action instanceof SubmenuAction) {
-            const menuActionViewItem = new SubmenuMenuActionViewItem(action, action.actions, parentData, { ...options, submenuIds: new Set([...(options.submenuIds || []), action.id]) }, this.menuStyles);
+            const menuActionViewItem = new SubmenuMenuActionViewItem(action, action.actions, parentData, Object.assign(Object.assign({}, options), { submenuIds: new Set([...(options.submenuIds || []), action.id]) }), this.menuStyles);
             if (options.enableMnemonics) {
                 const mnemonic = menuActionViewItem.getMnemonic();
                 if (mnemonic && menuActionViewItem.isEnabled()) {
@@ -332,7 +322,7 @@ class BaseMenuActionViewItem extends BaseActionViewItem {
                 // => to get the Copy and Paste context menu actions working on Firefox,
                 // there should be no timeout here
                 if (isFirefox) {
-                    const mouseEvent = new StandardMouseEvent(getWindow(this.element), e);
+                    const mouseEvent = new StandardMouseEvent(e);
                     // Allowing right click to trigger the event causes the issue described below,
                     // but since the solution below does not work in FF, we must disable right click
                     if (mouseEvent.rightButton) {
@@ -647,7 +637,7 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
             this.submenuContainer.classList.add('menubar-menu-items-holder', 'context-view');
             // Set the top value of the menu container before construction
             // This allows the menu constructor to calculate the proper max height
-            const computedStyles = getWindow(this.parentData.parent.domNode).getComputedStyle(this.parentData.parent.domNode);
+            const computedStyles = getComputedStyle(this.parentData.parent.domNode);
             const paddingTop = parseFloat(computedStyles.paddingTop || '0') || 0;
             // this.submenuContainer.style.top = `${this.element.offsetTop - this.parentData.parent.scrollOffset - paddingTop}px`;
             this.submenuContainer.style.zIndex = '1';
@@ -664,7 +654,6 @@ class SubmenuMenuActionViewItem extends BaseMenuActionViewItem {
                 width: entryBox.width
             };
             const viewBox = this.submenuContainer.getBoundingClientRect();
-            const window = getWindow(this.element);
             const { top, left } = this.calculateSubmenuMenuLayout(new Dimension(window.innerWidth, window.innerHeight), Dimension.lift(viewBox), entryBoxUpdated, this.expandDirection);
             // subtract offsets caused by transform parent
             this.submenuContainer.style.left = `${left - viewBox.left}px`;
@@ -787,6 +776,10 @@ ${formatRule(Codicon.menuSubmenu)}
 
 .monaco-menu .monaco-action-bar .action-item.disabled {
 	cursor: default;
+}
+
+.monaco-menu .monaco-action-bar.animated .action-item.active {
+	transform: scale(1.272019649, 1.272019649); /* 1.272019649 = √φ */
 }
 
 .monaco-menu .monaco-action-bar .action-item .icon,

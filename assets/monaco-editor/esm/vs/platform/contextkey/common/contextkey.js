@@ -1433,7 +1433,7 @@ export class RawContextKey extends ContextKeyDefinedExpr {
         this._defaultValue = defaultValue;
         // collect all context keys into a central place
         if (typeof metaOrHide === 'object') {
-            RawContextKey._info.push({ ...metaOrHide, key });
+            RawContextKey._info.push(Object.assign(Object.assign({}, metaOrHide), { key }));
         }
         else if (metaOrHide !== true) {
             RawContextKey._info.push({ key, description: metaOrHide, type: defaultValue !== null && defaultValue !== undefined ? typeof defaultValue : undefined });

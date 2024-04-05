@@ -70,8 +70,6 @@ registerSimpleEditorSettingMigration('autoIndent', [[false, 'advanced'], [true, 
 registerSimpleEditorSettingMigration('matchBrackets', [[true, 'always'], [false, 'never']]);
 registerSimpleEditorSettingMigration('renderFinalNewline', [[true, 'on'], [false, 'off']]);
 registerSimpleEditorSettingMigration('cursorSmoothCaretAnimation', [[true, 'on'], [false, 'off']]);
-registerSimpleEditorSettingMigration('occurrencesHighlight', [[true, 'singleFile'], [false, 'off']]);
-registerSimpleEditorSettingMigration('wordBasedSuggestions', [[true, 'matchingDocuments'], [false, 'off']]);
 registerEditorSettingMigration('autoClosingBrackets', (value, read, write) => {
     if (value === false) {
         write('autoClosingBrackets', 'never');
@@ -165,36 +163,20 @@ registerEditorSettingMigration('experimental.stickyScroll.maxLineCount', (value,
     }
 });
 // Code Actions on Save
-registerEditorSettingMigration('codeActionsOnSave', (value, read, write) => {
-    if (value && typeof value === 'object') {
-        let toBeModified = false;
-        const newValue = {};
-        for (const entry of Object.entries(value)) {
-            if (typeof entry[1] === 'boolean') {
-                toBeModified = true;
-                newValue[entry[0]] = entry[1] ? 'explicit' : 'never';
-            }
-            else {
-                newValue[entry[0]] = entry[1];
-            }
-        }
-        if (toBeModified) {
-            write(`codeActionsOnSave`, newValue);
-        }
-    }
-});
-// Migrate Quick Fix Settings
-registerEditorSettingMigration('codeActionWidget.includeNearbyQuickfixes', (value, read, write) => {
-    if (typeof value === 'boolean') {
-        write('codeActionWidget.includeNearbyQuickfixes', undefined);
-        if (typeof read('codeActionWidget.includeNearbyQuickFixes') === 'undefined') {
-            write('codeActionWidget.includeNearbyQuickFixes', value);
-        }
-    }
-});
-// Migrate the lightbulb settings
-registerEditorSettingMigration('lightbulb.enabled', (value, read, write) => {
-    if (typeof value === 'boolean') {
-        write('lightbulb.enabled', value ? undefined : 'off');
-    }
-});
+// registerEditorSettingMigration('codeActionsOnSave', (value, read, write) => {
+// 	if (value && typeof value === 'object') {
+// 		let toBeModified = false;
+// 		const newValue = {} as any;
+// 		for (const entry of Object.entries(value)) {
+// 			if (typeof entry[1] === 'boolean') {
+// 				toBeModified = true;
+// 				newValue[entry[0]] = entry[1] ? 'explicit' : 'never';
+// 			} else {
+// 				newValue[entry[0]] = entry[1];
+// 			}
+// 		}
+// 		if (toBeModified) {
+// 			write(`codeActionsOnSave`, newValue);
+// 		}
+// 	}
+// });

@@ -8,17 +8,16 @@ import { EditorAction2 } from '../../editorExtensions.js';
 import { ICodeEditorService } from '../../services/codeEditorService.js';
 import { DiffEditorWidget } from './diffEditorWidget.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
-import { localize, localize2 } from '../../../../nls.js';
+import { localize } from '../../../../nls.js';
 import { Action2, MenuId, MenuRegistry, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { CommandsRegistry } from '../../../../platform/commands/common/commands.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { ContextKeyEqualsExpr, ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
-import './registrations.contribution.js';
 export class ToggleCollapseUnchangedRegions extends Action2 {
     constructor() {
         super({
             id: 'diffEditor.toggleCollapseUnchangedRegions',
-            title: localize2('toggleCollapseUnchangedRegions', 'Toggle Collapse Unchanged Regions'),
+            title: { value: localize('toggleCollapseUnchangedRegions', "Toggle Collapse Unchanged Regions"), original: 'Toggle Collapse Unchanged Regions' },
             icon: Codicon.map,
             toggled: ContextKeyExpr.has('config.diffEditor.hideUnchangedRegions.enabled'),
             precondition: ContextKeyExpr.has('isInDiffEditor'),
@@ -41,7 +40,7 @@ export class ToggleShowMovedCodeBlocks extends Action2 {
     constructor() {
         super({
             id: 'diffEditor.toggleShowMovedCodeBlocks',
-            title: localize2('toggleShowMovedCodeBlocks', 'Toggle Show Moved Code Blocks'),
+            title: { value: localize('toggleShowMovedCodeBlocks', "Toggle Show Moved Code Blocks"), original: 'Toggle Show Moved Code Blocks' },
             precondition: ContextKeyExpr.has('isInDiffEditor'),
         });
     }
@@ -56,7 +55,7 @@ export class ToggleUseInlineViewWhenSpaceIsLimited extends Action2 {
     constructor() {
         super({
             id: 'diffEditor.toggleUseInlineViewWhenSpaceIsLimited',
-            title: localize2('toggleUseInlineViewWhenSpaceIsLimited', 'Toggle Use Inline View When Space Is Limited'),
+            title: { value: localize('toggleUseInlineViewWhenSpaceIsLimited', "Toggle Use Inline View When Space Is Limited"), original: 'Toggle Use Inline View When Space Is Limited' },
             precondition: ContextKeyExpr.has('isInDiffEditor'),
         });
     }
@@ -90,12 +89,15 @@ MenuRegistry.appendMenuItem(MenuId.EditorTitle, {
     group: '1_diff',
     when: ContextKeyExpr.has('isInDiffEditor'),
 });
-const diffEditorCategory = localize2('diffEditor', "Diff Editor");
+const diffEditorCategory = {
+    value: localize('diffEditor', 'Diff Editor'),
+    original: 'Diff Editor',
+};
 export class SwitchSide extends EditorAction2 {
     constructor() {
         super({
             id: 'diffEditor.switchSide',
-            title: localize2('switchSide', 'Switch Side'),
+            title: { value: localize('switchSide', "Switch Side"), original: 'Switch Side' },
             icon: Codicon.arrowSwap,
             precondition: ContextKeyExpr.has('isInDiffEditor'),
             f1: true,
@@ -120,7 +122,7 @@ export class ExitCompareMove extends EditorAction2 {
     constructor() {
         super({
             id: 'diffEditor.exitCompareMove',
-            title: localize2('exitCompareMove', 'Exit Compare Move'),
+            title: { value: localize('exitCompareMove', "Exit Compare Move"), original: 'Exit Compare Move' },
             icon: Codicon.close,
             precondition: EditorContextKeys.comparingMovedCode,
             f1: false,
@@ -143,7 +145,7 @@ export class CollapseAllUnchangedRegions extends EditorAction2 {
     constructor() {
         super({
             id: 'diffEditor.collapseAllUnchangedRegions',
-            title: localize2('collapseAllUnchangedRegions', 'Collapse All Unchanged Regions'),
+            title: { value: localize('collapseAllUnchangedRegions', "Collapse All Unchanged Regions"), original: 'Collapse All Unchanged Regions' },
             icon: Codicon.fold,
             precondition: ContextKeyExpr.has('isInDiffEditor'),
             f1: true,
@@ -162,7 +164,7 @@ export class ShowAllUnchangedRegions extends EditorAction2 {
     constructor() {
         super({
             id: 'diffEditor.showAllUnchangedRegions',
-            title: localize2('showAllUnchangedRegions', 'Show All Unchanged Regions'),
+            title: { value: localize('showAllUnchangedRegions', "Show All Unchanged Regions"), original: 'Show All Unchanged Regions' },
             icon: Codicon.unfold,
             precondition: ContextKeyExpr.has('isInDiffEditor'),
             f1: true,
@@ -177,12 +179,15 @@ export class ShowAllUnchangedRegions extends EditorAction2 {
     }
 }
 registerAction2(ShowAllUnchangedRegions);
-const accessibleDiffViewerCategory = localize2('accessibleDiffViewer', "Accessible Diff Viewer");
+const accessibleDiffViewerCategory = {
+    value: localize('accessibleDiffViewer', 'Accessible Diff Viewer'),
+    original: 'Accessible Diff Viewer',
+};
 export class AccessibleDiffViewerNext extends Action2 {
     constructor() {
         super({
             id: AccessibleDiffViewerNext.id,
-            title: localize2('editor.action.accessibleDiffViewer.next', 'Go to Next Difference'),
+            title: { value: localize('editor.action.accessibleDiffViewer.next', "Go to Next Difference"), original: 'Go to Next Difference' },
             category: accessibleDiffViewerCategory,
             precondition: ContextKeyExpr.has('isInDiffEditor'),
             keybinding: {
@@ -212,7 +217,7 @@ export class AccessibleDiffViewerPrev extends Action2 {
     constructor() {
         super({
             id: AccessibleDiffViewerPrev.id,
-            title: localize2('editor.action.accessibleDiffViewer.prev', 'Go to Previous Difference'),
+            title: { value: localize('editor.action.accessibleDiffViewer.prev', "Go to Previous Difference"), original: 'Go to Previous Difference' },
             category: accessibleDiffViewerCategory,
             precondition: ContextKeyExpr.has('isInDiffEditor'),
             keybinding: {
@@ -229,8 +234,19 @@ export class AccessibleDiffViewerPrev extends Action2 {
 }
 AccessibleDiffViewerPrev.id = 'editor.action.accessibleDiffViewer.prev';
 export function findFocusedDiffEditor(accessor) {
+    var _a;
     const codeEditorService = accessor.get(ICodeEditorService);
     const diffEditors = codeEditorService.listDiffEditors();
+    const activeCodeEditor = (_a = codeEditorService.getFocusedCodeEditor()) !== null && _a !== void 0 ? _a : codeEditorService.getActiveCodeEditor();
+    if (!activeCodeEditor) {
+        return null;
+    }
+    for (let i = 0, len = diffEditors.length; i < len; i++) {
+        const diffEditor = diffEditors[i];
+        if (diffEditor.getModifiedEditor().getId() === activeCodeEditor.getId() || diffEditor.getOriginalEditor().getId() === activeCodeEditor.getId()) {
+            return diffEditor;
+        }
+    }
     const activeElement = getActiveElement();
     if (activeElement) {
         for (const d of diffEditors) {

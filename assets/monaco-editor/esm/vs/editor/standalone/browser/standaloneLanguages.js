@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { Color } from '../../../base/common/color.js';
 import { Range } from '../../common/core/range.js';
 import * as languages from '../../common/languages.js';
@@ -251,8 +260,8 @@ function createTokenizationSupportAdapter(languageId, provider) {
  * with a tokens provider set using `registerDocumentSemanticTokensProvider` or `registerDocumentRangeSemanticTokensProvider`.
  */
 export function registerTokensProviderFactory(languageId, factory) {
-    const adaptedFactory = new languages.LazyTokenizationSupport(async () => {
-        const result = await Promise.resolve(factory.create());
+    const adaptedFactory = new languages.LazyTokenizationSupport(() => __awaiter(this, void 0, void 0, function* () {
+        const result = yield Promise.resolve(factory.create());
         if (!result) {
             return null;
         }
@@ -260,7 +269,7 @@ export function registerTokensProviderFactory(languageId, factory) {
             return createTokenizationSupportAdapter(languageId, result);
         }
         return new MonarchTokenizer(StandaloneServices.get(ILanguageService), StandaloneServices.get(IStandaloneThemeService), languageId, compile(languageId, result), StandaloneServices.get(IConfigurationService));
-    });
+    }));
     return languages.TokenizationRegistry.registerFactory(languageId, adaptedFactory);
 }
 /**
@@ -307,13 +316,6 @@ export function registerReferenceProvider(languageSelector, provider) {
 export function registerRenameProvider(languageSelector, provider) {
     const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
     return languageFeaturesService.renameProvider.register(languageSelector, provider);
-}
-/**
- * Register a new symbol-name provider (e.g., when a symbol is being renamed, show new possible symbol-names)
- */
-export function registerNewSymbolNameProvider(languageSelector, provider) {
-    const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
-    return languageFeaturesService.newSymbolNamesProvider.register(languageSelector, provider);
 }
 /**
  * Register a signature help provider (used by e.g. parameter hints).
@@ -504,10 +506,6 @@ export function registerInlineCompletionsProvider(languageSelector, provider) {
     const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
     return languageFeaturesService.inlineCompletionsProvider.register(languageSelector, provider);
 }
-export function registerInlineEditProvider(languageSelector, provider) {
-    const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
-    return languageFeaturesService.inlineEditProvider.register(languageSelector, provider);
-}
 /**
  * Register an inlay hints provider.
  */
@@ -533,7 +531,6 @@ export function createMonacoLanguagesAPI() {
         setMonarchTokensProvider: setMonarchTokensProvider,
         registerReferenceProvider: registerReferenceProvider,
         registerRenameProvider: registerRenameProvider,
-        registerNewSymbolNameProvider: registerNewSymbolNameProvider,
         registerCompletionItemProvider: registerCompletionItemProvider,
         registerSignatureHelpProvider: registerSignatureHelpProvider,
         registerHoverProvider: registerHoverProvider,
@@ -556,7 +553,6 @@ export function createMonacoLanguagesAPI() {
         registerDocumentSemanticTokensProvider: registerDocumentSemanticTokensProvider,
         registerDocumentRangeSemanticTokensProvider: registerDocumentRangeSemanticTokensProvider,
         registerInlineCompletionsProvider: registerInlineCompletionsProvider,
-        registerInlineEditProvider: registerInlineEditProvider,
         registerInlayHintsProvider: registerInlayHintsProvider,
         // enums
         DocumentHighlightKind: standaloneEnums.DocumentHighlightKind,
@@ -570,9 +566,7 @@ export function createMonacoLanguagesAPI() {
         SignatureHelpTriggerKind: standaloneEnums.SignatureHelpTriggerKind,
         InlayHintKind: standaloneEnums.InlayHintKind,
         InlineCompletionTriggerKind: standaloneEnums.InlineCompletionTriggerKind,
-        InlineEditTriggerKind: standaloneEnums.InlineEditTriggerKind,
         CodeActionTriggerType: standaloneEnums.CodeActionTriggerType,
-        NewSymbolNameTag: standaloneEnums.NewSymbolNameTag,
         // classes
         FoldingRangeKind: languages.FoldingRangeKind,
         SelectedSuggestionInfo: languages.SelectedSuggestionInfo,

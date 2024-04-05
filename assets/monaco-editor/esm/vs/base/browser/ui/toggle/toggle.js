@@ -6,8 +6,6 @@ import { Widget } from '../widget.js';
 import { ThemeIcon } from '../../../common/themables.js';
 import { Emitter } from '../../../common/event.js';
 import './toggle.css';
-import { setupCustomHover } from '../iconLabel/iconLabelHover.js';
-import { getDefaultHoverDelegate } from '../hover/hoverDelegate.js';
 export const unthemedToggleStyles = {
     inputActiveOptionBorder: '#007ACC00',
     inputActiveOptionForeground: '#FFFFFF',
@@ -34,7 +32,7 @@ export class Toggle extends Widget {
             classes.push('checked');
         }
         this.domNode = document.createElement('div');
-        this._hover = this._register(setupCustomHover(getDefaultHoverDelegate('mouse'), this.domNode, this._opts.title));
+        this.domNode.title = this._opts.title;
         this.domNode.classList.add(...classes);
         if (!this._opts.notFocusable) {
             this.domNode.tabIndex = 0;

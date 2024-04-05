@@ -1,9 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) Microsoft Corporation. All rights reserved.
- *  Licensed under the MIT License. See License.txt in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-import { equals } from '../../../../base/common/arrays.js';
-import { splitLines } from '../../../../base/common/strings.js';
 import { applyEdits } from './utils.js';
 export class GhostText {
     constructor(lineNumber, parts) {
@@ -35,17 +29,15 @@ export class GhostText {
     }
 }
 export class GhostTextPart {
-    constructor(column, text, 
+    constructor(column, lines, 
     /**
      * Indicates if this part is a preview of an inline suggestion when a suggestion is previewed.
     */
     preview) {
         this.column = column;
-        this.text = text;
+        this.lines = lines;
         this.preview = preview;
-        this.lines = splitLines(this.text);
     }
-    ;
     equals(other) {
         return this.column === other.column &&
             this.lines.length === other.lines.length &&
@@ -53,15 +45,14 @@ export class GhostTextPart {
     }
 }
 export class GhostTextReplacement {
-    constructor(lineNumber, columnRange, text, additionalReservedLineCount = 0) {
+    constructor(lineNumber, columnRange, newLines, additionalReservedLineCount = 0) {
         this.lineNumber = lineNumber;
         this.columnRange = columnRange;
-        this.text = text;
+        this.newLines = newLines;
         this.additionalReservedLineCount = additionalReservedLineCount;
         this.parts = [
-            new GhostTextPart(this.columnRange.endColumnExclusive, this.text, false),
+            new GhostTextPart(this.columnRange.endColumnExclusive, this.newLines, false),
         ];
-        this.newLines = splitLines(this.text);
     }
     renderForScreenReader(_lineText) {
         return this.newLines.join('\n');
@@ -79,9 +70,6 @@ export class GhostTextReplacement {
             this.newLines.every((line, index) => line === other.newLines[index]) &&
             this.additionalReservedLineCount === other.additionalReservedLineCount;
     }
-}
-export function ghostTextsOrReplacementsEqual(a, b) {
-    return equals(a, b, ghostTextOrReplacementEquals);
 }
 export function ghostTextOrReplacementEquals(a, b) {
     if (a === b) {

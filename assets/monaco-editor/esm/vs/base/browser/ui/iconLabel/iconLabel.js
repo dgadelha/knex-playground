@@ -9,7 +9,6 @@ import { setupCustomHover, setupNativeHover } from './iconLabelHover.js';
 import { Disposable } from '../../../common/lifecycle.js';
 import { equals } from '../../../common/objects.js';
 import { Range } from '../../../common/range.js';
-import { getDefaultHoverDelegate } from '../hover/hoverDelegate.js';
 class FastLabelNode {
     constructor(_element) {
         this._element = _element;
@@ -44,26 +43,24 @@ class FastLabelNode {
 }
 export class IconLabel extends Disposable {
     constructor(container, options) {
-        var _a;
         super();
         this.customHovers = new Map();
         this.creationOptions = options;
         this.domNode = this._register(new FastLabelNode(dom.append(container, dom.$('.monaco-icon-label'))));
         this.labelContainer = dom.append(this.domNode.element, dom.$('.monaco-icon-label-container'));
-        this.nameContainer = dom.append(this.labelContainer, dom.$('span.monaco-icon-name-container'));
+        const nameContainer = dom.append(this.labelContainer, dom.$('span.monaco-icon-name-container'));
         if ((options === null || options === void 0 ? void 0 : options.supportHighlights) || (options === null || options === void 0 ? void 0 : options.supportIcons)) {
-            this.nameNode = new LabelWithHighlights(this.nameContainer, !!options.supportIcons);
+            this.nameNode = new LabelWithHighlights(nameContainer, !!options.supportIcons);
         }
         else {
-            this.nameNode = new Label(this.nameContainer);
+            this.nameNode = new Label(nameContainer);
         }
-        this.hoverDelegate = (_a = options === null || options === void 0 ? void 0 : options.hoverDelegate) !== null && _a !== void 0 ? _a : getDefaultHoverDelegate('mouse');
+        this.hoverDelegate = options === null || options === void 0 ? void 0 : options.hoverDelegate;
     }
     get element() {
         return this.domNode.element;
     }
     setLabel(label, description, options) {
-        var _a;
         const labelClasses = ['monaco-icon-label'];
         const containerClasses = ['monaco-icon-label-container'];
         let ariaLabel = '';
@@ -81,12 +78,7 @@ export class IconLabel extends Disposable {
                 containerClasses.push('disabled');
             }
             if (options.title) {
-                if (typeof options.title === 'string') {
-                    ariaLabel += options.title;
-                }
-                else {
-                    ariaLabel += label;
-                }
+                ariaLabel += options.title;
             }
         }
         this.domNode.className = labelClasses.join(' ');
@@ -106,10 +98,6 @@ export class IconLabel extends Disposable {
                 descriptionNode.empty = !description;
             }
         }
-        if ((options === null || options === void 0 ? void 0 : options.suffix) || this.suffixNode) {
-            const suffixNode = this.getOrCreateSuffixNode();
-            suffixNode.textContent = (_a = options === null || options === void 0 ? void 0 : options.suffix) !== null && _a !== void 0 ? _a : '';
-        }
     }
     setupHover(htmlElement, tooltip) {
         const previousCustomHover = this.customHovers.get(htmlElement);
@@ -121,7 +109,7 @@ export class IconLabel extends Disposable {
             htmlElement.removeAttribute('title');
             return;
         }
-        if (this.hoverDelegate.showNativeHover) {
+        if (!this.hoverDelegate) {
             setupNativeHover(htmlElement, tooltip);
         }
         else {
@@ -137,13 +125,6 @@ export class IconLabel extends Disposable {
             disposable.dispose();
         }
         this.customHovers.clear();
-    }
-    getOrCreateSuffixNode() {
-        if (!this.suffixNode) {
-            const suffixContainer = this._register(new FastLabelNode(dom.after(this.nameContainer, dom.$('span.monaco-icon-suffix-container'))));
-            this.suffixNode = this._register(new FastLabelNode(dom.append(suffixContainer.element, dom.$('span.label-suffix'))));
-        }
-        return this.suffixNode;
     }
     getOrCreateDescriptionNode() {
         var _a;

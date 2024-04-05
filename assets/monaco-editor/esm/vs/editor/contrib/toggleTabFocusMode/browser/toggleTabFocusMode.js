@@ -10,7 +10,7 @@ export class ToggleTabFocusModeAction extends Action2 {
     constructor() {
         super({
             id: ToggleTabFocusModeAction.ID,
-            title: nls.localize2({ key: 'toggle.tabMovesFocus', comment: ['Turn on/off use of tab key for moving focus around VS Code'] }, 'Toggle Tab Key Moves Focus'),
+            title: { value: nls.localize({ key: 'toggle.tabMovesFocus', comment: ['Turn on/off use of tab key for moving focus around VS Code'] }, 'Toggle Tab Key Moves Focus'), original: 'Toggle Tab Key Moves Focus' },
             precondition: undefined,
             keybinding: {
                 primary: 2048 /* KeyMod.CtrlCmd */ | 43 /* KeyCode.KeyM */,

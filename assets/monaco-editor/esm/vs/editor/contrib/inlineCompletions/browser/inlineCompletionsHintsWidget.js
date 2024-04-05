@@ -48,7 +48,7 @@ let InlineCompletionsHintsWidget = class InlineCompletionsHintsWidget extends Di
         this.sessionPosition = undefined;
         this.position = derived(this, reader => {
             var _a, _b, _c;
-            const ghostText = (_a = this.model.read(reader)) === null || _a === void 0 ? void 0 : _a.primaryGhostText.read(reader);
+            const ghostText = (_a = this.model.read(reader)) === null || _a === void 0 ? void 0 : _a.ghostText.read(reader);
             if (!this.alwaysShowToolbar.read(reader) || !ghostText || ghostText.parts.length === 0) {
                 this.sessionPosition = undefined;
                 return null;
@@ -67,7 +67,7 @@ let InlineCompletionsHintsWidget = class InlineCompletionsHintsWidget extends Di
             if (!model || !this.alwaysShowToolbar.read(reader)) {
                 return;
             }
-            const contentWidget = store.add(this.instantiationService.createInstance(InlineSuggestionHintsContentWidget, this.editor, true, this.position, model.selectedInlineCompletionIndex, model.inlineCompletionsCount, model.selectedInlineCompletion.map(v => /** @description commands */ { var _a; /** @description commands */ return (_a = v === null || v === void 0 ? void 0 : v.inlineCompletion.source.inlineCompletions.commands) !== null && _a !== void 0 ? _a : []; })));
+            const contentWidget = store.add(this.instantiationService.createInstance(InlineSuggestionHintsContentWidget, this.editor, true, this.position, model.selectedInlineCompletionIndex, model.inlineCompletionsCount, model.selectedInlineCompletion.map(v => { var _a; return (_a = v === null || v === void 0 ? void 0 : v.inlineCompletion.source.inlineCompletions.commands) !== null && _a !== void 0 ? _a : []; })));
             editor.addContentWidget(contentWidget);
             store.add(toDisposable(() => editor.removeContentWidget(contentWidget)));
             store.add(autorun(reader => {
@@ -246,9 +246,6 @@ class ActionViewItemWithClassName extends ActionViewItem {
             container.classList.add(this._className);
         }
     }
-    updateTooltip() {
-        // NOOP, disable tooltip
-    }
 }
 class StatusBarViewItem extends MenuEntryActionViewItem {
     updateLabel() {
@@ -258,20 +255,17 @@ class StatusBarViewItem extends MenuEntryActionViewItem {
         }
         if (this.label) {
             const div = h('div.keybinding').root;
-            const k = new KeybindingLabel(div, OS, { disableTitle: true, ...unthemedKeybindingLabelOptions });
+            const k = new KeybindingLabel(div, OS, Object.assign({ disableTitle: true }, unthemedKeybindingLabelOptions));
             k.set(kb);
             this.label.textContent = this._action.label;
             this.label.appendChild(div);
             this.label.classList.add('inlineSuggestionStatusBarItemLabel');
         }
     }
-    updateTooltip() {
-        // NOOP, disable tooltip
-    }
 }
 let CustomizedMenuWorkbenchToolBar = class CustomizedMenuWorkbenchToolBar extends WorkbenchToolBar {
     constructor(container, menuId, options2, menuService, contextKeyService, contextMenuService, keybindingService, telemetryService) {
-        super(container, { resetMenu: menuId, ...options2 }, menuService, contextKeyService, contextMenuService, keybindingService, telemetryService);
+        super(container, Object.assign({ resetMenu: menuId }, options2), menuService, contextKeyService, contextMenuService, keybindingService, telemetryService);
         this.menuId = menuId;
         this.options2 = options2;
         this.menuService = menuService;

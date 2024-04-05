@@ -20,7 +20,7 @@ export class BlockDecorations extends ViewPart {
     update() {
         let didChange = false;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(144 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         const newContentWidth = layoutInfo.contentWidth - layoutInfo.verticalScrollbarWidth;
         if (this.contentWidth !== newContentWidth) {
             this.contentWidth = newContentWidth;

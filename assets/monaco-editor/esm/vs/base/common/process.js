@@ -2,12 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { isMacintosh, isWindows } from './platform.js';
+import { globals, isMacintosh, isWindows } from './platform.js';
 let safeProcess;
 // Native sandbox environment
-const vscodeGlobal = globalThis.vscode;
-if (typeof vscodeGlobal !== 'undefined' && typeof vscodeGlobal.process !== 'undefined') {
-    const sandboxProcess = vscodeGlobal.process;
+if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.process !== 'undefined') {
+    const sandboxProcess = globals.vscode.process;
     safeProcess = {
         get platform() { return sandboxProcess.platform; },
         get arch() { return sandboxProcess.arch; },

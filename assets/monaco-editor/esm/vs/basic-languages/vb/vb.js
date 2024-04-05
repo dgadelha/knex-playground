@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/vb/vb.ts
 var conf = {
@@ -66,8 +65,6 @@ var language = {
     { token: "delimiter.array", open: "[", close: "]" },
     { token: "delimiter.parenthesis", open: "(", close: ")" },
     { token: "delimiter.angle", open: "<", close: ">" },
-    // Special bracket statement pairs
-    // according to https://msdn.microsoft.com/en-us/library/tsw2a11z.aspx
     {
       token: "keyword.tag-addhandler",
       open: "addhandler",
@@ -130,7 +127,6 @@ var language = {
     { token: "keyword.tag-try", open: "try", close: "end try" },
     { token: "keyword.tag-while", open: "while", close: "end while" },
     { token: "keyword.tag-with", open: "with", close: "end with" },
-    // Other pairs
     { token: "keyword.tag-using", open: "using", close: "end using" },
     { token: "keyword.tag-do", open: "do", close: "loop" },
     { token: "keyword.tag-for", open: "for", close: "next" }
@@ -321,24 +317,18 @@ var language = {
     "RaiseEvent",
     "SyncLock"
   ],
-  // we include these common regular expressions
   symbols: /[=><!~?;\.,:&|+\-*\/\^%]+/,
   integersuffix: /U?[DI%L&S@]?/,
   floatsuffix: /[R#F!]?/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // whitespace
       { include: "@whitespace" },
-      // special ending tag-words
       [/next(?!\w)/, { token: "keyword.tag-for" }],
       [/loop(?!\w)/, { token: "keyword.tag-do" }],
-      // usual ending tags
       [
         /end\s+(?!for|do)(addhandler|class|enum|event|function|get|if|interface|module|namespace|operator|property|raiseevent|removehandler|select|set|structure|sub|synclock|try|while|with|using)/,
         { token: "keyword.tag-$1" }
       ],
-      // identifiers, tagwords, and keywords
       [
         /[a-zA-Z_]\w*/,
         {
@@ -349,20 +339,15 @@ var language = {
           }
         }
       ],
-      // Preprocessor directive
       [/^\s*#\w+/, "keyword"],
-      // numbers
       [/\d*\d+e([\-+]?\d+)?(@floatsuffix)/, "number.float"],
       [/\d*\.\d+(e[\-+]?\d+)?(@floatsuffix)/, "number.float"],
       [/&H[0-9a-f]+(@integersuffix)/, "number.hex"],
       [/&0[0-7]+(@integersuffix)/, "number.octal"],
       [/\d+(@integersuffix)/, "number"],
-      // date literal
       [/#.*#/, "number"],
-      // delimiters and operators
       [/[{}()\[\]]/, "@brackets"],
       [/@symbols/, "delimiter"],
-      // strings
       [/["\u201c\u201d]/, { token: "string.quote", next: "@string" }]
     ],
     whitespace: [

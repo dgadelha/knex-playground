@@ -23,7 +23,7 @@ export class MouseHandler extends ViewEventHandler {
         this.mouseTargetFactory = new MouseTargetFactory(this._context, viewHelper);
         this._mouseDownOperation = this._register(new MouseDownOperation(this._context, this.viewController, this.viewHelper, this.mouseTargetFactory, (e, testEventTarget) => this._createMouseTarget(e, testEventTarget), (e) => this._getMouseColumn(e)));
         this.lastMouseLeaveTime = -1;
-        this._height = this._context.configuration.options.get(144 /* EditorOption.layoutInfo */).height;
+        this._height = this._context.configuration.options.get(143 /* EditorOption.layoutInfo */).height;
         const mouseEvents = new EditorMouseEventFactory(this.viewHelper.viewDomNode);
         this._register(mouseEvents.onContextMenu(this.viewHelper.viewDomNode, (e) => this._onContextMenu(e, true)));
         this._register(mouseEvents.onMouseMove(this.viewHelper.viewDomNode, (e) => {
@@ -73,7 +73,7 @@ export class MouseHandler extends ViewEventHandler {
         let gestureAccumulatedDelta = 0;
         const onMouseWheel = (browserEvent) => {
             this.viewController.emitMouseWheel(browserEvent);
-            if (!this._context.configuration.options.get(76 /* EditorOption.mouseWheelZoom */)) {
+            if (!this._context.configuration.options.get(75 /* EditorOption.mouseWheelZoom */)) {
                 return;
             }
             const e = new StandardWheelEvent(browserEvent);
@@ -125,9 +125,9 @@ export class MouseHandler extends ViewEventHandler {
     }
     // --- begin event handlers
     onConfigurationChanged(e) {
-        if (e.hasChanged(144 /* EditorOption.layoutInfo */)) {
+        if (e.hasChanged(143 /* EditorOption.layoutInfo */)) {
             // layout change
-            const height = this._context.configuration.options.get(144 /* EditorOption.layoutInfo */).height;
+            const height = this._context.configuration.options.get(143 /* EditorOption.layoutInfo */).height;
             if (this._height !== height) {
                 this._height = height;
                 this._mouseDownOperation.onHeightChanged();
@@ -145,7 +145,7 @@ export class MouseHandler extends ViewEventHandler {
     // --- end event handlers
     getTargetAtClientPoint(clientX, clientY) {
         const clientPos = new ClientCoordinates(clientX, clientY);
-        const pos = clientPos.toPageCoordinates(dom.getWindow(this.viewHelper.viewDomNode));
+        const pos = clientPos.toPageCoordinates();
         const editorPos = createEditorPagePosition(this.viewHelper.viewDomNode);
         if (pos.y < editorPos.y || pos.y > editorPos.y + editorPos.height || pos.x < editorPos.x || pos.x > editorPos.x + editorPos.width) {
             return null;
@@ -213,7 +213,7 @@ export class MouseHandler extends ViewEventHandler {
         const targetIsContent = (t.type === 6 /* MouseTargetType.CONTENT_TEXT */ || t.type === 7 /* MouseTargetType.CONTENT_EMPTY */);
         const targetIsGutter = (t.type === 2 /* MouseTargetType.GUTTER_GLYPH_MARGIN */ || t.type === 3 /* MouseTargetType.GUTTER_LINE_NUMBERS */ || t.type === 4 /* MouseTargetType.GUTTER_LINE_DECORATIONS */);
         const targetIsLineNumbers = (t.type === 3 /* MouseTargetType.GUTTER_LINE_NUMBERS */);
-        const selectOnLineNumbers = this._context.configuration.options.get(109 /* EditorOption.selectOnLineNumbers */);
+        const selectOnLineNumbers = this._context.configuration.options.get(108 /* EditorOption.selectOnLineNumbers */);
         const targetIsViewZone = (t.type === 8 /* MouseTargetType.CONTENT_VIEW_ZONE */ || t.type === 5 /* MouseTargetType.GUTTER_VIEW_ZONE */);
         const targetIsWidget = (t.type === 9 /* MouseTargetType.CONTENT_WIDGET */);
         let shouldHandle = e.leftButton || e.middleButton;
@@ -310,7 +310,7 @@ class MouseDownOperation extends Disposable {
         // Overwrite the detail of the MouseEvent, as it will be sent out in an event and contributions might rely on it.
         e.detail = this._mouseState.count;
         const options = this._context.configuration.options;
-        if (!options.get(91 /* EditorOption.readOnly */)
+        if (!options.get(90 /* EditorOption.readOnly */)
             && options.get(35 /* EditorOption.dragAndDrop */)
             && !options.get(22 /* EditorOption.columnSelection */)
             && !this._mouseState.altKey // we don't support multiple mouse
@@ -324,7 +324,7 @@ class MouseDownOperation extends Disposable {
             this._isActive = true;
             this._mouseMoveMonitor.startMonitoring(this._viewHelper.viewLinesDomNode, pointerId, e.buttons, (e) => this._onMouseDownThenMove(e), (browserEvent) => {
                 const position = this._findMousePosition(this._lastMouseEvent, false);
-                if (dom.isKeyboardEvent(browserEvent)) {
+                if (browserEvent && browserEvent instanceof KeyboardEvent) {
                     // cancel
                     this._viewController.emitMouseDropCanceled();
                 }
@@ -492,11 +492,10 @@ class TopBottomDragScrollingOperation extends Disposable {
         this._position = position;
         this._mouseEvent = mouseEvent;
         this._lastTime = Date.now();
-        this._animationFrameDisposable = dom.scheduleAtNextAnimationFrame(dom.getWindow(mouseEvent.browserEvent), () => this._execute());
+        this._animationFrameDisposable = dom.scheduleAtNextAnimationFrame(() => this._execute());
     }
     dispose() {
         this._animationFrameDisposable.dispose();
-        super.dispose();
     }
     setPosition(position, mouseEvent) {
         this._position = position;
@@ -515,8 +514,8 @@ class TopBottomDragScrollingOperation extends Disposable {
      * get the number of lines per second to auto-scroll
      */
     _getScrollSpeed() {
-        const lineHeight = this._context.configuration.options.get(67 /* EditorOption.lineHeight */);
-        const viewportInLines = this._context.configuration.options.get(144 /* EditorOption.layoutInfo */).height / lineHeight;
+        const lineHeight = this._context.configuration.options.get(66 /* EditorOption.lineHeight */);
+        const viewportInLines = this._context.configuration.options.get(143 /* EditorOption.layoutInfo */).height / lineHeight;
         const outsideDistanceInLines = this._position.outsideDistance / lineHeight;
         if (outsideDistanceInLines <= 1.5) {
             return Math.max(30, viewportInLines * (1 + outsideDistanceInLines));
@@ -527,7 +526,7 @@ class TopBottomDragScrollingOperation extends Disposable {
         return Math.max(200, viewportInLines * (7 + outsideDistanceInLines));
     }
     _execute() {
-        const lineHeight = this._context.configuration.options.get(67 /* EditorOption.lineHeight */);
+        const lineHeight = this._context.configuration.options.get(66 /* EditorOption.lineHeight */);
         const scrollSpeedInLines = this._getScrollSpeed();
         const elapsed = this._tick();
         const scrollInPixels = scrollSpeedInLines * (elapsed / 1000) * lineHeight;
@@ -540,7 +539,7 @@ class TopBottomDragScrollingOperation extends Disposable {
         let mouseTarget;
         {
             const editorPos = createEditorPagePosition(this._viewHelper.viewDomNode);
-            const horizontalScrollbarHeight = this._context.configuration.options.get(144 /* EditorOption.layoutInfo */).horizontalScrollbarHeight;
+            const horizontalScrollbarHeight = this._context.configuration.options.get(143 /* EditorOption.layoutInfo */).horizontalScrollbarHeight;
             const pos = new PageCoordinates(this._mouseEvent.pos.x, editorPos.y + editorPos.height - horizontalScrollbarHeight - 0.1);
             const relativePos = createCoordinatesRelativeToEditor(this._viewHelper.viewDomNode, editorPos, pos);
             mouseTarget = this._mouseTargetFactory.createMouseTarget(this._viewHelper.getLastRenderData(), editorPos, pos, relativePos, null);
@@ -554,7 +553,7 @@ class TopBottomDragScrollingOperation extends Disposable {
             }
         }
         this._dispatchMouse(mouseTarget, true, 2 /* NavigationCommandRevealType.None */);
-        this._animationFrameDisposable = dom.scheduleAtNextAnimationFrame(dom.getWindow(mouseTarget.element), () => this._execute());
+        this._animationFrameDisposable = dom.scheduleAtNextAnimationFrame(() => this._execute());
     }
 }
 class MouseDownState {

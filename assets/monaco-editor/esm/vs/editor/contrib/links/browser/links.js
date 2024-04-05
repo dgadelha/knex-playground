@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var LinkDetector_1;
 import { createCancelablePromise, RunOnceScheduler } from '../../../../base/common/async.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
@@ -60,7 +69,7 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
             this.cleanUpActiveLinkDecoration();
         }));
         this._register(editor.onDidChangeConfiguration((e) => {
-            if (!e.hasChanged(71 /* EditorOption.links */)) {
+            if (!e.hasChanged(70 /* EditorOption.links */)) {
                 return;
             }
             // Remove any links (for the getting disabled case)
@@ -92,40 +101,42 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         }));
         this.computeLinks.schedule(0);
     }
-    async computeLinksNow() {
-        if (!this.editor.hasModel() || !this.editor.getOption(71 /* EditorOption.links */)) {
-            return;
-        }
-        const model = this.editor.getModel();
-        if (model.isTooLargeForSyncing()) {
-            return;
-        }
-        if (!this.providers.has(model)) {
-            return;
-        }
-        if (this.activeLinksList) {
-            this.activeLinksList.dispose();
-            this.activeLinksList = null;
-        }
-        this.computePromise = createCancelablePromise(token => getLinks(this.providers, model, token));
-        try {
-            const sw = new StopWatch(false);
-            this.activeLinksList = await this.computePromise;
-            this.debounceInformation.update(model, sw.elapsed());
-            if (model.isDisposed()) {
+    computeLinksNow() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this.editor.hasModel() || !this.editor.getOption(70 /* EditorOption.links */)) {
                 return;
             }
-            this.updateDecorations(this.activeLinksList.links);
-        }
-        catch (err) {
-            onUnexpectedError(err);
-        }
-        finally {
-            this.computePromise = null;
-        }
+            const model = this.editor.getModel();
+            if (model.isTooLargeForSyncing()) {
+                return;
+            }
+            if (!this.providers.has(model)) {
+                return;
+            }
+            if (this.activeLinksList) {
+                this.activeLinksList.dispose();
+                this.activeLinksList = null;
+            }
+            this.computePromise = createCancelablePromise(token => getLinks(this.providers, model, token));
+            try {
+                const sw = new StopWatch(false);
+                this.activeLinksList = yield this.computePromise;
+                this.debounceInformation.update(model, sw.elapsed());
+                if (model.isDisposed()) {
+                    return;
+                }
+                this.updateDecorations(this.activeLinksList.links);
+            }
+            catch (err) {
+                onUnexpectedError(err);
+            }
+            finally {
+                this.computePromise = null;
+            }
+        });
     }
     updateDecorations(links) {
-        const useMetaKey = (this.editor.getOption(78 /* EditorOption.multiCursorModifier */) === 'altKey');
+        const useMetaKey = (this.editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey');
         const oldDecorations = [];
         const keys = Object.keys(this.currentOccurrences);
         for (const decorationId of keys) {
@@ -150,7 +161,7 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         });
     }
     _onEditorMouseMove(mouseEvent, withKey) {
-        const useMetaKey = (this.editor.getOption(78 /* EditorOption.multiCursorModifier */) === 'altKey');
+        const useMetaKey = (this.editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey');
         if (this.isEnabled(mouseEvent, withKey)) {
             this.cleanUpActiveLinkDecoration(); // always remove previous link decoration as their can only be one
             const occurrence = this.getLinkOccurrence(mouseEvent.target.position);
@@ -166,7 +177,7 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         }
     }
     cleanUpActiveLinkDecoration() {
-        const useMetaKey = (this.editor.getOption(78 /* EditorOption.multiCursorModifier */) === 'altKey');
+        const useMetaKey = (this.editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey');
         if (this.activeLinkDecorationId) {
             const occurrence = this.currentOccurrences[this.activeLinkDecorationId];
             if (occurrence) {
@@ -297,7 +308,7 @@ class LinkOccurrence {
         };
     }
     static _getOptions(link, useMetaKey, isActive) {
-        const options = { ...(isActive ? decoration.active : decoration.general) };
+        const options = Object.assign({}, (isActive ? decoration.active : decoration.general));
         options.hoverMessage = getHoverMessage(link, useMetaKey);
         return options;
     }

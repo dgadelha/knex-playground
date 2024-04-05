@@ -10,8 +10,8 @@ import { findFirstIdxMonotonousOrArrLen, findLastIdxMonotonous, findLastMonotono
  * A range of lines (1-based).
  */
 export class LineRange {
-    static fromRangeInclusive(range) {
-        return new LineRange(range.startLineNumber, range.endLineNumber + 1);
+    static fromRange(range) {
+        return new LineRange(range.startLineNumber, range.endLineNumber);
     }
     /**
      * @param lineRanges An array of sorted line ranges.
@@ -177,10 +177,6 @@ export class LineRangeSet {
     contains(lineNumber) {
         const rangeThatStartsBeforeEnd = findLastMonotonous(this._normalizedRanges, r => r.startLineNumber <= lineNumber);
         return !!rangeThatStartsBeforeEnd && rangeThatStartsBeforeEnd.endLineNumberExclusive > lineNumber;
-    }
-    intersects(range) {
-        const rangeThatStartsBeforeEnd = findLastMonotonous(this._normalizedRanges, r => r.startLineNumber < range.endLineNumberExclusive);
-        return !!rangeThatStartsBeforeEnd && rangeThatStartsBeforeEnd.endLineNumberExclusive > range.startLineNumber;
     }
     getUnion(other) {
         if (this._normalizedRanges.length === 0) {

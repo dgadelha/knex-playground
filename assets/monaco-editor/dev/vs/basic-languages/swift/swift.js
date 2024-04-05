@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/swift/swift", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -61,7 +61,6 @@ var moduleExports = (() => {
   var language = {
     defaultToken: "",
     tokenPostfix: ".swift",
-    // TODO(owensd): Support the full range of unicode valid identifiers.
     identifier: /[a-zA-Z_][\w$]*/,
     attributes: [
       "@GKInspectable",
@@ -224,11 +223,9 @@ var moduleExports = (() => {
       "__owned"
     ],
     symbols: /[=(){}\[\].,:;@#\_&\-<>`?!+*\\\/]/,
-    // Moved . to operatorstart so it can be a delimiter
     operatorstart: /[\/=\-+!*%<>&|^~?\u00A1-\u00A7\u00A9\u00AB\u00AC\u00AE\u00B0-\u00B1\u00B6\u00BB\u00BF\u00D7\u00F7\u2016-\u2017\u2020-\u2027\u2030-\u203E\u2041-\u2053\u2055-\u205E\u2190-\u23FF\u2500-\u2775\u2794-\u2BFF\u2E00-\u2E7F\u3001-\u3003\u3008-\u3030]/,
     operatorend: /[\u0300-\u036F\u1DC0-\u1DFF\u20D0-\u20FF\uFE00-\uFE0F\uFE20-\uFE2F\uE0100-\uE01EF]/,
     operators: /(@operatorstart)((@operatorstart)|(@operatorend))*/,
-    // TODO(owensd): These are borrowed from C#; need to validate correctness for Swift.
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
     tokenizer: {
       root: [

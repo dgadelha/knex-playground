@@ -1,14 +1,12 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 
-
 // src/basic-languages/kotlin/kotlin.ts
 var conf = {
-  // the default separators except `@$`
   wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\#\%\^\&\*\(\)\-\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
   comments: {
     lineComment: "//",
@@ -164,19 +162,15 @@ var language = {
     "$",
     "_"
   ],
-  // we include these common regular expressions
   symbols: /[=><!~?:&|+\-*\/\^%]+/,
   escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
   digits: /\d+(_+\d+)*/,
   octaldigits: /[0-7]+(_+[0-7]+)*/,
   binarydigits: /[0-1]+(_+[0-1]+)*/,
   hexdigits: /[[0-9a-fA-F]+(_+[0-9a-fA-F]+)*/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // class name highlighting
       [/[A-Z][\w\$]*/, "type.identifier"],
-      // identifiers and keywords
       [
         /[a-zA-Z_$][\w$]*/,
         {
@@ -186,9 +180,7 @@ var language = {
           }
         }
       ],
-      // whitespace
       { include: "@whitespace" },
-      // delimiters and operators
       [/[{}()\[\]]/, "@brackets"],
       [/[<>](?!@symbols)/, "@brackets"],
       [
@@ -200,9 +192,7 @@ var language = {
           }
         }
       ],
-      // @ annotations.
       [/@\s*[a-zA-Z_\$][\w\$]*/, "annotation"],
-      // numbers
       [/(@digits)[eE]([\-+]?(@digits))?[fFdD]?/, "number.float"],
       [/(@digits)\.(@digits)([eE][\-+]?(@digits))?[fFdD]?/, "number.float"],
       [/0[xX](@hexdigits)[Ll]?/, "number.hex"],
@@ -210,14 +200,10 @@ var language = {
       [/0[bB](@binarydigits)[Ll]?/, "number.binary"],
       [/(@digits)[fFdD]/, "number.float"],
       [/(@digits)[lL]?/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
-      // strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/"""/, "string", "@multistring"],
       [/"/, "string", "@string"],
-      // characters
       [/'[^\\']'/, "string"],
       [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
       [/'/, "string.invalid"]
@@ -234,7 +220,6 @@ var language = {
       [/\*\//, "comment", "@pop"],
       [/[\/*]/, "comment"]
     ],
-    //Identical copy of comment above, except for the addition of .doc
     javadoc: [
       [/[^\/*]+/, "comment.doc"],
       [/\/\*/, "comment.doc", "@push"],

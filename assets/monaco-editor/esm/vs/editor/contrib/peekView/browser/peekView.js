@@ -198,7 +198,7 @@ let PeekViewWidget = class PeekViewWidget extends ZoneWidget {
             this.dispose();
             return;
         }
-        const headHeight = Math.ceil(this.editor.getOption(67 /* EditorOption.lineHeight */) * 1.2);
+        const headHeight = Math.ceil(this.editor.getOption(66 /* EditorOption.lineHeight */) * 1.2);
         const bodyHeight = Math.round(heightInPixel - (headHeight + 2 /* the border-top/bottom width*/));
         this._doLayoutHead(headHeight, widthInPixel);
         this._doLayoutBody(bodyHeight, widthInPixel);

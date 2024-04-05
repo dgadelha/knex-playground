@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/perl/perl", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -65,8 +65,6 @@ var moduleExports = (() => {
       { token: "delimiter.parenthesis", open: "(", close: ")" },
       { token: "delimiter.square", open: "[", close: "]" }
     ],
-    // https://learn.perl.org/docs/keywords.html
-    // Perl syntax
     keywords: [
       "__DATA__",
       "else",
@@ -102,7 +100,6 @@ var moduleExports = (() => {
       "__DIE__",
       "__WARN__"
     ],
-    // Perl functions
     builtinFunctions: [
       "-A",
       "END",
@@ -340,9 +337,7 @@ var moduleExports = (() => {
       "lcfirst",
       "setnetent"
     ],
-    // File handlers
     builtinFileHandlers: ["ARGV", "STDERR", "STDOUT", "ARGVOUT", "STDIN", "ENV"],
-    // Perl variables
     builtinVariables: [
       "$!",
       "$^RE_TRIE_MAXBUF",
@@ -475,11 +470,9 @@ var moduleExports = (() => {
       "$^RE_DEBUG_FLAGS",
       "$LAST_PAREN_MATCH"
     ],
-    // operators
     symbols: /[:+\-\^*$&%@=<>!?|\/~\.]/,
     quoteLikeOps: ["qr", "m", "s", "q", "qq", "qx", "qw", "tr", "y"],
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
-    // The main tokenizer for our languages
     tokenizer: {
       root: [
         { include: "@whitespace" },
@@ -498,7 +491,6 @@ var moduleExports = (() => {
             }
           }
         ],
-        // Perl variables
         [
           /[\$@%][*@#?\+\-\$!\w\\\^><~:;\.]+/,
           {
@@ -510,12 +502,9 @@ var moduleExports = (() => {
         ],
         { include: "@strings" },
         { include: "@dblStrings" },
-        // Perl Doc
         { include: "@perldoc" },
-        // Here Doc
         { include: "@heredoc" },
         [/[{}\[\]()]/, "@brackets"],
-        // RegExp
         [/[\/](?:(?:\[(?:\\]|[^\]])+\])|(?:\\\/|[^\]\/]))*[\/]\w*\s*(?=[).,;]|$)/, "regexp"],
         [/@symbols/, "operators"],
         { include: "@numbers" },
@@ -531,14 +520,12 @@ var moduleExports = (() => {
         [/0[xX][0-9a-fA-F_]*[0-9a-fA-F]/, "number.hex"],
         [/\d+/, "number"]
       ],
-      // Single quote string
       strings: [[/'/, "string", "@stringBody"]],
       stringBody: [
         [/'/, "string", "@popall"],
         [/\\'/, "string.escape"],
         [/./, "string"]
       ],
-      // Double quote string
       dblStrings: [[/"/, "string", "@dblStringBody"]],
       dblStringBody: [
         [/"/, "string", "@popall"],
@@ -547,9 +534,6 @@ var moduleExports = (() => {
         { include: "@variables" },
         [/./, "string"]
       ],
-      // Quoted constructs
-      // Percent strings in Ruby are similar to quote-like operators in Perl.
-      // This is adapted from pstrings in ../ruby/ruby.ts.
       quotedConstructs: [
         [/(q|qw|tr|y)\s*\(/, { token: "string.delim", switchTo: "@qstring.(.)" }],
         [/(q|qw|tr|y)\s*\[/, { token: "string.delim", switchTo: "@qstring.[.]" }],
@@ -573,10 +557,6 @@ var moduleExports = (() => {
         [/(qq|qx)\s*([^A-Za-z0-9#\s])/, { token: "string.delim", switchTo: "@qqstring.$2.$2" }],
         [/(qq|qx)\s+(\w)/, { token: "string.delim", switchTo: "@qqstring.$2.$2" }]
       ],
-      // Non-expanded quoted string
-      // qstring<open>.<close>
-      //  open = open delimiter
-      //  close = close delimiter
       qstring: [
         [/\\./, "string.escape"],
         [
@@ -585,16 +565,11 @@ var moduleExports = (() => {
             cases: {
               "$#==$S3": { token: "string.delim", next: "@pop" },
               "$#==$S2": { token: "string.delim", next: "@push" },
-              // nested delimiters
               "@default": "string"
             }
           }
         ]
       ],
-      // Quoted regexp
-      // qregexp.<open>.<close>
-      //  open = open delimiter
-      //  close = close delimiter
       qregexp: [
         { include: "@variables" },
         [/\\./, "regexp.escape"],
@@ -607,17 +582,12 @@ var moduleExports = (() => {
                 next: "@regexpModifiers"
               },
               "$#==$S2": { token: "regexp.delim", next: "@push" },
-              // nested delimiters
               "@default": "regexp"
             }
           }
         ]
       ],
       regexpModifiers: [[/[msixpodualngcer]+/, { token: "regexp.modifier", next: "@popall" }]],
-      // Expanded quoted string
-      // qqstring.<open>.<close>
-      //  open = open delimiter
-      //  close = close delimiter
       qqstring: [{ include: "@variables" }, { include: "@qstring" }],
       heredoc: [
         [/<<\s*['"`]?([\w\-]+)['"`]?/, { token: "string.heredoc.delimiter", next: "@heredocBody.$1" }]
@@ -646,11 +616,8 @@ var moduleExports = (() => {
       ],
       variables: [
         [/\$\w+/, "variable"],
-        // scalar
         [/@\w+/, "variable"],
-        // array
         [/%\w+/, "variable"]
-        // key/value
       ]
     }
   };

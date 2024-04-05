@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import { BugIndicatingError } from '../../../../base/common/errors.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { autorunOpts } from '../../../../base/common/observable.js';
@@ -70,9 +74,6 @@ export function applyObservableDecorations(editor, decorations) {
 export function addPositions(pos1, pos2) {
     return new Position(pos1.lineNumber + pos2.lineNumber - 1, pos2.lineNumber === 1 ? pos1.column + pos2.column - 1 : pos2.column);
 }
-export function subtractPositions(pos1, pos2) {
-    return new Position(pos1.lineNumber - pos2.lineNumber + 1, pos1.lineNumber - pos2.lineNumber === 0 ? pos1.column - pos2.column + 1 : pos1.column);
-}
 export function lengthOfText(text) {
     let line = 1;
     let column = 1;
@@ -86,50 +87,4 @@ export function lengthOfText(text) {
         }
     }
     return new Position(line, column);
-}
-/**
- * Given some text edits, this function finds the new ranges of the editted text post application of all edits.
- * Assumes that the edit ranges are disjoint and they are sorted in the order of the ranges
- * @param edits edits applied
- * @returns new ranges post edits for every edit
- */
-export function getNewRanges(edits) {
-    var _a;
-    const newRanges = [];
-    let previousEditEndLineNumber = 0;
-    let lineOffset = 0;
-    let columnOffset = 0;
-    for (const edit of edits) {
-        const text = (_a = edit.text) !== null && _a !== void 0 ? _a : '';
-        const textLength = lengthOfText(text);
-        const newRangeStart = Position.lift({
-            lineNumber: edit.range.startLineNumber + lineOffset,
-            column: edit.range.startColumn + (edit.range.startLineNumber === previousEditEndLineNumber ? columnOffset : 0)
-        });
-        const newRangeEnd = addPositions(newRangeStart, textLength);
-        newRanges.push(Range.fromPositions(newRangeStart, newRangeEnd));
-        lineOffset += textLength.lineNumber - edit.range.endLineNumber + edit.range.startLineNumber - 1;
-        columnOffset = newRangeEnd.column - edit.range.endColumn;
-        previousEditEndLineNumber = edit.range.endLineNumber;
-    }
-    return newRanges;
-}
-export class Permutation {
-    constructor(_indexMap) {
-        this._indexMap = _indexMap;
-    }
-    static createSortPermutation(arr, compareFn) {
-        const sortIndices = Array.from(arr.keys()).sort((index1, index2) => compareFn(arr[index1], arr[index2]));
-        return new Permutation(sortIndices);
-    }
-    apply(arr) {
-        return arr.map((_, index) => arr[this._indexMap[index]]);
-    }
-    inverse() {
-        const inverseIndexMap = this._indexMap.slice();
-        for (let i = 0; i < this._indexMap.length; i++) {
-            inverseIndexMap[this._indexMap[i]] = i;
-        }
-        return new Permutation(inverseIndexMap);
-    }
 }

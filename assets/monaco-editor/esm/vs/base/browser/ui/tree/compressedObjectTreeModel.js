@@ -71,9 +71,9 @@ export function decompress(element) {
 }
 function splice(treeElement, element, children) {
     if (treeElement.element === element) {
-        return { ...treeElement, children };
+        return Object.assign(Object.assign({}, treeElement), { children });
     }
-    return { ...treeElement, children: Iterable.map(Iterable.from(treeElement.children), e => splice(e, element, children)) };
+    return Object.assign(Object.assign({}, treeElement), { children: Iterable.map(Iterable.from(treeElement.children), e => splice(e, element, children)) });
 }
 const wrapIdentityProvider = (base) => ({
     getId(node) {
@@ -128,9 +128,6 @@ export class CompressedObjectTreeModel {
             diffDepth: node.depth - parent.depth,
         });
     }
-    isCompressionEnabled() {
-        return this.enabled;
-    }
     setCompressionEnabled(enabled) {
         if (enabled === this.enabled) {
             return;
@@ -162,7 +159,7 @@ export class CompressedObjectTreeModel {
                 }
             }
         };
-        this.model.setChildren(node, children, { ...options, onDidCreateNode, onDidDeleteNode });
+        this.model.setChildren(node, children, Object.assign(Object.assign({}, options), { onDidCreateNode, onDidDeleteNode }));
     }
     has(element) {
         return this.nodes.has(element);
@@ -268,24 +265,19 @@ function mapList(nodeMapper, list) {
     };
 }
 function mapOptions(compressedNodeUnwrapper, options) {
-    return {
-        ...options,
-        identityProvider: options.identityProvider && {
+    return Object.assign(Object.assign({}, options), { identityProvider: options.identityProvider && {
             getId(node) {
                 return options.identityProvider.getId(compressedNodeUnwrapper(node));
             }
-        },
-        sorter: options.sorter && {
+        }, sorter: options.sorter && {
             compare(node, otherNode) {
                 return options.sorter.compare(node.elements[0], otherNode.elements[0]);
             }
-        },
-        filter: options.filter && {
+        }, filter: options.filter && {
             filter(node, parentVisibility) {
                 return options.filter.filter(compressedNodeUnwrapper(node), parentVisibility);
             }
-        }
-    };
+        } });
 }
 export class CompressibleObjectTreeModel {
     get onDidSplice() {
@@ -312,9 +304,6 @@ export class CompressibleObjectTreeModel {
     }
     setChildren(element, children = Iterable.empty(), options = {}) {
         this.model.setChildren(element, children, options);
-    }
-    isCompressionEnabled() {
-        return this.model.isCompressionEnabled();
     }
     setCompressionEnabled(enabled) {
         this.model.setCompressionEnabled(enabled);

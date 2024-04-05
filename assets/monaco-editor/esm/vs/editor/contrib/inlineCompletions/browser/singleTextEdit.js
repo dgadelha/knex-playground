@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { LcsDiff } from '../../../../base/common/diff/diff.js';
-import { commonPrefixLength, getLeadingWhitespace } from '../../../../base/common/strings.js';
+import { commonPrefixLength, getLeadingWhitespace, splitLines } from '../../../../base/common/strings.js';
 import { Range } from '../../../common/core/range.js';
 import { GhostText, GhostTextPart } from './ghostText.js';
 import { addPositions, lengthOfText } from './utils.js';
@@ -97,10 +97,12 @@ export class SingleTextEdit {
             const nonPreviewText = edit.text.substring(c.modifiedStart, nonPreviewTextEnd);
             const italicText = edit.text.substring(nonPreviewTextEnd, Math.max(c.modifiedStart, modifiedEnd));
             if (nonPreviewText.length > 0) {
-                parts.push(new GhostTextPart(insertColumn, nonPreviewText, false));
+                const lines = splitLines(nonPreviewText);
+                parts.push(new GhostTextPart(insertColumn, lines, false));
             }
             if (italicText.length > 0) {
-                parts.push(new GhostTextPart(insertColumn, italicText, true));
+                const lines = splitLines(italicText);
+                parts.push(new GhostTextPart(insertColumn, lines, true));
             }
         }
         return new GhostText(lineNumber, parts);

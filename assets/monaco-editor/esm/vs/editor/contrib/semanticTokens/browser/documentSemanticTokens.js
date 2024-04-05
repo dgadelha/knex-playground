@@ -53,11 +53,6 @@ let DocumentSemanticTokensFeature = class DocumentSemanticTokensFeature extends 
                 }
             }
         };
-        modelService.getModels().forEach(model => {
-            if (isSemanticColoringEnabled(model, themeService, configurationService)) {
-                register(model);
-            }
-        });
         this._register(modelService.onModelAdded((model) => {
             if (isSemanticColoringEnabled(model, themeService, configurationService)) {
                 register(model);

@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/graphql/graphql.ts
 var conf = {
@@ -35,7 +34,6 @@ var conf = {
   }
 };
 var language = {
-  // Set defaultToken to invalid to see what you do not tokenize yet
   defaultToken: "invalid",
   tokenPostfix: ".gql",
   keywords: [
@@ -81,14 +79,10 @@ var language = {
     "VARIABLE_DEFINITION"
   ],
   operators: ["=", "!", "?", ":", "&", "|"],
-  // we include these common regular expressions
   symbols: /[=!?:&|]+/,
-  // https://facebook.github.io/graphql/draft/#sec-String-Value
   escapes: /\\(?:["\\\/bfnrt]|u[0-9A-Fa-f]{4})/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // fields and argument names
       [
         /[a-z_][\w$]*/,
         {
@@ -98,7 +92,6 @@ var language = {
           }
         }
       ],
-      // identify typed input variables
       [
         /[$][\w$]*/,
         {
@@ -108,7 +101,6 @@ var language = {
           }
         }
       ],
-      // to show class names nicely
       [
         /[A-Z][\w\$]*/,
         {
@@ -118,25 +110,16 @@ var language = {
           }
         }
       ],
-      // whitespace
       { include: "@whitespace" },
-      // delimiters and operators
       [/[{}()\[\]]/, "@brackets"],
       [/@symbols/, { cases: { "@operators": "operator", "@default": "" } }],
-      // @ annotations.
-      // As an example, we emit a debugging log message on these tokens.
-      // Note: message are supressed during the first load -- change some lines to see them.
       [/@\s*[a-zA-Z_\$][\w\$]*/, { token: "annotation", log: "annotation token: $0" }],
-      // numbers
       [/\d*\.\d+([eE][\-+]?\d+)?/, "number.float"],
       [/0[xX][0-9a-fA-F]+/, "number.hex"],
       [/\d+/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
       [/"""/, { token: "string", next: "@mlstring", nextEmbedded: "markdown" }],
-      // strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/"/, { token: "string.quote", bracket: "@open", next: "@string" }]
     ],
     mlstring: [

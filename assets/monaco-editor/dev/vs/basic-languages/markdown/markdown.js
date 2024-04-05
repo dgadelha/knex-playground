@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/markdown/markdown", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -61,13 +61,10 @@ var moduleExports = (() => {
   var language = {
     defaultToken: "",
     tokenPostfix: ".md",
-    // escape codes
     control: /[\\`*_\[\]{}()#+\-\.!]/,
     noncontrol: /[^\\`*_\[\]{}()#+\-\.!]/,
     escapes: /\\(?:@control)/,
-    // escape codes for javascript/CSS strings
     jsescapes: /\\(?:[btnfr\\"']|[0-7][0-7]?|[0-3][0-7]{2})/,
-    // non matched elements
     empty: [
       "area",
       "base",
@@ -85,55 +82,37 @@ var moduleExports = (() => {
     ],
     tokenizer: {
       root: [
-        // markdown tables
         [/^\s*\|/, "@rematch", "@table_header"],
-        // headers (with #)
         [/^(\s{0,3})(#+)((?:[^\\#]|@escapes)+)((?:#+)?)/, ["white", "keyword", "keyword", "keyword"]],
-        // headers (with =)
         [/^\s*(=+|\-+)\s*$/, "keyword"],
-        // headers (with ***)
         [/^\s*((\*[ ]?)+)\s*$/, "meta.separator"],
-        // quote
         [/^\s*>+/, "comment"],
-        // list (starting with * or number)
         [/^\s*([\*\-+:]|\d+\.)\s/, "keyword"],
-        // code block (4 spaces indent)
         [/^(\t|[ ]{4})[^ ].*$/, "string"],
-        // code block (3 tilde)
         [/^\s*~~~\s*((?:\w|[\/\-#])+)?\s*$/, { token: "string", next: "@codeblock" }],
-        // github style code blocks (with backticks and language)
         [
           /^\s*```\s*((?:\w|[\/\-#])+).*$/,
           { token: "string", next: "@codeblockgh", nextEmbedded: "$1" }
         ],
-        // github style code blocks (with backticks but no language)
         [/^\s*```\s*$/, { token: "string", next: "@codeblock" }],
-        // markup within lines
         { include: "@linecontent" }
       ],
       table_header: [
         { include: "@table_common" },
         [/[^\|]+/, "keyword.table.header"]
-        // table header
       ],
       table_body: [{ include: "@table_common" }, { include: "@linecontent" }],
       table_common: [
         [/\s*[\-:]+\s*/, { token: "keyword", switchTo: "table_body" }],
-        // header-divider
         [/^\s*\|/, "keyword.table.left"],
-        // opening |
         [/^\s*[^\|]/, "@rematch", "@pop"],
-        // exiting
         [/^\s*$/, "@rematch", "@pop"],
-        // exiting
         [
           /\|/,
           {
             cases: {
               "@eos": "keyword.table.right",
-              // closing |
               "@default": "keyword.table.middle"
-              // inner |
             }
           }
         ]
@@ -143,35 +122,24 @@ var moduleExports = (() => {
         [/^\s*```\s*$/, { token: "string", next: "@pop" }],
         [/.*$/, "variable.source"]
       ],
-      // github style code blocks
       codeblockgh: [
         [/```\s*$/, { token: "string", next: "@pop", nextEmbedded: "@pop" }],
         [/[^`]+/, "variable.source"]
       ],
       linecontent: [
-        // escapes
         [/&\w+;/, "string.escape"],
         [/@escapes/, "escape"],
-        // various markup
         [/\b__([^\\_]|@escapes|_(?!_))+__\b/, "strong"],
         [/\*\*([^\\*]|@escapes|\*(?!\*))+\*\*/, "strong"],
         [/\b_[^_]+_\b/, "emphasis"],
         [/\*([^\\*]|@escapes)+\*/, "emphasis"],
         [/`([^\\`]|@escapes)+`/, "variable"],
-        // links
         [/\{+[^}]+\}+/, "string.target"],
         [/(!?\[)((?:[^\]\\]|@escapes)*)(\]\([^\)]+\))/, ["string.link", "", "string.link"]],
         [/(!?\[)((?:[^\]\\]|@escapes)*)(\])/, "string.link"],
-        // or html
         { include: "html" }
       ],
-      // Note: it is tempting to rather switch to the real HTML mode instead of building our own here
-      // but currently there is a limitation in Monarch that prevents us from doing it: The opening
-      // '<' would start the HTML mode, however there is no way to jump 1 character back to let the
-      // HTML mode also tokenize the opening angle bracket. Thus, even though we could jump to HTML,
-      // we cannot correctly tokenize it in that mode yet.
       html: [
-        // html tags
         [/<(\w+)\/>/, "tag"],
         [
           /<(\w+)(\-|\w)*/,
@@ -191,7 +159,6 @@ var moduleExports = (() => {
         [/<!--/, "comment.content.invalid"],
         [/[<\-]/, "comment.content"]
       ],
-      // Almost full HTML tag matching, complete with embedded scripts & styles
       tag: [
         [/[ \t\r\n]+/, "white"],
         [

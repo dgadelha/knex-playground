@@ -35,7 +35,7 @@ export function lengthIsZero(length) {
  * We use the upper 26 bits to store the line and the lower 26 bits to store the column.
  */
 ///*
-const factor = 2 ** 26;
+const factor = Math.pow(2, 26);
 /*/
 const factor = 1000000;
 // */

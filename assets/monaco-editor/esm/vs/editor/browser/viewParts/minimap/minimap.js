@@ -30,22 +30,22 @@ const GUTTER_DECORATION_WIDTH = 2;
 class MinimapOptions {
     constructor(configuration, theme, tokensColorTracker) {
         const options = configuration.options;
-        const pixelRatio = options.get(142 /* EditorOption.pixelRatio */);
-        const layoutInfo = options.get(144 /* EditorOption.layoutInfo */);
+        const pixelRatio = options.get(141 /* EditorOption.pixelRatio */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         const minimapLayout = layoutInfo.minimap;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        const minimapOpts = options.get(73 /* EditorOption.minimap */);
+        const minimapOpts = options.get(72 /* EditorOption.minimap */);
         this.renderMinimap = minimapLayout.renderMinimap;
         this.size = minimapOpts.size;
         this.minimapHeightIsEditorHeight = minimapLayout.minimapHeightIsEditorHeight;
-        this.scrollBeyondLastLine = options.get(105 /* EditorOption.scrollBeyondLastLine */);
-        this.paddingTop = options.get(84 /* EditorOption.padding */).top;
-        this.paddingBottom = options.get(84 /* EditorOption.padding */).bottom;
+        this.scrollBeyondLastLine = options.get(104 /* EditorOption.scrollBeyondLastLine */);
+        this.paddingTop = options.get(83 /* EditorOption.padding */).top;
+        this.paddingBottom = options.get(83 /* EditorOption.padding */).bottom;
         this.showSlider = minimapOpts.showSlider;
         this.autohide = minimapOpts.autohide;
         this.pixelRatio = pixelRatio;
         this.typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
-        this.lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        this.lineHeight = options.get(66 /* EditorOption.lineHeight */);
         this.minimapLeft = minimapLayout.minimapLeft;
         this.minimapWidth = minimapLayout.minimapWidth;
         this.minimapHeight = layoutInfo.height;
@@ -854,7 +854,7 @@ class InnerMinimap extends Disposable {
         this._buffers = null;
         this._selectionColor = this._theme.getColor(minimapSelection);
         this._domNode = createFastDomNode(document.createElement('div'));
-        PartFingerprints.write(this._domNode, 9 /* PartFingerprint.Minimap */);
+        PartFingerprints.write(this._domNode, 8 /* PartFingerprint.Minimap */);
         this._domNode.setClassName(this._getMinimapDomNodeClassName());
         this._domNode.setPosition('absolute');
         this._domNode.setAttribute('role', 'presentation');

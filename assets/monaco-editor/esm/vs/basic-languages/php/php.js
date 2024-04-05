@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/php/php.ts
 var conf = {
@@ -35,8 +34,6 @@ var conf = {
 var language = {
   defaultToken: "",
   tokenPostfix: "",
-  // ignoreCase: true,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
       [/<\?((php)|=)?/, { token: "@rematch", switchTo: "@phpInSimpleState.root" }],
@@ -49,7 +46,6 @@ var language = {
       [/(<\/)(\w+)/, ["delimiter.html", { token: "tag.html", next: "@otherTag" }]],
       [/</, "delimiter.html"],
       [/[^<]+/]
-      // text
     ],
     doctype: [
       [/<\?((php)|=)?/, { token: "@rematch", switchTo: "@phpInSimpleState.comment" }],
@@ -70,10 +66,7 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/]
-      // whitespace
     ],
-    // -- BEGIN <script> tags handling
-    // After <script
     script: [
       [/<\?((php)|=)?/, { token: "@rematch", switchTo: "@phpInSimpleState.script" }],
       [/type/, "attribute.name", "@scriptAfterType"],
@@ -90,13 +83,11 @@ var language = {
         }
       ],
       [/[ \t\r\n]+/],
-      // whitespace
       [
         /(<\/)(script\s*)(>)/,
         ["delimiter.html", "tag.html", { token: "delimiter.html", next: "@pop" }]
       ]
     ],
-    // After <script ... type
     scriptAfterType: [
       [
         /<\?((php)|=)?/,
@@ -114,12 +105,9 @@ var language = {
           nextEmbedded: "text/javascript"
         }
       ],
-      // cover invalid e.g. <script type>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <script ... type =
     scriptAfterTypeEquals: [
       [
         /<\?((php)|=)?/,
@@ -150,12 +138,9 @@ var language = {
           nextEmbedded: "text/javascript"
         }
       ],
-      // cover invalid e.g. <script type=>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <script ... type = $S2
     scriptWithCustomType: [
       [
         /<\?((php)|=)?/,
@@ -177,7 +162,6 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
     scriptEmbedded: [
@@ -191,9 +175,6 @@ var language = {
       ],
       [/<\/script/, { token: "@rematch", next: "@pop", nextEmbedded: "@pop" }]
     ],
-    // -- END <script> tags handling
-    // -- BEGIN <style> tags handling
-    // After <style
     style: [
       [/<\?((php)|=)?/, { token: "@rematch", switchTo: "@phpInSimpleState.style" }],
       [/type/, "attribute.name", "@styleAfterType"],
@@ -210,13 +191,11 @@ var language = {
         }
       ],
       [/[ \t\r\n]+/],
-      // whitespace
       [
         /(<\/)(style\s*)(>)/,
         ["delimiter.html", "tag.html", { token: "delimiter.html", next: "@pop" }]
       ]
     ],
-    // After <style ... type
     styleAfterType: [
       [
         /<\?((php)|=)?/,
@@ -234,12 +213,9 @@ var language = {
           nextEmbedded: "text/css"
         }
       ],
-      // cover invalid e.g. <style type>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <style ... type =
     styleAfterTypeEquals: [
       [
         /<\?((php)|=)?/,
@@ -270,12 +246,9 @@ var language = {
           nextEmbedded: "text/css"
         }
       ],
-      // cover invalid e.g. <style type=>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <style ... type = $S2
     styleWithCustomType: [
       [
         /<\?((php)|=)?/,
@@ -297,7 +270,6 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
     styleEmbedded: [
@@ -311,7 +283,6 @@ var language = {
       ],
       [/<\/style/, { token: "@rematch", next: "@pop", nextEmbedded: "@pop" }]
     ],
-    // -- END <style> tags handling
     phpInSimpleState: [
       [/<\?((php)|=)?/, "metatag.php"],
       [/\?>/, { token: "metatag.php", switchTo: "@$S2.$S3" }],
@@ -351,23 +322,16 @@ var language = {
           }
         }
       ],
-      // brackets
       [/[{}]/, "delimiter.bracket.php"],
       [/[\[\]]/, "delimiter.array.php"],
       [/[()]/, "delimiter.parenthesis.php"],
-      // whitespace
       [/[ \t\r\n]+/],
-      // comments
       [/(#|\/\/)$/, "comment.php"],
       [/(#|\/\/)/, "comment.php", "@phpLineComment"],
-      // block comments
       [/\/\*/, "comment.php", "@phpComment"],
-      // strings
       [/"/, "string.php", "@phpDoubleQuoteString"],
       [/'/, "string.php", "@phpSingleQuoteString"],
-      // delimiters
       [/[\+\-\*\%\&\|\^\~\!\=\<\>\/\?\;\:\.\,\@]/, "delimiter.php"],
-      // numbers
       [/\d*\d+[eE]([\-+]?\d+)?/, "number.float.php"],
       [/\d*\.\d+([eE][\-+]?\d+)?/, "number.float.php"],
       [/0[xX][0-9a-fA-F']*[0-9a-fA-F]/, "number.hex.php"],

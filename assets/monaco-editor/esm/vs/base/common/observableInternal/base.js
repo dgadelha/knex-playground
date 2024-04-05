@@ -2,16 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { DebugNameData, getFunctionName } from './debugName.js';
 import { getLogger } from './logging.js';
-let _recomputeInitiallyAndOnChange;
-export function _setRecomputeInitiallyAndOnChange(recomputeInitiallyAndOnChange) {
-    _recomputeInitiallyAndOnChange = recomputeInitiallyAndOnChange;
-}
-let _keepObserved;
-export function _setKeepObserved(keepObserved) {
-    _keepObserved = keepObserved;
-}
 let _derived;
 /**
  * @internal
@@ -44,8 +35,8 @@ export class ConvenientObservable {
                 if (name !== undefined) {
                     return name;
                 }
-                // regexp to match `x => x.y` or `x => x?.y` where x and y can be arbitrary identifiers (uses backref):
-                const regexp = /^\s*\(?\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*\)?\s*=>\s*\1(?:\??)\.([a-zA-Z_$][a-zA-Z_$0-9]*)\s*$/;
+                // regexp to match `x => x.y` where x and y can be arbitrary identifiers (uses backref):
+                const regexp = /^\s*\(?\s*([a-zA-Z_$][a-zA-Z_$0-9]*)\s*\)?\s*=>\s*\1\.([a-zA-Z_$][a-zA-Z_$0-9]*)\s*$/;
                 const match = regexp.exec(fn.toString());
                 if (match) {
                     return `${this.debugName}.${match[2]}`;
@@ -56,10 +47,6 @@ export class ConvenientObservable {
                 return undefined;
             },
         }, (reader) => fn(this.read(reader), reader));
-    }
-    recomputeInitiallyAndOnChange(store, handleValue) {
-        store.add(_recomputeInitiallyAndOnChange(this, handleValue));
-        return this;
     }
 }
 export class BaseObservable extends ConvenientObservable {
@@ -83,11 +70,6 @@ export class BaseObservable extends ConvenientObservable {
     onFirstObserverAdded() { }
     onLastObserverRemoved() { }
 }
-/**
- * Starts a transaction in which many observables can be changed at once.
- * {@link fn} should start with a JS Doc using `@description` to give the transaction a debug name.
- * Reaction run on demand or when the transaction ends.
- */
 export function transaction(fn, getDebugName) {
     const tx = new TransactionImpl(fn, getDebugName);
     try {
@@ -97,36 +79,6 @@ export function transaction(fn, getDebugName) {
         tx.finish();
     }
 }
-let _globalTransaction = undefined;
-export function globalTransaction(fn) {
-    if (_globalTransaction) {
-        fn(_globalTransaction);
-    }
-    else {
-        const tx = new TransactionImpl(fn, undefined);
-        _globalTransaction = tx;
-        try {
-            fn(tx);
-        }
-        finally {
-            tx.finish(); // During finish, more actions might be added to the transaction.
-            // Which is why we only clear the global transaction after finish.
-            _globalTransaction = undefined;
-        }
-    }
-}
-export async function asyncTransaction(fn, getDebugName) {
-    const tx = new TransactionImpl(fn, getDebugName);
-    try {
-        await fn(tx);
-    }
-    finally {
-        tx.finish();
-    }
-}
-/**
- * Allows to chain transactions.
- */
 export function subtransaction(tx, fn, getDebugName) {
     if (!tx) {
         transaction(fn, getDebugName);
@@ -150,21 +102,55 @@ export class TransactionImpl {
         return getFunctionName(this._fn);
     }
     updateObserver(observer, observable) {
-        // When this gets called while finish is active, they will still get considered
         this.updatingObservers.push({ observer, observable });
         observer.beginUpdate(observable);
     }
     finish() {
         var _a;
         const updatingObservers = this.updatingObservers;
-        for (let i = 0; i < updatingObservers.length; i++) {
-            const { observer, observable } = updatingObservers[i];
-            observer.endUpdate(observable);
-        }
         // Prevent anyone from updating observers from now on.
         this.updatingObservers = null;
+        for (const { observer, observable } of updatingObservers) {
+            observer.endUpdate(observable);
+        }
         (_a = getLogger()) === null || _a === void 0 ? void 0 : _a.handleEndTransaction();
     }
+}
+export function getDebugName(debugNameFn, fn, owner, self) {
+    let result;
+    if (debugNameFn !== undefined) {
+        if (typeof debugNameFn === 'function') {
+            result = debugNameFn();
+            if (result !== undefined) {
+                return result;
+            }
+        }
+        else {
+            return debugNameFn;
+        }
+    }
+    if (fn !== undefined) {
+        result = getFunctionName(fn);
+        if (result !== undefined) {
+            return result;
+        }
+    }
+    if (owner !== undefined) {
+        for (const key in owner) {
+            if (owner[key] === self) {
+                return key;
+            }
+        }
+    }
+    return undefined;
+}
+export function getFunctionName(fn) {
+    const fnSrc = fn.toString();
+    // Pattern: /** @description ... */
+    const regexp = /\/\*\*\s*@description\s*([^*]*)\*\//;
+    const match = regexp.exec(fnSrc);
+    const result = match ? match[1] : undefined;
+    return result === null || result === void 0 ? void 0 : result.trim();
 }
 export function observableValue(nameOrOwner, initialValue) {
     if (typeof nameOrOwner === 'string') {
@@ -177,7 +163,7 @@ export function observableValue(nameOrOwner, initialValue) {
 export class ObservableValue extends BaseObservable {
     get debugName() {
         var _a;
-        return (_a = new DebugNameData(this._owner, this._debugName, undefined).getDebugName(this)) !== null && _a !== void 0 ? _a : 'ObservableValue';
+        return (_a = getDebugName(this._debugName, undefined, this._owner, this)) !== null && _a !== void 0 ? _a : 'ObservableValue';
     }
     constructor(_owner, _debugName, initialValue) {
         super();
@@ -219,10 +205,6 @@ export class ObservableValue extends BaseObservable {
         this._value = newValue;
     }
 }
-/**
- * A disposable observable. When disposed, its value is also disposed.
- * When a new value is set, the previous value is disposed.
- */
 export function disposableObservableValue(nameOrOwner, initialValue) {
     if (typeof nameOrOwner === 'string') {
         return new DisposableObservableValue(undefined, nameOrOwner, initialValue);

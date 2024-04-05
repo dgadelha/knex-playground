@@ -7,6 +7,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
@@ -179,31 +188,25 @@ let ActionList = class ActionList extends Disposable {
         const itemsHeight = this._allMenuItems.length * this._actionLineHeight;
         const heightWithHeaders = itemsHeight + numHeaders * this._headerLineHeight - numHeaders * this._actionLineHeight;
         this._list.layout(heightWithHeaders);
-        let maxWidth = minWidth;
-        if (this._allMenuItems.length >= 50) {
-            maxWidth = 380;
-        }
-        else {
-            // For finding width dynamically (not using resize observer)
-            const itemWidths = this._allMenuItems.map((_, index) => {
-                const element = this.domNode.ownerDocument.getElementById(this._list.getElementID(index));
-                if (element) {
-                    element.style.width = 'auto';
-                    const width = element.getBoundingClientRect().width;
-                    element.style.width = '';
-                    return width;
-                }
-                return 0;
-            });
-            // resize observer - can be used in the future since list widget supports dynamic height but not width
-            maxWidth = Math.max(...itemWidths, minWidth);
-        }
+        // For finding width dynamically (not using resize observer)
+        const itemWidths = this._allMenuItems.map((_, index) => {
+            const element = document.getElementById(this._list.getElementID(index));
+            if (element) {
+                element.style.width = 'auto';
+                const width = element.getBoundingClientRect().width;
+                element.style.width = '';
+                return width;
+            }
+            return 0;
+        });
+        // resize observer - can be used in the future since list widget supports dynamic height but not width
+        const width = Math.max(...itemWidths, minWidth);
         const maxVhPrecentage = 0.7;
-        const height = Math.min(heightWithHeaders, this.domNode.ownerDocument.body.clientHeight * maxVhPrecentage);
-        this._list.layout(height, maxWidth);
+        const height = Math.min(heightWithHeaders, document.body.clientHeight * maxVhPrecentage);
+        this._list.layout(height, width);
         this.domNode.style.height = `${height}px`;
         this._list.domFocus();
-        return maxWidth;
+        return width;
     }
     focusPrevious() {
         this._list.focusPrevious(1, true, undefined, this.focusCondition);
@@ -238,6 +241,7 @@ let ActionList = class ActionList extends Disposable {
     }
     onFocus() {
         var _a, _b;
+        this._list.domFocus();
         const focused = this._list.getFocus();
         if (focused.length === 0) {
             return;
@@ -246,18 +250,20 @@ let ActionList = class ActionList extends Disposable {
         const element = this._list.element(focusIndex);
         (_b = (_a = this._delegate).onFocus) === null || _b === void 0 ? void 0 : _b.call(_a, element.item);
     }
-    async onListHover(e) {
-        const element = e.element;
-        if (element && element.item && this.focusCondition(element)) {
-            if (this._delegate.onHover && !element.disabled && element.kind === "action" /* ActionListItemKind.Action */) {
-                const result = await this._delegate.onHover(element.item, this.cts.token);
-                element.canPreview = result ? result.canPreview : undefined;
+    onListHover(e) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const element = e.element;
+            if (element && element.item && this.focusCondition(element)) {
+                if (this._delegate.onHover && !element.disabled && element.kind === "action" /* ActionListItemKind.Action */) {
+                    const result = yield this._delegate.onHover(element.item, this.cts.token);
+                    element.canPreview = result ? result.canPreview : undefined;
+                }
+                if (e.index) {
+                    this._list.splice(e.index, 1, [element]);
+                }
             }
-            if (e.index) {
-                this._list.splice(e.index, 1, [element]);
-            }
-        }
-        this._list.setFocus(typeof e.index === 'number' ? [e.index] : []);
+            this._list.setFocus(typeof e.index === 'number' ? [e.index] : []);
+        });
     }
     onListClick(e) {
         if (e.element && this.focusCondition(e.element)) {

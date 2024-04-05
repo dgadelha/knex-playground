@@ -40,7 +40,6 @@ let ContextMenuService = class ContextMenuService extends Disposable {
         this.contextKeyService = contextKeyService;
         this._contextMenuHandler = undefined;
         this._onDidShowContextMenu = this._store.add(new Emitter());
-        this.onDidShowContextMenu = this._onDidShowContextMenu.event;
         this._onDidHideContextMenu = this._store.add(new Emitter());
     }
     configure(options) {
@@ -49,14 +48,11 @@ let ContextMenuService = class ContextMenuService extends Disposable {
     // ContextMenu
     showContextMenu(delegate) {
         delegate = ContextMenuMenuDelegate.transform(delegate, this.menuService, this.contextKeyService);
-        this.contextMenuHandler.showContextMenu({
-            ...delegate,
-            onHide: (didCancel) => {
+        this.contextMenuHandler.showContextMenu(Object.assign(Object.assign({}, delegate), { onHide: (didCancel) => {
                 var _a;
                 (_a = delegate.onHide) === null || _a === void 0 ? void 0 : _a.call(delegate, didCancel);
                 this._onDidHideContextMenu.fire();
-            }
-        });
+            } }));
         ModifierKeyEmitter.getInstance().resetKeyStatus();
         this._onDidShowContextMenu.fire();
     }
@@ -80,9 +76,7 @@ export var ContextMenuMenuDelegate;
             return delegate;
         }
         const { menuId, menuActionOptions, contextKeyService } = delegate;
-        return {
-            ...delegate,
-            getActions: () => {
+        return Object.assign(Object.assign({}, delegate), { getActions: () => {
                 const target = [];
                 if (menuId) {
                     const menu = menuService.createMenu(menuId, contextKeyService !== null && contextKeyService !== void 0 ? contextKeyService : globalContextKeyService);
@@ -95,8 +89,7 @@ export var ContextMenuMenuDelegate;
                 else {
                     return Separator.join(delegate.getActions(), target);
                 }
-            }
-        };
+            } });
     }
     ContextMenuMenuDelegate.transform = transform;
 })(ContextMenuMenuDelegate || (ContextMenuMenuDelegate = {}));

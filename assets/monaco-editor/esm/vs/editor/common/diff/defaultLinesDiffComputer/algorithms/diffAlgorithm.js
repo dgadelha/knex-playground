@@ -87,15 +87,6 @@ export class OffsetPair {
     toString() {
         return `${this.offset1} <-> ${this.offset2}`;
     }
-    delta(offset) {
-        if (offset === 0) {
-            return this;
-        }
-        return new OffsetPair(this.offset1 + offset, this.offset2 + offset);
-    }
-    equals(other) {
-        return this.offset1 === other.offset1 && this.offset2 === other.offset2;
-    }
 }
 OffsetPair.zero = new OffsetPair(0, 0);
 OffsetPair.max = new OffsetPair(Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);

@@ -112,6 +112,7 @@ export class IndexTreeModel {
         const treeListElementsToInsert = [];
         const nodesToInsertIterator = Iterable.map(toInsert, el => this.createTreeNode(el, parentNode, parentNode.visible ? 1 /* TreeVisibility.Visible */ : 0 /* TreeVisibility.Hidden */, revealed, treeListElementsToInsert, onDidCreateNode));
         const lastIndex = location[location.length - 1];
+        const lastHadChildren = parentNode.children.length > 0;
         // figure out what's the visible child start index right before the
         // splice point
         let visibleChildStartIndex = 0;
@@ -173,6 +174,10 @@ export class IndexTreeModel {
             deletedNodes.forEach(visit);
         }
         this._onDidSplice.fire({ insertedNodes: nodesToInsert, deletedNodes });
+        const currentlyHasChildren = parentNode.children.length > 0;
+        if (lastHadChildren !== currentlyHasChildren) {
+            this.setCollapsible(location.slice(0, -1), currentlyHasChildren);
+        }
         let node = parentNode;
         while (node) {
             if (node.visibility === 2 /* TreeVisibility.Recurse */) {

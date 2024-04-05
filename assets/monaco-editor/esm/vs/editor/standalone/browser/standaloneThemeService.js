@@ -16,7 +16,6 @@ import { Extensions as ThemingExtensions } from '../../../platform/theme/common/
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { ColorScheme, isDark, isHighContrast } from '../../../platform/theme/common/theme.js';
 import { getIconsStyleSheet, UnthemedProductIconTheme } from '../../../platform/theme/browser/iconsStyleSheet.js';
-import { mainWindow } from '../../../base/browser/window.js';
 export const VS_LIGHT_THEME_NAME = 'vs';
 export const VS_DARK_THEME_NAME = 'vs-dark';
 export const HC_BLACK_THEME_NAME = 'hc-black';
@@ -199,7 +198,7 @@ export class StandaloneThemeService extends Disposable {
             this._codiconCSS = iconsStyleSheet.getCSS();
             this._updateCSS();
         }));
-        addMatchMediaChangeListener(mainWindow, '(forced-colors: active)', () => {
+        addMatchMediaChangeListener('(forced-colors: active)', () => {
             this._onOSSchemeChanged();
         });
     }
@@ -283,7 +282,7 @@ export class StandaloneThemeService extends Disposable {
     }
     _onOSSchemeChanged() {
         if (this._autoDetectHighContrast) {
-            const wantsHighContrast = mainWindow.matchMedia(`(forced-colors: active)`).matches;
+            const wantsHighContrast = window.matchMedia(`(forced-colors: active)`).matches;
             if (wantsHighContrast !== isHighContrast(this._theme.type)) {
                 // switch to high contrast or non-high contrast but stick to dark or light
                 let newThemeName;
@@ -320,7 +319,7 @@ export class StandaloneThemeService extends Disposable {
                 colorVariables.push(`${asCssVariableName(item.id)}: ${color.toString()};`);
             }
         }
-        ruleCollector.addRule(`.monaco-editor, .monaco-diff-editor, .monaco-component { ${colorVariables.join('\n')} }`);
+        ruleCollector.addRule(`.monaco-editor, .monaco-diff-editor { ${colorVariables.join('\n')} }`);
         const colorMap = this._colorMapOverride || this._theme.tokenTheme.getColorMap();
         ruleCollector.addRule(generateTokensCSSForColorMap(colorMap));
         this._themeCSS = cssRules.join('\n');

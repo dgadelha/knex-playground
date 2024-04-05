@@ -5,7 +5,6 @@
 import { createTrustedTypesPolicy } from './trustedTypes.js';
 import { onUnexpectedError } from '../common/errors.js';
 import { logOnceWebWorkerWarning } from '../common/worker/simpleWorker.js';
-import { Disposable, toDisposable } from '../common/lifecycle.js';
 const ttPolicy = createTrustedTypesPolicy('defaultWorkerFactory', { createScriptURL: value => value });
 function getWorker(label) {
     const monacoEnvironment = globalThis.MonacoEnvironment;
@@ -66,9 +65,8 @@ function isPromiseLike(obj) {
  * A worker that uses HTML5 web workers so that is has
  * its own global scope and its own thread.
  */
-class WebWorker extends Disposable {
+class WebWorker {
     constructor(moduleId, id, label, onMessageCallback, onErrorCallback) {
-        super();
         this.id = id;
         this.label = label;
         const workerOrPromise = getWorker(label);
@@ -88,16 +86,6 @@ class WebWorker extends Disposable {
                 w.addEventListener('error', onErrorCallback);
             }
         });
-        this._register(toDisposable(() => {
-            var _a;
-            (_a = this.worker) === null || _a === void 0 ? void 0 : _a.then(w => {
-                w.onmessage = null;
-                w.onmessageerror = null;
-                w.removeEventListener('error', onErrorCallback);
-                w.terminate();
-            });
-            this.worker = null;
-        }));
     }
     getId() {
         return this.id;
@@ -113,6 +101,11 @@ class WebWorker extends Disposable {
                 onUnexpectedError(new Error(`FAILED to post message to '${this.label}'-worker`, { cause: err }));
             }
         });
+    }
+    dispose() {
+        var _a;
+        (_a = this.worker) === null || _a === void 0 ? void 0 : _a.then(w => w.terminate());
+        this.worker = null;
     }
 }
 export class DefaultWorkerFactory {

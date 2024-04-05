@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/st/st", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -357,11 +357,8 @@ var moduleExports = (() => {
       "right",
       "rtc"
     ],
-    // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
-    // C# style strings
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
-    // The main tokenizer for our languages
     tokenizer: {
       root: [
         [/(\.\.)/, "delimiter"],
@@ -380,7 +377,6 @@ var moduleExports = (() => {
         [/\b[A_Za-z]+(_TO_)[A_Za-z]+\b/, "predefined"],
         [/[;]/, "delimiter"],
         [/[.]/, { token: "delimiter", next: "@params" }],
-        // identifiers and keywords
         [
           /[a-zA-Z_]\w*/,
           {
@@ -399,7 +395,6 @@ var moduleExports = (() => {
         { include: "@whitespace" },
         [/[{}()\[\]]/, "@brackets"],
         [/"([^"\\]|\\.)*$/, "string.invalid"],
-        // non-teminated string
         [/"/, { token: "string.quote", bracket: "@open", next: "@string_dq" }],
         [/'/, { token: "string.quote", bracket: "@open", next: "@string_sq" }],
         [/'[^\\']'/, "string"],
@@ -413,14 +408,12 @@ var moduleExports = (() => {
       comment: [
         [/[^\/*]+/, "comment"],
         [/\/\*/, "comment", "@push"],
-        // nested comment
         ["\\*/", "comment", "@pop"],
         [/[\/*]/, "comment"]
       ],
       comment2: [
         [/[^\(*]+/, "comment"],
         [/\(\*/, "comment", "@push"],
-        // nested comment
         ["\\*\\)", "comment", "@pop"],
         [/[\(*]/, "comment"]
       ],

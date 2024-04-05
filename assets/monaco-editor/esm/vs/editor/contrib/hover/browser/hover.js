@@ -11,7 +11,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var HoverController_1;
+var ModesHoverController_1;
 import { KeyChord } from '../../../../base/common/keyCodes.js';
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { EditorAction, registerEditorAction, registerEditorContribution } from '../../../browser/editorExtensions.js';
@@ -30,12 +30,15 @@ import { MarkdownHoverParticipant } from './markdownHoverParticipant.js';
 import { MarkerHoverParticipant } from './markerHoverParticipant.js';
 import { InlineSuggestionHintsContentWidget } from '../../inlineCompletions/browser/inlineCompletionsHintsWidget.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
-import { RunOnceScheduler } from '../../../../base/common/async.js';
 import * as nls from '../../../../nls.js';
 import './hover.css';
+import { RunOnceScheduler } from '../../../../base/common/async.js';
 // sticky hover widget which doesn't disappear on focus out and such
 const _sticky = false;
-let HoverController = HoverController_1 = class HoverController extends Disposable {
+let ModesHoverController = ModesHoverController_1 = class ModesHoverController extends Disposable {
+    static get(editor) {
+        return editor.getContribution(ModesHoverController_1.ID);
+    }
     constructor(_editor, _instantiationService, _openerService, _languageService, _keybindingService) {
         super();
         this._editor = _editor;
@@ -43,55 +46,47 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
         this._openerService = _openerService;
         this._languageService = _languageService;
         this._keybindingService = _keybindingService;
-        this._listenersStore = new DisposableStore();
-        this._hoverState = {
-            mouseDown: false,
-            contentHoverFocused: false,
-            activatedByDecoratorClick: false
-        };
+        this._toUnhook = new DisposableStore();
+        this._hoverActivatedByColorDecoratorClick = false;
+        this._isMouseDown = false;
+        this._hoverClicked = false;
+        this._contentWidget = null;
+        this._glyphWidget = null;
         this._reactToEditorMouseMoveRunner = this._register(new RunOnceScheduler(() => this._reactToEditorMouseMove(this._mouseMoveEvent), 0));
-        this._hookListeners();
+        this._hookEvents();
         this._register(this._editor.onDidChangeConfiguration((e) => {
             if (e.hasChanged(60 /* EditorOption.hover */)) {
-                this._unhookListeners();
-                this._hookListeners();
+                this._unhookEvents();
+                this._hookEvents();
             }
         }));
+        this._register(this._editor.onMouseLeave(() => {
+            this._mouseMoveEvent = undefined;
+            this._reactToEditorMouseMoveRunner.cancel();
+        }));
     }
-    static get(editor) {
-        return editor.getContribution(HoverController_1.ID);
-    }
-    _hookListeners() {
+    _hookEvents() {
+        const hideWidgetsEventHandler = () => this._hideWidgets();
         const hoverOpts = this._editor.getOption(60 /* EditorOption.hover */);
-        this._hoverSettings = {
-            enabled: hoverOpts.enabled,
-            sticky: hoverOpts.sticky,
-            hidingDelay: hoverOpts.delay
-        };
-        if (hoverOpts.enabled) {
-            this._listenersStore.add(this._editor.onMouseDown((e) => this._onEditorMouseDown(e)));
-            this._listenersStore.add(this._editor.onMouseUp(() => this._onEditorMouseUp()));
-            this._listenersStore.add(this._editor.onMouseMove((e) => this._onEditorMouseMove(e)));
-            this._listenersStore.add(this._editor.onKeyDown((e) => this._onKeyDown(e)));
+        this._isHoverEnabled = hoverOpts.enabled;
+        this._isHoverSticky = hoverOpts.sticky;
+        this._hidingDelay = hoverOpts.hidingDelay;
+        if (this._isHoverEnabled) {
+            this._toUnhook.add(this._editor.onMouseDown((e) => this._onEditorMouseDown(e)));
+            this._toUnhook.add(this._editor.onMouseUp((e) => this._onEditorMouseUp(e)));
+            this._toUnhook.add(this._editor.onMouseMove((e) => this._onEditorMouseMove(e)));
+            this._toUnhook.add(this._editor.onKeyDown((e) => this._onKeyDown(e)));
         }
         else {
-            this._listenersStore.add(this._editor.onMouseMove((e) => this._onEditorMouseMove(e)));
-            this._listenersStore.add(this._editor.onKeyDown((e) => this._onKeyDown(e)));
+            this._toUnhook.add(this._editor.onMouseMove((e) => this._onEditorMouseMove(e)));
+            this._toUnhook.add(this._editor.onKeyDown((e) => this._onKeyDown(e)));
         }
-        this._listenersStore.add(this._editor.onMouseLeave((e) => this._onEditorMouseLeave(e)));
-        this._listenersStore.add(this._editor.onDidChangeModel(() => {
-            this._cancelScheduler();
-            this._hideWidgets();
-        }));
-        this._listenersStore.add(this._editor.onDidChangeModelContent(() => this._cancelScheduler()));
-        this._listenersStore.add(this._editor.onDidScrollChange((e) => this._onEditorScrollChanged(e)));
+        this._toUnhook.add(this._editor.onMouseLeave((e) => this._onEditorMouseLeave(e)));
+        this._toUnhook.add(this._editor.onDidChangeModel(hideWidgetsEventHandler));
+        this._toUnhook.add(this._editor.onDidScrollChange((e) => this._onEditorScrollChanged(e)));
     }
-    _unhookListeners() {
-        this._listenersStore.clear();
-    }
-    _cancelScheduler() {
-        this._mouseMoveEvent = undefined;
-        this._reactToEditorMouseMoveRunner.cancel();
+    _unhookEvents() {
+        this._toUnhook.clear();
     }
     _onEditorScrollChanged(e) {
         if (e.scrollTopChanged || e.scrollLeftChanged) {
@@ -100,66 +95,62 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
     }
     _onEditorMouseDown(mouseEvent) {
         var _a;
-        this._hoverState.mouseDown = true;
+        this._isMouseDown = true;
         const target = mouseEvent.target;
         if (target.type === 9 /* MouseTargetType.CONTENT_WIDGET */ && target.detail === ContentHoverWidget.ID) {
+            this._hoverClicked = true;
             // mouse down on top of content hover widget
-            this._hoverState.contentHoverFocused = true;
             return;
         }
         if (target.type === 12 /* MouseTargetType.OVERLAY_WIDGET */ && target.detail === MarginHoverWidget.ID) {
-            // mouse down on top of margin hover widget
+            // mouse down on top of overlay hover widget
             return;
         }
         if (target.type !== 12 /* MouseTargetType.OVERLAY_WIDGET */) {
-            this._hoverState.contentHoverFocused = false;
+            this._hoverClicked = false;
         }
-        if ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.widget.isResizing) {
-            return;
+        if (!((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.widget.isResizing)) {
+            this._hideWidgets();
         }
-        this._hideWidgets();
     }
-    _onEditorMouseUp() {
-        this._hoverState.mouseDown = false;
+    _onEditorMouseUp(mouseEvent) {
+        this._isMouseDown = false;
     }
     _onEditorMouseLeave(mouseEvent) {
         var _a, _b;
-        this._cancelScheduler();
-        const targetElement = (mouseEvent.event.browserEvent.relatedTarget);
-        if (((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.widget.isResizing) || ((_b = this._contentWidget) === null || _b === void 0 ? void 0 : _b.containsNode(targetElement))) {
+        const targetEm = (mouseEvent.event.browserEvent.relatedTarget);
+        if (((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.widget.isResizing) || ((_b = this._contentWidget) === null || _b === void 0 ? void 0 : _b.containsNode(targetEm))) {
             // When the content widget is resizing
-            // When the mouse is inside hover widget
+            // when the mouse is inside hover widget
             return;
         }
-        if (_sticky) {
-            return;
+        if (!_sticky) {
+            this._hideWidgets();
         }
-        this._hideWidgets();
     }
     _isMouseOverWidget(mouseEvent) {
         var _a, _b, _c, _d, _e;
         const target = mouseEvent.target;
-        const sticky = this._hoverSettings.sticky;
-        if (sticky
+        if (this._isHoverSticky
             && target.type === 9 /* MouseTargetType.CONTENT_WIDGET */
             && target.detail === ContentHoverWidget.ID) {
             // mouse moved on top of content hover widget
             return true;
         }
-        if (sticky
+        if (this._isHoverSticky
             && ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.containsNode((_b = mouseEvent.event.browserEvent.view) === null || _b === void 0 ? void 0 : _b.document.activeElement))
             && !((_d = (_c = mouseEvent.event.browserEvent.view) === null || _c === void 0 ? void 0 : _c.getSelection()) === null || _d === void 0 ? void 0 : _d.isCollapsed)) {
             // selected text within content hover widget
             return true;
         }
-        if (!sticky
+        if (!this._isHoverSticky
             && target.type === 9 /* MouseTargetType.CONTENT_WIDGET */
             && target.detail === ContentHoverWidget.ID
             && ((_e = this._contentWidget) === null || _e === void 0 ? void 0 : _e.isColorPickerVisible)) {
-            // though the hover is not sticky, the color picker is sticky
+            // though the hover is not sticky, the color picker needs to.
             return true;
         }
-        if (sticky
+        if (this._isHoverSticky
             && target.type === 12 /* MouseTargetType.OVERLAY_WIDGET */
             && target.detail === MarginHoverWidget.ID) {
             // mouse moved on top of overlay hover widget
@@ -173,11 +164,10 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
         if (((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.isFocused) || ((_b = this._contentWidget) === null || _b === void 0 ? void 0 : _b.isResizing)) {
             return;
         }
-        if (this._hoverState.mouseDown && this._hoverState.contentHoverFocused) {
+        if (this._isMouseDown && this._hoverClicked) {
             return;
         }
-        const sticky = this._hoverSettings.sticky;
-        if (sticky && ((_c = this._contentWidget) === null || _c === void 0 ? void 0 : _c.isVisibleFromKeyboard)) {
+        if (this._isHoverSticky && ((_c = this._contentWidget) === null || _c === void 0 ? void 0 : _c.isVisibleFromKeyboard)) {
             // Sticky mode is on and the hover has been shown via keyboard
             // so moving the mouse has no effect
             return;
@@ -190,46 +180,40 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
         }
         // If the mouse is not over the widget, and if sticky is on,
         // then give it a grace period before reacting to the mouse event
-        const hidingDelay = this._hoverSettings.hidingDelay;
-        if (((_d = this._contentWidget) === null || _d === void 0 ? void 0 : _d.isVisible) && sticky && hidingDelay > 0) {
+        if (((_d = this._contentWidget) === null || _d === void 0 ? void 0 : _d.isVisible) && this._isHoverSticky && this._hidingDelay > 0) {
             if (!this._reactToEditorMouseMoveRunner.isScheduled()) {
-                this._reactToEditorMouseMoveRunner.schedule(hidingDelay);
+                this._reactToEditorMouseMoveRunner.schedule(this._hidingDelay);
             }
             return;
         }
         this._reactToEditorMouseMove(mouseEvent);
     }
     _reactToEditorMouseMove(mouseEvent) {
-        var _a, _b, _c, _d;
+        var _a, _b, _c;
         if (!mouseEvent) {
             return;
         }
         const target = mouseEvent.target;
         const mouseOnDecorator = (_a = target.element) === null || _a === void 0 ? void 0 : _a.classList.contains('colorpicker-color-decoration');
-        const decoratorActivatedOn = this._editor.getOption(147 /* EditorOption.colorDecoratorsActivatedOn */);
-        const enabled = this._hoverSettings.enabled;
-        const activatedByDecoratorClick = this._hoverState.activatedByDecoratorClick;
-        if ((mouseOnDecorator && ((decoratorActivatedOn === 'click' && !activatedByDecoratorClick) ||
-            (decoratorActivatedOn === 'hover' && !enabled && !_sticky) ||
-            (decoratorActivatedOn === 'clickAndHover' && !enabled && !activatedByDecoratorClick))) || (!mouseOnDecorator && !enabled && !activatedByDecoratorClick)) {
+        const decoratorActivatedOn = this._editor.getOption(146 /* EditorOption.colorDecoratorsActivatedOn */);
+        if ((mouseOnDecorator && ((decoratorActivatedOn === 'click' && !this._hoverActivatedByColorDecoratorClick) ||
+            (decoratorActivatedOn === 'hover' && !this._isHoverEnabled && !_sticky) ||
+            (decoratorActivatedOn === 'clickAndHover' && !this._isHoverEnabled && !this._hoverActivatedByColorDecoratorClick)))
+            || !mouseOnDecorator && !this._isHoverEnabled && !this._hoverActivatedByColorDecoratorClick) {
             this._hideWidgets();
             return;
         }
         const contentWidget = this._getOrCreateContentWidget();
-        if (contentWidget.showsOrWillShow(mouseEvent)) {
+        if (contentWidget.maybeShowAt(mouseEvent)) {
             (_b = this._glyphWidget) === null || _b === void 0 ? void 0 : _b.hide();
             return;
         }
-        if (target.type === 2 /* MouseTargetType.GUTTER_GLYPH_MARGIN */ && target.position && target.detail.glyphMarginLane) {
+        if (target.type === 2 /* MouseTargetType.GUTTER_GLYPH_MARGIN */ && target.position) {
             (_c = this._contentWidget) === null || _c === void 0 ? void 0 : _c.hide();
-            const glyphWidget = this._getOrCreateGlyphWidget();
-            glyphWidget.startShowingAt(target.position.lineNumber, target.detail.glyphMarginLane);
-            return;
-        }
-        if (target.type === 3 /* MouseTargetType.GUTTER_LINE_NUMBERS */ && target.position) {
-            (_d = this._contentWidget) === null || _d === void 0 ? void 0 : _d.hide();
-            const glyphWidget = this._getOrCreateGlyphWidget();
-            glyphWidget.startShowingAt(target.position.lineNumber, 'lineNo');
+            if (!this._glyphWidget) {
+                this._glyphWidget = new MarginHoverWidget(this._editor, this._languageService, this._openerService);
+            }
+            this._glyphWidget.startShowingAt(target.position.lineNumber);
             return;
         }
         if (_sticky) {
@@ -243,36 +227,24 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
             return;
         }
         const resolvedKeyboardEvent = this._keybindingService.softDispatch(e, this._editor.getDomNode());
-        // If the beginning of a multi-chord keybinding is pressed,
-        // or the command aims to focus the hover,
-        // set the variable to true, otherwise false
-        const mightTriggerFocus = (resolvedKeyboardEvent.kind === 1 /* ResultKind.MoreChordsNeeded */ ||
-            (resolvedKeyboardEvent.kind === 2 /* ResultKind.KbFound */
-                && resolvedKeyboardEvent.commandId === 'editor.action.showHover'
-                && ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.isVisible)));
-        if (e.keyCode === 5 /* KeyCode.Ctrl */
-            || e.keyCode === 6 /* KeyCode.Alt */
-            || e.keyCode === 57 /* KeyCode.Meta */
-            || e.keyCode === 4 /* KeyCode.Shift */
-            || mightTriggerFocus) {
+        // If the beginning of a multi-chord keybinding is pressed, or the command aims to focus the hover, set the variable to true, otherwise false
+        const mightTriggerFocus = (resolvedKeyboardEvent.kind === 1 /* ResultKind.MoreChordsNeeded */ || (resolvedKeyboardEvent.kind === 2 /* ResultKind.KbFound */ && resolvedKeyboardEvent.commandId === 'editor.action.showHover' && ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.isVisible)));
+        if (e.keyCode !== 5 /* KeyCode.Ctrl */ && e.keyCode !== 6 /* KeyCode.Alt */ && e.keyCode !== 57 /* KeyCode.Meta */ && e.keyCode !== 4 /* KeyCode.Shift */
+            && !mightTriggerFocus) {
             // Do not hide hover when a modifier key is pressed
-            return;
+            this._hideWidgets();
         }
-        this._hideWidgets();
     }
     _hideWidgets() {
         var _a, _b, _c;
         if (_sticky) {
             return;
         }
-        if ((this._hoverState.mouseDown
-            && this._hoverState.contentHoverFocused
-            && ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.isColorPickerVisible))
-            || InlineSuggestionHintsContentWidget.dropDownVisible) {
+        if ((this._isMouseDown && this._hoverClicked && ((_a = this._contentWidget) === null || _a === void 0 ? void 0 : _a.isColorPickerVisible)) || InlineSuggestionHintsContentWidget.dropDownVisible) {
             return;
         }
-        this._hoverState.activatedByDecoratorClick = false;
-        this._hoverState.contentHoverFocused = false;
+        this._hoverActivatedByColorDecoratorClick = false;
+        this._hoverClicked = false;
         (_b = this._glyphWidget) === null || _b === void 0 ? void 0 : _b.hide();
         (_c = this._contentWidget) === null || _c === void 0 ? void 0 : _c.hide();
     }
@@ -282,14 +254,8 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
         }
         return this._contentWidget;
     }
-    _getOrCreateGlyphWidget() {
-        if (!this._glyphWidget) {
-            this._glyphWidget = new MarginHoverWidget(this._editor, this._languageService, this._openerService);
-        }
-        return this._glyphWidget;
-    }
     showContentHover(range, mode, source, focus, activatedByColorDecoratorClick = false) {
-        this._hoverState.activatedByDecoratorClick = activatedByColorDecoratorClick;
+        this._hoverActivatedByColorDecoratorClick = activatedByColorDecoratorClick;
         this._getOrCreateContentWidget().startShowingAtRange(range, mode, source, focus);
     }
     focus() {
@@ -339,26 +305,20 @@ let HoverController = HoverController_1 = class HoverController extends Disposab
     dispose() {
         var _a, _b;
         super.dispose();
-        this._unhookListeners();
-        this._listenersStore.dispose();
+        this._unhookEvents();
+        this._toUnhook.dispose();
         (_a = this._glyphWidget) === null || _a === void 0 ? void 0 : _a.dispose();
         (_b = this._contentWidget) === null || _b === void 0 ? void 0 : _b.dispose();
     }
 };
-HoverController.ID = 'editor.contrib.hover';
-HoverController = HoverController_1 = __decorate([
+ModesHoverController.ID = 'editor.contrib.hover';
+ModesHoverController = ModesHoverController_1 = __decorate([
     __param(1, IInstantiationService),
     __param(2, IOpenerService),
     __param(3, ILanguageService),
     __param(4, IKeybindingService)
-], HoverController);
-export { HoverController };
-var HoverFocusBehavior;
-(function (HoverFocusBehavior) {
-    HoverFocusBehavior["NoAutoFocus"] = "noAutoFocus";
-    HoverFocusBehavior["FocusIfVisible"] = "focusIfVisible";
-    HoverFocusBehavior["AutoFocusImmediately"] = "autoFocusImmediately";
-})(HoverFocusBehavior || (HoverFocusBehavior = {}));
+], ModesHoverController);
+export { ModesHoverController };
 class ShowOrFocusHoverAction extends EditorAction {
     constructor() {
         super({
@@ -368,10 +328,11 @@ class ShowOrFocusHoverAction extends EditorAction {
                 comment: [
                     'Label for action that will trigger the showing/focusing of a hover in the editor.',
                     'If the hover is not visible, it will show the hover.',
-                    'This allows for users to show the hover without using the mouse.'
+                    'This allows for users to show the hover without using the mouse.',
+                    'If the hover is already visible, it will take focus.'
                 ]
             }, "Show or Focus Hover"),
-            metadata: {
+            description: {
                 description: `Show or Focus Hover`,
                 args: [{
                         name: 'args',
@@ -379,14 +340,9 @@ class ShowOrFocusHoverAction extends EditorAction {
                             type: 'object',
                             properties: {
                                 'focus': {
-                                    description: 'Controls if and when the hover should take focus upon being triggered by this action.',
-                                    enum: [HoverFocusBehavior.NoAutoFocus, HoverFocusBehavior.FocusIfVisible, HoverFocusBehavior.AutoFocusImmediately],
-                                    enumDescriptions: [
-                                        nls.localize('showOrFocusHover.focus.noAutoFocus', 'The hover will not automatically take focus.'),
-                                        nls.localize('showOrFocusHover.focus.focusIfVisible', 'The hover will take focus only if it is already visible.'),
-                                        nls.localize('showOrFocusHover.focus.autoFocusImmediately', 'The hover will automatically take focus when it appears.'),
-                                    ],
-                                    default: HoverFocusBehavior.FocusIfVisible,
+                                    description: 'Controls if when triggered with the keyboard, the hover should take focus immediately.',
+                                    type: 'boolean',
+                                    default: false
                                 }
                             },
                         }
@@ -405,34 +361,18 @@ class ShowOrFocusHoverAction extends EditorAction {
         if (!editor.hasModel()) {
             return;
         }
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
-        const focusArgument = args === null || args === void 0 ? void 0 : args.focus;
-        let focusOption = HoverFocusBehavior.FocusIfVisible;
-        if (Object.values(HoverFocusBehavior).includes(focusArgument)) {
-            focusOption = focusArgument;
-        }
-        else if (typeof focusArgument === 'boolean' && focusArgument) {
-            focusOption = HoverFocusBehavior.AutoFocusImmediately;
-        }
-        const showContentHover = (focus) => {
-            const position = editor.getPosition();
-            const range = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
-            controller.showContentHover(range, 1 /* HoverStartMode.Immediate */, 1 /* HoverStartSource.Keyboard */, focus);
-        };
-        const accessibilitySupportEnabled = editor.getOption(2 /* EditorOption.accessibilitySupport */) === 2 /* AccessibilitySupport.Enabled */;
+        const position = editor.getPosition();
+        const range = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
+        const focus = editor.getOption(2 /* EditorOption.accessibilitySupport */) === 2 /* AccessibilitySupport.Enabled */ || !!(args === null || args === void 0 ? void 0 : args.focus);
         if (controller.isHoverVisible) {
-            if (focusOption !== HoverFocusBehavior.NoAutoFocus) {
-                controller.focus();
-            }
-            else {
-                showContentHover(accessibilitySupportEnabled);
-            }
+            controller.focus();
         }
         else {
-            showContentHover(accessibilitySupportEnabled || focusOption === HoverFocusBehavior.AutoFocusImmediately);
+            controller.showContentHover(range, 1 /* HoverStartMode.Immediate */, 1 /* HoverStartSource.Keyboard */, focus);
         }
     }
 }
@@ -452,7 +392,7 @@ class ShowDefinitionPreviewHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -491,7 +431,7 @@ class ScrollUpHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -518,7 +458,7 @@ class ScrollDownHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -545,7 +485,7 @@ class ScrollLeftHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -572,7 +512,7 @@ class ScrollRightHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -600,7 +540,7 @@ class PageUpHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -628,7 +568,7 @@ class PageDownHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -656,7 +596,7 @@ class GoToTopHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
@@ -684,14 +624,14 @@ class GoToBottomHoverAction extends EditorAction {
         });
     }
     run(accessor, editor) {
-        const controller = HoverController.get(editor);
+        const controller = ModesHoverController.get(editor);
         if (!controller) {
             return;
         }
         controller.goToBottom();
     }
 }
-registerEditorContribution(HoverController.ID, HoverController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);
+registerEditorContribution(ModesHoverController.ID, ModesHoverController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);
 registerEditorAction(ShowOrFocusHoverAction);
 registerEditorAction(ShowDefinitionPreviewHoverAction);
 registerEditorAction(ScrollUpHoverAction);

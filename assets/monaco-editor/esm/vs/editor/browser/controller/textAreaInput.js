@@ -2,29 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 import * as browser from '../../../base/browser/browser.js';
 import * as dom from '../../../base/browser/dom.js';
 import { DomEmitter } from '../../../base/browser/event.js';
 import { StandardKeyboardEvent } from '../../../base/browser/keyboardEvent.js';
 import { inputLatency } from '../../../base/browser/performance.js';
 import { RunOnceScheduler } from '../../../base/common/async.js';
-import { Emitter, Event } from '../../../base/common/event.js';
-import { Disposable, MutableDisposable } from '../../../base/common/lifecycle.js';
+import { Emitter } from '../../../base/common/event.js';
+import { Disposable } from '../../../base/common/lifecycle.js';
 import { Mimes } from '../../../base/common/mime.js';
 import * as strings from '../../../base/common/strings.js';
 import { TextAreaState, _debugComposition } from './textAreaState.js';
 import { Selection } from '../../common/core/selection.js';
-import { IAccessibilityService } from '../../../platform/accessibility/common/accessibility.js';
-import { ILogService } from '../../../platform/log/common/log.js';
 export var TextAreaSyntethicEvents;
 (function (TextAreaSyntethicEvents) {
     TextAreaSyntethicEvents.Tap = '-monaco-textarea-synthetic-tap';
@@ -78,18 +67,16 @@ class CompositionContext {
  *
  * Composition events are generated for presentation purposes (composition input is reflected in onType).
  */
-let TextAreaInput = class TextAreaInput extends Disposable {
+export class TextAreaInput extends Disposable {
     get textAreaState() {
         return this._textAreaState;
     }
-    constructor(_host, _textArea, _OS, _browser, _accessibilityService, _logService) {
+    constructor(_host, _textArea, _OS, _browser) {
         super();
         this._host = _host;
         this._textArea = _textArea;
         this._OS = _OS;
         this._browser = _browser;
-        this._accessibilityService = _accessibilityService;
-        this._logService = _logService;
         this._onFocus = this._register(new Emitter());
         this.onFocus = this._onFocus.event;
         this._onBlur = this._register(new Emitter());
@@ -112,21 +99,11 @@ let TextAreaInput = class TextAreaInput extends Disposable {
         this.onCompositionEnd = this._onCompositionEnd.event;
         this._onSelectionChangeRequest = this._register(new Emitter());
         this.onSelectionChangeRequest = this._onSelectionChangeRequest.event;
-        this._asyncFocusGainWriteScreenReaderContent = this._register(new MutableDisposable());
         this._asyncTriggerCut = this._register(new RunOnceScheduler(() => this._onCut.fire(), 0));
+        this._asyncFocusGainWriteScreenReaderContent = this._register(new RunOnceScheduler(() => this.writeScreenReaderContent('asyncFocusGain'), 0));
         this._textAreaState = TextAreaState.EMPTY;
         this._selectionChangeListener = null;
-        if (this._accessibilityService.isScreenReaderOptimized()) {
-            this.writeNativeTextAreaContent('ctor');
-        }
-        this._register(Event.runAndSubscribe(this._accessibilityService.onDidChangeScreenReaderOptimized, () => {
-            if (this._accessibilityService.isScreenReaderOptimized() && !this._asyncFocusGainWriteScreenReaderContent.value) {
-                this._asyncFocusGainWriteScreenReaderContent.value = this._register(new RunOnceScheduler(() => this.writeNativeTextAreaContent('asyncFocusGain'), 0));
-            }
-            else {
-                this._asyncFocusGainWriteScreenReaderContent.clear();
-            }
-        }));
+        this.writeScreenReaderContent('ctor');
         this._hasFocus = false;
         this._currentComposition = null;
         let lastKeyDown = null;
@@ -299,13 +276,10 @@ let TextAreaInput = class TextAreaInput extends Disposable {
         this._register(this._textArea.onFocus(() => {
             const hadFocus = this._hasFocus;
             this._setHasFocus(true);
-            if (this._accessibilityService.isScreenReaderOptimized() && this._browser.isSafari && !hadFocus && this._hasFocus) {
+            if (this._browser.isSafari && !hadFocus && this._hasFocus) {
                 // When "tabbing into" the textarea, immediately after dispatching the 'focus' event,
                 // Safari will always move the selection at offset 0 in the textarea
-                if (!this._asyncFocusGainWriteScreenReaderContent.value) {
-                    this._asyncFocusGainWriteScreenReaderContent.value = new RunOnceScheduler(() => this.writeNativeTextAreaContent('asyncFocusGain'), 0);
-                }
-                this._asyncFocusGainWriteScreenReaderContent.value.schedule();
+                this._asyncFocusGainWriteScreenReaderContent.schedule();
             }
         }));
         this._register(this._textArea.onBlur(() => {
@@ -316,7 +290,7 @@ let TextAreaInput = class TextAreaInput extends Disposable {
                 // Clear the flag to be able to write to the textarea
                 this._currentComposition = null;
                 // Clear the textarea to avoid an unwanted cursor type
-                this.writeNativeTextAreaContent('blurWithoutCompositionEnd');
+                this.writeScreenReaderContent('blurWithoutCompositionEnd');
                 // Fire artificial composition end
                 this._onCompositionEnd.fire();
             }
@@ -329,7 +303,7 @@ let TextAreaInput = class TextAreaInput extends Disposable {
                 // Clear the flag to be able to write to the textarea
                 this._currentComposition = null;
                 // Clear the textarea to avoid an unwanted cursor type
-                this.writeNativeTextAreaContent('tapWithoutCompositionEnd');
+                this.writeScreenReaderContent('tapWithoutCompositionEnd');
                 // Fire artificial composition end
                 this._onCompositionEnd.fire();
             }
@@ -438,7 +412,7 @@ let TextAreaInput = class TextAreaInput extends Disposable {
             this._selectionChangeListener = this._installSelectionChangeListener();
         }
         if (this._hasFocus) {
-            this.writeNativeTextAreaContent('focusgain');
+            this.writeScreenReaderContent('focusgain');
         }
         if (this._hasFocus) {
             this._onFocus.fire();
@@ -454,13 +428,11 @@ let TextAreaInput = class TextAreaInput extends Disposable {
         textAreaState.writeToTextArea(reason, this._textArea, this._hasFocus);
         this._textAreaState = textAreaState;
     }
-    writeNativeTextAreaContent(reason) {
-        if ((!this._accessibilityService.isScreenReaderOptimized() && reason === 'render') || this._currentComposition) {
-            // Do not write to the text on render unless a screen reader is being used #192278
+    writeScreenReaderContent(reason) {
+        if (this._currentComposition) {
             // Do not write to the text area when doing composition
             return;
         }
-        this._logService.trace(`writeTextAreaState(reason: ${reason})`);
         this._setAndWriteTextAreaState(reason, this._host.getScreenReaderContent());
     }
     _ensureClipboardGetsEditorSelection(e) {
@@ -480,12 +452,7 @@ let TextAreaInput = class TextAreaInput extends Disposable {
             ClipboardEventUtils.setTextData(e.clipboardData, dataToCopy.text, dataToCopy.html, storedMetadata);
         }
     }
-};
-TextAreaInput = __decorate([
-    __param(4, IAccessibilityService),
-    __param(5, ILogService)
-], TextAreaInput);
-export { TextAreaInput };
+}
 export const ClipboardEventUtils = {
     getTextData(clipboardData) {
         const text = clipboardData.getData(Mimes.text);
@@ -550,8 +517,8 @@ export class TextAreaWrapper extends Disposable {
         if (shadowRoot) {
             return shadowRoot.activeElement === this._actual;
         }
-        else if (this._actual.isConnected) {
-            return dom.getActiveElement() === this._actual;
+        else if (dom.isInDOM(this._actual)) {
+            return this._actual.ownerDocument.activeElement === this._actual;
         }
         else {
             return false;
@@ -594,16 +561,15 @@ export class TextAreaWrapper extends Disposable {
             activeElement = shadowRoot.activeElement;
         }
         else {
-            activeElement = dom.getActiveElement();
+            activeElement = textArea.ownerDocument.activeElement;
         }
-        const activeWindow = dom.getWindow(activeElement);
         const currentIsFocused = (activeElement === textArea);
         const currentSelectionStart = textArea.selectionStart;
         const currentSelectionEnd = textArea.selectionEnd;
         if (currentIsFocused && currentSelectionStart === selectionStart && currentSelectionEnd === selectionEnd) {
             // No change
             // Firefox iframe bug https://github.com/microsoft/monaco-editor/issues/643#issuecomment-367871377
-            if (browser.isFirefox && activeWindow.parent !== activeWindow) {
+            if (browser.isFirefox && window.parent !== window) {
                 textArea.focus();
             }
             return;
@@ -613,7 +579,7 @@ export class TextAreaWrapper extends Disposable {
             // No need to focus, only need to change the selection range
             this.setIgnoreSelectionChangeTime('setSelectionRange');
             textArea.setSelectionRange(selectionStart, selectionEnd);
-            if (browser.isFirefox && activeWindow.parent !== activeWindow) {
+            if (browser.isFirefox && window.parent !== window) {
                 textArea.focus();
             }
             return;

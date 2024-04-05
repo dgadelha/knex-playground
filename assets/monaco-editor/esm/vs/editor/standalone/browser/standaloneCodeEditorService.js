@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { windowOpenNoOpener } from '../../../base/browser/dom.js';
 import { Schemas } from '../../../base/common/network.js';
 import { AbstractCodeEditorService } from '../../browser/services/abstractCodeEditorService.js';
@@ -25,12 +34,12 @@ let StandaloneCodeEditorService = class StandaloneCodeEditorService extends Abst
         this._register(this.onCodeEditorRemove(() => this._checkContextKey()));
         this._editorIsOpen = contextKeyService.createKey('editorIsOpen', false);
         this._activeCodeEditor = null;
-        this._register(this.registerCodeEditorOpenHandler(async (input, source, sideBySide) => {
+        this._register(this.registerCodeEditorOpenHandler((input, source, sideBySide) => __awaiter(this, void 0, void 0, function* () {
             if (!source) {
                 return null;
             }
             return this.doOpenEditor(source, input);
-        }));
+        })));
     }
     _checkContextKey() {
         let hasCodeEditor = false;

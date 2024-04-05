@@ -11,7 +11,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { createStyleSheet, isActiveElement, isKeyboardEvent } from '../../../base/browser/dom.js';
+import { createStyleSheet } from '../../../base/browser/dom.js';
 import { PagedList } from '../../../base/browser/ui/list/listPaging.js';
 import { DefaultStyleController, isSelectionRangeChangeEvent, isSelectionSingleChangeEvent, List, TypeNavigationMode } from '../../../base/browser/ui/list/listWidget.js';
 import { Table } from '../../../base/browser/ui/table/tableWidget.js';
@@ -65,7 +65,7 @@ export class ListService {
         const registeredList = { widget, extraContextKeys };
         this.lists.push(registeredList);
         // Check for currently being focused
-        if (isActiveElement(widget.getHTMLElement())) {
+        if (widget.getHTMLElement() === document.activeElement) {
             this.setLastFocusedList(widget);
         }
         return combinedDisposable(widget.onDidFocus(() => this.setLastFocusedList(widget)), toDisposable(() => this.lists.splice(this.lists.indexOf(registeredList), 1)), widget.onDidDispose(() => {
@@ -83,9 +83,8 @@ export const RawWorkbenchListScrollAtBoundaryContextKey = new RawContextKey('lis
 export const WorkbenchListScrollAtTopContextKey = ContextKeyExpr.or(RawWorkbenchListScrollAtBoundaryContextKey.isEqualTo('top'), RawWorkbenchListScrollAtBoundaryContextKey.isEqualTo('both'));
 export const WorkbenchListScrollAtBottomContextKey = ContextKeyExpr.or(RawWorkbenchListScrollAtBoundaryContextKey.isEqualTo('bottom'), RawWorkbenchListScrollAtBoundaryContextKey.isEqualTo('both'));
 export const RawWorkbenchListFocusContextKey = new RawContextKey('listFocus', true);
-export const WorkbenchTreeStickyScrollFocused = new RawContextKey('treestickyScrollFocused', false);
 export const WorkbenchListSupportsMultiSelectContextKey = new RawContextKey('listSupportsMultiselect', true);
-export const WorkbenchListFocusContextKey = ContextKeyExpr.and(RawWorkbenchListFocusContextKey, ContextKeyExpr.not(InputFocusedContextKey), WorkbenchTreeStickyScrollFocused.negate());
+export const WorkbenchListFocusContextKey = ContextKeyExpr.and(RawWorkbenchListFocusContextKey, ContextKeyExpr.not(InputFocusedContextKey));
 export const WorkbenchListHasSelectionOrFocus = new RawContextKey('listHasSelectionOrFocus', false);
 export const WorkbenchListDoubleSelection = new RawContextKey('listDoubleSelection', false);
 export const WorkbenchListMultiSelection = new RawContextKey('listMultiSelection', false);
@@ -144,8 +143,6 @@ const listSmoothScrolling = 'workbench.list.smoothScrolling';
 const mouseWheelScrollSensitivityKey = 'workbench.list.mouseWheelScrollSensitivity';
 const fastScrollSensitivityKey = 'workbench.list.fastScrollSensitivity';
 const treeExpandMode = 'workbench.tree.expandMode';
-const treeStickyScroll = 'workbench.tree.enableStickyScroll';
-const treeStickyScrollMaxElements = 'workbench.tree.stickyScrollMaxItemCount';
 function useAltAsMultipleSelectionModifier(configurationService) {
     return configurationService.getValue(multiSelectModifierSettingKey) === 'alt';
 }
@@ -178,27 +175,14 @@ function toWorkbenchListOptions(accessor, options) {
     const configurationService = accessor.get(IConfigurationService);
     const keybindingService = accessor.get(IKeybindingService);
     const disposables = new DisposableStore();
-    const result = {
-        ...options,
-        keyboardNavigationDelegate: { mightProducePrintableCharacter(e) { return keybindingService.mightProducePrintableCharacter(e); } },
-        smoothScrolling: Boolean(configurationService.getValue(listSmoothScrolling)),
-        mouseWheelScrollSensitivity: configurationService.getValue(mouseWheelScrollSensitivityKey),
-        fastScrollSensitivity: configurationService.getValue(fastScrollSensitivityKey),
-        multipleSelectionController: (_a = options.multipleSelectionController) !== null && _a !== void 0 ? _a : disposables.add(new MultipleSelectionController(configurationService)),
-        keyboardNavigationEventFilter: createKeyboardNavigationEventFilter(keybindingService),
-        scrollByPage: Boolean(configurationService.getValue(scrollByPageKey))
-    };
+    const result = Object.assign(Object.assign({}, options), { keyboardNavigationDelegate: { mightProducePrintableCharacter(e) { return keybindingService.mightProducePrintableCharacter(e); } }, smoothScrolling: Boolean(configurationService.getValue(listSmoothScrolling)), mouseWheelScrollSensitivity: configurationService.getValue(mouseWheelScrollSensitivityKey), fastScrollSensitivity: configurationService.getValue(fastScrollSensitivityKey), multipleSelectionController: (_a = options.multipleSelectionController) !== null && _a !== void 0 ? _a : disposables.add(new MultipleSelectionController(configurationService)), keyboardNavigationEventFilter: createKeyboardNavigationEventFilter(keybindingService), scrollByPage: Boolean(configurationService.getValue(scrollByPageKey)) });
     return [result, disposables];
 }
 let WorkbenchList = class WorkbenchList extends List {
     constructor(user, container, delegate, renderers, options, contextKeyService, listService, configurationService, instantiationService) {
         const horizontalScrolling = typeof options.horizontalScrolling !== 'undefined' ? options.horizontalScrolling : Boolean(configurationService.getValue(horizontalScrollingKey));
         const [workbenchListOptions, workbenchListOptionsDisposable] = instantiationService.invokeFunction(toWorkbenchListOptions, options);
-        super(user, container, delegate, renderers, {
-            keyboardSupport: false,
-            ...workbenchListOptions,
-            horizontalScrolling,
-        });
+        super(user, container, delegate, renderers, Object.assign(Object.assign({ keyboardSupport: false }, workbenchListOptions), { horizontalScrolling }));
         this.disposables.add(workbenchListOptionsDisposable);
         this.contextKeyService = createScopedContextKeyService(contextKeyService, this);
         this.disposables.add(createScrollObserver(this.contextKeyService, this));
@@ -235,29 +219,29 @@ let WorkbenchList = class WorkbenchList extends List {
             let options = {};
             if (e.affectsConfiguration(horizontalScrollingKey) && this.horizontalScrolling === undefined) {
                 const horizontalScrolling = Boolean(configurationService.getValue(horizontalScrollingKey));
-                options = { ...options, horizontalScrolling };
+                options = Object.assign(Object.assign({}, options), { horizontalScrolling });
             }
             if (e.affectsConfiguration(scrollByPageKey)) {
                 const scrollByPage = Boolean(configurationService.getValue(scrollByPageKey));
-                options = { ...options, scrollByPage };
+                options = Object.assign(Object.assign({}, options), { scrollByPage });
             }
             if (e.affectsConfiguration(listSmoothScrolling)) {
                 const smoothScrolling = Boolean(configurationService.getValue(listSmoothScrolling));
-                options = { ...options, smoothScrolling };
+                options = Object.assign(Object.assign({}, options), { smoothScrolling });
             }
             if (e.affectsConfiguration(mouseWheelScrollSensitivityKey)) {
                 const mouseWheelScrollSensitivity = configurationService.getValue(mouseWheelScrollSensitivityKey);
-                options = { ...options, mouseWheelScrollSensitivity };
+                options = Object.assign(Object.assign({}, options), { mouseWheelScrollSensitivity });
             }
             if (e.affectsConfiguration(fastScrollSensitivityKey)) {
                 const fastScrollSensitivity = configurationService.getValue(fastScrollSensitivityKey);
-                options = { ...options, fastScrollSensitivity };
+                options = Object.assign(Object.assign({}, options), { fastScrollSensitivity });
             }
             if (Object.keys(options).length > 0) {
                 this.updateOptions(options);
             }
         }));
-        this.navigator = new ListResourceNavigator(this, { configurationService, ...options });
+        this.navigator = new ListResourceNavigator(this, Object.assign({ configurationService }, options));
         this.disposables.add(this.navigator);
     }
     updateOptions(options) {
@@ -284,11 +268,7 @@ let WorkbenchPagedList = class WorkbenchPagedList extends PagedList {
     constructor(user, container, delegate, renderers, options, contextKeyService, listService, configurationService, instantiationService) {
         const horizontalScrolling = typeof options.horizontalScrolling !== 'undefined' ? options.horizontalScrolling : Boolean(configurationService.getValue(horizontalScrollingKey));
         const [workbenchListOptions, workbenchListOptionsDisposable] = instantiationService.invokeFunction(toWorkbenchListOptions, options);
-        super(user, container, delegate, renderers, {
-            keyboardSupport: false,
-            ...workbenchListOptions,
-            horizontalScrolling,
-        });
+        super(user, container, delegate, renderers, Object.assign(Object.assign({ keyboardSupport: false }, workbenchListOptions), { horizontalScrolling }));
         this.disposables = new DisposableStore();
         this.disposables.add(workbenchListOptionsDisposable);
         this.contextKeyService = createScopedContextKeyService(contextKeyService, this);
@@ -309,29 +289,29 @@ let WorkbenchPagedList = class WorkbenchPagedList extends PagedList {
             let options = {};
             if (e.affectsConfiguration(horizontalScrollingKey) && this.horizontalScrolling === undefined) {
                 const horizontalScrolling = Boolean(configurationService.getValue(horizontalScrollingKey));
-                options = { ...options, horizontalScrolling };
+                options = Object.assign(Object.assign({}, options), { horizontalScrolling });
             }
             if (e.affectsConfiguration(scrollByPageKey)) {
                 const scrollByPage = Boolean(configurationService.getValue(scrollByPageKey));
-                options = { ...options, scrollByPage };
+                options = Object.assign(Object.assign({}, options), { scrollByPage });
             }
             if (e.affectsConfiguration(listSmoothScrolling)) {
                 const smoothScrolling = Boolean(configurationService.getValue(listSmoothScrolling));
-                options = { ...options, smoothScrolling };
+                options = Object.assign(Object.assign({}, options), { smoothScrolling });
             }
             if (e.affectsConfiguration(mouseWheelScrollSensitivityKey)) {
                 const mouseWheelScrollSensitivity = configurationService.getValue(mouseWheelScrollSensitivityKey);
-                options = { ...options, mouseWheelScrollSensitivity };
+                options = Object.assign(Object.assign({}, options), { mouseWheelScrollSensitivity });
             }
             if (e.affectsConfiguration(fastScrollSensitivityKey)) {
                 const fastScrollSensitivity = configurationService.getValue(fastScrollSensitivityKey);
-                options = { ...options, fastScrollSensitivity };
+                options = Object.assign(Object.assign({}, options), { fastScrollSensitivity });
             }
             if (Object.keys(options).length > 0) {
                 this.updateOptions(options);
             }
         }));
-        this.navigator = new ListResourceNavigator(this, { configurationService, ...options });
+        this.navigator = new ListResourceNavigator(this, Object.assign({ configurationService }, options));
         this.disposables.add(this.navigator);
     }
     updateOptions(options) {
@@ -362,11 +342,7 @@ let WorkbenchTable = class WorkbenchTable extends Table {
     constructor(user, container, delegate, columns, renderers, options, contextKeyService, listService, configurationService, instantiationService) {
         const horizontalScrolling = typeof options.horizontalScrolling !== 'undefined' ? options.horizontalScrolling : Boolean(configurationService.getValue(horizontalScrollingKey));
         const [workbenchListOptions, workbenchListOptionsDisposable] = instantiationService.invokeFunction(toWorkbenchListOptions, options);
-        super(user, container, delegate, columns, renderers, {
-            keyboardSupport: false,
-            ...workbenchListOptions,
-            horizontalScrolling,
-        });
+        super(user, container, delegate, columns, renderers, Object.assign(Object.assign({ keyboardSupport: false }, workbenchListOptions), { horizontalScrolling }));
         this.disposables.add(workbenchListOptionsDisposable);
         this.contextKeyService = createScopedContextKeyService(contextKeyService, this);
         this.disposables.add(createScrollObserver(this.contextKeyService, this));
@@ -403,29 +379,29 @@ let WorkbenchTable = class WorkbenchTable extends Table {
             let options = {};
             if (e.affectsConfiguration(horizontalScrollingKey) && this.horizontalScrolling === undefined) {
                 const horizontalScrolling = Boolean(configurationService.getValue(horizontalScrollingKey));
-                options = { ...options, horizontalScrolling };
+                options = Object.assign(Object.assign({}, options), { horizontalScrolling });
             }
             if (e.affectsConfiguration(scrollByPageKey)) {
                 const scrollByPage = Boolean(configurationService.getValue(scrollByPageKey));
-                options = { ...options, scrollByPage };
+                options = Object.assign(Object.assign({}, options), { scrollByPage });
             }
             if (e.affectsConfiguration(listSmoothScrolling)) {
                 const smoothScrolling = Boolean(configurationService.getValue(listSmoothScrolling));
-                options = { ...options, smoothScrolling };
+                options = Object.assign(Object.assign({}, options), { smoothScrolling });
             }
             if (e.affectsConfiguration(mouseWheelScrollSensitivityKey)) {
                 const mouseWheelScrollSensitivity = configurationService.getValue(mouseWheelScrollSensitivityKey);
-                options = { ...options, mouseWheelScrollSensitivity };
+                options = Object.assign(Object.assign({}, options), { mouseWheelScrollSensitivity });
             }
             if (e.affectsConfiguration(fastScrollSensitivityKey)) {
                 const fastScrollSensitivity = configurationService.getValue(fastScrollSensitivityKey);
-                options = { ...options, fastScrollSensitivity };
+                options = Object.assign(Object.assign({}, options), { fastScrollSensitivity });
             }
             if (Object.keys(options).length > 0) {
                 this.updateOptions(options);
             }
         }));
-        this.navigator = new TableResourceNavigator(this, { configurationService, ...options });
+        this.navigator = new TableResourceNavigator(this, Object.assign({ configurationService }, options));
         this.disposables.add(this.navigator);
     }
     updateOptions(options) {
@@ -459,7 +435,7 @@ class ResourceNavigator extends Disposable {
         this.widget = widget;
         this._onDidOpen = this._register(new Emitter());
         this.onDidOpen = this._onDidOpen.event;
-        this._register(Event.filter(this.widget.onDidChangeSelection, e => isKeyboardEvent(e.browserEvent))(e => this.onSelectionFromKeyboard(e)));
+        this._register(Event.filter(this.widget.onDidChangeSelection, e => e.browserEvent instanceof KeyboardEvent)(e => this.onSelectionFromKeyboard(e)));
         this._register(this.widget.onPointer((e) => this.onPointer(e.element, e.browserEvent)));
         this._register(this.widget.onMouseDblClick((e) => this.onMouseDblClick(e.element, e.browserEvent)));
         if (typeof (options === null || options === void 0 ? void 0 : options.openOnSingleClick) !== 'boolean' && (options === null || options === void 0 ? void 0 : options.configurationService)) {
@@ -749,25 +725,9 @@ function workbenchTreeDataPreamble(accessor, options) {
     return {
         getTypeNavigationMode,
         disposable,
-        options: {
+        options: Object.assign(Object.assign({ 
             // ...options, // TODO@Joao why is this not splatted here?
-            keyboardSupport: false,
-            ...workbenchListOptions,
-            indent: typeof configurationService.getValue(treeIndentKey) === 'number' ? configurationService.getValue(treeIndentKey) : undefined,
-            renderIndentGuides,
-            smoothScrolling: Boolean(configurationService.getValue(listSmoothScrolling)),
-            defaultFindMode: getDefaultTreeFindMode(configurationService),
-            defaultFindMatchType: getDefaultTreeFindMatchType(configurationService),
-            horizontalScrolling,
-            scrollByPage: Boolean(configurationService.getValue(scrollByPageKey)),
-            paddingBottom: paddingBottom,
-            hideTwistiesOfChildlessElements: options.hideTwistiesOfChildlessElements,
-            expandOnlyOnTwistieClick: (_a = options.expandOnlyOnTwistieClick) !== null && _a !== void 0 ? _a : (configurationService.getValue(treeExpandMode) === 'doubleClick'),
-            contextViewProvider: contextViewService,
-            findWidgetStyles: defaultFindWidgetStyles,
-            enableStickyScroll: Boolean(configurationService.getValue(treeStickyScroll)),
-            stickyScrollMaxItemCount: Number(configurationService.getValue(treeStickyScrollMaxElements)),
-        }
+            keyboardSupport: false }, workbenchListOptions), { indent: typeof configurationService.getValue(treeIndentKey) === 'number' ? configurationService.getValue(treeIndentKey) : undefined, renderIndentGuides, smoothScrolling: Boolean(configurationService.getValue(listSmoothScrolling)), defaultFindMode: getDefaultTreeFindMode(configurationService), defaultFindMatchType: getDefaultTreeFindMatchType(configurationService), horizontalScrolling, scrollByPage: Boolean(configurationService.getValue(scrollByPageKey)), paddingBottom: paddingBottom, hideTwistiesOfChildlessElements: options.hideTwistiesOfChildlessElements, expandOnlyOnTwistieClick: (_a = options.expandOnlyOnTwistieClick) !== null && _a !== void 0 ? _a : (configurationService.getValue(treeExpandMode) === 'doubleClick'), contextViewProvider: contextViewService, findWidgetStyles: defaultFindWidgetStyles })
     };
 }
 let WorkbenchTreeInternals = class WorkbenchTreeInternals {
@@ -792,7 +752,6 @@ let WorkbenchTreeInternals = class WorkbenchTreeInternals {
         this.treeElementCanExpand = WorkbenchTreeElementCanExpand.bindTo(this.contextKeyService);
         this.treeElementHasChild = WorkbenchTreeElementHasChild.bindTo(this.contextKeyService);
         this.treeFindOpen = WorkbenchTreeFindOpen.bindTo(this.contextKeyService);
-        this.treeStickyScrollFocused = WorkbenchTreeStickyScrollFocused.bindTo(this.contextKeyService);
         this._useAltAsMultipleSelectionModifier = useAltAsMultipleSelectionModifier(configurationService);
         this.updateStyleOverrides(overrideStyles);
         const updateCollapseContextKeys = () => {
@@ -822,61 +781,53 @@ let WorkbenchTreeInternals = class WorkbenchTreeInternals {
             const focus = tree.getFocus();
             this.hasSelectionOrFocus.set(selection.length > 0 || focus.length > 0);
             updateCollapseContextKeys();
-        }), tree.onDidChangeCollapseState(updateCollapseContextKeys), tree.onDidChangeModel(updateCollapseContextKeys), tree.onDidChangeFindOpenState(enabled => this.treeFindOpen.set(enabled)), tree.onDidChangeStickyScrollFocused(focused => this.treeStickyScrollFocused.set(focused)), configurationService.onDidChangeConfiguration(e => {
+        }), tree.onDidChangeCollapseState(updateCollapseContextKeys), tree.onDidChangeModel(updateCollapseContextKeys), tree.onDidChangeFindOpenState(enabled => this.treeFindOpen.set(enabled)), configurationService.onDidChangeConfiguration(e => {
             let newOptions = {};
             if (e.affectsConfiguration(multiSelectModifierSettingKey)) {
                 this._useAltAsMultipleSelectionModifier = useAltAsMultipleSelectionModifier(configurationService);
             }
             if (e.affectsConfiguration(treeIndentKey)) {
                 const indent = configurationService.getValue(treeIndentKey);
-                newOptions = { ...newOptions, indent };
+                newOptions = Object.assign(Object.assign({}, newOptions), { indent });
             }
             if (e.affectsConfiguration(treeRenderIndentGuidesKey) && options.renderIndentGuides === undefined) {
                 const renderIndentGuides = configurationService.getValue(treeRenderIndentGuidesKey);
-                newOptions = { ...newOptions, renderIndentGuides };
+                newOptions = Object.assign(Object.assign({}, newOptions), { renderIndentGuides });
             }
             if (e.affectsConfiguration(listSmoothScrolling)) {
                 const smoothScrolling = Boolean(configurationService.getValue(listSmoothScrolling));
-                newOptions = { ...newOptions, smoothScrolling };
+                newOptions = Object.assign(Object.assign({}, newOptions), { smoothScrolling });
             }
             if (e.affectsConfiguration(defaultFindModeSettingKey) || e.affectsConfiguration(keyboardNavigationSettingKey)) {
                 const defaultFindMode = getDefaultTreeFindMode(configurationService);
-                newOptions = { ...newOptions, defaultFindMode };
+                newOptions = Object.assign(Object.assign({}, newOptions), { defaultFindMode });
             }
             if (e.affectsConfiguration(typeNavigationModeSettingKey) || e.affectsConfiguration(keyboardNavigationSettingKey)) {
                 const typeNavigationMode = getTypeNavigationMode();
-                newOptions = { ...newOptions, typeNavigationMode };
+                newOptions = Object.assign(Object.assign({}, newOptions), { typeNavigationMode });
             }
             if (e.affectsConfiguration(defaultFindMatchTypeSettingKey)) {
                 const defaultFindMatchType = getDefaultTreeFindMatchType(configurationService);
-                newOptions = { ...newOptions, defaultFindMatchType };
+                newOptions = Object.assign(Object.assign({}, newOptions), { defaultFindMatchType });
             }
             if (e.affectsConfiguration(horizontalScrollingKey) && options.horizontalScrolling === undefined) {
                 const horizontalScrolling = Boolean(configurationService.getValue(horizontalScrollingKey));
-                newOptions = { ...newOptions, horizontalScrolling };
+                newOptions = Object.assign(Object.assign({}, newOptions), { horizontalScrolling });
             }
             if (e.affectsConfiguration(scrollByPageKey)) {
                 const scrollByPage = Boolean(configurationService.getValue(scrollByPageKey));
-                newOptions = { ...newOptions, scrollByPage };
+                newOptions = Object.assign(Object.assign({}, newOptions), { scrollByPage });
             }
             if (e.affectsConfiguration(treeExpandMode) && options.expandOnlyOnTwistieClick === undefined) {
-                newOptions = { ...newOptions, expandOnlyOnTwistieClick: configurationService.getValue(treeExpandMode) === 'doubleClick' };
-            }
-            if (e.affectsConfiguration(treeStickyScroll)) {
-                const enableStickyScroll = configurationService.getValue(treeStickyScroll);
-                newOptions = { ...newOptions, enableStickyScroll };
-            }
-            if (e.affectsConfiguration(treeStickyScrollMaxElements)) {
-                const stickyScrollMaxItemCount = Math.max(1, configurationService.getValue(treeStickyScrollMaxElements));
-                newOptions = { ...newOptions, stickyScrollMaxItemCount };
+                newOptions = Object.assign(Object.assign({}, newOptions), { expandOnlyOnTwistieClick: configurationService.getValue(treeExpandMode) === 'doubleClick' });
             }
             if (e.affectsConfiguration(mouseWheelScrollSensitivityKey)) {
                 const mouseWheelScrollSensitivity = configurationService.getValue(mouseWheelScrollSensitivityKey);
-                newOptions = { ...newOptions, mouseWheelScrollSensitivity };
+                newOptions = Object.assign(Object.assign({}, newOptions), { mouseWheelScrollSensitivity });
             }
             if (e.affectsConfiguration(fastScrollSensitivityKey)) {
                 const fastScrollSensitivity = configurationService.getValue(fastScrollSensitivityKey);
-                newOptions = { ...newOptions, fastScrollSensitivity };
+                newOptions = Object.assign(Object.assign({}, newOptions), { fastScrollSensitivity });
             }
             if (Object.keys(newOptions).length > 0) {
                 tree.updateOptions(newOptions);
@@ -886,7 +837,7 @@ let WorkbenchTreeInternals = class WorkbenchTreeInternals {
                 tree.updateOptions({ typeNavigationMode: getTypeNavigationMode() });
             }
         }));
-        this.navigator = new TreeResourceNavigator(tree, { configurationService, ...options });
+        this.navigator = new TreeResourceNavigator(tree, Object.assign({ configurationService }, options));
         this.disposables.push(this.navigator);
     }
     updateOptions(options) {
@@ -1014,17 +965,6 @@ configurationRegistry.registerConfiguration({
             enum: ['singleClick', 'doubleClick'],
             default: 'singleClick',
             description: localize('expand mode', "Controls how tree folders are expanded when clicking the folder names. Note that some trees and lists might choose to ignore this setting if it is not applicable."),
-        },
-        [treeStickyScroll]: {
-            type: 'boolean',
-            default: true,
-            description: localize('sticky scroll', "Controls whether sticky scrolling is enabled in trees."),
-        },
-        [treeStickyScrollMaxElements]: {
-            type: 'number',
-            minimum: 1,
-            default: 7,
-            markdownDescription: localize('sticky scroll maximum items', "Controls the number of sticky elements displayed in the tree when `#workbench.tree.enableStickyScroll#` is enabled."),
         },
         [typeNavigationModeSettingKey]: {
             type: 'string',

@@ -19,8 +19,7 @@ export var OverviewRulerLane;
 export var GlyphMarginLane;
 (function (GlyphMarginLane) {
     GlyphMarginLane[GlyphMarginLane["Left"] = 1] = "Left";
-    GlyphMarginLane[GlyphMarginLane["Center"] = 2] = "Center";
-    GlyphMarginLane[GlyphMarginLane["Right"] = 3] = "Right";
+    GlyphMarginLane[GlyphMarginLane["Right"] = 2] = "Right";
 })(GlyphMarginLane || (GlyphMarginLane = {}));
 /**
  * Position in the minimap to render the decoration.

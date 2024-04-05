@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/sql/sql.ts
 var conf = {
@@ -41,7 +40,6 @@ var language = {
     { open: "(", close: ")", token: "delimiter.parenthesis" }
   ],
   keywords: [
-    // This list is generated using `keywords.js`
     "ABORT",
     "ABSOLUTE",
     "ACTION",
@@ -409,7 +407,6 @@ var language = {
     "ZONE"
   ],
   operators: [
-    // Logical
     "ALL",
     "AND",
     "ANY",
@@ -420,11 +417,9 @@ var language = {
     "NOT",
     "OR",
     "SOME",
-    // Set
     "EXCEPT",
     "INTERSECT",
     "UNION",
-    // Join
     "APPLY",
     "CROSS",
     "FULL",
@@ -433,19 +428,15 @@ var language = {
     "LEFT",
     "OUTER",
     "RIGHT",
-    // Predicates
     "CONTAINS",
     "FREETEXT",
     "IS",
     "NULL",
-    // Pivoting
     "PIVOT",
     "UNPIVOT",
-    // Merging
     "MATCHED"
   ],
   builtinFunctions: [
-    // Aggregate
     "AVG",
     "CHECKSUM_AGG",
     "COUNT",
@@ -459,7 +450,6 @@ var language = {
     "STDEVP",
     "VAR",
     "VARP",
-    // Analytic
     "CUME_DIST",
     "FIRST_VALUE",
     "LAG",
@@ -468,20 +458,16 @@ var language = {
     "PERCENTILE_CONT",
     "PERCENTILE_DISC",
     "PERCENT_RANK",
-    // Collation
     "COLLATE",
     "COLLATIONPROPERTY",
     "TERTIARY_WEIGHTS",
-    // Azure
     "FEDERATION_FILTERING_VALUE",
-    // Conversion
     "CAST",
     "CONVERT",
     "PARSE",
     "TRY_CAST",
     "TRY_CONVERT",
     "TRY_PARSE",
-    // Cryptographic
     "ASYMKEY_ID",
     "ASYMKEYPROPERTY",
     "CERTPROPERTY",
@@ -507,16 +493,13 @@ var language = {
     "SYMKEYPROPERTY",
     "VERIFYSIGNEDBYCERT",
     "VERIFYSIGNEDBYASYMKEY",
-    // Cursor
     "CURSOR_STATUS",
-    // Datatype
     "DATALENGTH",
     "IDENT_CURRENT",
     "IDENT_INCR",
     "IDENT_SEED",
     "IDENTITY",
     "SQL_VARIANT_PROPERTY",
-    // Datetime
     "CURRENT_TIMESTAMP",
     "DATEADD",
     "DATEDIFF",
@@ -540,12 +523,10 @@ var language = {
     "TIMEFROMPARTS",
     "TODATETIMEOFFSET",
     "YEAR",
-    // Logical
     "CHOOSE",
     "COALESCE",
     "IIF",
     "NULLIF",
-    // Mathematical
     "ABS",
     "ACOS",
     "ASIN",
@@ -569,7 +550,6 @@ var language = {
     "SQRT",
     "SQUARE",
     "TAN",
-    // Metadata
     "APP_NAME",
     "APPLOCK_MODE",
     "APPLOCK_TEST",
@@ -609,19 +589,15 @@ var language = {
     "TYPE_ID",
     "TYPE_NAME",
     "TYPEPROPERTY",
-    // Ranking
     "DENSE_RANK",
     "NTILE",
     "RANK",
     "ROW_NUMBER",
-    // Replication
     "PUBLISHINGSERVERNAME",
-    // Rowset
     "OPENDATASOURCE",
     "OPENQUERY",
     "OPENROWSET",
     "OPENXML",
-    // Security
     "CERTENCODED",
     "CERTPRIVATEKEY",
     "CURRENT_USER",
@@ -645,7 +621,6 @@ var language = {
     "USER",
     "USER_ID",
     "USER_NAME",
-    // String
     "ASCII",
     "CHAR",
     "CHARINDEX",
@@ -671,7 +646,6 @@ var language = {
     "SUBSTRING",
     "UNICODE",
     "UPPER",
-    // System
     "BINARY_CHECKSUM",
     "CHECKSUM",
     "CONNECTIONPROPERTY",
@@ -695,37 +669,29 @@ var language = {
     "NEWSEQUENTIALID",
     "ROWCOUNT_BIG",
     "XACT_STATE",
-    // TextImage
     "TEXTPTR",
     "TEXTVALID",
-    // Trigger
     "COLUMNS_UPDATED",
     "EVENTDATA",
     "TRIGGER_NESTLEVEL",
     "UPDATE",
-    // ChangeTracking
     "CHANGETABLE",
     "CHANGE_TRACKING_CONTEXT",
     "CHANGE_TRACKING_CURRENT_VERSION",
     "CHANGE_TRACKING_IS_COLUMN_IN_MASK",
     "CHANGE_TRACKING_MIN_VALID_VERSION",
-    // FullTextSearch
     "CONTAINSTABLE",
     "FREETEXTTABLE",
-    // SemanticTextSearch
     "SEMANTICKEYPHRASETABLE",
     "SEMANTICSIMILARITYDETAILSTABLE",
     "SEMANTICSIMILARITYTABLE",
-    // FileStream
     "FILETABLEROOTPATH",
     "GETFILENAMESPACEPATH",
     "GETPATHLOCATOR",
     "PATHNAME",
-    // ServiceBroker
     "GET_TRANSMISSION_STATUS"
   ],
   builtinVariables: [
-    // Configuration
     "@@DATEFIRST",
     "@@DBTS",
     "@@LANGID",
@@ -741,19 +707,14 @@ var language = {
     "@@SPID",
     "@@TEXTSIZE",
     "@@VERSION",
-    // Cursor
     "@@CURSOR_ROWS",
     "@@FETCH_STATUS",
-    // Datetime
     "@@DATEFIRST",
-    // Metadata
     "@@PROCID",
-    // System
     "@@ERROR",
     "@@IDENTITY",
     "@@ROWCOUNT",
     "@@TRANCOUNT",
-    // Stats
     "@@CONNECTIONS",
     "@@CPU_BUSY",
     "@@IDLE",
@@ -799,9 +760,6 @@ var language = {
     ],
     comment: [
       [/[^*/]+/, "comment"],
-      // Not supporting nested comments, as nested comments seem to not be standard?
-      // i.e. http://stackoverflow.com/questions/728172/are-there-multiline-comment-delimiters-in-sql-that-are-vendor-agnostic
-      // [/\/\*/, { token: 'comment.quote', next: '@push' }],    // nested comment not allowed :-(
       [/\*\//, { token: "comment.quote", next: "@pop" }],
       [/./, "comment"]
     ],

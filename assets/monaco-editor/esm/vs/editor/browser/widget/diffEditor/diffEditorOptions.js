@@ -7,9 +7,9 @@ import { diffEditorDefaultOptions } from '../../../common/config/diffEditor.js';
 import { clampedFloat, clampedInt, boolean as validateBooleanOption, stringSet as validateStringSetOption } from '../../../common/config/editorOptions.js';
 export class DiffEditorOptions {
     get editorOptions() { return this._options; }
-    constructor(options) {
-        this._diffEditorWidth = observableValue(this, 0);
-        this.couldShowInlineViewBecauseOfSize = derived(this, reader => this._options.read(reader).renderSideBySide && this._diffEditorWidth.read(reader) <= this._options.read(reader).renderSideBySideInlineBreakpoint);
+    constructor(options, diffEditorWidth) {
+        this.diffEditorWidth = diffEditorWidth;
+        this.couldShowInlineViewBecauseOfSize = derived(this, reader => this._options.read(reader).renderSideBySide && this.diffEditorWidth.read(reader) <= this._options.read(reader).renderSideBySideInlineBreakpoint);
         this.renderOverviewRuler = derived(this, reader => this._options.read(reader).renderOverviewRuler);
         this.renderSideBySide = derived(this, reader => this._options.read(reader).renderSideBySide
             && !(this._options.read(reader).useInlineViewWhenSpaceIsLimited && this.couldShowInlineViewBecauseOfSize.read(reader)));
@@ -44,16 +44,13 @@ export class DiffEditorOptions {
         this.hideUnchangedRegionsRevealLineCount = derived(this, reader => this._options.read(reader).hideUnchangedRegions.revealLineCount);
         this.hideUnchangedRegionsContextLineCount = derived(this, reader => this._options.read(reader).hideUnchangedRegions.contextLineCount);
         this.hideUnchangedRegionsMinimumLineCount = derived(this, reader => this._options.read(reader).hideUnchangedRegions.minimumLineCount);
-        const optionsCopy = { ...options, ...validateDiffEditorOptions(options, diffEditorDefaultOptions) };
+        const optionsCopy = Object.assign(Object.assign({}, options), validateDiffEditorOptions(options, diffEditorDefaultOptions));
         this._options = observableValue(this, optionsCopy);
     }
     updateOptions(changedOptions) {
         const newDiffEditorOptions = validateDiffEditorOptions(changedOptions, this._options.get());
-        const newOptions = { ...this._options.get(), ...changedOptions, ...newDiffEditorOptions };
+        const newOptions = Object.assign(Object.assign(Object.assign({}, this._options.get()), changedOptions), newDiffEditorOptions);
         this._options.set(newOptions, undefined, { changedOptions: changedOptions });
-    }
-    setWidth(width) {
-        this._diffEditorWidth.set(width, undefined);
     }
 }
 function validateDiffEditorOptions(options, defaults) {

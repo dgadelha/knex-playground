@@ -7,10 +7,7 @@ import { DataUri } from '../../../base/common/resources.js';
 import { PLAINTEXT_LANGUAGE_ID } from '../languages/modesRegistry.js';
 import { FileKind } from '../../../platform/files/common/files.js';
 const fileIconDirectoryRegex = /(?:\/|^)(?:([^\/]+)\/)?([^\/]+)$/;
-export function getIconClasses(modelService, languageService, resource, fileKind, icon) {
-    if (icon) {
-        return [`codicon-${icon.id}`, 'predefined-file-icon'];
-    }
+export function getIconClasses(modelService, languageService, resource, fileKind) {
     // we always set these base classes even if we do not have a path
     const classes = fileKind === FileKind.ROOT_FOLDER ? ['rootfolder-icon'] : fileKind === FileKind.FOLDER ? ['folder-icon'] : ['file-icon'];
     if (resource) {
@@ -32,12 +29,8 @@ export function getIconClasses(modelService, languageService, resource, fileKind
                 name = cssEscape(resource.authority.toLowerCase());
             }
         }
-        // Root Folders
-        if (fileKind === FileKind.ROOT_FOLDER) {
-            classes.push(`${name}-root-name-folder-icon`);
-        }
         // Folders
-        else if (fileKind === FileKind.FOLDER) {
+        if (fileKind === FileKind.FOLDER) {
             classes.push(`${name}-name-folder-icon`);
         }
         // Files

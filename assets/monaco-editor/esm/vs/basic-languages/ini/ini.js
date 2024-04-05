@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/ini/ini.ts
 var conf = {
@@ -34,24 +33,15 @@ var conf = {
 var language = {
   defaultToken: "",
   tokenPostfix: ".ini",
-  // we include these common regular expressions
   escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // sections
       [/^\[[^\]]*\]/, "metatag"],
-      // keys
       [/(^\w+)(\s*)(\=)/, ["key", "", "delimiter"]],
-      // whitespace
       { include: "@whitespace" },
-      // numbers
       [/\d+/, "number"],
-      // strings: recover on non-terminated strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/'([^'\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/"/, "string", '@string."'],
       [/'/, "string", "@string.'"]
     ],

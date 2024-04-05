@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { runWhenGlobalIdle } from '../../../base/common/async.js';
+import { runWhenIdle } from '../../../base/common/async.js';
 import { BugIndicatingError, onUnexpectedError } from '../../../base/common/errors.js';
 import { setTimeout0 } from '../../../base/common/platform.js';
 import { StopWatch } from '../../../base/common/stopwatch.js';
@@ -345,7 +345,7 @@ export class DefaultBackgroundTokenizer {
             return;
         }
         this._isScheduled = true;
-        runWhenGlobalIdle((deadline) => {
+        runWhenIdle((deadline) => {
             this._isScheduled = false;
             this._backgroundTokenizeWithDeadline(deadline);
         });

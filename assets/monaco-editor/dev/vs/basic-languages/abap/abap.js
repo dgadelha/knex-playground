@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/abap/abap", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -66,7 +66,6 @@ var moduleExports = (() => {
       "analysis",
       "analyzer",
       "and",
-      // also an operator
       "append",
       "appendage",
       "appending",
@@ -97,7 +96,6 @@ var moduleExports = (() => {
       "before",
       "begin",
       "between",
-      // also an operator
       "big",
       "binary",
       "bintohex",
@@ -181,7 +179,6 @@ var moduleExports = (() => {
       "concatenate",
       "cond",
       "condense",
-      // also a built-in
       "condition",
       "connect",
       "connection",
@@ -310,7 +307,6 @@ var moduleExports = (() => {
       "enum",
       "environment",
       "equiv",
-      // also an operator
       "errormessage",
       "errors",
       "escaping",
@@ -352,7 +348,6 @@ var moduleExports = (() => {
       "filter-table",
       "final",
       "find",
-      // also a built-in
       "first",
       "first-line",
       "fixed-point",
@@ -389,7 +384,6 @@ var moduleExports = (() => {
       "handler",
       "harmless",
       "hashed",
-      // also a table type
       "having",
       "hdb",
       "header",
@@ -420,7 +414,6 @@ var moduleExports = (() => {
       "import",
       "importing",
       "in",
-      // also an operator
       "inactive",
       "incl",
       "include",
@@ -428,7 +421,6 @@ var moduleExports = (() => {
       "including",
       "increment",
       "index",
-      // also a table type
       "index-line",
       "infotypes",
       "inheriting",
@@ -439,7 +431,6 @@ var moduleExports = (() => {
       "inout",
       "input",
       "insert",
-      // also a built-in
       "instance",
       "instances",
       "instr",
@@ -481,7 +472,6 @@ var moduleExports = (() => {
       "like",
       "line",
       "lines",
-      // also a built-in
       "line-count",
       "linefeed",
       "line-selection",
@@ -515,7 +505,6 @@ var moduleExports = (() => {
       "mark",
       "mask",
       "match",
-      // also a built-in
       "matchcode",
       "max",
       "maximum",
@@ -571,11 +560,9 @@ var moduleExports = (() => {
       "non-unicode",
       "non-unique",
       "not",
-      // also an operator
       "null",
       "number",
       "object",
-      // also a data type
       "objects",
       "obligatory",
       "occurrence",
@@ -592,7 +579,6 @@ var moduleExports = (() => {
       "optional",
       "options",
       "or",
-      // also an operator
       "order",
       "other",
       "others",
@@ -685,7 +671,6 @@ var moduleExports = (() => {
       "remote",
       "renaming",
       "replace",
-      // also a built-in
       "replacement",
       "replacing",
       "report",
@@ -760,7 +745,6 @@ var moduleExports = (() => {
       "sort",
       "sortable",
       "sorted",
-      // also a table type
       "source",
       "specified",
       "split",
@@ -771,7 +755,6 @@ var moduleExports = (() => {
       "stable",
       "stamp",
       "standard",
-      // also a table type
       "starting",
       "start-of-editing",
       "start-of-selection",
@@ -847,7 +830,6 @@ var moduleExports = (() => {
       "transfer",
       "transformation",
       "translate",
-      // also a built-in
       "transporting",
       "trmac",
       "truncate",
@@ -914,7 +896,6 @@ var moduleExports = (() => {
       "yymmdd",
       "zero",
       "zone",
-      // since 7.55:
       "abap_system_timezone",
       "abap_user_timezone",
       "access",
@@ -1050,11 +1031,6 @@ var moduleExports = (() => {
       "var",
       "verbatim"
     ],
-    //
-    // Built-in Functions
-    //
-    // Functions that are also statements have been moved to keywords
-    //
     builtinFunctions: [
       "abs",
       "acos",
@@ -1069,7 +1045,6 @@ var moduleExports = (() => {
       "cmax",
       "cmin",
       "concat_lines_of",
-      // 'condense', // moved to keywords
       "contains",
       "contains_any_not_of",
       "contains_any_of",
@@ -1082,27 +1057,22 @@ var moduleExports = (() => {
       "distance",
       "escape",
       "exp",
-      // 'find', // moved to keywords
       "find_any_not_of",
       "find_any_of",
       "find_end",
       "floor",
       "frac",
       "from_mixed",
-      // 'insert', // moved to keywords
       "ipow",
       "line_exists",
       "line_index",
-      // 'lines', // moved to keywords
       "log",
       "log10",
-      // 'match', // moved to keywords
       "matches",
       "nmax",
       "nmin",
       "numofchar",
       "repeat",
-      // 'replace', // moved to keywords
       "rescale",
       "reverse",
       "round",
@@ -1124,24 +1094,14 @@ var moduleExports = (() => {
       "to_lower",
       "to_mixed",
       "to_upper",
-      // 'translate', // moved to keywords
       "trunc",
       "utclong_add",
-      // since 7.54
       "utclong_current",
-      // since 7.54
       "utclong_diff",
-      // since 7.54
       "xsdbool",
       "xstrlen"
     ],
-    //
-    // Data Types
-    //
-    // Data types that are also part of statements have been moved to keywords
-    //
     typeKeywords: [
-      // built-in abap types
       "b",
       "c",
       "d",
@@ -1150,46 +1110,34 @@ var moduleExports = (() => {
       "f",
       "i",
       "int8",
-      // since 7.54
       "n",
       "p",
       "s",
       "string",
       "t",
       "utclong",
-      // since 7.54
       "x",
       "xstring",
-      // generic data types
       "any",
       "clike",
       "csequence",
       "decfloat",
-      // 'object', // moved to keywords
       "numeric",
       "simple",
       "xsequence",
-      // ddic/sql data types
       "accp",
       "char",
       "clnt",
       "cuky",
       "curr",
       "datn",
-      // since 7.55
       "dats",
       "d16d",
-      // since 7.55
       "d16n",
-      // since 7.55
       "d16r",
-      // since 7.55
       "d34d",
-      // since 7.55
       "d34n",
-      // since 7.55
       "d34r",
-      // since 7.55
       "dec",
       "df16_dec",
       "df16_raw",
@@ -1197,7 +1145,6 @@ var moduleExports = (() => {
       "df34_raw",
       "fltp",
       "geom_ewkb",
-      // since 7.55
       "int1",
       "int2",
       "int4",
@@ -1210,17 +1157,13 @@ var moduleExports = (() => {
       "rawstring",
       "sstring",
       "timn",
-      // since 7.55
       "tims",
       "unit",
       "utcl",
-      // since 7.55
-      // ddic data types (obsolete)
       "df16_scl",
       "df34_scl",
       "prec",
       "varc",
-      // special data types and constants
       "abap_bool",
       "abap_false",
       "abap_true",
@@ -1232,7 +1175,6 @@ var moduleExports = (() => {
       "sy",
       "syst",
       "table_line",
-      // obsolete data object
       "*sys*"
     ],
     builtinMethods: ["class_constructor", "constructor"],
@@ -1273,13 +1215,7 @@ var moduleExports = (() => {
       "$SELF"
     ],
     selectors: ["->", "->*", "=>", "~", "~*"],
-    //
-    // Operators
-    //
-    // Operators that can be part of statements have been moved to keywords
-    //
     operators: [
-      // arithmetic operators
       " +",
       " -",
       "/",
@@ -1287,7 +1223,6 @@ var moduleExports = (() => {
       "**",
       "div",
       "mod",
-      // assignment operators
       "=",
       "#",
       "@",
@@ -1297,12 +1232,9 @@ var moduleExports = (() => {
       "/=",
       "**=",
       "&&=",
-      // casting operator
       "?=",
-      // concat operators
       "&",
       "&&",
-      // bit operators
       "bit-and",
       "bit-not",
       "bit-or",
@@ -1310,25 +1242,14 @@ var moduleExports = (() => {
       "m",
       "o",
       "z",
-      // boolean operators
-      // 'and', // moved to keywords
-      // 'equiv', // moved to keywords
-      // 'not', // moved to keywords
-      // 'or', // moved to keywords
-      // comparison operators
       "<",
       " >",
-      // todo: separate from -> and =>
       "<=",
       ">=",
       "<>",
       "><",
-      // obsolete
       "=<",
-      // obsolete
       "=>",
-      // obsolete
-      // 'between', // moved to keywords
       "bt",
       "byte-ca",
       "byte-cn",
@@ -1342,23 +1263,15 @@ var moduleExports = (() => {
       "cp",
       "cs",
       "eq",
-      // obsolete
       "ge",
-      // obsolete
       "gt",
-      // obsolete
-      // 'in', // moved to keywords
       "le",
-      // obsolete
       "lt",
-      // obsolete
       "na",
       "nb",
       "ne",
-      // obsolete
       "np",
       "ns",
-      // cds
       "*/",
       "*:",
       "--",
@@ -1370,7 +1283,6 @@ var moduleExports = (() => {
       root: [
         [
           /[a-z_\/$%@]([\w\/$%]|-(?!>))*/,
-          // exclude '->' selector
           {
             cases: {
               "@typeKeywords": "type",
@@ -1385,9 +1297,7 @@ var moduleExports = (() => {
           }
         ],
         [/<[\w]+>/, "identifier"],
-        // field symbols
         [/##[\w|_]+/, "comment"],
-        // pragmas
         { include: "@whitespace" },
         [/[:,.]/, "delimiter"],
         [/[{}()\[\]]/, "@brackets"],

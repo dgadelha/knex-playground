@@ -140,7 +140,7 @@ class MessageWidget {
         this._editor.applyFontInfo(this._relatedBlock);
         if (isNonEmptyArray(relatedInformation)) {
             const relatedInformationNode = this._relatedBlock.appendChild(document.createElement('div'));
-            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(67 /* EditorOption.lineHeight */) * 0.66)}px`;
+            relatedInformationNode.style.paddingTop = `${Math.floor(this._editor.getOption(66 /* EditorOption.lineHeight */) * 0.66)}px`;
             this._lines += 1;
             for (const related of relatedInformation) {
                 const container = document.createElement('div');

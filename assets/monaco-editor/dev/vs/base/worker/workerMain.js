@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/vscode/blob/main/LICENSE.txt
  *-----------------------------------------------------------*/
@@ -1910,10 +1910,19 @@ var AMDLoader;
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.load = exports.create = exports.setPseudoTranslation = exports.getConfiguredDefaultLocale = exports.localize2 = exports.localize = void 0;
+    exports.load = exports.create = exports.setPseudoTranslation = exports.getConfiguredDefaultLocale = exports.localize = void 0;
     let isPseudo = (typeof document !== 'undefined' && document.location && document.location.hash.indexOf('pseudo=true') >= 0);
     const DEFAULT_TAG = 'i-default';
     function _format(message, args) {
@@ -1958,26 +1967,22 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
         }
         return path + '/';
     }
-    async function getMessagesFromTranslationsService(translationServiceUrl, language, name) {
-        const url = endWithSlash(translationServiceUrl) + endWithSlash(language) + 'vscode/' + endWithSlash(name);
-        const res = await fetch(url);
-        if (res.ok) {
-            const messages = await res.json();
-            return messages;
-        }
-        throw new Error(`${res.status} - ${res.statusText}`);
+    function getMessagesFromTranslationsService(translationServiceUrl, language, name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const url = endWithSlash(translationServiceUrl) + endWithSlash(language) + 'vscode/' + endWithSlash(name);
+            const res = yield fetch(url);
+            if (res.ok) {
+                const messages = yield res.json();
+                return messages;
+            }
+            throw new Error(`${res.status} - ${res.statusText}`);
+        });
     }
     function createScopedLocalize(scope) {
         return function (idx, defaultValue) {
             const restArgs = Array.prototype.slice.call(arguments, 2);
             return _format(scope[idx], restArgs);
         };
-    }
-    function createScopedLocalize2(scope) {
-        return (idx, defaultValue, ...args) => ({
-            value: _format(scope[idx], args),
-            original: _format(defaultValue, args)
-        });
     }
     /**
      * @skipMangle
@@ -1986,17 +1991,6 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
         return _format(message, args);
     }
     exports.localize = localize;
-    /**
-     * @skipMangle
-     */
-    function localize2(data, message, ...args) {
-        const original = _format(message, args);
-        return {
-            value: original,
-            original
-        };
-    }
-    exports.localize2 = localize2;
     /**
      * @skipMangle
      */
@@ -2021,7 +2015,6 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
         var _a;
         return {
             localize: createScopedLocalize(data[key]),
-            localize2: createScopedLocalize2(data[key]),
             getConfiguredDefaultLocale: (_a = data.getConfiguredDefaultLocale) !== null && _a !== void 0 ? _a : ((_) => undefined)
         };
     }
@@ -2037,7 +2030,6 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
             // TODO: We need to give back the mangled names here
             return load({
                 localize: localize,
-                localize2: localize2,
                 getConfiguredDefaultLocale: () => { var _a; return (_a = pluginConfig.availableLanguages) === null || _a === void 0 ? void 0 : _a['*']; }
             });
         }
@@ -2050,11 +2042,9 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
         const messagesLoaded = (messages) => {
             if (Array.isArray(messages)) {
                 messages.localize = createScopedLocalize(messages);
-                messages.localize2 = createScopedLocalize2(messages);
             }
             else {
                 messages.localize = createScopedLocalize(messages[name]);
-                messages.localize2 = createScopedLocalize2(messages[name]);
             }
             messages.getConfiguredDefaultLocale = () => { var _a; return (_a = pluginConfig.availableLanguages) === null || _a === void 0 ? void 0 : _a['*']; };
             load(messages);
@@ -2071,10 +2061,10 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
             });
         }
         else if (pluginConfig.translationServiceUrl && !useDefaultLanguage) {
-            (async () => {
-                var _a;
+            (() => __awaiter(this, void 0, void 0, function* () {
+                var _b;
                 try {
-                    const messages = await getMessagesFromTranslationsService(pluginConfig.translationServiceUrl, language, name);
+                    const messages = yield getMessagesFromTranslationsService(pluginConfig.translationServiceUrl, language, name);
                     return messagesLoaded(messages);
                 }
                 catch (err) {
@@ -2088,9 +2078,9 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
                         // Since we were unable to load the specific language, try to load the generic language. Ex. we failed to find a
                         // Swiss German (de-CH), so try to load the generic German (de) messages instead.
                         const genericLanguage = language.split('-')[0];
-                        const messages = await getMessagesFromTranslationsService(pluginConfig.translationServiceUrl, genericLanguage, name);
+                        const messages = yield getMessagesFromTranslationsService(pluginConfig.translationServiceUrl, genericLanguage, name);
                         // We got some messages, so we configure the configuration to use the generic language for this session.
-                        (_a = pluginConfig.availableLanguages) !== null && _a !== void 0 ? _a : (pluginConfig.availableLanguages = {});
+                        (_b = pluginConfig.availableLanguages) !== null && _b !== void 0 ? _b : (pluginConfig.availableLanguages = {});
                         pluginConfig.availableLanguages['*'] = genericLanguage;
                         return messagesLoaded(messages);
                     }
@@ -2099,7 +2089,7 @@ define(__m[19/*vs/nls*/], __M([0/*require*/,1/*exports*/]), function (require, e
                         return req([name + '.nls'], messagesLoaded);
                     }
                 }
-            })();
+            }))();
         }
         else {
             req([name + suffix], messagesLoaded, (err) => {
@@ -3680,7 +3670,7 @@ define(__m[5/*vs/base/common/errors*/], __M([0/*require*/,1/*exports*/]), functi
 define(__m[12/*vs/base/common/assert*/], __M([0/*require*/,1/*exports*/,5/*vs/base/common/errors*/]), function (require, exports, errors_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.checkAdjacentItems = exports.assertFn = exports.softAssert = exports.assertNever = exports.ok = void 0;
+    exports.checkAdjacentItems = exports.assertFn = exports.assertNever = exports.ok = void 0;
     /**
      * Throws an error with the provided message if the provided value does not evaluate to a true Javascript value.
      *
@@ -3705,15 +3695,6 @@ define(__m[12/*vs/base/common/assert*/], __M([0/*require*/,1/*exports*/,5/*vs/ba
         throw new Error(message);
     }
     exports.assertNever = assertNever;
-    /**
-     * Like assert, but doesn't throw.
-     */
-    function softAssert(condition) {
-        if (!condition) {
-            (0, errors_1.onUnexpectedError)(new errors_1.BugIndicatingError('Soft Assertion Failed'));
-        }
-    }
-    exports.softAssert = softAssert;
     /**
      * condition must be side-effect free!
      */
@@ -3753,7 +3734,7 @@ define(__m[20/*vs/base/common/functional*/], __M([0/*require*/,1/*exports*/]), f
     /**
      * Given a function, returns a function that is only calling that function once.
      */
-    function createSingleCallFunction(fn, fnDidRunCallback) {
+    function createSingleCallFunction(fn) {
         const _this = this;
         let didCall = false;
         let result;
@@ -3762,17 +3743,7 @@ define(__m[20/*vs/base/common/functional*/], __M([0/*require*/,1/*exports*/]), f
                 return result;
             }
             didCall = true;
-            if (fnDidRunCallback) {
-                try {
-                    result = fn.apply(_this, arguments);
-                }
-                finally {
-                    fnDidRunCallback();
-                }
-            }
-            else {
-                result = fn.apply(_this, arguments);
-            }
+            result = fn.apply(_this, arguments);
             return result;
         };
     }
@@ -3864,7 +3835,9 @@ define(__m[21/*vs/base/common/iterator*/], __M([0/*require*/,1/*exports*/]), fun
         Iterable.map = map;
         function* concat(...iterables) {
             for (const iterable of iterables) {
-                yield* iterable;
+                for (const element of iterable) {
+                    yield element;
+                }
             }
         }
         Iterable.concat = concat;
@@ -3914,14 +3887,6 @@ define(__m[21/*vs/base/common/iterator*/], __M([0/*require*/,1/*exports*/]), fun
             return [consumed, { [Symbol.iterator]() { return iterator; } }];
         }
         Iterable.consume = consume;
-        async function asyncToArray(iterable) {
-            const result = [];
-            for await (const item of iterable) {
-                result.push(item);
-            }
-            return Promise.resolve(result);
-        }
-        Iterable.asyncToArray = asyncToArray;
     })(Iterable || (exports.Iterable = Iterable = {}));
 });
 
@@ -5931,11 +5896,39 @@ define(__m[9/*vs/base/common/event*/], __M([0/*require*/,1/*exports*/,5/*vs/base
             return result.event;
         }
         Event.fromPromise = fromPromise;
-        function runAndSubscribe(event, handler, initial) {
-            handler(initial);
+        /**
+         * Adds a listener to an event and calls the listener immediately with undefined as the event object.
+         *
+         * @example
+         * ```
+         * // Initialize the UI and update it when dataChangeEvent fires
+         * runAndSubscribe(dataChangeEvent, () => this._updateUI());
+         * ```
+         */
+        function runAndSubscribe(event, handler) {
+            handler(undefined);
             return event(e => handler(e));
         }
         Event.runAndSubscribe = runAndSubscribe;
+        /**
+         * Adds a listener to an event and calls the listener immediately with undefined as the event object. A new
+         * {@link DisposableStore} is passed to the listener which is disposed when the returned disposable is disposed.
+         */
+        function runAndSubscribeWithStore(event, handler) {
+            let store = null;
+            function run(e) {
+                store === null || store === void 0 ? void 0 : store.dispose();
+                store = new lifecycle_1.DisposableStore();
+                handler(e, store);
+            }
+            run(undefined);
+            const disposable = event(e => run(e));
+            return (0, lifecycle_1.toDisposable)(() => {
+                disposable.dispose();
+                store === null || store === void 0 ? void 0 : store.dispose();
+            });
+        }
+        Event.runAndSubscribeWithStore = runAndSubscribeWithStore;
         class EmitterObserver {
             constructor(_observable, store) {
                 this._observable = _observable;
@@ -5993,7 +5986,7 @@ define(__m[9/*vs/base/common/event*/], __M([0/*require*/,1/*exports*/,5/*vs/base
          * Each listener is attached to the observable directly.
          */
         function fromObservableLight(observable) {
-            return (listener, thisArgs, disposables) => {
+            return (listener) => {
                 let count = 0;
                 let didChange = false;
                 const observer = {
@@ -6006,7 +5999,7 @@ define(__m[9/*vs/base/common/event*/], __M([0/*require*/,1/*exports*/,5/*vs/base
                             observable.reportChanges();
                             if (didChange) {
                                 didChange = false;
-                                listener.call(thisArgs);
+                                listener();
                             }
                         }
                     },
@@ -6019,18 +6012,11 @@ define(__m[9/*vs/base/common/event*/], __M([0/*require*/,1/*exports*/,5/*vs/base
                 };
                 observable.addObserver(observer);
                 observable.reportChanges();
-                const disposable = {
+                return {
                     dispose() {
                         observable.removeObserver(observer);
                     }
                 };
-                if (disposables instanceof lifecycle_1.DisposableStore) {
-                    disposables.add(disposable);
-                }
-                else if (Array.isArray(disposables)) {
-                    disposables.push(disposable);
-                }
-                return disposable;
             };
         }
         Event.fromObservableLight = fromObservableLight;
@@ -6521,17 +6507,13 @@ define(__m[9/*vs/base/common/event*/], __M([0/*require*/,1/*exports*/,5/*vs/base
             e.listener = e.event(r => this.emitter.fire(r));
         }
         unhook(e) {
-            var _a;
-            (_a = e.listener) === null || _a === void 0 ? void 0 : _a.dispose();
+            if (e.listener) {
+                e.listener.dispose();
+            }
             e.listener = null;
         }
         dispose() {
-            var _a;
             this.emitter.dispose();
-            for (const e of this.events) {
-                (_a = e.listener) === null || _a === void 0 ? void 0 : _a.dispose();
-            }
-            this.events = [];
         }
     }
     exports.EventMultiplexer = EventMultiplexer;
@@ -6743,7 +6725,7 @@ define(__m[6/*vs/base/common/strings*/], __M([0/*require*/,1/*exports*/,32/*vs/b
     "use strict";
     var _a;
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.InvisibleCharacters = exports.AmbiguousCharacters = exports.noBreakWhitespace = exports.getLeftDeleteOffset = exports.singleLetterHash = exports.containsUppercaseCharacter = exports.startsWithUTF8BOM = exports.UTF8_BOM_CHARACTER = exports.isEmojiImprecise = exports.isFullWidthCharacter = exports.containsUnusualLineTerminators = exports.UNUSUAL_LINE_TERMINATORS = exports.isBasicASCII = exports.containsRTL = exports.getCharContainingOffset = exports.prevCharLength = exports.nextCharLength = exports.GraphemeIterator = exports.CodePointIterator = exports.getNextCodePoint = exports.computeCodePoint = exports.isLowSurrogate = exports.isHighSurrogate = exports.commonSuffixLength = exports.commonPrefixLength = exports.startsWithIgnoreCase = exports.equalsIgnoreCase = exports.isUpperAsciiLetter = exports.isLowerAsciiLetter = exports.isAsciiDigit = exports.compareSubstringIgnoreCase = exports.compareIgnoreCase = exports.compareSubstring = exports.compare = exports.lastNonWhitespaceIndex = exports.getLeadingWhitespace = exports.firstNonWhitespaceIndex = exports.splitLinesIncludeSeparators = exports.splitLines = exports.regExpLeadsToEndlessLoop = exports.createRegExp = exports.stripWildcards = exports.convertSimple2RegExpPattern = exports.rtrim = exports.ltrim = exports.trim = exports.escapeRegExpCharacters = exports.escape = exports.htmlAttributeEncodeValue = exports.format = exports.isFalsyOrWhitespace = void 0;
+    exports.InvisibleCharacters = exports.AmbiguousCharacters = exports.noBreakWhitespace = exports.getLeftDeleteOffset = exports.singleLetterHash = exports.containsUppercaseCharacter = exports.startsWithUTF8BOM = exports.UTF8_BOM_CHARACTER = exports.isEmojiImprecise = exports.isFullWidthCharacter = exports.containsUnusualLineTerminators = exports.UNUSUAL_LINE_TERMINATORS = exports.isBasicASCII = exports.containsRTL = exports.getCharContainingOffset = exports.prevCharLength = exports.nextCharLength = exports.GraphemeIterator = exports.CodePointIterator = exports.getNextCodePoint = exports.computeCodePoint = exports.isLowSurrogate = exports.isHighSurrogate = exports.commonSuffixLength = exports.commonPrefixLength = exports.startsWithIgnoreCase = exports.equalsIgnoreCase = exports.isUpperAsciiLetter = exports.isLowerAsciiLetter = exports.isAsciiDigit = exports.compareSubstringIgnoreCase = exports.compareIgnoreCase = exports.compareSubstring = exports.compare = exports.lastNonWhitespaceIndex = exports.getLeadingWhitespace = exports.firstNonWhitespaceIndex = exports.splitLines = exports.regExpLeadsToEndlessLoop = exports.createRegExp = exports.stripWildcards = exports.convertSimple2RegExpPattern = exports.rtrim = exports.ltrim = exports.trim = exports.escapeRegExpCharacters = exports.escape = exports.format = exports.isFalsyOrWhitespace = void 0;
     function isFalsyOrWhitespace(str) {
         if (!str || typeof str !== 'string') {
             return true;
@@ -6770,25 +6752,6 @@ define(__m[6/*vs/base/common/strings*/], __M([0/*require*/,1/*exports*/,32/*vs/b
         });
     }
     exports.format = format;
-    /**
-     * Encodes the given value so that it can be used as literal value in html attributes.
-     *
-     * In other words, computes `$val`, such that `attr` in `<div attr="$val" />` has the runtime value `value`.
-     * This prevents XSS injection.
-     */
-    function htmlAttributeEncodeValue(value) {
-        return value.replace(/[<>"'&]/g, ch => {
-            switch (ch) {
-                case '<': return '&lt;';
-                case '>': return '&gt;';
-                case '"': return '&quot;';
-                case '\'': return '&apos;';
-                case '&': return '&amp;';
-            }
-            return ch;
-        });
-    }
-    exports.htmlAttributeEncodeValue = htmlAttributeEncodeValue;
     /**
      * Converts HTML characters inside the string to use entities instead. Makes the string safe from
      * being used e.g. in HTMLElement.innerHTML.
@@ -6923,16 +6886,6 @@ define(__m[6/*vs/base/common/strings*/], __M([0/*require*/,1/*exports*/,32/*vs/b
         return str.split(/\r\n|\r|\n/);
     }
     exports.splitLines = splitLines;
-    function splitLinesIncludeSeparators(str) {
-        var _b;
-        const linesWithSeparators = [];
-        const splitLinesAndSeparators = str.split(/(\r\n|\r|\n)/);
-        for (let i = 0; i < Math.ceil(splitLinesAndSeparators.length / 2); i++) {
-            linesWithSeparators.push(splitLinesAndSeparators[2 * i] + ((_b = splitLinesAndSeparators[2 * i + 1]) !== null && _b !== void 0 ? _b : ''));
-        }
-        return linesWithSeparators;
-    }
-    exports.splitLinesIncludeSeparators = splitLinesIncludeSeparators;
     /**
      * Returns first index of the string that is not whitespace.
      * If string is empty or contains only whitespaces, returns -1
@@ -9026,7 +8979,6 @@ define(__m[40/*vs/base/common/codicons*/], __M([0/*require*/,1/*exports*/,25/*vs
         closeDirty: register('close-dirty', 0xea71),
         debugBreakpoint: register('debug-breakpoint', 0xea71),
         debugBreakpointDisabled: register('debug-breakpoint-disabled', 0xea71),
-        debugBreakpointPending: register('debug-breakpoint-pending', 0xebd9),
         debugHint: register('debug-hint', 0xea71),
         primitiveSquare: register('primitive-square', 0xea72),
         edit: register('edit', 0xea73),
@@ -9502,34 +9454,7 @@ define(__m[40/*vs/base/common/codicons*/], __M([0/*require*/,1/*exports*/,25/*vs
         sparkle: register('sparkle', 0xec10),
         insert: register('insert', 0xec11),
         mic: register('mic', 0xec12),
-        thumbsDownFilled: register('thumbsdown-filled', 0xec13),
-        thumbsUpFilled: register('thumbsup-filled', 0xec14),
-        coffee: register('coffee', 0xec15),
-        snake: register('snake', 0xec16),
-        game: register('game', 0xec17),
-        vr: register('vr', 0xec18),
-        chip: register('chip', 0xec19),
-        piano: register('piano', 0xec1a),
-        music: register('music', 0xec1b),
-        micFilled: register('mic-filled', 0xec1c),
-        gitFetch: register('git-fetch', 0xec1d),
-        copilot: register('copilot', 0xec1e),
-        lightbulbSparkle: register('lightbulb-sparkle', 0xec1f),
-        lightbulbSparkleAutofix: register('lightbulb-sparkle-autofix', 0xec1f),
-        robot: register('robot', 0xec20),
-        sparkleFilled: register('sparkle-filled', 0xec21),
-        diffSingle: register('diff-single', 0xec22),
-        diffMultiple: register('diff-multiple', 0xec23),
-        surroundWith: register('surround-with', 0xec24),
-        gitStash: register('git-stash', 0xec26),
-        gitStashApply: register('git-stash-apply', 0xec27),
-        gitStashPop: register('git-stash-pop', 0xec28),
-        runAllCoverage: register('run-all-coverage', 0xec2d),
-        runCoverage: register('run-all-coverage', 0xec2c),
-        coverage: register('coverage', 0xec2e),
-        githubProject: register('github-project', 0xec2f),
         // derived icons, that could become separate icons
-        // TODO: These mappings should go in the vscode-codicons mapping file
         dialogError: register('dialog-error', 'error'),
         dialogWarning: register('dialog-warning', 'warning'),
         dialogInfo: register('dialog-info', 'info'),
@@ -9866,11 +9791,14 @@ define(__m[3/*vs/editor/common/core/offsetRange*/], __M([0/*require*/,1/*exports
                 sortedRanges.splice(i, j - i, new OffsetRange(start, end));
             }
         }
+        static tryCreate(start, endExclusive) {
+            if (start > endExclusive) {
+                return undefined;
+            }
+            return new OffsetRange(start, endExclusive);
+        }
         static ofLength(length) {
             return new OffsetRange(0, length);
-        }
-        static ofStartAndLength(start, length) {
-            return new OffsetRange(start, start + length);
         }
         constructor(start, endExclusive) {
             this.start = start;
@@ -9897,6 +9825,12 @@ define(__m[3/*vs/editor/common/core/offsetRange*/], __M([0/*require*/,1/*exports
         toString() {
             return `[${this.start}, ${this.endExclusive})`;
         }
+        equals(other) {
+            return this.start === other.start && this.endExclusive === other.endExclusive;
+        }
+        containsRange(other) {
+            return this.start <= other.start && other.endExclusive <= this.endExclusive;
+        }
         contains(offset) {
             return this.start <= offset && offset < this.endExclusive;
         }
@@ -9920,17 +9854,6 @@ define(__m[3/*vs/editor/common/core/offsetRange*/], __M([0/*require*/,1/*exports
                 return new OffsetRange(start, end);
             }
             return undefined;
-        }
-        intersects(other) {
-            const start = Math.max(this.start, other.start);
-            const end = Math.min(this.endExclusive, other.endExclusive);
-            return start < end;
-        }
-        isBefore(other) {
-            return this.endExclusive <= other.start;
-        }
-        isAfter(other) {
-            return this.start >= other.endExclusive;
         }
         slice(arr) {
             return arr.slice(this.start, this.endExclusive);
@@ -10163,12 +10086,6 @@ define(__m[4/*vs/editor/common/core/position*/], __M([0/*require*/,1/*exports*/]
             return (obj
                 && (typeof obj.lineNumber === 'number')
                 && (typeof obj.column === 'number'));
-        }
-        toJSON() {
-            return {
-                lineNumber: this.lineNumber,
-                column: this.column
-            };
         }
     }
     exports.Position = Position;
@@ -10592,8 +10509,8 @@ define(__m[10/*vs/editor/common/core/lineRange*/], __M([0/*require*/,1/*exports*
      * A range of lines (1-based).
      */
     class LineRange {
-        static fromRangeInclusive(range) {
-            return new LineRange(range.startLineNumber, range.endLineNumber + 1);
+        static fromRange(range) {
+            return new LineRange(range.startLineNumber, range.endLineNumber);
         }
         /**
          * @param lineRanges An array of sorted line ranges.
@@ -10760,10 +10677,6 @@ define(__m[10/*vs/editor/common/core/lineRange*/], __M([0/*require*/,1/*exports*
         contains(lineNumber) {
             const rangeThatStartsBeforeEnd = (0, arraysFind_1.findLastMonotonous)(this._normalizedRanges, r => r.startLineNumber <= lineNumber);
             return !!rangeThatStartsBeforeEnd && rangeThatStartsBeforeEnd.endLineNumberExclusive > lineNumber;
-        }
-        intersects(range) {
-            const rangeThatStartsBeforeEnd = (0, arraysFind_1.findLastMonotonous)(this._normalizedRanges, r => r.startLineNumber < range.endLineNumberExclusive);
-            return !!rangeThatStartsBeforeEnd && rangeThatStartsBeforeEnd.endLineNumberExclusive > range.startLineNumber;
         }
         getUnion(other) {
             if (this._normalizedRanges.length === 0) {
@@ -11111,8 +11024,6 @@ define(__m[28/*vs/editor/common/core/wordHelper*/], __M([0/*require*/,1/*exports
         timeBudget: 150
     });
     function getWordAtText(column, wordDefinition, text, textOffset, config) {
-        // Ensure the regex has the 'g' flag, otherwise this will loop forever
-        wordDefinition = ensureValidWordDefinition(wordDefinition);
         if (!config) {
             config = iterator_1.Iterable.first(_defaultConfig);
         }
@@ -11272,15 +11183,6 @@ define(__m[8/*vs/editor/common/diff/defaultLinesDiffComputer/algorithms/diffAlgo
         }
         toString() {
             return `${this.offset1} <-> ${this.offset2}`;
-        }
-        delta(offset) {
-            if (offset === 0) {
-                return this;
-            }
-            return new OffsetPair(this.offset1 + offset, this.offset2 + offset);
-        }
-        equals(other) {
-            return this.offset1 === other.offset1 && this.offset2 === other.offset2;
         }
     }
     exports.OffsetPair = OffsetPair;
@@ -11491,9 +11393,6 @@ define(__m[43/*vs/editor/common/diff/defaultLinesDiffComputer/heuristicSequenceO
     function optimizeSequenceDiffs(sequence1, sequence2, sequenceDiffs) {
         let result = sequenceDiffs;
         result = joinSequenceDiffsByShifting(sequence1, sequence2, result);
-        // Sometimes, calling this function twice improves the result.
-        // Uncomment the second invocation and run the tests to see the difference.
-        result = joinSequenceDiffsByShifting(sequence1, sequence2, result);
         result = shiftSequenceDiffs(sequence1, sequence2, result);
         return result;
     }
@@ -11590,8 +11489,8 @@ define(__m[43/*vs/editor/common/diff/defaultLinesDiffComputer/heuristicSequenceO
             const prevDiff = (i > 0 ? sequenceDiffs[i - 1] : undefined);
             const diff = sequenceDiffs[i];
             const nextDiff = (i + 1 < sequenceDiffs.length ? sequenceDiffs[i + 1] : undefined);
-            const seq1ValidRange = new offsetRange_1.OffsetRange(prevDiff ? prevDiff.seq1Range.endExclusive + 1 : 0, nextDiff ? nextDiff.seq1Range.start - 1 : sequence1.length);
-            const seq2ValidRange = new offsetRange_1.OffsetRange(prevDiff ? prevDiff.seq2Range.endExclusive + 1 : 0, nextDiff ? nextDiff.seq2Range.start - 1 : sequence2.length);
+            const seq1ValidRange = new offsetRange_1.OffsetRange(prevDiff ? prevDiff.seq1Range.start + 1 : 0, nextDiff ? nextDiff.seq1Range.endExclusive - 1 : sequence1.length);
+            const seq2ValidRange = new offsetRange_1.OffsetRange(prevDiff ? prevDiff.seq2Range.start + 1 : 0, nextDiff ? nextDiff.seq2Range.endExclusive - 1 : sequence2.length);
             if (diff.seq1Range.isEmpty) {
                 sequenceDiffs[i] = shiftDiffToBetterPosition(diff, sequence1, sequence2, seq1ValidRange, seq2ValidRange);
             }
@@ -11656,60 +11555,62 @@ define(__m[43/*vs/editor/common/diff/defaultLinesDiffComputer/heuristicSequenceO
     }
     exports.removeShortMatches = removeShortMatches;
     function extendDiffsToEntireWordIfAppropriate(sequence1, sequence2, sequenceDiffs) {
-        const equalMappings = diffAlgorithm_1.SequenceDiff.invert(sequenceDiffs, sequence1.length);
         const additional = [];
-        let lastPoint = new diffAlgorithm_1.OffsetPair(0, 0);
-        function scanWord(pair, equalMapping) {
-            if (pair.offset1 < lastPoint.offset1 || pair.offset2 < lastPoint.offset2) {
+        let lastModifiedWord = undefined;
+        function maybePushWordToAdditional() {
+            if (!lastModifiedWord) {
                 return;
             }
-            const w1 = sequence1.findWordContaining(pair.offset1);
-            const w2 = sequence2.findWordContaining(pair.offset2);
-            if (!w1 || !w2) {
-                return;
+            const originalLength1 = lastModifiedWord.s1Range.length - lastModifiedWord.deleted;
+            const originalLength2 = lastModifiedWord.s2Range.length - lastModifiedWord.added;
+            if (originalLength1 !== originalLength2) {
+                // TODO figure out why this happens
             }
-            let w = new diffAlgorithm_1.SequenceDiff(w1, w2);
-            const equalPart = w.intersect(equalMapping);
-            let equalChars1 = equalPart.seq1Range.length;
-            let equalChars2 = equalPart.seq2Range.length;
-            // The words do not touch previous equals mappings, as we would have processed them already.
-            // But they might touch the next ones.
-            while (equalMappings.length > 0) {
-                const next = equalMappings[0];
-                const intersects = next.seq1Range.intersects(w1) || next.seq2Range.intersects(w2);
-                if (!intersects) {
-                    break;
-                }
-                const v1 = sequence1.findWordContaining(next.seq1Range.start);
-                const v2 = sequence2.findWordContaining(next.seq2Range.start);
-                // Because there is an intersection, we know that the words are not empty.
-                const v = new diffAlgorithm_1.SequenceDiff(v1, v2);
-                const equalPart = v.intersect(next);
-                equalChars1 += equalPart.seq1Range.length;
-                equalChars2 += equalPart.seq2Range.length;
-                w = w.join(v);
-                if (w.seq1Range.endExclusive >= next.seq1Range.endExclusive) {
-                    // The word extends beyond the next equal mapping.
-                    equalMappings.shift();
-                }
-                else {
-                    break;
-                }
+            if (Math.max(lastModifiedWord.deleted, lastModifiedWord.added) + (lastModifiedWord.count - 1) > originalLength1) {
+                additional.push(new diffAlgorithm_1.SequenceDiff(lastModifiedWord.s1Range, lastModifiedWord.s2Range));
             }
-            if (equalChars1 + equalChars2 < (w.seq1Range.length + w.seq2Range.length) * 2 / 3) {
-                additional.push(w);
-            }
-            lastPoint = w.getEndExclusives();
+            lastModifiedWord = undefined;
         }
-        while (equalMappings.length > 0) {
-            const next = equalMappings.shift();
-            if (next.seq1Range.isEmpty) {
-                continue;
+        for (const s of sequenceDiffs) {
+            function processWord(s1Range, s2Range) {
+                var _a, _b, _c, _d;
+                if (!lastModifiedWord || !lastModifiedWord.s1Range.containsRange(s1Range) || !lastModifiedWord.s2Range.containsRange(s2Range)) {
+                    if (lastModifiedWord && !(lastModifiedWord.s1Range.endExclusive < s1Range.start && lastModifiedWord.s2Range.endExclusive < s2Range.start)) {
+                        const s1Added = offsetRange_1.OffsetRange.tryCreate(lastModifiedWord.s1Range.endExclusive, s1Range.start);
+                        const s2Added = offsetRange_1.OffsetRange.tryCreate(lastModifiedWord.s2Range.endExclusive, s2Range.start);
+                        lastModifiedWord.deleted += (_a = s1Added === null || s1Added === void 0 ? void 0 : s1Added.length) !== null && _a !== void 0 ? _a : 0;
+                        lastModifiedWord.added += (_b = s2Added === null || s2Added === void 0 ? void 0 : s2Added.length) !== null && _b !== void 0 ? _b : 0;
+                        lastModifiedWord.s1Range = lastModifiedWord.s1Range.join(s1Range);
+                        lastModifiedWord.s2Range = lastModifiedWord.s2Range.join(s2Range);
+                    }
+                    else {
+                        maybePushWordToAdditional();
+                        lastModifiedWord = { added: 0, deleted: 0, count: 0, s1Range: s1Range, s2Range: s2Range };
+                    }
+                }
+                const changedS1 = s1Range.intersect(s.seq1Range);
+                const changedS2 = s2Range.intersect(s.seq2Range);
+                lastModifiedWord.count++;
+                lastModifiedWord.deleted += (_c = changedS1 === null || changedS1 === void 0 ? void 0 : changedS1.length) !== null && _c !== void 0 ? _c : 0;
+                lastModifiedWord.added += (_d = changedS2 === null || changedS2 === void 0 ? void 0 : changedS2.length) !== null && _d !== void 0 ? _d : 0;
             }
-            scanWord(next.getStarts(), next);
-            // The equal parts are not empty, so -1 gives us a character that is equal in both parts.
-            scanWord(next.getEndExclusives().delta(-1), next);
+            const w1Before = sequence1.findWordContaining(s.seq1Range.start - 1);
+            const w2Before = sequence2.findWordContaining(s.seq2Range.start - 1);
+            const w1After = sequence1.findWordContaining(s.seq1Range.endExclusive);
+            const w2After = sequence2.findWordContaining(s.seq2Range.endExclusive);
+            if (w1Before && w1After && w2Before && w2After && w1Before.equals(w1After) && w2Before.equals(w2After)) {
+                processWord(w1Before, w2Before);
+            }
+            else {
+                if (w1Before && w2Before) {
+                    processWord(w1Before, w2Before);
+                }
+                if (w1After && w2After) {
+                    processWord(w1After, w2After);
+                }
+            }
         }
+        maybePushWordToAdditional();
         const merged = mergeSequenceDiffs(sequenceDiffs, additional);
         return merged;
     }
@@ -11813,7 +11714,7 @@ define(__m[43/*vs/editor/common/diff/defaultLinesDiffComputer/heuristicSequenceO
                         return Math.min(v, max);
                     }
                     if (Math.pow(Math.pow(cap(beforeLineCount1 * 40 + beforeSeq1Length), 1.5) + Math.pow(cap(beforeLineCount2 * 40 + beforeSeq2Length), 1.5), 1.5)
-                        + Math.pow(Math.pow(cap(afterLineCount1 * 40 + afterSeq1Length), 1.5) + Math.pow(cap(afterLineCount2 * 40 + afterSeq2Length), 1.5), 1.5) > ((max ** 1.5) ** 1.5) * 1.3) {
+                        + Math.pow(Math.pow(cap(afterLineCount1 * 40 + afterSeq1Length), 1.5) + Math.pow(cap(afterLineCount2 * 40 + afterSeq2Length), 1.5), 1.5) > (Math.pow((Math.pow(max, 1.5)), 1.5)) * 1.3) {
                         return true;
                     }
                     return false;
@@ -11847,12 +11748,7 @@ define(__m[43/*vs/editor/common/diff/defaultLinesDiffComputer/heuristicSequenceO
             }
             const availableSpace = diffAlgorithm_1.SequenceDiff.fromOffsetPairs(prev ? prev.getEndExclusives() : diffAlgorithm_1.OffsetPair.zero, next ? next.getStarts() : diffAlgorithm_1.OffsetPair.max);
             const result = newDiff.intersect(availableSpace);
-            if (newDiffs.length > 0 && result.getStarts().equals(newDiffs[newDiffs.length - 1].getEndExclusives())) {
-                newDiffs[newDiffs.length - 1] = newDiffs[newDiffs.length - 1].join(result);
-            }
-            else {
-                newDiffs.push(result);
-            }
+            newDiffs.push(result);
         });
         return newDiffs;
     }
@@ -12144,13 +12040,9 @@ define(__m[30/*vs/editor/common/diff/defaultLinesDiffComputer/linesSliceCharSequ
             // 11  0   0   12  15  6   13  0   0   11
             const prevCategory = getCategory(length > 0 ? this.elements[length - 1] : -1);
             const nextCategory = getCategory(length < this.elements.length ? this.elements[length] : -1);
-            if (prevCategory === 7 /* CharBoundaryCategory.LineBreakCR */ && nextCategory === 8 /* CharBoundaryCategory.LineBreakLF */) {
+            if (prevCategory === 6 /* CharBoundaryCategory.LineBreakCR */ && nextCategory === 7 /* CharBoundaryCategory.LineBreakLF */) {
                 // don't break between \r and \n
                 return 0;
-            }
-            if (prevCategory === 8 /* CharBoundaryCategory.LineBreakLF */) {
-                // prefer the linebreak before the change
-                return 150;
             }
             let score = 0;
             if (prevCategory !== nextCategory) {
@@ -12221,23 +12113,22 @@ define(__m[30/*vs/editor/common/diff/defaultLinesDiffComputer/linesSliceCharSequ
         [2 /* CharBoundaryCategory.WordNumber */]: 0,
         [3 /* CharBoundaryCategory.End */]: 10,
         [4 /* CharBoundaryCategory.Other */]: 2,
-        [5 /* CharBoundaryCategory.Separator */]: 30,
-        [6 /* CharBoundaryCategory.Space */]: 3,
-        [7 /* CharBoundaryCategory.LineBreakCR */]: 10,
-        [8 /* CharBoundaryCategory.LineBreakLF */]: 10,
+        [5 /* CharBoundaryCategory.Space */]: 3,
+        [6 /* CharBoundaryCategory.LineBreakCR */]: 10,
+        [7 /* CharBoundaryCategory.LineBreakLF */]: 10,
     };
     function getCategoryBoundaryScore(category) {
         return score[category];
     }
     function getCategory(charCode) {
         if (charCode === 10 /* CharCode.LineFeed */) {
-            return 8 /* CharBoundaryCategory.LineBreakLF */;
+            return 7 /* CharBoundaryCategory.LineBreakLF */;
         }
         else if (charCode === 13 /* CharCode.CarriageReturn */) {
-            return 7 /* CharBoundaryCategory.LineBreakCR */;
+            return 6 /* CharBoundaryCategory.LineBreakCR */;
         }
         else if ((0, utils_1.isSpace)(charCode)) {
-            return 6 /* CharBoundaryCategory.Space */;
+            return 5 /* CharBoundaryCategory.Space */;
         }
         else if (charCode >= 97 /* CharCode.a */ && charCode <= 122 /* CharCode.z */) {
             return 0 /* CharBoundaryCategory.WordLower */;
@@ -12250,9 +12141,6 @@ define(__m[30/*vs/editor/common/diff/defaultLinesDiffComputer/linesSliceCharSequ
         }
         else if (charCode === -1) {
             return 3 /* CharBoundaryCategory.End */;
-        }
-        else if (charCode === 44 /* CharCode.Comma */ || charCode === 59 /* CharCode.Semicolon */) {
-            return 5 /* CharBoundaryCategory.Separator */;
         }
         else {
             return 4 /* CharBoundaryCategory.Other */;
@@ -12312,27 +12200,16 @@ define(__m[16/*vs/editor/common/diff/rangeMapping*/], __M([0/*require*/,1/*expor
             let lastOriginalEndLineNumber = 1;
             let lastModifiedEndLineNumber = 1;
             for (const m of mapping) {
-                const r = new LineRangeMapping(new lineRange_1.LineRange(lastOriginalEndLineNumber, m.original.startLineNumber), new lineRange_1.LineRange(lastModifiedEndLineNumber, m.modified.startLineNumber));
+                const r = new DetailedLineRangeMapping(new lineRange_1.LineRange(lastOriginalEndLineNumber, m.original.startLineNumber), new lineRange_1.LineRange(lastModifiedEndLineNumber, m.modified.startLineNumber), undefined);
                 if (!r.modified.isEmpty) {
                     result.push(r);
                 }
                 lastOriginalEndLineNumber = m.original.endLineNumberExclusive;
                 lastModifiedEndLineNumber = m.modified.endLineNumberExclusive;
             }
-            const r = new LineRangeMapping(new lineRange_1.LineRange(lastOriginalEndLineNumber, originalLineCount + 1), new lineRange_1.LineRange(lastModifiedEndLineNumber, modifiedLineCount + 1));
+            const r = new DetailedLineRangeMapping(new lineRange_1.LineRange(lastOriginalEndLineNumber, originalLineCount + 1), new lineRange_1.LineRange(lastModifiedEndLineNumber, modifiedLineCount + 1), undefined);
             if (!r.modified.isEmpty) {
                 result.push(r);
-            }
-            return result;
-        }
-        static clip(mapping, originalRange, modifiedRange) {
-            const result = [];
-            for (const m of mapping) {
-                const original = m.original.intersect(originalRange);
-                const modified = m.modified.intersect(modifiedRange);
-                if (original && !original.isEmpty && modified && !modified.isEmpty) {
-                    result.push(new LineRangeMapping(original, modified));
-                }
             }
             return result;
         }
@@ -12403,23 +12280,13 @@ define(__m[46/*vs/editor/common/diff/defaultLinesDiffComputer/computeMovedLines*
         moves = joinCloseConsecutiveMoves(moves);
         // Ignore too short moves
         moves = moves.filter(current => {
-            const lines = current.original.toOffsetRange().slice(originalLines).map(l => l.trim());
-            const originalText = lines.join('\n');
-            return originalText.length >= 15 && countWhere(lines, l => l.length >= 2) >= 2;
+            const originalText = current.original.toOffsetRange().slice(originalLines).map(l => l.trim()).join('\n');
+            return originalText.length >= 10;
         });
         moves = removeMovesInSameDiff(changes, moves);
         return moves;
     }
     exports.computeMovedLines = computeMovedLines;
-    function countWhere(arr, predicate) {
-        let count = 0;
-        for (const t of arr) {
-            if (predicate(t)) {
-                count++;
-            }
-        }
-        return count;
-    }
     function computeMovesFromSimpleDeletionsToSimpleInsertions(changes, originalLines, modifiedLines, timeout) {
         const moves = [];
         const deletions = changes
@@ -12617,9 +12484,9 @@ define(__m[46/*vs/editor/common/diff/defaultLinesDiffComputer/computeMovedLines*
     function removeMovesInSameDiff(changes, moves) {
         const changesMonotonous = new arraysFind_1.MonotonousArray(changes);
         moves = moves.filter(m => {
-            const diffBeforeEndOfMoveOriginal = changesMonotonous.findLastMonotonous(c => c.original.startLineNumber < m.original.endLineNumberExclusive)
+            const diffBeforeEndOfMoveOriginal = changesMonotonous.findLastMonotonous(c => c.original.endLineNumberExclusive < m.original.endLineNumberExclusive)
                 || new rangeMapping_1.LineRangeMapping(new lineRange_1.LineRange(1, 1), new lineRange_1.LineRange(1, 1));
-            const diffBeforeEndOfMoveModified = (0, arraysFind_1.findLastMonotonous)(changes, c => c.modified.startLineNumber < m.modified.endLineNumberExclusive);
+            const diffBeforeEndOfMoveModified = (0, arraysFind_1.findLastMonotonous)(changes, c => c.modified.endLineNumberExclusive < m.modified.endLineNumberExclusive);
             const differentDiffs = diffBeforeEndOfMoveOriginal !== diffBeforeEndOfMoveModified;
             return differentDiffs;
         });
@@ -13854,8 +13721,7 @@ define(__m[53/*vs/editor/common/model*/], __M([0/*require*/,1/*exports*/,14/*vs/
     var GlyphMarginLane;
     (function (GlyphMarginLane) {
         GlyphMarginLane[GlyphMarginLane["Left"] = 1] = "Left";
-        GlyphMarginLane[GlyphMarginLane["Center"] = 2] = "Center";
-        GlyphMarginLane[GlyphMarginLane["Right"] = 3] = "Right";
+        GlyphMarginLane[GlyphMarginLane["Right"] = 2] = "Right";
     })(GlyphMarginLane || (exports.GlyphMarginLane = GlyphMarginLane = {}));
     /**
      * Position in the minimap to render the decoration.
@@ -14984,7 +14850,7 @@ define(__m[57/*vs/editor/common/services/unicodeTextModelHighlighter*/], __M([0/
 define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/,1/*exports*/]), function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.WrappingIndent = exports.TrackedRangeStickiness = exports.TextEditorCursorStyle = exports.TextEditorCursorBlinkingStyle = exports.SymbolTag = exports.SymbolKind = exports.SignatureHelpTriggerKind = exports.ShowLightbulbIconMode = exports.SelectionDirection = exports.ScrollbarVisibility = exports.ScrollType = exports.RenderMinimap = exports.RenderLineNumbersType = exports.PositionAffinity = exports.OverviewRulerLane = exports.OverlayWidgetPositionPreference = exports.NewSymbolNameTag = exports.MouseTargetType = exports.MinimapPosition = exports.MarkerTag = exports.MarkerSeverity = exports.KeyCode = exports.InlineEditTriggerKind = exports.InlineCompletionTriggerKind = exports.InlayHintKind = exports.InjectedTextCursorStops = exports.IndentAction = exports.GlyphMarginLane = exports.EndOfLineSequence = exports.EndOfLinePreference = exports.EditorOption = exports.EditorAutoIndentStrategy = exports.DocumentHighlightKind = exports.DefaultEndOfLine = exports.CursorChangeReason = exports.ContentWidgetPositionPreference = exports.CompletionTriggerKind = exports.CompletionItemTag = exports.CompletionItemKind = exports.CompletionItemInsertTextRule = exports.CodeActionTriggerType = exports.AccessibilitySupport = void 0;
+    exports.WrappingIndent = exports.TrackedRangeStickiness = exports.TextEditorCursorStyle = exports.TextEditorCursorBlinkingStyle = exports.SymbolTag = exports.SymbolKind = exports.SignatureHelpTriggerKind = exports.SelectionDirection = exports.ScrollbarVisibility = exports.ScrollType = exports.RenderMinimap = exports.RenderLineNumbersType = exports.PositionAffinity = exports.OverviewRulerLane = exports.OverlayWidgetPositionPreference = exports.MouseTargetType = exports.MinimapPosition = exports.MarkerTag = exports.MarkerSeverity = exports.KeyCode = exports.InlineCompletionTriggerKind = exports.InlayHintKind = exports.InjectedTextCursorStops = exports.IndentAction = exports.GlyphMarginLane = exports.EndOfLineSequence = exports.EndOfLinePreference = exports.EditorOption = exports.EditorAutoIndentStrategy = exports.DocumentHighlightKind = exports.DefaultEndOfLine = exports.CursorChangeReason = exports.ContentWidgetPositionPreference = exports.CompletionTriggerKind = exports.CompletionItemTag = exports.CompletionItemKind = exports.CompletionItemInsertTextRule = exports.CodeActionTriggerType = exports.AccessibilitySupport = void 0;
     // THIS IS A GENERATED FILE. DO NOT EDIT DIRECTLY.
     var AccessibilitySupport;
     (function (AccessibilitySupport) {
@@ -15217,92 +15083,91 @@ define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/
         EditorOption[EditorOption["hover"] = 60] = "hover";
         EditorOption[EditorOption["inDiffEditor"] = 61] = "inDiffEditor";
         EditorOption[EditorOption["inlineSuggest"] = 62] = "inlineSuggest";
-        EditorOption[EditorOption["inlineEdit"] = 63] = "inlineEdit";
-        EditorOption[EditorOption["letterSpacing"] = 64] = "letterSpacing";
-        EditorOption[EditorOption["lightbulb"] = 65] = "lightbulb";
-        EditorOption[EditorOption["lineDecorationsWidth"] = 66] = "lineDecorationsWidth";
-        EditorOption[EditorOption["lineHeight"] = 67] = "lineHeight";
-        EditorOption[EditorOption["lineNumbers"] = 68] = "lineNumbers";
-        EditorOption[EditorOption["lineNumbersMinChars"] = 69] = "lineNumbersMinChars";
-        EditorOption[EditorOption["linkedEditing"] = 70] = "linkedEditing";
-        EditorOption[EditorOption["links"] = 71] = "links";
-        EditorOption[EditorOption["matchBrackets"] = 72] = "matchBrackets";
-        EditorOption[EditorOption["minimap"] = 73] = "minimap";
-        EditorOption[EditorOption["mouseStyle"] = 74] = "mouseStyle";
-        EditorOption[EditorOption["mouseWheelScrollSensitivity"] = 75] = "mouseWheelScrollSensitivity";
-        EditorOption[EditorOption["mouseWheelZoom"] = 76] = "mouseWheelZoom";
-        EditorOption[EditorOption["multiCursorMergeOverlapping"] = 77] = "multiCursorMergeOverlapping";
-        EditorOption[EditorOption["multiCursorModifier"] = 78] = "multiCursorModifier";
-        EditorOption[EditorOption["multiCursorPaste"] = 79] = "multiCursorPaste";
-        EditorOption[EditorOption["multiCursorLimit"] = 80] = "multiCursorLimit";
-        EditorOption[EditorOption["occurrencesHighlight"] = 81] = "occurrencesHighlight";
-        EditorOption[EditorOption["overviewRulerBorder"] = 82] = "overviewRulerBorder";
-        EditorOption[EditorOption["overviewRulerLanes"] = 83] = "overviewRulerLanes";
-        EditorOption[EditorOption["padding"] = 84] = "padding";
-        EditorOption[EditorOption["pasteAs"] = 85] = "pasteAs";
-        EditorOption[EditorOption["parameterHints"] = 86] = "parameterHints";
-        EditorOption[EditorOption["peekWidgetDefaultFocus"] = 87] = "peekWidgetDefaultFocus";
-        EditorOption[EditorOption["definitionLinkOpensInPeek"] = 88] = "definitionLinkOpensInPeek";
-        EditorOption[EditorOption["quickSuggestions"] = 89] = "quickSuggestions";
-        EditorOption[EditorOption["quickSuggestionsDelay"] = 90] = "quickSuggestionsDelay";
-        EditorOption[EditorOption["readOnly"] = 91] = "readOnly";
-        EditorOption[EditorOption["readOnlyMessage"] = 92] = "readOnlyMessage";
-        EditorOption[EditorOption["renameOnType"] = 93] = "renameOnType";
-        EditorOption[EditorOption["renderControlCharacters"] = 94] = "renderControlCharacters";
-        EditorOption[EditorOption["renderFinalNewline"] = 95] = "renderFinalNewline";
-        EditorOption[EditorOption["renderLineHighlight"] = 96] = "renderLineHighlight";
-        EditorOption[EditorOption["renderLineHighlightOnlyWhenFocus"] = 97] = "renderLineHighlightOnlyWhenFocus";
-        EditorOption[EditorOption["renderValidationDecorations"] = 98] = "renderValidationDecorations";
-        EditorOption[EditorOption["renderWhitespace"] = 99] = "renderWhitespace";
-        EditorOption[EditorOption["revealHorizontalRightPadding"] = 100] = "revealHorizontalRightPadding";
-        EditorOption[EditorOption["roundedSelection"] = 101] = "roundedSelection";
-        EditorOption[EditorOption["rulers"] = 102] = "rulers";
-        EditorOption[EditorOption["scrollbar"] = 103] = "scrollbar";
-        EditorOption[EditorOption["scrollBeyondLastColumn"] = 104] = "scrollBeyondLastColumn";
-        EditorOption[EditorOption["scrollBeyondLastLine"] = 105] = "scrollBeyondLastLine";
-        EditorOption[EditorOption["scrollPredominantAxis"] = 106] = "scrollPredominantAxis";
-        EditorOption[EditorOption["selectionClipboard"] = 107] = "selectionClipboard";
-        EditorOption[EditorOption["selectionHighlight"] = 108] = "selectionHighlight";
-        EditorOption[EditorOption["selectOnLineNumbers"] = 109] = "selectOnLineNumbers";
-        EditorOption[EditorOption["showFoldingControls"] = 110] = "showFoldingControls";
-        EditorOption[EditorOption["showUnused"] = 111] = "showUnused";
-        EditorOption[EditorOption["snippetSuggestions"] = 112] = "snippetSuggestions";
-        EditorOption[EditorOption["smartSelect"] = 113] = "smartSelect";
-        EditorOption[EditorOption["smoothScrolling"] = 114] = "smoothScrolling";
-        EditorOption[EditorOption["stickyScroll"] = 115] = "stickyScroll";
-        EditorOption[EditorOption["stickyTabStops"] = 116] = "stickyTabStops";
-        EditorOption[EditorOption["stopRenderingLineAfter"] = 117] = "stopRenderingLineAfter";
-        EditorOption[EditorOption["suggest"] = 118] = "suggest";
-        EditorOption[EditorOption["suggestFontSize"] = 119] = "suggestFontSize";
-        EditorOption[EditorOption["suggestLineHeight"] = 120] = "suggestLineHeight";
-        EditorOption[EditorOption["suggestOnTriggerCharacters"] = 121] = "suggestOnTriggerCharacters";
-        EditorOption[EditorOption["suggestSelection"] = 122] = "suggestSelection";
-        EditorOption[EditorOption["tabCompletion"] = 123] = "tabCompletion";
-        EditorOption[EditorOption["tabIndex"] = 124] = "tabIndex";
-        EditorOption[EditorOption["unicodeHighlighting"] = 125] = "unicodeHighlighting";
-        EditorOption[EditorOption["unusualLineTerminators"] = 126] = "unusualLineTerminators";
-        EditorOption[EditorOption["useShadowDOM"] = 127] = "useShadowDOM";
-        EditorOption[EditorOption["useTabStops"] = 128] = "useTabStops";
-        EditorOption[EditorOption["wordBreak"] = 129] = "wordBreak";
-        EditorOption[EditorOption["wordSeparators"] = 130] = "wordSeparators";
-        EditorOption[EditorOption["wordWrap"] = 131] = "wordWrap";
-        EditorOption[EditorOption["wordWrapBreakAfterCharacters"] = 132] = "wordWrapBreakAfterCharacters";
-        EditorOption[EditorOption["wordWrapBreakBeforeCharacters"] = 133] = "wordWrapBreakBeforeCharacters";
-        EditorOption[EditorOption["wordWrapColumn"] = 134] = "wordWrapColumn";
-        EditorOption[EditorOption["wordWrapOverride1"] = 135] = "wordWrapOverride1";
-        EditorOption[EditorOption["wordWrapOverride2"] = 136] = "wordWrapOverride2";
-        EditorOption[EditorOption["wrappingIndent"] = 137] = "wrappingIndent";
-        EditorOption[EditorOption["wrappingStrategy"] = 138] = "wrappingStrategy";
-        EditorOption[EditorOption["showDeprecated"] = 139] = "showDeprecated";
-        EditorOption[EditorOption["inlayHints"] = 140] = "inlayHints";
-        EditorOption[EditorOption["editorClassName"] = 141] = "editorClassName";
-        EditorOption[EditorOption["pixelRatio"] = 142] = "pixelRatio";
-        EditorOption[EditorOption["tabFocusMode"] = 143] = "tabFocusMode";
-        EditorOption[EditorOption["layoutInfo"] = 144] = "layoutInfo";
-        EditorOption[EditorOption["wrappingInfo"] = 145] = "wrappingInfo";
-        EditorOption[EditorOption["defaultColorDecorators"] = 146] = "defaultColorDecorators";
-        EditorOption[EditorOption["colorDecoratorsActivatedOn"] = 147] = "colorDecoratorsActivatedOn";
-        EditorOption[EditorOption["inlineCompletionsAccessibilityVerbose"] = 148] = "inlineCompletionsAccessibilityVerbose";
+        EditorOption[EditorOption["letterSpacing"] = 63] = "letterSpacing";
+        EditorOption[EditorOption["lightbulb"] = 64] = "lightbulb";
+        EditorOption[EditorOption["lineDecorationsWidth"] = 65] = "lineDecorationsWidth";
+        EditorOption[EditorOption["lineHeight"] = 66] = "lineHeight";
+        EditorOption[EditorOption["lineNumbers"] = 67] = "lineNumbers";
+        EditorOption[EditorOption["lineNumbersMinChars"] = 68] = "lineNumbersMinChars";
+        EditorOption[EditorOption["linkedEditing"] = 69] = "linkedEditing";
+        EditorOption[EditorOption["links"] = 70] = "links";
+        EditorOption[EditorOption["matchBrackets"] = 71] = "matchBrackets";
+        EditorOption[EditorOption["minimap"] = 72] = "minimap";
+        EditorOption[EditorOption["mouseStyle"] = 73] = "mouseStyle";
+        EditorOption[EditorOption["mouseWheelScrollSensitivity"] = 74] = "mouseWheelScrollSensitivity";
+        EditorOption[EditorOption["mouseWheelZoom"] = 75] = "mouseWheelZoom";
+        EditorOption[EditorOption["multiCursorMergeOverlapping"] = 76] = "multiCursorMergeOverlapping";
+        EditorOption[EditorOption["multiCursorModifier"] = 77] = "multiCursorModifier";
+        EditorOption[EditorOption["multiCursorPaste"] = 78] = "multiCursorPaste";
+        EditorOption[EditorOption["multiCursorLimit"] = 79] = "multiCursorLimit";
+        EditorOption[EditorOption["occurrencesHighlight"] = 80] = "occurrencesHighlight";
+        EditorOption[EditorOption["overviewRulerBorder"] = 81] = "overviewRulerBorder";
+        EditorOption[EditorOption["overviewRulerLanes"] = 82] = "overviewRulerLanes";
+        EditorOption[EditorOption["padding"] = 83] = "padding";
+        EditorOption[EditorOption["pasteAs"] = 84] = "pasteAs";
+        EditorOption[EditorOption["parameterHints"] = 85] = "parameterHints";
+        EditorOption[EditorOption["peekWidgetDefaultFocus"] = 86] = "peekWidgetDefaultFocus";
+        EditorOption[EditorOption["definitionLinkOpensInPeek"] = 87] = "definitionLinkOpensInPeek";
+        EditorOption[EditorOption["quickSuggestions"] = 88] = "quickSuggestions";
+        EditorOption[EditorOption["quickSuggestionsDelay"] = 89] = "quickSuggestionsDelay";
+        EditorOption[EditorOption["readOnly"] = 90] = "readOnly";
+        EditorOption[EditorOption["readOnlyMessage"] = 91] = "readOnlyMessage";
+        EditorOption[EditorOption["renameOnType"] = 92] = "renameOnType";
+        EditorOption[EditorOption["renderControlCharacters"] = 93] = "renderControlCharacters";
+        EditorOption[EditorOption["renderFinalNewline"] = 94] = "renderFinalNewline";
+        EditorOption[EditorOption["renderLineHighlight"] = 95] = "renderLineHighlight";
+        EditorOption[EditorOption["renderLineHighlightOnlyWhenFocus"] = 96] = "renderLineHighlightOnlyWhenFocus";
+        EditorOption[EditorOption["renderValidationDecorations"] = 97] = "renderValidationDecorations";
+        EditorOption[EditorOption["renderWhitespace"] = 98] = "renderWhitespace";
+        EditorOption[EditorOption["revealHorizontalRightPadding"] = 99] = "revealHorizontalRightPadding";
+        EditorOption[EditorOption["roundedSelection"] = 100] = "roundedSelection";
+        EditorOption[EditorOption["rulers"] = 101] = "rulers";
+        EditorOption[EditorOption["scrollbar"] = 102] = "scrollbar";
+        EditorOption[EditorOption["scrollBeyondLastColumn"] = 103] = "scrollBeyondLastColumn";
+        EditorOption[EditorOption["scrollBeyondLastLine"] = 104] = "scrollBeyondLastLine";
+        EditorOption[EditorOption["scrollPredominantAxis"] = 105] = "scrollPredominantAxis";
+        EditorOption[EditorOption["selectionClipboard"] = 106] = "selectionClipboard";
+        EditorOption[EditorOption["selectionHighlight"] = 107] = "selectionHighlight";
+        EditorOption[EditorOption["selectOnLineNumbers"] = 108] = "selectOnLineNumbers";
+        EditorOption[EditorOption["showFoldingControls"] = 109] = "showFoldingControls";
+        EditorOption[EditorOption["showUnused"] = 110] = "showUnused";
+        EditorOption[EditorOption["snippetSuggestions"] = 111] = "snippetSuggestions";
+        EditorOption[EditorOption["smartSelect"] = 112] = "smartSelect";
+        EditorOption[EditorOption["smoothScrolling"] = 113] = "smoothScrolling";
+        EditorOption[EditorOption["stickyScroll"] = 114] = "stickyScroll";
+        EditorOption[EditorOption["stickyTabStops"] = 115] = "stickyTabStops";
+        EditorOption[EditorOption["stopRenderingLineAfter"] = 116] = "stopRenderingLineAfter";
+        EditorOption[EditorOption["suggest"] = 117] = "suggest";
+        EditorOption[EditorOption["suggestFontSize"] = 118] = "suggestFontSize";
+        EditorOption[EditorOption["suggestLineHeight"] = 119] = "suggestLineHeight";
+        EditorOption[EditorOption["suggestOnTriggerCharacters"] = 120] = "suggestOnTriggerCharacters";
+        EditorOption[EditorOption["suggestSelection"] = 121] = "suggestSelection";
+        EditorOption[EditorOption["tabCompletion"] = 122] = "tabCompletion";
+        EditorOption[EditorOption["tabIndex"] = 123] = "tabIndex";
+        EditorOption[EditorOption["unicodeHighlighting"] = 124] = "unicodeHighlighting";
+        EditorOption[EditorOption["unusualLineTerminators"] = 125] = "unusualLineTerminators";
+        EditorOption[EditorOption["useShadowDOM"] = 126] = "useShadowDOM";
+        EditorOption[EditorOption["useTabStops"] = 127] = "useTabStops";
+        EditorOption[EditorOption["wordBreak"] = 128] = "wordBreak";
+        EditorOption[EditorOption["wordSeparators"] = 129] = "wordSeparators";
+        EditorOption[EditorOption["wordWrap"] = 130] = "wordWrap";
+        EditorOption[EditorOption["wordWrapBreakAfterCharacters"] = 131] = "wordWrapBreakAfterCharacters";
+        EditorOption[EditorOption["wordWrapBreakBeforeCharacters"] = 132] = "wordWrapBreakBeforeCharacters";
+        EditorOption[EditorOption["wordWrapColumn"] = 133] = "wordWrapColumn";
+        EditorOption[EditorOption["wordWrapOverride1"] = 134] = "wordWrapOverride1";
+        EditorOption[EditorOption["wordWrapOverride2"] = 135] = "wordWrapOverride2";
+        EditorOption[EditorOption["wrappingIndent"] = 136] = "wrappingIndent";
+        EditorOption[EditorOption["wrappingStrategy"] = 137] = "wrappingStrategy";
+        EditorOption[EditorOption["showDeprecated"] = 138] = "showDeprecated";
+        EditorOption[EditorOption["inlayHints"] = 139] = "inlayHints";
+        EditorOption[EditorOption["editorClassName"] = 140] = "editorClassName";
+        EditorOption[EditorOption["pixelRatio"] = 141] = "pixelRatio";
+        EditorOption[EditorOption["tabFocusMode"] = 142] = "tabFocusMode";
+        EditorOption[EditorOption["layoutInfo"] = 143] = "layoutInfo";
+        EditorOption[EditorOption["wrappingInfo"] = 144] = "wrappingInfo";
+        EditorOption[EditorOption["defaultColorDecorators"] = 145] = "defaultColorDecorators";
+        EditorOption[EditorOption["colorDecoratorsActivatedOn"] = 146] = "colorDecoratorsActivatedOn";
+        EditorOption[EditorOption["inlineCompletionsAccessibilityVerbose"] = 147] = "inlineCompletionsAccessibilityVerbose";
     })(EditorOption || (exports.EditorOption = EditorOption = {}));
     /**
      * End of line character preference.
@@ -15342,8 +15207,7 @@ define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/
     var GlyphMarginLane;
     (function (GlyphMarginLane) {
         GlyphMarginLane[GlyphMarginLane["Left"] = 1] = "Left";
-        GlyphMarginLane[GlyphMarginLane["Center"] = 2] = "Center";
-        GlyphMarginLane[GlyphMarginLane["Right"] = 3] = "Right";
+        GlyphMarginLane[GlyphMarginLane["Right"] = 2] = "Right";
     })(GlyphMarginLane || (exports.GlyphMarginLane = GlyphMarginLane = {}));
     /**
      * Describes what to do with the indentation when pressing Enter.
@@ -15397,11 +15261,6 @@ define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/
          */
         InlineCompletionTriggerKind[InlineCompletionTriggerKind["Explicit"] = 1] = "Explicit";
     })(InlineCompletionTriggerKind || (exports.InlineCompletionTriggerKind = InlineCompletionTriggerKind = {}));
-    var InlineEditTriggerKind;
-    (function (InlineEditTriggerKind) {
-        InlineEditTriggerKind[InlineEditTriggerKind["Invoke"] = 0] = "Invoke";
-        InlineEditTriggerKind[InlineEditTriggerKind["Automatic"] = 1] = "Automatic";
-    })(InlineEditTriggerKind || (exports.InlineEditTriggerKind = InlineEditTriggerKind = {}));
     /**
      * Virtual Key Codes, the value does not hold any inherent meaning.
      * Inspired somewhat from https://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
@@ -15689,10 +15548,6 @@ define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/
          */
         MouseTargetType[MouseTargetType["OUTSIDE_EDITOR"] = 13] = "OUTSIDE_EDITOR";
     })(MouseTargetType || (exports.MouseTargetType = MouseTargetType = {}));
-    var NewSymbolNameTag;
-    (function (NewSymbolNameTag) {
-        NewSymbolNameTag[NewSymbolNameTag["AIGenerated"] = 1] = "AIGenerated";
-    })(NewSymbolNameTag || (exports.NewSymbolNameTag = NewSymbolNameTag = {}));
     /**
      * A positioning preference for rendering overlay widgets.
      */
@@ -15783,12 +15638,6 @@ define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/
          */
         SelectionDirection[SelectionDirection["RTL"] = 1] = "RTL";
     })(SelectionDirection || (exports.SelectionDirection = SelectionDirection = {}));
-    var ShowLightbulbIconMode;
-    (function (ShowLightbulbIconMode) {
-        ShowLightbulbIconMode["Off"] = "off";
-        ShowLightbulbIconMode["OnCode"] = "onCode";
-        ShowLightbulbIconMode["On"] = "on";
-    })(ShowLightbulbIconMode || (exports.ShowLightbulbIconMode = ShowLightbulbIconMode = {}));
     var SignatureHelpTriggerKind;
     (function (SignatureHelpTriggerKind) {
         SignatureHelpTriggerKind[SignatureHelpTriggerKind["Invoke"] = 1] = "Invoke";
@@ -15930,6 +15779,15 @@ define(__m[58/*vs/editor/common/standalone/standaloneEnums*/], __M([0/*require*/
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+
+
+
+
+
+
+
+
 define(__m[59/*vs/editor/common/tokenizationRegistry*/], __M([0/*require*/,1/*exports*/,9/*vs/base/common/event*/,13/*vs/base/common/lifecycle*/]), function (require, exports, event_1, lifecycle_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -15976,19 +15834,21 @@ define(__m[59/*vs/editor/common/tokenizationRegistry*/], __M([0/*require*/,1/*ex
                 v.dispose();
             });
         }
-        async getOrCreate(languageId) {
-            // check first if the support is already set
-            const tokenizationSupport = this.get(languageId);
-            if (tokenizationSupport) {
-                return tokenizationSupport;
-            }
-            const factory = this._factories.get(languageId);
-            if (!factory || factory.isResolved) {
-                // no factory or factory.resolve already finished
-                return null;
-            }
-            await factory.resolve();
-            return this.get(languageId);
+        getOrCreate(languageId) {
+            return __awaiter(this, void 0, void 0, function* () {
+                // check first if the support is already set
+                const tokenizationSupport = this.get(languageId);
+                if (tokenizationSupport) {
+                    return tokenizationSupport;
+                }
+                const factory = this._factories.get(languageId);
+                if (!factory || factory.isResolved) {
+                    // no factory or factory.resolve already finished
+                    return null;
+                }
+                yield factory.resolve();
+                return this.get(languageId);
+            });
         }
         isResolved(languageId) {
             const tokenizationSupport = this.get(languageId);
@@ -16036,18 +15896,22 @@ define(__m[59/*vs/editor/common/tokenizationRegistry*/], __M([0/*require*/,1/*ex
             this._isDisposed = true;
             super.dispose();
         }
-        async resolve() {
-            if (!this._resolvePromise) {
-                this._resolvePromise = this._create();
-            }
-            return this._resolvePromise;
+        resolve() {
+            return __awaiter(this, void 0, void 0, function* () {
+                if (!this._resolvePromise) {
+                    this._resolvePromise = this._create();
+                }
+                return this._resolvePromise;
+            });
         }
-        async _create() {
-            const value = await this._factory.tokenizationSupport;
-            this._isResolved = true;
-            if (value && !this._isDisposed) {
-                this._register(this._registry.register(this._languageId, value));
-            }
+        _create() {
+            return __awaiter(this, void 0, void 0, function* () {
+                const value = yield this._factory.tokenizationSupport;
+                this._isResolved = true;
+                if (value && !this._isDisposed) {
+                    this._register(this._registry.register(this._languageId, value));
+                }
+            });
         }
     }
 });
@@ -16057,7 +15921,7 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
     "use strict";
     var _a;
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.isAndroid = exports.isEdge = exports.isSafari = exports.isFirefox = exports.isChrome = exports.isLittleEndian = exports.OS = exports.setTimeout0 = exports.setTimeout0IsFaster = exports.language = exports.userAgent = exports.isMobile = exports.isIOS = exports.webWorkerOrigin = exports.isWebWorker = exports.isWeb = exports.isNative = exports.isLinux = exports.isMacintosh = exports.isWindows = exports.LANGUAGE_DEFAULT = void 0;
+    exports.isAndroid = exports.isEdge = exports.isSafari = exports.isFirefox = exports.isChrome = exports.isLittleEndian = exports.OS = exports.setTimeout0 = exports.setTimeout0IsFaster = exports.language = exports.userAgent = exports.isMobile = exports.isIOS = exports.isWebWorker = exports.isWeb = exports.isNative = exports.isLinux = exports.isMacintosh = exports.isWindows = exports.globals = exports.LANGUAGE_DEFAULT = void 0;
     exports.LANGUAGE_DEFAULT = 'en';
     let _isWindows = false;
     let _isMacintosh = false;
@@ -16074,11 +15938,14 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
     let _platformLocale = exports.LANGUAGE_DEFAULT;
     let _translationsConfigFile = undefined;
     let _userAgent = undefined;
-    const $globalThis = globalThis;
+    /**
+     * @deprecated use `globalThis` instead
+     */
+    exports.globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
     let nodeProcess = undefined;
-    if (typeof $globalThis.vscode !== 'undefined' && typeof $globalThis.vscode.process !== 'undefined') {
+    if (typeof exports.globals.vscode !== 'undefined' && typeof exports.globals.vscode.process !== 'undefined') {
         // Native environment (sandboxed)
-        nodeProcess = $globalThis.vscode.process;
+        nodeProcess = exports.globals.vscode.process;
     }
     else if (typeof process !== 'undefined') {
         // Native environment (non-sandboxed)
@@ -16086,8 +15953,27 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
     }
     const isElectronProcess = typeof ((_a = nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.versions) === null || _a === void 0 ? void 0 : _a.electron) === 'string';
     const isElectronRenderer = isElectronProcess && (nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.type) === 'renderer';
+    // Web environment
+    if (typeof navigator === 'object' && !isElectronRenderer) {
+        _userAgent = navigator.userAgent;
+        _isWindows = _userAgent.indexOf('Windows') >= 0;
+        _isMacintosh = _userAgent.indexOf('Macintosh') >= 0;
+        _isIOS = (_userAgent.indexOf('Macintosh') >= 0 || _userAgent.indexOf('iPad') >= 0 || _userAgent.indexOf('iPhone') >= 0) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
+        _isLinux = _userAgent.indexOf('Linux') >= 0;
+        _isMobile = (_userAgent === null || _userAgent === void 0 ? void 0 : _userAgent.indexOf('Mobi')) >= 0;
+        _isWeb = true;
+        const configuredLocale = nls.getConfiguredDefaultLocale(
+        // This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
+        // to ensure that the NLS AMD Loader plugin has been loaded and configured.
+        // This is because the loader plugin decides what the default locale is based on
+        // how it's able to resolve the strings.
+        nls.localize(0, null));
+        _locale = configuredLocale || exports.LANGUAGE_DEFAULT;
+        _language = _locale;
+        _platformLocale = navigator.language;
+    }
     // Native environment
-    if (typeof nodeProcess === 'object') {
+    else if (typeof nodeProcess === 'object') {
         _isWindows = (nodeProcess.platform === 'win32');
         _isMacintosh = (nodeProcess.platform === 'darwin');
         _isLinux = (nodeProcess.platform === 'linux');
@@ -16112,25 +15998,6 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
         }
         _isNative = true;
     }
-    // Web environment
-    else if (typeof navigator === 'object' && !isElectronRenderer) {
-        _userAgent = navigator.userAgent;
-        _isWindows = _userAgent.indexOf('Windows') >= 0;
-        _isMacintosh = _userAgent.indexOf('Macintosh') >= 0;
-        _isIOS = (_userAgent.indexOf('Macintosh') >= 0 || _userAgent.indexOf('iPad') >= 0 || _userAgent.indexOf('iPhone') >= 0) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
-        _isLinux = _userAgent.indexOf('Linux') >= 0;
-        _isMobile = (_userAgent === null || _userAgent === void 0 ? void 0 : _userAgent.indexOf('Mobi')) >= 0;
-        _isWeb = true;
-        const configuredLocale = nls.getConfiguredDefaultLocale(
-        // This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
-        // to ensure that the NLS AMD Loader plugin has been loaded and configured.
-        // This is because the loader plugin decides what the default locale is based on
-        // how it's able to resolve the strings.
-        nls.localize(0, null));
-        _locale = configuredLocale || exports.LANGUAGE_DEFAULT;
-        _language = _locale;
-        _platformLocale = navigator.language;
-    }
     // Unknown environment
     else {
         console.error('Unable to resolve platform.');
@@ -16150,8 +16017,7 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
     exports.isLinux = _isLinux;
     exports.isNative = _isNative;
     exports.isWeb = _isWeb;
-    exports.isWebWorker = (_isWeb && typeof $globalThis.importScripts === 'function');
-    exports.webWorkerOrigin = exports.isWebWorker ? $globalThis.origin : undefined;
+    exports.isWebWorker = (_isWeb && typeof exports.globals.importScripts === 'function');
     exports.isIOS = _isIOS;
     exports.isMobile = _isMobile;
     exports.userAgent = _userAgent;
@@ -16161,7 +16027,7 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
      * Chinese)
      */
     exports.language = _language;
-    exports.setTimeout0IsFaster = (typeof $globalThis.postMessage === 'function' && !$globalThis.importScripts);
+    exports.setTimeout0IsFaster = (typeof exports.globals.postMessage === 'function' && !exports.globals.importScripts);
     /**
      * See https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#:~:text=than%204%2C%20then-,set%20timeout%20to%204,-.
      *
@@ -16171,7 +16037,7 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
     exports.setTimeout0 = (() => {
         if (exports.setTimeout0IsFaster) {
             const pending = [];
-            $globalThis.addEventListener('message', (e) => {
+            exports.globals.addEventListener('message', (e) => {
                 if (e.data && e.data.vscodeScheduleAsyncWork) {
                     for (let i = 0, len = pending.length; i < len; i++) {
                         const candidate = pending[i];
@@ -16190,7 +16056,7 @@ define(__m[17/*vs/base/common/platform*/], __M([0/*require*/,1/*exports*/,60/*vs
                     id: myId,
                     callback: callback
                 });
-                $globalThis.postMessage({ vscodeScheduleAsyncWork: myId }, '*');
+                exports.globals.postMessage({ vscodeScheduleAsyncWork: myId }, '*');
             };
         }
         return (callback) => setTimeout(callback);
@@ -16227,9 +16093,8 @@ define(__m[62/*vs/base/common/process*/], __M([0/*require*/,1/*exports*/,17/*vs/
     exports.platform = exports.env = exports.cwd = void 0;
     let safeProcess;
     // Native sandbox environment
-    const vscodeGlobal = globalThis.vscode;
-    if (typeof vscodeGlobal !== 'undefined' && typeof vscodeGlobal.process !== 'undefined') {
-        const sandboxProcess = vscodeGlobal.process;
+    if (typeof platform_1.globals.vscode !== 'undefined' && typeof platform_1.globals.vscode.process !== 'undefined') {
+        const sandboxProcess = platform_1.globals.vscode.process;
         safeProcess = {
             get platform() { return sandboxProcess.platform; },
             get arch() { return sandboxProcess.arch; },
@@ -18670,7 +18535,7 @@ define(__m[67/*vs/base/common/worker/simpleWorker*/], __M([0/*require*/,1/*expor
                         delete loaderConfig.paths['vs'];
                     }
                 }
-                if (typeof loaderConfig.trustedTypesPolicy !== 'undefined') {
+                if (typeof loaderConfig.trustedTypesPolicy !== undefined) {
                     // don't use, it has been destroyed during serialize
                     delete loaderConfig['trustedTypesPolicy'];
                 }
@@ -18712,7 +18577,7 @@ define(__m[64/*vs/nls!vs/editor/common/languages*/], __M([19/*vs/nls*/,61/*vs/nl
 define(__m[65/*vs/editor/common/languages*/], __M([0/*require*/,1/*exports*/,40/*vs/base/common/codicons*/,18/*vs/base/common/uri*/,2/*vs/editor/common/core/range*/,59/*vs/editor/common/tokenizationRegistry*/,64/*vs/nls!vs/editor/common/languages*/]), function (require, exports, codicons_1, uri_1, range_1, tokenizationRegistry_1, nls_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.InlineEditTriggerKind = exports.TokenizationRegistry = exports.LazyTokenizationSupport = exports.InlayHintKind = exports.Command = exports.NewSymbolNameTag = exports.FoldingRangeKind = exports.TextEdit = exports.SymbolKinds = exports.getAriaLabelForSymbol = exports.symbolKindNames = exports.isLocationLink = exports.DocumentHighlightKind = exports.SignatureHelpTriggerKind = exports.SelectedSuggestionInfo = exports.InlineCompletionTriggerKind = exports.CompletionItemKinds = exports.EncodedTokenizationResult = exports.TokenizationResult = exports.Token = void 0;
+    exports.TokenizationRegistry = exports.LazyTokenizationSupport = exports.InlayHintKind = exports.Command = exports.FoldingRangeKind = exports.TextEdit = exports.SymbolKinds = exports.getAriaLabelForSymbol = exports.symbolKindNames = exports.isLocationLink = exports.DocumentHighlightKind = exports.SignatureHelpTriggerKind = exports.SelectedSuggestionInfo = exports.InlineCompletionTriggerKind = exports.CompletionItemKinds = exports.EncodedTokenizationResult = exports.TokenizationResult = exports.Token = void 0;
     class Token {
         constructor(offset, type, language) {
             this.offset = offset;
@@ -19033,10 +18898,6 @@ define(__m[65/*vs/editor/common/languages*/], __M([0/*require*/,1/*exports*/,40/
      * The value of the kind is 'region'.
      */
     FoldingRangeKind.Region = new FoldingRangeKind('region');
-    var NewSymbolNameTag;
-    (function (NewSymbolNameTag) {
-        NewSymbolNameTag[NewSymbolNameTag["AIGenerated"] = 1] = "AIGenerated";
-    })(NewSymbolNameTag || (exports.NewSymbolNameTag = NewSymbolNameTag = {}));
     /**
      * @internal
      */
@@ -19088,11 +18949,6 @@ define(__m[65/*vs/editor/common/languages*/], __M([0/*require*/,1/*exports*/,40/
      * @internal
      */
     exports.TokenizationRegistry = new tokenizationRegistry_1.TokenizationRegistry();
-    var InlineEditTriggerKind;
-    (function (InlineEditTriggerKind) {
-        InlineEditTriggerKind[InlineEditTriggerKind["Invoke"] = 0] = "Invoke";
-        InlineEditTriggerKind[InlineEditTriggerKind["Automatic"] = 1] = "Automatic";
-    })(InlineEditTriggerKind || (exports.InlineEditTriggerKind = InlineEditTriggerKind = {}));
 });
 
 /*---------------------------------------------------------------------------------------------
@@ -19138,6 +18994,15 @@ define(__m[66/*vs/editor/common/services/editorBaseApi*/], __M([0/*require*/,1/*
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+
+
+
+
+
+
+
+
 define(__m[68/*vs/editor/common/services/editorSimpleWorker*/], __M([0/*require*/,1/*exports*/,24/*vs/base/common/diff/diff*/,18/*vs/base/common/uri*/,4/*vs/editor/common/core/position*/,2/*vs/editor/common/core/range*/,55/*vs/editor/common/model/mirrorTextModel*/,28/*vs/editor/common/core/wordHelper*/,51/*vs/editor/common/languages/linkComputer*/,52/*vs/editor/common/languages/supports/inplaceReplaceSupport*/,66/*vs/editor/common/services/editorBaseApi*/,23/*vs/base/common/stopwatch*/,57/*vs/editor/common/services/unicodeTextModelHighlighter*/,49/*vs/editor/common/diff/linesDiffComputers*/,14/*vs/base/common/objects*/,50/*vs/editor/common/languages/defaultDocumentColorsComputer*/]), function (require, exports, diff_1, uri_1, position_1, range_1, mirrorTextModel_1, wordHelper_1, linkComputer_1, inplaceReplaceSupport_1, editorBaseApi_1, stopwatch_1, unicodeTextModelHighlighter_1, linesDiffComputers_1, objects_1, defaultDocumentColorsComputer_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -19363,22 +19228,25 @@ define(__m[68/*vs/editor/common/services/editorSimpleWorker*/], __M([0/*require*
             }
             delete this._models[strURL];
         }
-        async computeUnicodeHighlights(url, options, range) {
-            const model = this._getModel(url);
-            if (!model) {
-                return { ranges: [], hasMore: false, ambiguousCharacterCount: 0, invisibleCharacterCount: 0, nonBasicAsciiCharacterCount: 0 };
-            }
-            return unicodeTextModelHighlighter_1.UnicodeTextModelHighlighter.computeUnicodeHighlights(model, options, range);
+        computeUnicodeHighlights(url, options, range) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const model = this._getModel(url);
+                if (!model) {
+                    return { ranges: [], hasMore: false, ambiguousCharacterCount: 0, invisibleCharacterCount: 0, nonBasicAsciiCharacterCount: 0 };
+                }
+                return unicodeTextModelHighlighter_1.UnicodeTextModelHighlighter.computeUnicodeHighlights(model, options, range);
+            });
         }
         // ---- BEGIN diff --------------------------------------------------------------------------
-        async computeDiff(originalUrl, modifiedUrl, options, algorithm) {
-            const original = this._getModel(originalUrl);
-            const modified = this._getModel(modifiedUrl);
-            if (!original || !modified) {
-                return null;
-            }
-            const result = EditorSimpleWorker.computeDiff(original, modified, options, algorithm);
-            return result;
+        computeDiff(originalUrl, modifiedUrl, options, algorithm) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const original = this._getModel(originalUrl);
+                const modified = this._getModel(modifiedUrl);
+                if (!original || !modified) {
+                    return null;
+                }
+                return EditorSimpleWorker.computeDiff(original, modified, options, algorithm);
+            });
         }
         static computeDiff(originalTextModel, modifiedTextModel, options, algorithm) {
             const diffAlgorithm = algorithm === 'advanced' ? linesDiffComputers_1.linesDiffComputers.getDefault() : linesDiffComputers_1.linesDiffComputers.getLegacy();
@@ -19429,164 +19297,176 @@ define(__m[68/*vs/editor/common/services/editorSimpleWorker*/], __M([0/*require*
             }
             return true;
         }
-        async computeMoreMinimalEdits(modelUrl, edits, pretty) {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return edits;
-            }
-            const result = [];
-            let lastEol = undefined;
-            edits = edits.slice(0).sort((a, b) => {
-                if (a.range && b.range) {
-                    return range_1.Range.compareRangesUsingStarts(a.range, b.range);
+        computeMoreMinimalEdits(modelUrl, edits, pretty) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const model = this._getModel(modelUrl);
+                if (!model) {
+                    return edits;
                 }
-                // eol only changes should go to the end
-                const aRng = a.range ? 0 : 1;
-                const bRng = b.range ? 0 : 1;
-                return aRng - bRng;
-            });
-            // merge adjacent edits
-            let writeIndex = 0;
-            for (let readIndex = 1; readIndex < edits.length; readIndex++) {
-                if (range_1.Range.getEndPosition(edits[writeIndex].range).equals(range_1.Range.getStartPosition(edits[readIndex].range))) {
-                    edits[writeIndex].range = range_1.Range.fromPositions(range_1.Range.getStartPosition(edits[writeIndex].range), range_1.Range.getEndPosition(edits[readIndex].range));
-                    edits[writeIndex].text += edits[readIndex].text;
-                }
-                else {
-                    writeIndex++;
-                    edits[writeIndex] = edits[readIndex];
-                }
-            }
-            edits.length = writeIndex + 1;
-            for (let { range, text, eol } of edits) {
-                if (typeof eol === 'number') {
-                    lastEol = eol;
-                }
-                if (range_1.Range.isEmpty(range) && !text) {
-                    // empty change
-                    continue;
-                }
-                const original = model.getValueInRange(range);
-                text = text.replace(/\r\n|\n|\r/g, model.eol);
-                if (original === text) {
-                    // noop
-                    continue;
-                }
-                // make sure diff won't take too long
-                if (Math.max(text.length, original.length) > EditorSimpleWorker._diffLimit) {
-                    result.push({ range, text });
-                    continue;
-                }
-                // compute diff between original and edit.text
-                const changes = (0, diff_1.stringDiff)(original, text, pretty);
-                const editOffset = model.offsetAt(range_1.Range.lift(range).getStartPosition());
-                for (const change of changes) {
-                    const start = model.positionAt(editOffset + change.originalStart);
-                    const end = model.positionAt(editOffset + change.originalStart + change.originalLength);
-                    const newEdit = {
-                        text: text.substr(change.modifiedStart, change.modifiedLength),
-                        range: { startLineNumber: start.lineNumber, startColumn: start.column, endLineNumber: end.lineNumber, endColumn: end.column }
-                    };
-                    if (model.getValueInRange(newEdit.range) !== newEdit.text) {
-                        result.push(newEdit);
+                const result = [];
+                let lastEol = undefined;
+                edits = edits.slice(0).sort((a, b) => {
+                    if (a.range && b.range) {
+                        return range_1.Range.compareRangesUsingStarts(a.range, b.range);
+                    }
+                    // eol only changes should go to the end
+                    const aRng = a.range ? 0 : 1;
+                    const bRng = b.range ? 0 : 1;
+                    return aRng - bRng;
+                });
+                // merge adjacent edits
+                let writeIndex = 0;
+                for (let readIndex = 1; readIndex < edits.length; readIndex++) {
+                    if (range_1.Range.getEndPosition(edits[writeIndex].range).equals(range_1.Range.getStartPosition(edits[readIndex].range))) {
+                        edits[writeIndex].range = range_1.Range.fromPositions(range_1.Range.getStartPosition(edits[writeIndex].range), range_1.Range.getEndPosition(edits[readIndex].range));
+                        edits[writeIndex].text += edits[readIndex].text;
+                    }
+                    else {
+                        writeIndex++;
+                        edits[writeIndex] = edits[readIndex];
                     }
                 }
-            }
-            if (typeof lastEol === 'number') {
-                result.push({ eol: lastEol, text: '', range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 } });
-            }
-            return result;
-        }
-        // ---- END minimal edits ---------------------------------------------------------------
-        async computeLinks(modelUrl) {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return null;
-            }
-            return (0, linkComputer_1.computeLinks)(model);
-        }
-        // --- BEGIN default document colors -----------------------------------------------------------
-        async computeDefaultDocumentColors(modelUrl) {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return null;
-            }
-            return (0, defaultDocumentColorsComputer_1.computeDefaultDocumentColors)(model);
-        }
-        async textualSuggest(modelUrls, leadingWord, wordDef, wordDefFlags) {
-            const sw = new stopwatch_1.StopWatch();
-            const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
-            const seen = new Set();
-            outer: for (const url of modelUrls) {
-                const model = this._getModel(url);
-                if (!model) {
-                    continue;
-                }
-                for (const word of model.words(wordDefRegExp)) {
-                    if (word === leadingWord || !isNaN(Number(word))) {
+                edits.length = writeIndex + 1;
+                for (let { range, text, eol } of edits) {
+                    if (typeof eol === 'number') {
+                        lastEol = eol;
+                    }
+                    if (range_1.Range.isEmpty(range) && !text) {
+                        // empty change
                         continue;
                     }
-                    seen.add(word);
-                    if (seen.size > EditorSimpleWorker._suggestionsLimit) {
-                        break outer;
+                    const original = model.getValueInRange(range);
+                    text = text.replace(/\r\n|\n|\r/g, model.eol);
+                    if (original === text) {
+                        // noop
+                        continue;
+                    }
+                    // make sure diff won't take too long
+                    if (Math.max(text.length, original.length) > EditorSimpleWorker._diffLimit) {
+                        result.push({ range, text });
+                        continue;
+                    }
+                    // compute diff between original and edit.text
+                    const changes = (0, diff_1.stringDiff)(original, text, pretty);
+                    const editOffset = model.offsetAt(range_1.Range.lift(range).getStartPosition());
+                    for (const change of changes) {
+                        const start = model.positionAt(editOffset + change.originalStart);
+                        const end = model.positionAt(editOffset + change.originalStart + change.originalLength);
+                        const newEdit = {
+                            text: text.substr(change.modifiedStart, change.modifiedLength),
+                            range: { startLineNumber: start.lineNumber, startColumn: start.column, endLineNumber: end.lineNumber, endColumn: end.column }
+                        };
+                        if (model.getValueInRange(newEdit.range) !== newEdit.text) {
+                            result.push(newEdit);
+                        }
                     }
                 }
-            }
-            return { words: Array.from(seen), duration: sw.elapsed() };
+                if (typeof lastEol === 'number') {
+                    result.push({ eol: lastEol, text: '', range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 } });
+                }
+                return result;
+            });
+        }
+        // ---- END minimal edits ---------------------------------------------------------------
+        computeLinks(modelUrl) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const model = this._getModel(modelUrl);
+                if (!model) {
+                    return null;
+                }
+                return (0, linkComputer_1.computeLinks)(model);
+            });
+        }
+        // --- BEGIN default document colors -----------------------------------------------------------
+        computeDefaultDocumentColors(modelUrl) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const model = this._getModel(modelUrl);
+                if (!model) {
+                    return null;
+                }
+                return (0, defaultDocumentColorsComputer_1.computeDefaultDocumentColors)(model);
+            });
+        }
+        textualSuggest(modelUrls, leadingWord, wordDef, wordDefFlags) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const sw = new stopwatch_1.StopWatch();
+                const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
+                const seen = new Set();
+                outer: for (const url of modelUrls) {
+                    const model = this._getModel(url);
+                    if (!model) {
+                        continue;
+                    }
+                    for (const word of model.words(wordDefRegExp)) {
+                        if (word === leadingWord || !isNaN(Number(word))) {
+                            continue;
+                        }
+                        seen.add(word);
+                        if (seen.size > EditorSimpleWorker._suggestionsLimit) {
+                            break outer;
+                        }
+                    }
+                }
+                return { words: Array.from(seen), duration: sw.elapsed() };
+            });
         }
         // ---- END suggest --------------------------------------------------------------------------
         //#region -- word ranges --
-        async computeWordRanges(modelUrl, range, wordDef, wordDefFlags) {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return Object.create(null);
-            }
-            const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
-            const result = Object.create(null);
-            for (let line = range.startLineNumber; line < range.endLineNumber; line++) {
-                const words = model.getLineWords(line, wordDefRegExp);
-                for (const word of words) {
-                    if (!isNaN(Number(word.word))) {
-                        continue;
-                    }
-                    let array = result[word.word];
-                    if (!array) {
-                        array = [];
-                        result[word.word] = array;
-                    }
-                    array.push({
-                        startLineNumber: line,
-                        startColumn: word.startColumn,
-                        endLineNumber: line,
-                        endColumn: word.endColumn
-                    });
+        computeWordRanges(modelUrl, range, wordDef, wordDefFlags) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const model = this._getModel(modelUrl);
+                if (!model) {
+                    return Object.create(null);
                 }
-            }
-            return result;
+                const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
+                const result = Object.create(null);
+                for (let line = range.startLineNumber; line < range.endLineNumber; line++) {
+                    const words = model.getLineWords(line, wordDefRegExp);
+                    for (const word of words) {
+                        if (!isNaN(Number(word.word))) {
+                            continue;
+                        }
+                        let array = result[word.word];
+                        if (!array) {
+                            array = [];
+                            result[word.word] = array;
+                        }
+                        array.push({
+                            startLineNumber: line,
+                            startColumn: word.startColumn,
+                            endLineNumber: line,
+                            endColumn: word.endColumn
+                        });
+                    }
+                }
+                return result;
+            });
         }
         //#endregion
-        async navigateValueSet(modelUrl, range, up, wordDef, wordDefFlags) {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return null;
-            }
-            const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
-            if (range.startColumn === range.endColumn) {
-                range = {
-                    startLineNumber: range.startLineNumber,
-                    startColumn: range.startColumn,
-                    endLineNumber: range.endLineNumber,
-                    endColumn: range.endColumn + 1
-                };
-            }
-            const selectionText = model.getValueInRange(range);
-            const wordRange = model.getWordAtPosition({ lineNumber: range.startLineNumber, column: range.startColumn }, wordDefRegExp);
-            if (!wordRange) {
-                return null;
-            }
-            const word = model.getValueInRange(wordRange);
-            const result = inplaceReplaceSupport_1.BasicInplaceReplace.INSTANCE.navigateValueSet(range, selectionText, wordRange, word, up);
-            return result;
+        navigateValueSet(modelUrl, range, up, wordDef, wordDefFlags) {
+            return __awaiter(this, void 0, void 0, function* () {
+                const model = this._getModel(modelUrl);
+                if (!model) {
+                    return null;
+                }
+                const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
+                if (range.startColumn === range.endColumn) {
+                    range = {
+                        startLineNumber: range.startLineNumber,
+                        startColumn: range.startColumn,
+                        endLineNumber: range.endLineNumber,
+                        endColumn: range.endColumn + 1
+                    };
+                }
+                const selectionText = model.getValueInRange(range);
+                const wordRange = model.getWordAtPosition({ lineNumber: range.startLineNumber, column: range.startColumn }, wordDefRegExp);
+                if (!wordRange) {
+                    return null;
+                }
+                const word = model.getValueInRange(wordRange);
+                const result = inplaceReplaceSupport_1.BasicInplaceReplace.INSTANCE.navigateValueSet(range, selectionText, wordRange, word, up);
+                return result;
+            });
         }
         // ---- BEGIN foreign module support --------------------------------------------------------------------------
         loadForeignModule(moduleId, createData, foreignHostMethods) {

@@ -12,27 +12,16 @@ export class LineRangeMapping {
         let lastOriginalEndLineNumber = 1;
         let lastModifiedEndLineNumber = 1;
         for (const m of mapping) {
-            const r = new LineRangeMapping(new LineRange(lastOriginalEndLineNumber, m.original.startLineNumber), new LineRange(lastModifiedEndLineNumber, m.modified.startLineNumber));
+            const r = new DetailedLineRangeMapping(new LineRange(lastOriginalEndLineNumber, m.original.startLineNumber), new LineRange(lastModifiedEndLineNumber, m.modified.startLineNumber), undefined);
             if (!r.modified.isEmpty) {
                 result.push(r);
             }
             lastOriginalEndLineNumber = m.original.endLineNumberExclusive;
             lastModifiedEndLineNumber = m.modified.endLineNumberExclusive;
         }
-        const r = new LineRangeMapping(new LineRange(lastOriginalEndLineNumber, originalLineCount + 1), new LineRange(lastModifiedEndLineNumber, modifiedLineCount + 1));
+        const r = new DetailedLineRangeMapping(new LineRange(lastOriginalEndLineNumber, originalLineCount + 1), new LineRange(lastModifiedEndLineNumber, modifiedLineCount + 1), undefined);
         if (!r.modified.isEmpty) {
             result.push(r);
-        }
-        return result;
-    }
-    static clip(mapping, originalRange, modifiedRange) {
-        const result = [];
-        for (const m of mapping) {
-            const original = m.original.intersect(originalRange);
-            const modified = m.modified.intersect(modifiedRange);
-            if (original && !original.isEmpty && modified && !modified.isEmpty) {
-                result.push(new LineRangeMapping(original, modified));
-            }
         }
         return result;
     }

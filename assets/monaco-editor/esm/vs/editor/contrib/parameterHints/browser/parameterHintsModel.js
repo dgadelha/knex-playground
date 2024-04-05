@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { createCancelablePromise, Delayer } from '../../../../base/common/async.js';
 import { onUnexpectedError } from '../../../../base/common/errors.js';
 import { Emitter } from '../../../../base/common/event.js';
@@ -87,7 +96,7 @@ export class ParameterHintsModel extends Disposable {
         const length = this.state.hints.signatures.length;
         const activeSignature = this.state.hints.activeSignature;
         const last = (activeSignature % length) === (length - 1);
-        const cycle = this.editor.getOption(86 /* EditorOption.parameterHints */).cycle;
+        const cycle = this.editor.getOption(85 /* EditorOption.parameterHints */).cycle;
         // If there is only one signature, or we're on last signature of list
         if ((length < 2 || last) && !cycle) {
             this.cancel();
@@ -102,7 +111,7 @@ export class ParameterHintsModel extends Disposable {
         const length = this.state.hints.signatures.length;
         const activeSignature = this.state.hints.activeSignature;
         const first = activeSignature === 0;
-        const cycle = this.editor.getOption(86 /* EditorOption.parameterHints */).cycle;
+        const cycle = this.editor.getOption(85 /* EditorOption.parameterHints */).cycle;
         // If there is only one signature, or we're on first signature of list
         if ((length < 2 || first) && !cycle) {
             this.cancel();
@@ -114,57 +123,59 @@ export class ParameterHintsModel extends Disposable {
         if (this.state.type !== 1 /* ParameterHintState.Type.Active */) {
             return;
         }
-        this.state = new ParameterHintState.Active({ ...this.state.hints, activeSignature });
+        this.state = new ParameterHintState.Active(Object.assign(Object.assign({}, this.state.hints), { activeSignature }));
         this._onChangedHints.fire(this.state.hints);
     }
-    async doTrigger(triggerId) {
-        const isRetrigger = this.state.type === 1 /* ParameterHintState.Type.Active */ || this.state.type === 2 /* ParameterHintState.Type.Pending */;
-        const activeSignatureHelp = this.getLastActiveHints();
-        this.cancel(true);
-        if (this._pendingTriggers.length === 0) {
-            return false;
-        }
-        const context = this._pendingTriggers.reduce(mergeTriggerContexts);
-        this._pendingTriggers = [];
-        const triggerContext = {
-            triggerKind: context.triggerKind,
-            triggerCharacter: context.triggerCharacter,
-            isRetrigger: isRetrigger,
-            activeSignatureHelp: activeSignatureHelp
-        };
-        if (!this.editor.hasModel()) {
-            return false;
-        }
-        const model = this.editor.getModel();
-        const position = this.editor.getPosition();
-        this.state = new ParameterHintState.Pending(createCancelablePromise(token => provideSignatureHelp(this.providers, model, position, triggerContext, token)), activeSignatureHelp);
-        try {
-            const result = await this.state.request;
-            // Check that we are still resolving the correct signature help
-            if (triggerId !== this.triggerId) {
-                result === null || result === void 0 ? void 0 : result.dispose();
+    doTrigger(triggerId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const isRetrigger = this.state.type === 1 /* ParameterHintState.Type.Active */ || this.state.type === 2 /* ParameterHintState.Type.Pending */;
+            const activeSignatureHelp = this.getLastActiveHints();
+            this.cancel(true);
+            if (this._pendingTriggers.length === 0) {
                 return false;
             }
-            if (!result || !result.value.signatures || result.value.signatures.length === 0) {
-                result === null || result === void 0 ? void 0 : result.dispose();
-                this._lastSignatureHelpResult.clear();
-                this.cancel();
+            const context = this._pendingTriggers.reduce(mergeTriggerContexts);
+            this._pendingTriggers = [];
+            const triggerContext = {
+                triggerKind: context.triggerKind,
+                triggerCharacter: context.triggerCharacter,
+                isRetrigger: isRetrigger,
+                activeSignatureHelp: activeSignatureHelp
+            };
+            if (!this.editor.hasModel()) {
                 return false;
             }
-            else {
-                this.state = new ParameterHintState.Active(result.value);
-                this._lastSignatureHelpResult.value = result;
-                this._onChangedHints.fire(this.state.hints);
-                return true;
+            const model = this.editor.getModel();
+            const position = this.editor.getPosition();
+            this.state = new ParameterHintState.Pending(createCancelablePromise(token => provideSignatureHelp(this.providers, model, position, triggerContext, token)), activeSignatureHelp);
+            try {
+                const result = yield this.state.request;
+                // Check that we are still resolving the correct signature help
+                if (triggerId !== this.triggerId) {
+                    result === null || result === void 0 ? void 0 : result.dispose();
+                    return false;
+                }
+                if (!result || !result.value.signatures || result.value.signatures.length === 0) {
+                    result === null || result === void 0 ? void 0 : result.dispose();
+                    this._lastSignatureHelpResult.clear();
+                    this.cancel();
+                    return false;
+                }
+                else {
+                    this.state = new ParameterHintState.Active(result.value);
+                    this._lastSignatureHelpResult.value = result;
+                    this._onChangedHints.fire(this.state.hints);
+                    return true;
+                }
             }
-        }
-        catch (error) {
-            if (triggerId === this.triggerId) {
-                this.state = ParameterHintState.Default;
+            catch (error) {
+                if (triggerId === this.triggerId) {
+                    this.state = ParameterHintState.Default;
+                }
+                onUnexpectedError(error);
+                return false;
             }
-            onUnexpectedError(error);
-            return false;
-        }
+        });
     }
     getLastActiveHints() {
         switch (this.state.type) {
@@ -229,7 +240,7 @@ export class ParameterHintsModel extends Disposable {
         }
     }
     onEditorConfigurationChange() {
-        this.triggerOnType = this.editor.getOption(86 /* EditorOption.parameterHints */).enabled;
+        this.triggerOnType = this.editor.getOption(85 /* EditorOption.parameterHints */).enabled;
         if (!this.triggerOnType) {
             this.cancel();
         }

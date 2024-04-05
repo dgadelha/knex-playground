@@ -1,16 +1,14 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/lexon/lexon.ts
 var conf = {
   comments: {
     lineComment: "COMMENT"
-    // blockComment: ['COMMENT', '.'],
   },
   brackets: [["(", ")"]],
   autoClosingPairs: [
@@ -37,8 +35,6 @@ var conf = {
   }
 };
 var language = {
-  // Set defaultToken to invalid to see what you do not tokenize yet
-  // defaultToken: 'invalid',
   tokenPostfix: ".lexon",
   ignoreCase: true,
   keywords: [
@@ -76,14 +72,10 @@ var language = {
     "be",
     "certified"
   ],
-  // we include these common regular expressions
   symbols: /[=><!~?:&|+\-*\/\^%]+/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // comment
       [/^(\s*)(comment:?(?:\s.*|))$/, ["", "comment"]],
-      // special identifier cases
       [
         /"/,
         {
@@ -109,7 +101,6 @@ var language = {
           next: "@identifier_until_period"
         }
       ],
-      // identifiers and keywords
       [
         /[a-z_$][\w$]*/,
         {
@@ -121,18 +112,14 @@ var language = {
           }
         }
       ],
-      // whitespace
       { include: "@whitespace" },
-      // delimiters and operators
       [/[{}()\[\]]/, "@brackets"],
       [/[<>](?!@symbols)/, "@brackets"],
       [/@symbols/, "delimiter"],
-      // numbers
       [/\d*\.\d*\.\d*/, "number.semver"],
       [/\d*\.\d+([eE][\-+]?\d+)?/, "number.float"],
       [/0[xX][0-9a-fA-F]+/, "number.hex"],
       [/\d+/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"]
     ],
     quoted_identifier: [

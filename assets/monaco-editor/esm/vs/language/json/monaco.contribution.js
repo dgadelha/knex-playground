@@ -1,17 +1,37 @@
 import '../../editor/editor.api.js';
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
+
+// src/fillers/monaco-editor-core.ts
+var monaco_editor_core_exports = {};
+__reExport(monaco_editor_core_exports, monaco_editor_core_star);
+import * as monaco_editor_core_star from "../../editor/editor.api.js";
 
 // src/language/json/monaco.contribution.ts
-import { Emitter, languages } from "../../editor/editor.api.js";
 var LanguageServiceDefaultsImpl = class {
+  _onDidChange = new monaco_editor_core_exports.Emitter();
+  _diagnosticsOptions;
+  _modeConfiguration;
+  _languageId;
   constructor(languageId, diagnosticsOptions, modeConfiguration) {
-    this._onDidChange = new Emitter();
     this._languageId = languageId;
     this.setDiagnosticsOptions(diagnosticsOptions);
     this.setModeConfiguration(modeConfiguration);
@@ -59,13 +79,8 @@ var modeConfigurationDefault = {
   diagnostics: true,
   selectionRanges: true
 };
-var jsonDefaults = new LanguageServiceDefaultsImpl(
-  "json",
-  diagnosticDefault,
-  modeConfigurationDefault
-);
-var getWorker = () => getMode().then((mode) => mode.getWorker());
-languages.json = { jsonDefaults, getWorker };
+var jsonDefaults = new LanguageServiceDefaultsImpl("json", diagnosticDefault, modeConfigurationDefault);
+monaco_editor_core_exports.languages.json = { jsonDefaults };
 function getMode() {
   if (false) {
     return new Promise((resolve, reject) => {
@@ -75,16 +90,15 @@ function getMode() {
     return import("./jsonMode.js");
   }
 }
-languages.register({
+monaco_editor_core_exports.languages.register({
   id: "json",
   extensions: [".json", ".bowerrc", ".jshintrc", ".jscsrc", ".eslintrc", ".babelrc", ".har"],
   aliases: ["JSON", "json"],
   mimetypes: ["application/json"]
 });
-languages.onLanguage("json", () => {
+monaco_editor_core_exports.languages.onLanguage("json", () => {
   getMode().then((mode) => mode.setupMode(jsonDefaults));
 });
 export {
-  getWorker,
   jsonDefaults
 };

@@ -20,11 +20,14 @@ let _language = LANGUAGE_DEFAULT;
 let _platformLocale = LANGUAGE_DEFAULT;
 let _translationsConfigFile = undefined;
 let _userAgent = undefined;
-const $globalThis = globalThis;
+/**
+ * @deprecated use `globalThis` instead
+ */
+export const globals = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
 let nodeProcess = undefined;
-if (typeof $globalThis.vscode !== 'undefined' && typeof $globalThis.vscode.process !== 'undefined') {
+if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.process !== 'undefined') {
     // Native environment (sandboxed)
-    nodeProcess = $globalThis.vscode.process;
+    nodeProcess = globals.vscode.process;
 }
 else if (typeof process !== 'undefined') {
     // Native environment (non-sandboxed)
@@ -32,8 +35,27 @@ else if (typeof process !== 'undefined') {
 }
 const isElectronProcess = typeof ((_a = nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.versions) === null || _a === void 0 ? void 0 : _a.electron) === 'string';
 const isElectronRenderer = isElectronProcess && (nodeProcess === null || nodeProcess === void 0 ? void 0 : nodeProcess.type) === 'renderer';
+// Web environment
+if (typeof navigator === 'object' && !isElectronRenderer) {
+    _userAgent = navigator.userAgent;
+    _isWindows = _userAgent.indexOf('Windows') >= 0;
+    _isMacintosh = _userAgent.indexOf('Macintosh') >= 0;
+    _isIOS = (_userAgent.indexOf('Macintosh') >= 0 || _userAgent.indexOf('iPad') >= 0 || _userAgent.indexOf('iPhone') >= 0) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
+    _isLinux = _userAgent.indexOf('Linux') >= 0;
+    _isMobile = (_userAgent === null || _userAgent === void 0 ? void 0 : _userAgent.indexOf('Mobi')) >= 0;
+    _isWeb = true;
+    const configuredLocale = nls.getConfiguredDefaultLocale(
+    // This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
+    // to ensure that the NLS AMD Loader plugin has been loaded and configured.
+    // This is because the loader plugin decides what the default locale is based on
+    // how it's able to resolve the strings.
+    nls.localize({ key: 'ensureLoaderPluginIsLoaded', comment: ['{Locked}'] }, '_'));
+    _locale = configuredLocale || LANGUAGE_DEFAULT;
+    _language = _locale;
+    _platformLocale = navigator.language;
+}
 // Native environment
-if (typeof nodeProcess === 'object') {
+else if (typeof nodeProcess === 'object') {
     _isWindows = (nodeProcess.platform === 'win32');
     _isMacintosh = (nodeProcess.platform === 'darwin');
     _isLinux = (nodeProcess.platform === 'linux');
@@ -58,25 +80,6 @@ if (typeof nodeProcess === 'object') {
     }
     _isNative = true;
 }
-// Web environment
-else if (typeof navigator === 'object' && !isElectronRenderer) {
-    _userAgent = navigator.userAgent;
-    _isWindows = _userAgent.indexOf('Windows') >= 0;
-    _isMacintosh = _userAgent.indexOf('Macintosh') >= 0;
-    _isIOS = (_userAgent.indexOf('Macintosh') >= 0 || _userAgent.indexOf('iPad') >= 0 || _userAgent.indexOf('iPhone') >= 0) && !!navigator.maxTouchPoints && navigator.maxTouchPoints > 0;
-    _isLinux = _userAgent.indexOf('Linux') >= 0;
-    _isMobile = (_userAgent === null || _userAgent === void 0 ? void 0 : _userAgent.indexOf('Mobi')) >= 0;
-    _isWeb = true;
-    const configuredLocale = nls.getConfiguredDefaultLocale(
-    // This call _must_ be done in the file that calls `nls.getConfiguredDefaultLocale`
-    // to ensure that the NLS AMD Loader plugin has been loaded and configured.
-    // This is because the loader plugin decides what the default locale is based on
-    // how it's able to resolve the strings.
-    nls.localize({ key: 'ensureLoaderPluginIsLoaded', comment: ['{Locked}'] }, '_'));
-    _locale = configuredLocale || LANGUAGE_DEFAULT;
-    _language = _locale;
-    _platformLocale = navigator.language;
-}
 // Unknown environment
 else {
     console.error('Unable to resolve platform.');
@@ -96,8 +99,7 @@ export const isMacintosh = _isMacintosh;
 export const isLinux = _isLinux;
 export const isNative = _isNative;
 export const isWeb = _isWeb;
-export const isWebWorker = (_isWeb && typeof $globalThis.importScripts === 'function');
-export const webWorkerOrigin = isWebWorker ? $globalThis.origin : undefined;
+export const isWebWorker = (_isWeb && typeof globals.importScripts === 'function');
 export const isIOS = _isIOS;
 export const isMobile = _isMobile;
 export const userAgent = _userAgent;
@@ -107,7 +109,7 @@ export const userAgent = _userAgent;
  * Chinese)
  */
 export const language = _language;
-export const setTimeout0IsFaster = (typeof $globalThis.postMessage === 'function' && !$globalThis.importScripts);
+export const setTimeout0IsFaster = (typeof globals.postMessage === 'function' && !globals.importScripts);
 /**
  * See https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#:~:text=than%204%2C%20then-,set%20timeout%20to%204,-.
  *
@@ -117,7 +119,7 @@ export const setTimeout0IsFaster = (typeof $globalThis.postMessage === 'function
 export const setTimeout0 = (() => {
     if (setTimeout0IsFaster) {
         const pending = [];
-        $globalThis.addEventListener('message', (e) => {
+        globals.addEventListener('message', (e) => {
             if (e.data && e.data.vscodeScheduleAsyncWork) {
                 for (let i = 0, len = pending.length; i < len; i++) {
                     const candidate = pending[i];
@@ -136,7 +138,7 @@ export const setTimeout0 = (() => {
                 id: myId,
                 callback: callback
             });
-            $globalThis.postMessage({ vscodeScheduleAsyncWork: myId }, '*');
+            globals.postMessage({ vscodeScheduleAsyncWork: myId }, '*');
         };
     }
     return (callback) => setTimeout(callback);

@@ -11,45 +11,50 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { RunOnceScheduler } from '../../../../base/common/async.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { Disposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import { autorun, autorunWithStore, derived, observableSignal, observableSignalFromEvent, observableValue, transaction, waitForState } from '../../../../base/common/observable.js';
+import { autorunWithStore, derived, observableSignal, observableSignalFromEvent, observableValue, transaction, waitForState } from '../../../../base/common/observable.js';
 import { IDiffProviderFactoryService } from './diffProviderFactoryService.js';
-import { filterWithPrevious, readHotReloadableExport } from './utils.js';
-import { LineRange, LineRangeSet } from '../../../common/core/lineRange.js';
+import { readHotReloadableExport } from './utils.js';
+import { LineRange } from '../../../common/core/lineRange.js';
 import { DefaultLinesDiffComputer } from '../../../common/diff/defaultLinesDiffComputer/defaultLinesDiffComputer.js';
-import { DetailedLineRangeMapping, LineRangeMapping, RangeMapping } from '../../../common/diff/rangeMapping.js';
+import { DetailedLineRangeMapping, RangeMapping } from '../../../common/diff/rangeMapping.js';
 import { TextEditInfo } from '../../../common/model/bracketPairsTextModelPart/bracketPairsTree/beforeEditPositionMapper.js';
 import { combineTextEditInfos } from '../../../common/model/bracketPairsTextModelPart/bracketPairsTree/combineTextEditInfos.js';
 import { optimizeSequenceDiffs } from '../../../common/diff/defaultLinesDiffComputer/heuristicSequenceOptimizations.js';
-import { isDefined } from '../../../../base/common/types.js';
-import { groupAdjacentBy } from '../../../../base/common/arrays.js';
-import { softAssert } from '../../../../base/common/assert.js';
 let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
     setActiveMovedText(movedText) {
         this._activeMovedText.set(movedText, undefined);
     }
-    constructor(model, _options, _diffProviderFactoryService) {
+    constructor(model, _options, _editor, _diffProviderFactoryService) {
         super();
         this.model = model;
         this._options = _options;
+        this._editor = _editor;
         this._diffProviderFactoryService = _diffProviderFactoryService;
         this._isDiffUpToDate = observableValue(this, false);
         this.isDiffUpToDate = this._isDiffUpToDate;
         this._diff = observableValue(this, undefined);
         this.diff = this._diff;
-        this._unchangedRegions = observableValue(this, undefined);
+        this._unchangedRegions = observableValue(this, { regions: [], originalDecorationIds: [], modifiedDecorationIds: [] });
         this.unchangedRegions = derived(this, r => {
-            var _a, _b;
             if (this._options.hideUnchangedRegions.read(r)) {
-                return (_b = (_a = this._unchangedRegions.read(r)) === null || _a === void 0 ? void 0 : _a.regions) !== null && _b !== void 0 ? _b : [];
+                return this._unchangedRegions.read(r).regions;
             }
             else {
                 // Reset state
                 transaction(tx => {
-                    var _a;
-                    for (const r of ((_a = this._unchangedRegions.get()) === null || _a === void 0 ? void 0 : _a.regions) || []) {
+                    for (const r of this._unchangedRegions.get().regions) {
                         r.collapseAll(tx);
                     }
                 });
@@ -62,7 +67,7 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
         this.activeMovedText = derived(this, r => { var _a, _b; return (_b = (_a = this.movedTextToCompare.read(r)) !== null && _a !== void 0 ? _a : this._hoveredMovedText.read(r)) !== null && _b !== void 0 ? _b : this._activeMovedText.read(r); });
         this._cancellationTokenSource = new CancellationTokenSource();
         this._diffProvider = derived(this, reader => {
-            const diffProvider = this._diffProviderFactoryService.createDiffProvider({
+            const diffProvider = this._diffProviderFactoryService.createDiffProvider(this._editor, {
                 diffAlgorithm: this._options.diffAlgorithm.read(reader)
             });
             const onChangeSignal = observableSignalFromEvent('onDidChange', diffProvider.onDidChange);
@@ -74,85 +79,31 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
         this._register(toDisposable(() => this._cancellationTokenSource.cancel()));
         const contentChangedSignal = observableSignal('contentChangedSignal');
         const debouncer = this._register(new RunOnceScheduler(() => contentChangedSignal.trigger(undefined), 200));
-        this._register(autorun(reader => {
-            /** @description collapse touching unchanged ranges */
-            const lastUnchangedRegions = this._unchangedRegions.read(reader);
-            if (!lastUnchangedRegions || lastUnchangedRegions.regions.some(r => r.isDragged.read(reader))) {
-                return;
-            }
-            const lastUnchangedRegionsOrigRanges = lastUnchangedRegions.originalDecorationIds
-                .map(id => model.original.getDecorationRange(id))
-                .map(r => r ? LineRange.fromRangeInclusive(r) : undefined);
-            const lastUnchangedRegionsModRanges = lastUnchangedRegions.modifiedDecorationIds
-                .map(id => model.modified.getDecorationRange(id))
-                .map(r => r ? LineRange.fromRangeInclusive(r) : undefined);
-            const updatedLastUnchangedRegions = lastUnchangedRegions.regions.map((r, idx) => (!lastUnchangedRegionsOrigRanges[idx] || !lastUnchangedRegionsModRanges[idx]) ? undefined :
-                new UnchangedRegion(lastUnchangedRegionsOrigRanges[idx].startLineNumber, lastUnchangedRegionsModRanges[idx].startLineNumber, lastUnchangedRegionsOrigRanges[idx].length, r.visibleLineCountTop.read(reader), r.visibleLineCountBottom.read(reader))).filter(isDefined);
-            const newRanges = [];
-            let didChange = false;
-            for (const touching of groupAdjacentBy(updatedLastUnchangedRegions, (a, b) => a.getHiddenModifiedRange(reader).endLineNumberExclusive === b.getHiddenModifiedRange(reader).startLineNumber)) {
-                if (touching.length > 1) {
-                    didChange = true;
-                    const sumLineCount = touching.reduce((sum, r) => sum + r.lineCount, 0);
-                    const r = new UnchangedRegion(touching[0].originalLineNumber, touching[0].modifiedLineNumber, sumLineCount, touching[0].visibleLineCountTop.get(), touching[touching.length - 1].visibleLineCountBottom.get());
-                    newRanges.push(r);
-                }
-                else {
-                    newRanges.push(touching[0]);
-                }
-            }
-            if (didChange) {
-                const originalDecorationIds = model.original.deltaDecorations(lastUnchangedRegions.originalDecorationIds, newRanges.map(r => ({ range: r.originalUnchangedRange.toInclusiveRange(), options: { description: 'unchanged' } })));
-                const modifiedDecorationIds = model.modified.deltaDecorations(lastUnchangedRegions.modifiedDecorationIds, newRanges.map(r => ({ range: r.modifiedUnchangedRange.toInclusiveRange(), options: { description: 'unchanged' } })));
-                transaction(tx => {
-                    this._unchangedRegions.set({
-                        regions: newRanges,
-                        originalDecorationIds,
-                        modifiedDecorationIds
-                    }, tx);
-                });
-            }
-        }));
         const updateUnchangedRegions = (result, tx, reader) => {
             const newUnchangedRegions = UnchangedRegion.fromDiffs(result.changes, model.original.getLineCount(), model.modified.getLineCount(), this._options.hideUnchangedRegionsMinimumLineCount.read(reader), this._options.hideUnchangedRegionsContextLineCount.read(reader));
             // Transfer state from cur state
-            let visibleRegions = undefined;
             const lastUnchangedRegions = this._unchangedRegions.get();
-            if (lastUnchangedRegions) {
-                const lastUnchangedRegionsOrigRanges = lastUnchangedRegions.originalDecorationIds
-                    .map(id => model.original.getDecorationRange(id))
-                    .map(r => r ? LineRange.fromRangeInclusive(r) : undefined);
-                const lastUnchangedRegionsModRanges = lastUnchangedRegions.modifiedDecorationIds
-                    .map(id => model.modified.getDecorationRange(id))
-                    .map(r => r ? LineRange.fromRangeInclusive(r) : undefined);
-                const updatedLastUnchangedRegions = filterWithPrevious(lastUnchangedRegions.regions
-                    .map((r, idx) => {
-                    if (!lastUnchangedRegionsOrigRanges[idx] || !lastUnchangedRegionsModRanges[idx]) {
-                        return undefined;
+            const lastUnchangedRegionsOrigRanges = lastUnchangedRegions.originalDecorationIds
+                .map(id => model.original.getDecorationRange(id))
+                .filter(r => !!r)
+                .map(r => LineRange.fromRange(r));
+            const lastUnchangedRegionsModRanges = lastUnchangedRegions.modifiedDecorationIds
+                .map(id => model.modified.getDecorationRange(id))
+                .filter(r => !!r)
+                .map(r => LineRange.fromRange(r));
+            const originalDecorationIds = model.original.deltaDecorations(lastUnchangedRegions.originalDecorationIds, newUnchangedRegions.map(r => ({ range: r.originalUnchangedRange.toInclusiveRange(), options: { description: 'unchanged' } })));
+            const modifiedDecorationIds = model.modified.deltaDecorations(lastUnchangedRegions.modifiedDecorationIds, newUnchangedRegions.map(r => ({ range: r.modifiedUnchangedRange.toInclusiveRange(), options: { description: 'unchanged' } })));
+            for (const r of newUnchangedRegions) {
+                for (let i = 0; i < lastUnchangedRegions.regions.length; i++) {
+                    if (r.originalUnchangedRange.intersectsStrict(lastUnchangedRegionsOrigRanges[i])
+                        && r.modifiedUnchangedRange.intersectsStrict(lastUnchangedRegionsModRanges[i])) {
+                        r.setHiddenModifiedRange(lastUnchangedRegions.regions[i].getHiddenModifiedRange(undefined), tx);
+                        break;
                     }
-                    const length = lastUnchangedRegionsOrigRanges[idx].length;
-                    return new UnchangedRegion(lastUnchangedRegionsOrigRanges[idx].startLineNumber, lastUnchangedRegionsModRanges[idx].startLineNumber, length, 
-                    // The visible area can shrink by edits -> we have to account for this
-                    Math.min(r.visibleLineCountTop.get(), length), Math.min(r.visibleLineCountBottom.get(), length - r.visibleLineCountTop.get()));
-                }).filter(isDefined), (cur, prev) => !prev || (cur.modifiedLineNumber >= prev.modifiedLineNumber + prev.lineCount && cur.originalLineNumber >= prev.originalLineNumber + prev.lineCount));
-                let hiddenRegions = updatedLastUnchangedRegions.map(r => new LineRangeMapping(r.getHiddenOriginalRange(reader), r.getHiddenModifiedRange(reader)));
-                hiddenRegions = LineRangeMapping.clip(hiddenRegions, LineRange.ofLength(1, model.original.getLineCount()), LineRange.ofLength(1, model.modified.getLineCount()));
-                visibleRegions = LineRangeMapping.inverse(hiddenRegions, model.original.getLineCount(), model.modified.getLineCount());
-            }
-            const newUnchangedRegions2 = [];
-            if (visibleRegions) {
-                for (const r of newUnchangedRegions) {
-                    const intersecting = visibleRegions.filter(f => f.original.intersectsStrict(r.originalUnchangedRange) && f.modified.intersectsStrict(r.modifiedUnchangedRange));
-                    newUnchangedRegions2.push(...r.setVisibleRanges(intersecting, tx));
                 }
             }
-            else {
-                newUnchangedRegions2.push(...newUnchangedRegions);
-            }
-            const originalDecorationIds = model.original.deltaDecorations((lastUnchangedRegions === null || lastUnchangedRegions === void 0 ? void 0 : lastUnchangedRegions.originalDecorationIds) || [], newUnchangedRegions2.map(r => ({ range: r.originalUnchangedRange.toInclusiveRange(), options: { description: 'unchanged' } })));
-            const modifiedDecorationIds = model.modified.deltaDecorations((lastUnchangedRegions === null || lastUnchangedRegions === void 0 ? void 0 : lastUnchangedRegions.modifiedDecorationIds) || [], newUnchangedRegions2.map(r => ({ range: r.modifiedUnchangedRange.toInclusiveRange(), options: { description: 'unchanged' } })));
             this._unchangedRegions.set({
-                regions: newUnchangedRegions2,
+                regions: newUnchangedRegions,
                 originalDecorationIds,
                 modifiedDecorationIds
             }, tx);
@@ -172,7 +123,6 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
                     });
                 }
             }
-            this._isDiffUpToDate.set(false, undefined);
             debouncer.schedule();
         }));
         this._register(model.original.onDidChangeContent((e) => {
@@ -190,10 +140,9 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
                     });
                 }
             }
-            this._isDiffUpToDate.set(false, undefined);
             debouncer.schedule();
         }));
-        this._register(autorunWithStore(async (reader, store) => {
+        this._register(autorunWithStore((reader, store) => __awaiter(this, void 0, void 0, function* () {
             /** @description compute diff */
             var _a, _b;
             // So that they get recomputed when these settings change
@@ -216,7 +165,7 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
                 const edits = TextEditInfo.fromModelContentChanges(e.changes);
                 modifiedTextEditInfos = combineTextEditInfos(modifiedTextEditInfos, edits);
             }));
-            let result = await documentDiffProvider.diffProvider.computeDiff(model.original, model.modified, {
+            let result = yield documentDiffProvider.diffProvider.computeDiff(model.original, model.modified, {
                 ignoreTrimWhitespace: this._options.ignoreTrimWhitespace.read(reader),
                 maxComputationTimeMs: this._options.maxComputationTimeMs.read(reader),
                 computeMoves: this._options.showMoves.read(reader),
@@ -228,7 +177,6 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
             result = (_a = applyOriginalEdits(result, originalTextEditInfos, model.original, model.modified)) !== null && _a !== void 0 ? _a : result;
             result = (_b = applyModifiedEdits(result, modifiedTextEditInfos, model.original, model.modified)) !== null && _b !== void 0 ? _b : result;
             transaction(tx => {
-                /** @description write diff result */
                 updateUnchangedRegions(result, tx);
                 this._lastDiff = result;
                 const state = DiffState.fromDiffResult(result);
@@ -237,50 +185,48 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
                 const currentSyncedMovedText = this.movedTextToCompare.get();
                 this.movedTextToCompare.set(currentSyncedMovedText ? this._lastDiff.moves.find(m => m.lineRangeMapping.modified.intersect(currentSyncedMovedText.lineRangeMapping.modified)) : undefined, tx);
             });
-        }));
+        })));
     }
-    ensureModifiedLineIsVisible(lineNumber, preference, tx) {
-        var _a, _b;
+    ensureModifiedLineIsVisible(lineNumber, tx) {
+        var _a;
         if (((_a = this.diff.get()) === null || _a === void 0 ? void 0 : _a.mappings.length) === 0) {
             return;
         }
-        const unchangedRegions = ((_b = this._unchangedRegions.get()) === null || _b === void 0 ? void 0 : _b.regions) || [];
+        const unchangedRegions = this._unchangedRegions.get().regions;
         for (const r of unchangedRegions) {
             if (r.getHiddenModifiedRange(undefined).contains(lineNumber)) {
-                r.showModifiedLine(lineNumber, preference, tx);
+                r.showModifiedLine(lineNumber, tx);
                 return;
             }
         }
     }
-    ensureOriginalLineIsVisible(lineNumber, preference, tx) {
-        var _a, _b;
+    ensureOriginalLineIsVisible(lineNumber, tx) {
+        var _a;
         if (((_a = this.diff.get()) === null || _a === void 0 ? void 0 : _a.mappings.length) === 0) {
             return;
         }
-        const unchangedRegions = ((_b = this._unchangedRegions.get()) === null || _b === void 0 ? void 0 : _b.regions) || [];
+        const unchangedRegions = this._unchangedRegions.get().regions;
         for (const r of unchangedRegions) {
             if (r.getHiddenOriginalRange(undefined).contains(lineNumber)) {
-                r.showOriginalLine(lineNumber, preference, tx);
+                r.showOriginalLine(lineNumber, tx);
                 return;
             }
         }
     }
-    async waitForDiff() {
-        await waitForState(this.isDiffUpToDate, s => s);
+    waitForDiff() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield waitForState(this.isDiffUpToDate, s => s);
+        });
     }
     serializeState() {
         const regions = this._unchangedRegions.get();
         return {
-            collapsedRegions: regions === null || regions === void 0 ? void 0 : regions.regions.map(r => ({ range: r.getHiddenModifiedRange(undefined).serialize() }))
+            collapsedRegions: regions.regions.map(r => ({ range: r.getHiddenModifiedRange(undefined).serialize() }))
         };
     }
     restoreSerializedState(state) {
-        var _a;
-        const ranges = (_a = state.collapsedRegions) === null || _a === void 0 ? void 0 : _a.map(r => LineRange.deserialize(r.range));
+        const ranges = state.collapsedRegions.map(r => LineRange.deserialize(r.range));
         const regions = this._unchangedRegions.get();
-        if (!regions || !ranges) {
-            return;
-        }
         transaction(tx => {
             for (const r of regions.regions) {
                 for (const range of ranges) {
@@ -294,7 +240,7 @@ let DiffEditorViewModel = class DiffEditorViewModel extends Disposable {
     }
 };
 DiffEditorViewModel = __decorate([
-    __param(2, IDiffProviderFactoryService)
+    __param(3, IDiffProviderFactoryService)
 ], DiffEditorViewModel);
 export { DiffEditorViewModel };
 function normalizeDocumentDiff(diff, original, modified) {
@@ -397,38 +343,9 @@ export class UnchangedRegion {
         this._visibleLineCountBottom = observableValue(this, 0);
         this.visibleLineCountBottom = this._visibleLineCountBottom;
         this._shouldHideControls = derived(this, reader => /** @description isVisible */ this.visibleLineCountTop.read(reader) + this.visibleLineCountBottom.read(reader) === this.lineCount && !this.isDragged.read(reader));
-        this.isDragged = observableValue(this, undefined);
-        const visibleLineCountTop2 = Math.max(Math.min(visibleLineCountTop, this.lineCount), 0);
-        const visibleLineCountBottom2 = Math.max(Math.min(visibleLineCountBottom, this.lineCount - visibleLineCountTop), 0);
-        softAssert(visibleLineCountTop === visibleLineCountTop2);
-        softAssert(visibleLineCountBottom === visibleLineCountBottom2);
-        this._visibleLineCountTop.set(visibleLineCountTop2, undefined);
-        this._visibleLineCountBottom.set(visibleLineCountBottom2, undefined);
-    }
-    setVisibleRanges(visibleRanges, tx) {
-        const result = [];
-        const hiddenModified = new LineRangeSet(visibleRanges.map(r => r.modified)).subtractFrom(this.modifiedUnchangedRange);
-        let originalStartLineNumber = this.originalLineNumber;
-        let modifiedStartLineNumber = this.modifiedLineNumber;
-        const modifiedEndLineNumberEx = this.modifiedLineNumber + this.lineCount;
-        if (hiddenModified.ranges.length === 0) {
-            this.showAll(tx);
-            result.push(this);
-        }
-        else {
-            let i = 0;
-            for (const r of hiddenModified.ranges) {
-                const isLast = i === hiddenModified.ranges.length - 1;
-                i++;
-                const length = (isLast ? modifiedEndLineNumberEx : r.endLineNumberExclusive) - modifiedStartLineNumber;
-                const newR = new UnchangedRegion(originalStartLineNumber, modifiedStartLineNumber, length, 0, 0);
-                newR.setHiddenModifiedRange(r, tx);
-                result.push(newR);
-                originalStartLineNumber = newR.originalUnchangedRange.endLineNumberExclusive;
-                modifiedStartLineNumber = newR.modifiedUnchangedRange.endLineNumberExclusive;
-            }
-        }
-        return result;
+        this.isDragged = observableValue(this, false);
+        this._visibleLineCountTop.set(visibleLineCountTop, undefined);
+        this._visibleLineCountBottom.set(visibleLineCountBottom, undefined);
     }
     shouldHideControls(reader) {
         return this._shouldHideControls.read(reader);
@@ -461,20 +378,20 @@ export class UnchangedRegion {
     showAll(tx) {
         this._visibleLineCountBottom.set(this.lineCount - this._visibleLineCountTop.get(), tx);
     }
-    showModifiedLine(lineNumber, preference, tx) {
+    showModifiedLine(lineNumber, tx) {
         const top = lineNumber + 1 - (this.modifiedLineNumber + this._visibleLineCountTop.get());
         const bottom = (this.modifiedLineNumber - this._visibleLineCountBottom.get() + this.lineCount) - lineNumber;
-        if (preference === 0 /* RevealPreference.FromCloserSide */ && top < bottom || preference === 1 /* RevealPreference.FromTop */) {
+        if (top < bottom) {
             this._visibleLineCountTop.set(this._visibleLineCountTop.get() + top, tx);
         }
         else {
             this._visibleLineCountBottom.set(this._visibleLineCountBottom.get() + bottom, tx);
         }
     }
-    showOriginalLine(lineNumber, preference, tx) {
+    showOriginalLine(lineNumber, tx) {
         const top = lineNumber - this.originalLineNumber;
         const bottom = (this.originalLineNumber + this.lineCount) - lineNumber;
-        if (preference === 0 /* RevealPreference.FromCloserSide */ && top < bottom || preference === 1 /* RevealPreference.FromTop */) {
+        if (top < bottom) {
             this._visibleLineCountTop.set(Math.min(this._visibleLineCountTop.get() + bottom - top, this.getMaxVisibleLineCountTop()), tx);
         }
         else {

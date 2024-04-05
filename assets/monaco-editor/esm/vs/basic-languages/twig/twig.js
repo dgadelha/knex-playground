@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/twig/twig.ts
 var conf = {
@@ -18,7 +17,6 @@ var conf = {
     ["{{", "}}"],
     ["(", ")"],
     ["[", "]"],
-    // HTML
     ["<!--", "-->"],
     ["<", ">"]
   ],
@@ -34,7 +32,6 @@ var conf = {
   surroundingPairs: [
     { open: '"', close: '"' },
     { open: "'", close: "'" },
-    // HTML
     { open: "<", close: ">" }
   ]
 };
@@ -43,7 +40,6 @@ var language = {
   tokenPostfix: "",
   ignoreCase: true,
   keywords: [
-    // (opening) tags
     "apply",
     "autoescape",
     "block",
@@ -63,7 +59,6 @@ var language = {
     "use",
     "verbatim",
     "with",
-    // closing tags
     "endapply",
     "endautoescape",
     "endblock",
@@ -74,19 +69,15 @@ var language = {
     "endsandbox",
     "endset",
     "endwith",
-    // literals
     "true",
     "false"
   ],
   tokenizer: {
     root: [
-      // whitespace
       [/\s+/],
-      // Twig Tag Delimiters
       [/{#/, "comment.twig", "@commentState"],
       [/{%[-~]?/, "delimiter.twig", "@blockState"],
       [/{{[-~]?/, "delimiter.twig", "@variableState"],
-      // HTML
       [/<!DOCTYPE/, "metatag.html", "@doctype"],
       [/<!--/, "comment.html", "@comment"],
       [/(<)((?:[\w\-]+:)?[\w\-]+)(\s*)(\/>)/, ["delimiter.html", "tag.html", "", "delimiter.html"]],
@@ -96,25 +87,14 @@ var language = {
       [/(<\/)((?:[\w\-]+:)?[\w\-]+)/, ["delimiter.html", { token: "tag.html", next: "@otherTag" }]],
       [/</, "delimiter.html"],
       [/[^<{]+/]
-      // text
     ],
-    /**
-     * Comment Tag Handling
-     */
     commentState: [
       [/#}/, "comment.twig", "@pop"],
       [/./, "comment.twig"]
     ],
-    /**
-     * Block Tag Handling
-     */
     blockState: [
       [/[-~]?%}/, "delimiter.twig", "@pop"],
-      // whitespace
       [/\s+/],
-      // verbatim
-      // Unlike other blocks, verbatim ehas its own state
-      // transition to ensure we mark its contents as strings.
       [
         /(verbatim)(\s*)([-~]?%})/,
         ["keyword.twig", "", { token: "delimiter.twig", next: "@rawDataState" }]
@@ -122,51 +102,31 @@ var language = {
       { include: "expression" }
     ],
     rawDataState: [
-      // endverbatim
       [
         /({%[-~]?)(\s*)(endverbatim)(\s*)([-~]?%})/,
         ["delimiter.twig", "", "keyword.twig", "", { token: "delimiter.twig", next: "@popall" }]
       ],
       [/./, "string.twig"]
     ],
-    /**
-     * Variable Tag Handling
-     */
     variableState: [[/[-~]?}}/, "delimiter.twig", "@pop"], { include: "expression" }],
     stringState: [
-      // closing double quoted string
       [/"/, "string.twig", "@pop"],
-      // interpolation start
       [/#{\s*/, "string.twig", "@interpolationState"],
-      // string part
       [/[^#"\\]*(?:(?:\\.|#(?!\{))[^#"\\]*)*/, "string.twig"]
     ],
     interpolationState: [
-      // interpolation end
       [/}/, "string.twig", "@pop"],
       { include: "expression" }
     ],
-    /**
-     * Expression Handling
-     */
     expression: [
-      // whitespace
       [/\s+/],
-      // operators - math
       [/\+|-|\/{1,2}|%|\*{1,2}/, "operators.twig"],
-      // operators - logic
       [/(and|or|not|b-and|b-xor|b-or)(\s+)/, ["operators.twig", ""]],
-      // operators - comparison (symbols)
       [/==|!=|<|>|>=|<=/, "operators.twig"],
-      // operators - comparison (words)
       [/(starts with|ends with|matches)(\s+)/, ["operators.twig", ""]],
-      // operators - containment
       [/(in)(\s+)/, ["operators.twig", ""]],
-      // operators - test
       [/(is)(\s+)/, ["operators.twig", ""]],
-      // operators - misc
       [/\||~|:|\.{1,2}|\?{1,2}/, "operators.twig"],
-      // names
       [
         /[^\W\d][\w]*/,
         {
@@ -176,25 +136,13 @@ var language = {
           }
         }
       ],
-      // numbers
       [/\d+(\.\d+)?/, "number.twig"],
-      // punctuation
       [/\(|\)|\[|\]|{|}|,/, "delimiter.twig"],
-      // strings
       [/"([^#"\\]*(?:\\.[^#"\\]*)*)"|\'([^\'\\]*(?:\\.[^\'\\]*)*)\'/, "string.twig"],
-      // opening double quoted string
       [/"/, "string.twig", "@stringState"],
-      // misc syntactic constructs
-      // These are not operators per se, but for the purposes of lexical analysis we
-      // can treat them as such.
-      // arrow functions
       [/=>/, "operators.twig"],
-      // assignment
       [/=/, "operators.twig"]
     ],
-    /**
-     * HTML
-     */
     doctype: [
       [/[^>]+/, "metatag.content.html"],
       [/>/, "metatag.html", "@pop"]
@@ -211,10 +159,7 @@ var language = {
       [/[\w\-]+/, "attribute.name.html"],
       [/=/, "delimiter.html"],
       [/[ \t\r\n]+/]
-      // whitespace
     ],
-    // -- BEGIN <script> tags handling
-    // After <script
     script: [
       [/type/, "attribute.name.html", "@scriptAfterType"],
       [/"([^"]*)"/, "attribute.value.html"],
@@ -230,13 +175,11 @@ var language = {
         }
       ],
       [/[ \t\r\n]+/],
-      // whitespace
       [
         /(<\/)(script\s*)(>)/,
         ["delimiter.html", "tag.html", { token: "delimiter.html", next: "@pop" }]
       ]
     ],
-    // After <script ... type
     scriptAfterType: [
       [/=/, "delimiter.html", "@scriptAfterTypeEquals"],
       [
@@ -247,12 +190,9 @@ var language = {
           nextEmbedded: "text/javascript"
         }
       ],
-      // cover invalid e.g. <script type>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <script ... type =
     scriptAfterTypeEquals: [
       [
         /"([^"]*)"/,
@@ -276,12 +216,9 @@ var language = {
           nextEmbedded: "text/javascript"
         }
       ],
-      // cover invalid e.g. <script type=>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <script ... type = $S2
     scriptWithCustomType: [
       [
         />/,
@@ -296,16 +233,12 @@ var language = {
       [/[\w\-]+/, "attribute.name.html"],
       [/=/, "delimiter.html"],
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
     scriptEmbedded: [
       [/<\/script/, { token: "@rematch", next: "@pop", nextEmbedded: "@pop" }],
       [/[^<]+/, ""]
     ],
-    // -- END <script> tags handling
-    // -- BEGIN <style> tags handling
-    // After <style
     style: [
       [/type/, "attribute.name.html", "@styleAfterType"],
       [/"([^"]*)"/, "attribute.value.html"],
@@ -321,13 +254,11 @@ var language = {
         }
       ],
       [/[ \t\r\n]+/],
-      // whitespace
       [
         /(<\/)(style\s*)(>)/,
         ["delimiter.html", "tag.html", { token: "delimiter.html", next: "@pop" }]
       ]
     ],
-    // After <style ... type
     styleAfterType: [
       [/=/, "delimiter.html", "@styleAfterTypeEquals"],
       [
@@ -338,12 +269,9 @@ var language = {
           nextEmbedded: "text/css"
         }
       ],
-      // cover invalid e.g. <style type>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <style ... type =
     styleAfterTypeEquals: [
       [
         /"([^"]*)"/,
@@ -367,12 +295,9 @@ var language = {
           nextEmbedded: "text/css"
         }
       ],
-      // cover invalid e.g. <style type=>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <style ... type = $S2
     styleWithCustomType: [
       [
         />/,
@@ -387,7 +312,6 @@ var language = {
       [/[\w\-]+/, "attribute.name.html"],
       [/=/, "delimiter.html"],
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
     styleEmbedded: [

@@ -6,10 +6,9 @@ import * as dom from '../../../../base/browser/dom.js';
 import { asArray } from '../../../../base/common/arrays.js';
 import { isEmptyMarkdownString } from '../../../../base/common/htmlContent.js';
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
-import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
 import { HoverOperation } from './hoverOperation.js';
 import { HoverWidget } from '../../../../base/browser/ui/hover/hoverWidget.js';
-import { GlyphMarginLane } from '../../../common/model.js';
 const $ = dom.$;
 export class MarginHoverWidget extends Disposable {
     constructor(editor, languageService, openerService) {
@@ -59,15 +58,14 @@ export class MarginHoverWidget extends Disposable {
             this._hoverOperation.start(0 /* HoverStartMode.Delayed */);
         }
     }
-    startShowingAt(lineNumber, laneOrLine) {
-        if (this._computer.lineNumber === lineNumber && this._computer.lane === laneOrLine) {
+    startShowingAt(lineNumber) {
+        if (this._computer.lineNumber === lineNumber) {
             // We have to show the widget at the exact same line number as before, so no work is needed
             return;
         }
         this._hoverOperation.cancel();
         this.hide();
         this._computer.lineNumber = lineNumber;
-        this._computer.lane = laneOrLine;
         this._hoverOperation.start(0 /* HoverStartMode.Delayed */);
     }
     hide() {
@@ -114,11 +112,10 @@ export class MarginHoverWidget extends Disposable {
         const editorLayout = this._editor.getLayoutInfo();
         const topForLineNumber = this._editor.getTopForLineNumber(lineNumber);
         const editorScrollTop = this._editor.getScrollTop();
-        const lineHeight = this._editor.getOption(67 /* EditorOption.lineHeight */);
+        const lineHeight = this._editor.getOption(66 /* EditorOption.lineHeight */);
         const nodeHeight = this._hover.containerDomNode.clientHeight;
         const top = topForLineNumber - editorScrollTop - ((nodeHeight - lineHeight) / 2);
-        const left = editorLayout.glyphMarginLeft + editorLayout.glyphMarginWidth + (this._computer.lane === 'lineNo' ? editorLayout.lineNumbersWidth : 0);
-        this._hover.containerDomNode.style.left = `${left}px`;
+        this._hover.containerDomNode.style.left = `${editorLayout.glyphMarginLeft + editorLayout.glyphMarginWidth}px`;
         this._hover.containerDomNode.style.top = `${Math.max(Math.round(top), 0)}px`;
     }
 }
@@ -130,19 +127,11 @@ class MarginHoverComputer {
     set lineNumber(value) {
         this._lineNumber = value;
     }
-    get lane() {
-        return this._laneOrLine;
-    }
-    set lane(value) {
-        this._laneOrLine = value;
-    }
     constructor(_editor) {
         this._editor = _editor;
         this._lineNumber = -1;
-        this._laneOrLine = GlyphMarginLane.Center;
     }
     computeSync() {
-        var _a, _b;
         const toHoverMessage = (contents) => {
             return {
                 value: contents
@@ -150,16 +139,14 @@ class MarginHoverComputer {
         };
         const lineDecorations = this._editor.getLineDecorations(this._lineNumber);
         const result = [];
-        const isLineHover = this._laneOrLine === 'lineNo';
         if (!lineDecorations) {
             return result;
         }
         for (const d of lineDecorations) {
-            const lane = (_b = (_a = d.options.glyphMargin) === null || _a === void 0 ? void 0 : _a.position) !== null && _b !== void 0 ? _b : GlyphMarginLane.Center;
-            if (!isLineHover && lane !== this._laneOrLine) {
+            if (!d.options.glyphMarginClassName) {
                 continue;
             }
-            const hoverMessage = isLineHover ? d.options.lineNumberHoverMessage : d.options.glyphMarginHoverMessage;
+            const hoverMessage = d.options.glyphMarginHoverMessage;
             if (!hoverMessage || isEmptyMarkdownString(hoverMessage)) {
                 continue;
             }

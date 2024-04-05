@@ -50,8 +50,9 @@
 	text-align: right;
 }
 
-.monaco-editor .sticky-widget {
-	border-bottom: 1px solid var(--vscode-editorStickyScroll-border);
+.monaco-editor.hc-black .sticky-widget,
+.monaco-editor.hc-light .sticky-widget {
+	border-bottom: 1px solid var(--vscode-contrastBorder);
 }
 
 .monaco-editor .sticky-line-content:hover {
@@ -61,7 +62,7 @@
 
 .monaco-editor .sticky-widget {
 	width: 100%;
-	box-shadow: var(--vscode-editorStickyScroll-shadow) 0 3px 2px -2px;
+	box-shadow: var(--vscode-scrollbar-shadow) 0 3px 2px -2px;
 	z-index: 4;
 	background-color: var(--vscode-editorStickyScroll-background);
 }

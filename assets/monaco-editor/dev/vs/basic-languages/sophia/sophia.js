@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/sophia/sophia", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -59,7 +59,6 @@ var moduleExports = (() => {
       { token: "delimiter.angle", open: "<", close: ">" }
     ],
     keywords: [
-      // Main keywords
       "contract",
       "library",
       "entrypoint",
@@ -145,15 +144,12 @@ var moduleExports = (() => {
       ">>=",
       ">>>="
     ],
-    // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
     integersuffix: /(ll|LL|u|U|l|L)?(ll|LL|u|U|l|L)?/,
     floatsuffix: /[fFlL]?/,
-    // The main tokenizer for our languages
     tokenizer: {
       root: [
-        // identifiers and keywords
         [
           /[a-zA-Z_]\w*/,
           {
@@ -163,15 +159,10 @@ var moduleExports = (() => {
             }
           }
         ],
-        // whitespace
         { include: "@whitespace" },
-        // [[ attributes ]].
         [/\[\[.*\]\]/, "annotation"],
-        // Preprocessor directive
         [/^\s*#\w+/, "keyword"],
-        //DataTypes
         [/int\d*/, "keyword"],
-        // delimiters and operators
         [/[{}()\[\]]/, "@brackets"],
         [/[<>](?!@symbols)/, "@brackets"],
         [
@@ -183,7 +174,6 @@ var moduleExports = (() => {
             }
           }
         ],
-        // numbers
         [/\d*\d+[eE]([\-+]?\d+)?(@floatsuffix)/, "number.float"],
         [/\d*\.\d+([eE][\-+]?\d+)?(@floatsuffix)/, "number.float"],
         [/0[xX][0-9a-fA-F']*[0-9a-fA-F](@integersuffix)/, "number.hex"],
@@ -191,13 +181,9 @@ var moduleExports = (() => {
         [/0[bB][0-1']*[0-1](@integersuffix)/, "number.binary"],
         [/\d[\d']*\d(@integersuffix)/, "number"],
         [/\d(@integersuffix)/, "number"],
-        // delimiter: after number because of .\d floats
         [/[;,.]/, "delimiter"],
-        // strings
         [/"([^"\\]|\\.)*$/, "string.invalid"],
-        // non-teminated string
         [/"/, "string", "@string"],
-        // characters
         [/'[^\\']'/, "string"],
         [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
         [/'/, "string.invalid"]
@@ -213,7 +199,6 @@ var moduleExports = (() => {
         [/\*\//, "comment", "@pop"],
         [/[\/*]/, "comment"]
       ],
-      //Identical copy of comment above, except for the addition of .doc
       doccomment: [
         [/[^\/*]+/, "comment.doc"],
         [/\*\//, "comment.doc", "@pop"],

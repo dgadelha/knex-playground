@@ -131,10 +131,4 @@ export class Position {
             && (typeof obj.lineNumber === 'number')
             && (typeof obj.column === 'number'));
     }
-    toJSON() {
-        return {
-            lineNumber: this.lineNumber,
-            column: this.column
-        };
-    }
 }

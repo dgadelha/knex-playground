@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
@@ -41,7 +50,7 @@ let StickyLineCandidateProvider = class StickyLineCandidateProvider extends Disp
         this._sessionStore = this._register(new DisposableStore());
         this._updateSoon = this._register(new RunOnceScheduler(() => this.update(), 50));
         this._register(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(115 /* EditorOption.stickyScroll */)) {
+            if (e.hasChanged(114 /* EditorOption.stickyScroll */)) {
                 this.readConfiguration();
             }
         }));
@@ -50,7 +59,7 @@ let StickyLineCandidateProvider = class StickyLineCandidateProvider extends Disp
     readConfiguration() {
         this._stickyModelProvider = null;
         this._sessionStore.clear();
-        this._options = this._editor.getOption(115 /* EditorOption.stickyScroll */);
+        this._options = this._editor.getOption(114 /* EditorOption.stickyScroll */);
         if (!this._options.enabled) {
             return;
         }
@@ -71,26 +80,30 @@ let StickyLineCandidateProvider = class StickyLineCandidateProvider extends Disp
         var _a;
         return (_a = this._model) === null || _a === void 0 ? void 0 : _a.version;
     }
-    async update() {
+    update() {
         var _a;
-        (_a = this._cts) === null || _a === void 0 ? void 0 : _a.dispose(true);
-        this._cts = new CancellationTokenSource();
-        await this.updateStickyModel(this._cts.token);
-        this._onDidChangeStickyScroll.fire();
+        return __awaiter(this, void 0, void 0, function* () {
+            (_a = this._cts) === null || _a === void 0 ? void 0 : _a.dispose(true);
+            this._cts = new CancellationTokenSource();
+            yield this.updateStickyModel(this._cts.token);
+            this._onDidChangeStickyScroll.fire();
+        });
     }
-    async updateStickyModel(token) {
-        if (!this._editor.hasModel() || !this._stickyModelProvider || this._editor.getModel().isTooLargeForTokenization()) {
-            this._model = null;
-            return;
-        }
-        const textModel = this._editor.getModel();
-        const modelVersionId = textModel.getVersionId();
-        const model = await this._stickyModelProvider.update(textModel, modelVersionId, token);
-        if (token.isCancellationRequested) {
-            // the computation was canceled, so do not overwrite the model
-            return;
-        }
-        this._model = model;
+    updateStickyModel(token) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!this._editor.hasModel() || !this._stickyModelProvider || this._editor.getModel().isTooLargeForTokenization()) {
+                this._model = null;
+                return;
+            }
+            const textModel = this._editor.getModel();
+            const modelVersionId = textModel.getVersionId();
+            const model = yield this._stickyModelProvider.update(textModel, modelVersionId, token);
+            if (token.isCancellationRequested) {
+                // the computation was canceled, so do not overwrite the model
+                return;
+            }
+            this._model = model;
+        });
     }
     updateIndex(index) {
         if (index === -1) {

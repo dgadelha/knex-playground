@@ -3,23 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { ResourceTextEdit } from '../../../browser/services/bulkEditService.js';
-import { SnippetParser } from '../../snippet/browser/snippetParser.js';
-/**
- * Given a {@link DropOrPasteEdit} and set of ranges, creates a {@link WorkspaceEdit} that applies the insert text from
- * the {@link DropOrPasteEdit} at each range plus any additional edits.
- */
 export function createCombinedWorkspaceEdit(uri, ranges, edit) {
-    var _a, _b, _c, _d;
-    // If the edit insert text is empty, skip applying at each range
-    if (typeof edit.insertText === 'string' ? edit.insertText === '' : edit.insertText.snippet === '') {
-        return {
-            edits: (_b = (_a = edit.additionalEdit) === null || _a === void 0 ? void 0 : _a.edits) !== null && _b !== void 0 ? _b : []
-        };
-    }
+    var _a, _b;
     return {
         edits: [
-            ...ranges.map(range => new ResourceTextEdit(uri, { range, text: typeof edit.insertText === 'string' ? SnippetParser.escape(edit.insertText) + '$0' : edit.insertText.snippet, insertAsSnippet: true })),
-            ...((_d = (_c = edit.additionalEdit) === null || _c === void 0 ? void 0 : _c.edits) !== null && _d !== void 0 ? _d : [])
+            ...ranges.map(range => new ResourceTextEdit(uri, typeof edit.insertText === 'string'
+                ? { range, text: edit.insertText, insertAsSnippet: false }
+                : { range, text: edit.insertText.snippet, insertAsSnippet: true })),
+            ...((_b = (_a = edit.additionalEdit) === null || _a === void 0 ? void 0 : _a.edits) !== null && _b !== void 0 ? _b : [])
         ]
     };
 }

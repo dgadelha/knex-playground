@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { Emitter } from '../../../base/common/event.js';
-import { getWindow, scheduleAtNextAnimationFrame } from '../../../base/browser/dom.js';
 export class ElementSizeObserver extends Disposable {
     constructor(referenceDomElement, dimension) {
         super();
@@ -32,10 +31,10 @@ export class ElementSizeObserver extends Disposable {
             // The first time the resize observer fires, we will react to it immediately.
             // Otherwise we will postpone to the next animation frame.
             // We'll use `observeContentRect` to store the content rect we received.
-            let observedDimenstion = null;
+            let observeContentRect = null;
             const observeNow = () => {
-                if (observedDimenstion) {
-                    this.observe({ width: observedDimenstion.width, height: observedDimenstion.height });
+                if (observeContentRect) {
+                    this.observe({ width: observeContentRect.width, height: observeContentRect.height });
                 }
                 else {
                     this.observe();
@@ -51,7 +50,7 @@ export class ElementSizeObserver extends Disposable {
                         observeNow();
                     }
                     finally {
-                        scheduleAtNextAnimationFrame(getWindow(this._referenceDomElement), () => {
+                        requestAnimationFrame(() => {
                             alreadyObservedThisAnimationFrame = false;
                             update();
                         });
@@ -59,12 +58,7 @@ export class ElementSizeObserver extends Disposable {
                 }
             };
             this._resizeObserver = new ResizeObserver((entries) => {
-                if (entries && entries[0] && entries[0].contentRect) {
-                    observedDimenstion = { width: entries[0].contentRect.width, height: entries[0].contentRect.height };
-                }
-                else {
-                    observedDimenstion = null;
-                }
+                observeContentRect = (entries && entries[0] && entries[0].contentRect ? entries[0].contentRect : null);
                 shouldObserve = true;
                 update();
             });

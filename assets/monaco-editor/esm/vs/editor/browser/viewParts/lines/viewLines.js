@@ -68,16 +68,16 @@ export class ViewLines extends ViewPart {
         const conf = this._context.configuration;
         const options = this._context.configuration.options;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        const wrappingInfo = options.get(145 /* EditorOption.wrappingInfo */);
-        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
+        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
         this._isViewportWrapping = wrappingInfo.isViewportWrapping;
-        this._revealHorizontalRightPadding = options.get(100 /* EditorOption.revealHorizontalRightPadding */);
+        this._revealHorizontalRightPadding = options.get(99 /* EditorOption.revealHorizontalRightPadding */);
         this._cursorSurroundingLines = options.get(29 /* EditorOption.cursorSurroundingLines */);
         this._cursorSurroundingLinesStyle = options.get(30 /* EditorOption.cursorSurroundingLinesStyle */);
         this._canUseLayerHinting = !options.get(32 /* EditorOption.disableLayerHinting */);
         this._viewLineOptions = new ViewLineOptions(conf, this._context.theme.type);
-        PartFingerprints.write(this.domNode, 8 /* PartFingerprint.ViewLines */);
+        PartFingerprints.write(this.domNode, 7 /* PartFingerprint.ViewLines */);
         this.domNode.setClassName(`view-lines ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME}`);
         applyFontInfo(this.domNode, fontInfo);
         // --- width & height
@@ -91,8 +91,8 @@ export class ViewLines extends ViewPart {
         this._lastRenderedData = new LastRenderedData();
         this._horizontalRevealRequest = null;
         // sticky scroll widget
-        this._stickyScrollEnabled = options.get(115 /* EditorOption.stickyScroll */).enabled;
-        this._maxNumberStickyLines = options.get(115 /* EditorOption.stickyScroll */).maxLineCount;
+        this._stickyScrollEnabled = options.get(114 /* EditorOption.stickyScroll */).enabled;
+        this._maxNumberStickyLines = options.get(114 /* EditorOption.stickyScroll */).maxLineCount;
     }
     dispose() {
         this._asyncUpdateLineWidths.dispose();
@@ -110,25 +110,25 @@ export class ViewLines extends ViewPart {
     // ---- begin view event handlers
     onConfigurationChanged(e) {
         this._visibleLines.onConfigurationChanged(e);
-        if (e.hasChanged(145 /* EditorOption.wrappingInfo */)) {
+        if (e.hasChanged(144 /* EditorOption.wrappingInfo */)) {
             this._maxLineWidth = 0;
         }
         const options = this._context.configuration.options;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        const wrappingInfo = options.get(145 /* EditorOption.wrappingInfo */);
-        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
+        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
         this._isViewportWrapping = wrappingInfo.isViewportWrapping;
-        this._revealHorizontalRightPadding = options.get(100 /* EditorOption.revealHorizontalRightPadding */);
+        this._revealHorizontalRightPadding = options.get(99 /* EditorOption.revealHorizontalRightPadding */);
         this._cursorSurroundingLines = options.get(29 /* EditorOption.cursorSurroundingLines */);
         this._cursorSurroundingLinesStyle = options.get(30 /* EditorOption.cursorSurroundingLinesStyle */);
         this._canUseLayerHinting = !options.get(32 /* EditorOption.disableLayerHinting */);
         // sticky scroll
-        this._stickyScrollEnabled = options.get(115 /* EditorOption.stickyScroll */).enabled;
-        this._maxNumberStickyLines = options.get(115 /* EditorOption.stickyScroll */).maxLineCount;
+        this._stickyScrollEnabled = options.get(114 /* EditorOption.stickyScroll */).enabled;
+        this._maxNumberStickyLines = options.get(114 /* EditorOption.stickyScroll */).maxLineCount;
         applyFontInfo(this.domNode, fontInfo);
         this._onOptionsMaybeChanged();
-        if (e.hasChanged(144 /* EditorOption.layoutInfo */)) {
+        if (e.hasChanged(143 /* EditorOption.layoutInfo */)) {
             this._maxLineWidth = 0;
         }
         return true;
@@ -619,7 +619,7 @@ export class ViewLines extends ViewPart {
     }
     _computeScrollLeftToReveal(horizontalRevealRequest) {
         const viewport = this._context.viewLayout.getCurrentViewport();
-        const layoutInfo = this._context.configuration.options.get(144 /* EditorOption.layoutInfo */);
+        const layoutInfo = this._context.configuration.options.get(143 /* EditorOption.layoutInfo */);
         const viewportStartX = viewport.left;
         const viewportEndX = viewportStartX + viewport.width - layoutInfo.verticalScrollbarWidth;
         let boxStartX = 1073741824 /* Constants.MAX_SAFE_SMALL_INTEGER */;

@@ -5,26 +5,20 @@
 import './overlayWidgets.css';
 import { createFastDomNode } from '../../../../base/browser/fastDomNode.js';
 import { PartFingerprints, ViewPart } from '../../view/viewPart.js';
-import * as dom from '../../../../base/browser/dom.js';
 export class ViewOverlayWidgets extends ViewPart {
-    constructor(context, viewDomNode) {
+    constructor(context) {
         super(context);
-        this._viewDomNode = viewDomNode;
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(144 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         this._widgets = {};
         this._verticalScrollbarWidth = layoutInfo.verticalScrollbarWidth;
         this._minimapWidth = layoutInfo.minimap.minimapWidth;
         this._horizontalScrollbarHeight = layoutInfo.horizontalScrollbarHeight;
         this._editorHeight = layoutInfo.height;
         this._editorWidth = layoutInfo.width;
-        this._viewDomNodeRect = { top: 0, left: 0, width: 0, height: 0 };
         this._domNode = createFastDomNode(document.createElement('div'));
         PartFingerprints.write(this._domNode, 4 /* PartFingerprint.OverlayWidgets */);
         this._domNode.setClassName('overlayWidgets');
-        this.overflowingOverlayWidgetsDomNode = createFastDomNode(document.createElement('div'));
-        PartFingerprints.write(this.overflowingOverlayWidgetsDomNode, 5 /* PartFingerprint.OverflowingOverlayWidgets */);
-        this.overflowingOverlayWidgetsDomNode.setClassName('overflowingOverlayWidgets');
     }
     dispose() {
         super.dispose();
@@ -36,7 +30,7 @@ export class ViewOverlayWidgets extends ViewPart {
     // ---- begin view event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const layoutInfo = options.get(144 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
         this._verticalScrollbarWidth = layoutInfo.verticalScrollbarWidth;
         this._minimapWidth = layoutInfo.minimap.minimapWidth;
         this._horizontalScrollbarHeight = layoutInfo.horizontalScrollbarHeight;
@@ -55,12 +49,7 @@ export class ViewOverlayWidgets extends ViewPart {
         // This is sync because a widget wants to be in the dom
         domNode.setPosition('absolute');
         domNode.setAttribute('widgetId', widget.getId());
-        if (widget.allowEditorOverflow) {
-            this.overflowingOverlayWidgetsDomNode.appendChild(domNode);
-        }
-        else {
-            this._domNode.appendChild(domNode);
-        }
+        this._domNode.appendChild(domNode);
         this.setShouldRender();
         this._updateMaxMinWidth();
     }
@@ -81,7 +70,7 @@ export class ViewOverlayWidgets extends ViewPart {
             const widgetData = this._widgets[widgetId];
             const domNode = widgetData.domNode.domNode;
             delete this._widgets[widgetId];
-            domNode.remove();
+            domNode.parentNode.removeChild(domNode);
             this.setShouldRender();
             this._updateMaxMinWidth();
         }
@@ -119,25 +108,9 @@ export class ViewOverlayWidgets extends ViewPart {
             domNode.setTop(0);
             domNode.domNode.style.right = '50%';
         }
-        else {
-            const { top, left } = widgetData.preference;
-            const fixedOverflowWidgets = this._context.configuration.options.get(42 /* EditorOption.fixedOverflowWidgets */);
-            if (fixedOverflowWidgets && widgetData.widget.allowEditorOverflow) {
-                // top, left are computed relative to the editor and we need them relative to the page
-                const editorBoundingBox = this._viewDomNodeRect;
-                domNode.setTop(top + editorBoundingBox.top);
-                domNode.setLeft(left + editorBoundingBox.left);
-                domNode.setPosition('fixed');
-            }
-            else {
-                domNode.setTop(top);
-                domNode.setLeft(left);
-                domNode.setPosition('absolute');
-            }
-        }
     }
     prepareRender(ctx) {
-        this._viewDomNodeRect = dom.getDomNodePagePosition(this._viewDomNode.domNode);
+        // Nothing to read
     }
     render(ctx) {
         this._domNode.setWidth(this._editorWidth);

@@ -408,7 +408,7 @@ let SnippetSession = SnippetSession_1 = class SnippetSession {
             const snippetLineLeadingWhitespace = SnippetSession_1.adjustWhitespace(model, start, adjustWhitespace || (idx > 0 && firstLineFirstNonWhitespace !== model.getLineFirstNonWhitespaceColumn(selection.positionLineNumber)), snippet);
             snippet.resolveVariables(new CompositeSnippetVariableResolver([
                 modelBasedVariableResolver,
-                new ClipboardBasedVariableResolver(readClipboardText, idx, indexedSelections.length, editor.getOption(79 /* EditorOption.multiCursorPaste */) === 'spread'),
+                new ClipboardBasedVariableResolver(readClipboardText, idx, indexedSelections.length, editor.getOption(78 /* EditorOption.multiCursorPaste */) === 'spread'),
                 new SelectionBasedVariableResolver(model, selection, idx, overtypingCapturer),
                 new CommentBasedVariableResolver(model, selection, languageConfigurationService),
                 new TimeBasedVariableResolver,
@@ -436,7 +436,7 @@ let SnippetSession = SnippetSession_1 = class SnippetSession {
         // snippet variables resolver
         const resolver = new CompositeSnippetVariableResolver([
             editor.invokeWithinContext(accessor => new ModelBasedVariableResolver(accessor.get(ILabelService), model)),
-            new ClipboardBasedVariableResolver(() => clipboardText, 0, editor.getSelections().length, editor.getOption(79 /* EditorOption.multiCursorPaste */) === 'spread'),
+            new ClipboardBasedVariableResolver(() => clipboardText, 0, editor.getSelections().length, editor.getOption(78 /* EditorOption.multiCursorPaste */) === 'spread'),
             new SelectionBasedVariableResolver(model, editor.getSelection(), 0, overtypingCapturer),
             new CommentBasedVariableResolver(model, editor.getSelection(), languageConfigurationService),
             new TimeBasedVariableResolver,

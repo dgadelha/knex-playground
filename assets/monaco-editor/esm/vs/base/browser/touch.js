@@ -9,10 +9,8 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import * as DomUtils from './dom.js';
-import { mainWindow } from './window.js';
 import * as arrays from '../common/arrays.js';
 import { memoize } from '../common/decorators.js';
-import { Event as EventUtils } from '../common/event.js';
 import { Disposable, markAsSingleton, toDisposable } from '../common/lifecycle.js';
 import { LinkedList } from '../common/linkedList.js';
 export var EventType;
@@ -32,11 +30,9 @@ export class Gesture extends Disposable {
         this.activeTouches = {};
         this.handle = null;
         this._lastSetTapCountTime = 0;
-        this._register(EventUtils.runAndSubscribe(DomUtils.onDidRegisterWindow, ({ window, disposables }) => {
-            disposables.add(DomUtils.addDisposableListener(window.document, 'touchstart', (e) => this.onTouchStart(e), { passive: false }));
-            disposables.add(DomUtils.addDisposableListener(window.document, 'touchend', (e) => this.onTouchEnd(window, e)));
-            disposables.add(DomUtils.addDisposableListener(window.document, 'touchmove', (e) => this.onTouchMove(e), { passive: false }));
-        }, { window: mainWindow, disposables: this._store }));
+        this._register(DomUtils.addDisposableListener(document, 'touchstart', (e) => this.onTouchStart(e), { passive: false }));
+        this._register(DomUtils.addDisposableListener(document, 'touchend', (e) => this.onTouchEnd(e)));
+        this._register(DomUtils.addDisposableListener(document, 'touchmove', (e) => this.onTouchMove(e), { passive: false }));
     }
     static addTarget(element) {
         if (!Gesture.isTouchDevice()) {
@@ -61,7 +57,7 @@ export class Gesture extends Disposable {
     static isTouchDevice() {
         // `'ontouchstart' in window` always evaluates to true with typescript's modern typings. This causes `window` to be
         // `never` later in `window.navigator`. That's why we need the explicit `window as Window` cast
-        return 'ontouchstart' in mainWindow || navigator.maxTouchPoints > 0;
+        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     }
     dispose() {
         if (this.handle) {
@@ -99,7 +95,7 @@ export class Gesture extends Disposable {
             this.dispatched = false;
         }
     }
-    onTouchEnd(targetWindow, e) {
+    onTouchEnd(e) {
         const timestamp = Date.now(); // use Date.now() because on FF e.timeStamp is not epoch based.
         const activeTouchCount = Object.keys(this.activeTouches).length;
         for (let i = 0, len = e.changedTouches.length; i < len; i++) {
@@ -133,7 +129,7 @@ export class Gesture extends Disposable {
                 const deltaY = finalY - data.rollingPageY[0];
                 // We need to get all the dispatch targets on the start of the inertia event
                 const dispatchTo = [...this.targets].filter(t => data.initialTarget instanceof Node && t.contains(data.initialTarget));
-                this.inertia(targetWindow, dispatchTo, timestamp, // time now
+                this.inertia(dispatchTo, timestamp, // time now
                 Math.abs(deltaX) / deltaT, // speed
                 deltaX > 0 ? 1 : -1, // x direction
                 finalX, // x now
@@ -190,8 +186,8 @@ export class Gesture extends Disposable {
             }
         }
     }
-    inertia(targetWindow, dispatchTo, t1, vX, dirX, x, vY, dirY, y) {
-        this.handle = DomUtils.scheduleAtNextAnimationFrame(targetWindow, () => {
+    inertia(dispatchTo, t1, vX, dirX, x, vY, dirY, y) {
+        this.handle = DomUtils.scheduleAtNextAnimationFrame(() => {
             const now = Date.now();
             // velocity: old speed + accel_over_time
             const deltaT = now - t1;
@@ -213,7 +209,7 @@ export class Gesture extends Disposable {
             evt.translationY = delta_pos_y;
             dispatchTo.forEach(d => d.dispatchEvent(evt));
             if (!stopped) {
-                this.inertia(targetWindow, dispatchTo, now, vX, dirX, x + delta_pos_x, vY, dirY, y + delta_pos_y);
+                this.inertia(dispatchTo, now, vX, dirX, x + delta_pos_x, vY, dirY, y + delta_pos_y);
             }
         });
     }

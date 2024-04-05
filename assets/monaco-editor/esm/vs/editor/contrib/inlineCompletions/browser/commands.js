@@ -2,8 +2,16 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { transaction } from '../../../../base/common/observable.js';
-import { asyncTransaction } from '../../../../base/common/observableInternal/base.js';
 import { EditorAction } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { showNextInlineSuggestionActionId, showPreviousInlineSuggestionActionId, inlineSuggestCommitId } from './commandIds.js';
@@ -27,10 +35,12 @@ export class ShowNextInlineSuggestionAction extends EditorAction {
             },
         });
     }
-    async run(accessor, editor) {
+    run(accessor, editor) {
         var _a;
-        const controller = InlineCompletionsController.get(editor);
-        (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.next();
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.next();
+        });
     }
 }
 ShowNextInlineSuggestionAction.ID = showNextInlineSuggestionActionId;
@@ -47,10 +57,12 @@ export class ShowPreviousInlineSuggestionAction extends EditorAction {
             },
         });
     }
-    async run(accessor, editor) {
+    run(accessor, editor) {
         var _a;
-        const controller = InlineCompletionsController.get(editor);
-        (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.previous();
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.previous();
+        });
     }
 }
 ShowPreviousInlineSuggestionAction.ID = showPreviousInlineSuggestionActionId;
@@ -63,13 +75,11 @@ export class TriggerInlineSuggestionAction extends EditorAction {
             precondition: EditorContextKeys.writable
         });
     }
-    async run(accessor, editor) {
-        const controller = InlineCompletionsController.get(editor);
-        await asyncTransaction(async (tx) => {
-            var _a;
-            /** @description triggerExplicitly from command */
-            await ((_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.triggerExplicitly(tx));
-            controller === null || controller === void 0 ? void 0 : controller.playAccessibilitySignal(tx);
+    run(accessor, editor) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.triggerExplicitly();
         });
     }
 }
@@ -93,10 +103,12 @@ export class AcceptNextWordOfInlineCompletion extends EditorAction {
                 }],
         });
     }
-    async run(accessor, editor) {
+    run(accessor, editor) {
         var _a;
-        const controller = InlineCompletionsController.get(editor);
-        await ((_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.acceptNextWord(controller.editor));
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            yield ((_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.acceptNextWord(controller.editor));
+        });
     }
 }
 export class AcceptNextLineOfInlineCompletion extends EditorAction {
@@ -117,10 +129,12 @@ export class AcceptNextLineOfInlineCompletion extends EditorAction {
                 }],
         });
     }
-    async run(accessor, editor) {
+    run(accessor, editor) {
         var _a;
-        const controller = InlineCompletionsController.get(editor);
-        await ((_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.acceptNextLine(controller.editor));
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            yield ((_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.acceptNextLine(controller.editor));
+        });
     }
 }
 export class AcceptInlineCompletion extends EditorAction {
@@ -143,13 +157,15 @@ export class AcceptInlineCompletion extends EditorAction {
             }
         });
     }
-    async run(accessor, editor) {
+    run(accessor, editor) {
         var _a;
-        const controller = InlineCompletionsController.get(editor);
-        if (controller) {
-            (_a = controller.model.get()) === null || _a === void 0 ? void 0 : _a.accept(controller.editor);
-            controller.editor.focus();
-        }
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            if (controller) {
+                (_a = controller.model.get()) === null || _a === void 0 ? void 0 : _a.accept(controller.editor);
+                controller.editor.focus();
+            }
+        });
     }
 }
 export class HideInlineCompletion extends EditorAction {
@@ -165,11 +181,13 @@ export class HideInlineCompletion extends EditorAction {
             }
         });
     }
-    async run(accessor, editor) {
-        const controller = InlineCompletionsController.get(editor);
-        transaction(tx => {
-            var _a;
-            (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.stop(tx);
+    run(accessor, editor) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const controller = InlineCompletionsController.get(editor);
+            transaction(tx => {
+                var _a;
+                (_a = controller === null || controller === void 0 ? void 0 : controller.model.get()) === null || _a === void 0 ? void 0 : _a.stop(tx);
+            });
         });
     }
 }
@@ -189,11 +207,13 @@ export class ToggleAlwaysShowInlineSuggestionToolbar extends Action2 {
             toggled: ContextKeyExpr.equals('config.editor.inlineSuggest.showToolbar', 'always')
         });
     }
-    async run(accessor, editor) {
-        const configService = accessor.get(IConfigurationService);
-        const currentValue = configService.getValue('editor.inlineSuggest.showToolbar');
-        const newValue = currentValue === 'always' ? 'onHover' : 'always';
-        configService.updateValue('editor.inlineSuggest.showToolbar', newValue);
+    run(accessor, editor) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const configService = accessor.get(IConfigurationService);
+            const currentValue = configService.getValue('editor.inlineSuggest.showToolbar');
+            const newValue = currentValue === 'always' ? 'onHover' : 'always';
+            configService.updateValue('editor.inlineSuggest.showToolbar', newValue);
+        });
     }
 }
 ToggleAlwaysShowInlineSuggestionToolbar.ID = 'editor.action.inlineSuggest.toggleAlwaysShowToolbar';

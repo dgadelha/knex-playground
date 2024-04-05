@@ -2,6 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { assertNever } from '../../../../base/common/assert.js';
 import { DeferredPromise } from '../../../../base/common/async.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
@@ -11,100 +20,102 @@ import { Range } from '../../../common/core/range.js';
 import { fixBracketsInLine } from '../../../common/model/bracketPairsTextModelPart/fixBrackets.js';
 import { getReadonlyEmptyArray } from './utils.js';
 import { SnippetParser, Text } from '../../snippet/browser/snippetParser.js';
-export async function provideInlineCompletions(registry, position, model, context, token = CancellationToken.None, languageConfigurationService) {
-    // Important: Don't use position after the await calls, as the model could have been changed in the meantime!
-    const defaultReplaceRange = getDefaultRange(position, model);
-    const providers = registry.all(model);
-    const multiMap = new SetMap();
-    for (const provider of providers) {
-        if (provider.groupId) {
-            multiMap.add(provider.groupId, provider);
-        }
-    }
-    function getPreferredProviders(provider) {
-        if (!provider.yieldsToGroupIds) {
-            return [];
-        }
-        const result = [];
-        for (const groupId of provider.yieldsToGroupIds || []) {
-            const providers = multiMap.get(groupId);
-            for (const p of providers) {
-                result.push(p);
+export function provideInlineCompletions(registry, position, model, context, token = CancellationToken.None, languageConfigurationService) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Important: Don't use position after the await calls, as the model could have been changed in the meantime!
+        const defaultReplaceRange = getDefaultRange(position, model);
+        const providers = registry.all(model);
+        const multiMap = new SetMap();
+        for (const provider of providers) {
+            if (provider.groupId) {
+                multiMap.add(provider.groupId, provider);
             }
         }
-        return result;
-    }
-    const states = new Map();
-    const seen = new Set();
-    function findPreferredProviderCircle(provider, stack) {
-        stack = [...stack, provider];
-        if (seen.has(provider)) {
-            return stack;
-        }
-        seen.add(provider);
-        try {
-            const preferred = getPreferredProviders(provider);
-            for (const p of preferred) {
-                const c = findPreferredProviderCircle(p, stack);
-                if (c) {
-                    return c;
+        function getPreferredProviders(provider) {
+            if (!provider.yieldsToGroupIds) {
+                return [];
+            }
+            const result = [];
+            for (const groupId of provider.yieldsToGroupIds || []) {
+                const providers = multiMap.get(groupId);
+                for (const p of providers) {
+                    result.push(p);
                 }
             }
+            return result;
         }
-        finally {
-            seen.delete(provider);
-        }
-        return undefined;
-    }
-    function processProvider(provider) {
-        const state = states.get(provider);
-        if (state) {
-            return state;
-        }
-        const circle = findPreferredProviderCircle(provider, []);
-        if (circle) {
-            onUnexpectedExternalError(new Error(`Inline completions: cyclic yield-to dependency detected. Path: ${circle.map(s => s.toString ? s.toString() : ('' + s)).join(' -> ')}`));
-        }
-        const deferredPromise = new DeferredPromise();
-        states.set(provider, deferredPromise.p);
-        (async () => {
-            if (!circle) {
+        const states = new Map();
+        const seen = new Set();
+        function findPreferredProviderCircle(provider, stack) {
+            stack = [...stack, provider];
+            if (seen.has(provider)) {
+                return stack;
+            }
+            seen.add(provider);
+            try {
                 const preferred = getPreferredProviders(provider);
                 for (const p of preferred) {
-                    const result = await processProvider(p);
-                    if (result && result.items.length > 0) {
-                        // Skip provider
-                        return undefined;
+                    const c = findPreferredProviderCircle(p, stack);
+                    if (c) {
+                        return c;
                     }
                 }
             }
-            try {
-                const completions = await provider.provideInlineCompletions(model, position, context, token);
-                return completions;
+            finally {
+                seen.delete(provider);
             }
-            catch (e) {
-                onUnexpectedExternalError(e);
-                return undefined;
+            return undefined;
+        }
+        function processProvider(provider) {
+            const state = states.get(provider);
+            if (state) {
+                return state;
             }
-        })().then(c => deferredPromise.complete(c), e => deferredPromise.error(e));
-        return deferredPromise.p;
-    }
-    const providerResults = await Promise.all(providers.map(async (provider) => ({ provider, completions: await processProvider(provider) })));
-    const itemsByHash = new Map();
-    const lists = [];
-    for (const result of providerResults) {
-        const completions = result.completions;
-        if (!completions) {
-            continue;
+            const circle = findPreferredProviderCircle(provider, []);
+            if (circle) {
+                onUnexpectedExternalError(new Error(`Inline completions: cyclic yield-to dependency detected. Path: ${circle.map(s => s.toString ? s.toString() : ('' + s)).join(' -> ')}`));
+            }
+            const deferredPromise = new DeferredPromise();
+            states.set(provider, deferredPromise.p);
+            (() => __awaiter(this, void 0, void 0, function* () {
+                if (!circle) {
+                    const preferred = getPreferredProviders(provider);
+                    for (const p of preferred) {
+                        const result = yield processProvider(p);
+                        if (result && result.items.length > 0) {
+                            // Skip provider
+                            return undefined;
+                        }
+                    }
+                }
+                try {
+                    const completions = yield provider.provideInlineCompletions(model, position, context, token);
+                    return completions;
+                }
+                catch (e) {
+                    onUnexpectedExternalError(e);
+                    return undefined;
+                }
+            }))().then(c => deferredPromise.complete(c), e => deferredPromise.error(e));
+            return deferredPromise.p;
         }
-        const list = new InlineCompletionList(completions, result.provider);
-        lists.push(list);
-        for (const item of completions.items) {
-            const inlineCompletionItem = InlineCompletionItem.from(item, list, defaultReplaceRange, model, languageConfigurationService);
-            itemsByHash.set(inlineCompletionItem.hash(), inlineCompletionItem);
+        const providerResults = yield Promise.all(providers.map((provider) => __awaiter(this, void 0, void 0, function* () { return ({ provider, completions: yield processProvider(provider) }); })));
+        const itemsByHash = new Map();
+        const lists = [];
+        for (const result of providerResults) {
+            const completions = result.completions;
+            if (!completions) {
+                continue;
+            }
+            const list = new InlineCompletionList(completions, result.provider);
+            lists.push(list);
+            for (const item of completions.items) {
+                const inlineCompletionItem = InlineCompletionItem.from(item, list, defaultReplaceRange, model, languageConfigurationService);
+                itemsByHash.set(inlineCompletionItem.hash(), inlineCompletionItem);
+            }
         }
-    }
-    return new InlineCompletionProviderResult(Array.from(itemsByHash.values()), new Set(itemsByHash.keys()), lists);
+        return new InlineCompletionProviderResult(Array.from(itemsByHash.values()), new Set(itemsByHash.keys()), lists);
+    });
 }
 export class InlineCompletionProviderResult {
     constructor(

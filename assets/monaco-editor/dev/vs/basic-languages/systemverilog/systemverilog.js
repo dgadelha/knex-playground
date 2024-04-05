@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/systemverilog/systemverilog", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -79,12 +79,8 @@ var moduleExports = (() => {
     folding: {
       offSide: false,
       markers: {
-        start: new RegExp(
-          "^(?:\\s*|.*(?!\\/[\\/\\*])[^\\w])(?:begin|case(x|z)?|class|clocking|config|covergroup|function|generate|interface|module|package|primitive|property|program|sequence|specify|table|task)\\b"
-        ),
-        end: new RegExp(
-          "^(?:\\s*|.*(?!\\/[\\/\\*])[^\\w])(?:end|endcase|endclass|endclocking|endconfig|endgroup|endfunction|endgenerate|endinterface|endmodule|endpackage|endprimitive|endproperty|endprogram|endsequence|endspecify|endtable|endtask)\\b"
-        )
+        start: new RegExp("^(?:\\s*|.*(?!\\/[\\/\\*])[^\\w])(?:begin|case(x|z)?|class|clocking|config|covergroup|function|generate|interface|module|package|primitive|property|program|sequence|specify|table|task)\\b"),
+        end: new RegExp("^(?:\\s*|.*(?!\\/[\\/\\*])[^\\w])(?:end|endcase|endclass|endclocking|endconfig|endgroup|endfunction|endgenerate|endinterface|endmodule|endpackage|endprimitive|endproperty|endprogram|endsequence|endspecify|endtable|endtask)\\b")
       }
     }
   };
@@ -374,7 +370,6 @@ var moduleExports = (() => {
       "rtranif0"
     ],
     operators: [
-      // assignment operators
       "=",
       "+=",
       "-=",
@@ -388,10 +383,8 @@ var moduleExports = (() => {
       ">>+",
       "<<<=",
       ">>>=",
-      // conditional expression
       "?",
       ":",
-      // Unary operators
       "+",
       "-",
       "!",
@@ -403,7 +396,6 @@ var moduleExports = (() => {
       "^",
       "~^",
       "^~",
-      //binary operators
       "+",
       "-",
       "*",
@@ -429,15 +421,11 @@ var moduleExports = (() => {
       "<<",
       ">>>",
       "<<<",
-      // increment or decrement operator
       "++",
       "--",
-      //binary logical operator
       "->",
       "<->",
-      // binary set membership operator
       "inside",
-      // binary distrubution operator
       "dist",
       "::",
       "+:",
@@ -448,16 +436,13 @@ var moduleExports = (() => {
       "|=>",
       "#=#"
     ],
-    // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/\^%#]+/,
     escapes: /%%|\\(?:[antvf\\"']|x[0-9A-Fa-f]{1,2}|[0-7]{1,3})/,
     identifier: /(?:[a-zA-Z_][a-zA-Z0-9_$\.]*|\\\S+ )/,
     systemcall: /[$][a-zA-Z0-9_]+/,
     timeunits: /s|ms|us|ns|ps|fs/,
-    // The main tokenizer for our languages
     tokenizer: {
       root: [
-        // module instances
         [
           /^(\s*)(@identifier)/,
           [
@@ -481,19 +466,12 @@ var moduleExports = (() => {
             }
           ]
         ],
-        // include statements
         [/^\s*`include/, { token: "keyword.directive.include", next: "@include" }],
-        // Preprocessor directives
         [/^\s*`\s*\w+/, "keyword"],
-        // identifiers and keywords
         { include: "@identifier_or_keyword" },
-        // whitespace and comments
         { include: "@whitespace" },
-        // (* attributes *).
         [/\(\*.*\*\)/, "annotation"],
-        // Systemcall
         [/@systemcall/, "variable.predefined"],
-        // delimiters and operators
         [/[{}()\[\]]/, "@brackets"],
         [/[<>](?!@symbols)/, "@brackets"],
         [
@@ -505,11 +483,8 @@ var moduleExports = (() => {
             }
           }
         ],
-        // numbers
         { include: "@numbers" },
-        // delimiter: after number because of .\d floats
         [/[;,.]/, "delimiter"],
-        // strings
         { include: "@strings" }
       ],
       identifier_or_keyword: [
@@ -564,7 +539,6 @@ var moduleExports = (() => {
       ],
       strings: [
         [/"([^"\\]|\\.)*$/, "string.invalid"],
-        // non-teminated string
         [/"/, "string", "@string"]
       ],
       string: [

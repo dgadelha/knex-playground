@@ -11,6 +11,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import * as dom from '../../../../base/browser/dom.js';
 import { disposableTimeout } from '../../../../base/common/async.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -52,13 +61,13 @@ class InlineProgressWidget extends Disposable {
         this.domNode.append(iconElement);
         iconElement.classList.add(...ThemeIcon.asClassNameArray(Codicon.loading), 'codicon-modifier-spin');
         const updateSize = () => {
-            const lineHeight = this.editor.getOption(67 /* EditorOption.lineHeight */);
+            const lineHeight = this.editor.getOption(66 /* EditorOption.lineHeight */);
             this.domNode.style.height = `${lineHeight}px`;
             this.domNode.style.width = `${Math.ceil(0.8 * lineHeight)}px`;
         };
         updateSize();
         this._register(this.editor.onDidChangeConfiguration(c => {
-            if (c.hasChanged(52 /* EditorOption.fontSize */) || c.hasChanged(67 /* EditorOption.lineHeight */)) {
+            if (c.hasChanged(52 /* EditorOption.fontSize */) || c.hasChanged(66 /* EditorOption.lineHeight */)) {
                 updateSize();
             }
         }));
@@ -97,29 +106,31 @@ let InlineProgressManager = class InlineProgressManager extends Disposable {
         this._operationIdPool = 0;
         this._currentDecorations = _editor.createDecorationsCollection();
     }
-    async showWhile(position, title, promise) {
-        const operationId = this._operationIdPool++;
-        this._currentOperation = operationId;
-        this.clear();
-        this._showPromise.value = disposableTimeout(() => {
-            const range = Range.fromPositions(position);
-            const decorationIds = this._currentDecorations.set([{
-                    range: range,
-                    options: inlineProgressDecoration,
-                }]);
-            if (decorationIds.length > 0) {
-                this._currentWidget.value = this._instantiationService.createInstance(InlineProgressWidget, this.id, this._editor, range, title, promise);
+    showWhile(position, title, promise) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const operationId = this._operationIdPool++;
+            this._currentOperation = operationId;
+            this.clear();
+            this._showPromise.value = disposableTimeout(() => {
+                const range = Range.fromPositions(position);
+                const decorationIds = this._currentDecorations.set([{
+                        range: range,
+                        options: inlineProgressDecoration,
+                    }]);
+                if (decorationIds.length > 0) {
+                    this._currentWidget.value = this._instantiationService.createInstance(InlineProgressWidget, this.id, this._editor, range, title, promise);
+                }
+            }, this._showDelay);
+            try {
+                return yield promise;
             }
-        }, this._showDelay);
-        try {
-            return await promise;
-        }
-        finally {
-            if (this._currentOperation === operationId) {
-                this.clear();
-                this._currentOperation = undefined;
+            finally {
+                if (this._currentOperation === operationId) {
+                    this.clear();
+                    this._currentOperation = undefined;
+                }
             }
-        }
+        });
     }
     clear() {
         this._showPromise.clear();

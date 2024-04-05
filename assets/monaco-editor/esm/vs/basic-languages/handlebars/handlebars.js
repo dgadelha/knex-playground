@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -69,20 +69,14 @@ var conf = {
   ],
   onEnterRules: [
     {
-      beforeText: new RegExp(
-        `<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`,
-        "i"
-      ),
+      beforeText: new RegExp(`<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, "i"),
       afterText: /^<\/(\w[\w\d]*)\s*>$/i,
       action: {
         indentAction: monaco_editor_core_exports.languages.IndentAction.IndentOutdent
       }
     },
     {
-      beforeText: new RegExp(
-        `<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`,
-        "i"
-      ),
+      beforeText: new RegExp(`<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, "i"),
       action: { indentAction: monaco_editor_core_exports.languages.IndentAction.Indent }
     }
   ]
@@ -90,8 +84,6 @@ var conf = {
 var language = {
   defaultToken: "",
   tokenPostfix: "",
-  // ignoreCase: true,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
       [/\{\{!--/, "comment.block.start.handlebars", "@commentBlock"],
@@ -107,7 +99,6 @@ var language = {
       [/</, "delimiter.html"],
       [/\{/, "delimiter.html"],
       [/[^<{]+/]
-      // text
     ],
     doctype: [
       [
@@ -154,10 +145,7 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/]
-      // whitespace
     ],
-    // -- BEGIN <script> tags handling
-    // After <script
     script: [
       [
         /\{\{/,
@@ -180,13 +168,11 @@ var language = {
         }
       ],
       [/[ \t\r\n]+/],
-      // whitespace
       [
         /(<\/)(script\s*)(>)/,
         ["delimiter.html", "tag.html", { token: "delimiter.html", next: "@pop" }]
       ]
     ],
-    // After <script ... type
     scriptAfterType: [
       [
         /\{\{/,
@@ -204,12 +190,9 @@ var language = {
           nextEmbedded: "text/javascript"
         }
       ],
-      // cover invalid e.g. <script type>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <script ... type =
     scriptAfterTypeEquals: [
       [
         /\{\{/,
@@ -240,12 +223,9 @@ var language = {
           nextEmbedded: "text/javascript"
         }
       ],
-      // cover invalid e.g. <script type=>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <script ... type = $S2
     scriptWithCustomType: [
       [
         /\{\{/,
@@ -267,7 +247,6 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/script\s*>/, { token: "@rematch", next: "@pop" }]
     ],
     scriptEmbedded: [
@@ -281,9 +260,6 @@ var language = {
       ],
       [/<\/script/, { token: "@rematch", next: "@pop", nextEmbedded: "@pop" }]
     ],
-    // -- END <script> tags handling
-    // -- BEGIN <style> tags handling
-    // After <style
     style: [
       [
         /\{\{/,
@@ -306,13 +282,11 @@ var language = {
         }
       ],
       [/[ \t\r\n]+/],
-      // whitespace
       [
         /(<\/)(style\s*)(>)/,
         ["delimiter.html", "tag.html", { token: "delimiter.html", next: "@pop" }]
       ]
     ],
-    // After <style ... type
     styleAfterType: [
       [
         /\{\{/,
@@ -330,12 +304,9 @@ var language = {
           nextEmbedded: "text/css"
         }
       ],
-      // cover invalid e.g. <style type>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <style ... type =
     styleAfterTypeEquals: [
       [
         /\{\{/,
@@ -366,12 +337,9 @@ var language = {
           nextEmbedded: "text/css"
         }
       ],
-      // cover invalid e.g. <style type=>
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
-    // After <style ... type = $S2
     styleWithCustomType: [
       [
         /\{\{/,
@@ -393,7 +361,6 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/],
-      // whitespace
       [/<\/style\s*>/, { token: "@rematch", next: "@pop" }]
     ],
     styleEmbedded: [
@@ -407,7 +374,6 @@ var language = {
       ],
       [/<\/style/, { token: "@rematch", next: "@pop", nextEmbedded: "@pop" }]
     ],
-    // -- END <style> tags handling
     handlebarsInSimpleState: [
       [/\{\{\{?/, "delimiter.handlebars"],
       [/\}\}\}?/, { token: "delimiter.handlebars", switchTo: "@$S2.$S3" }],

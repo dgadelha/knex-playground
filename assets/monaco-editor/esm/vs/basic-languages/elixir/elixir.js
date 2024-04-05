@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/elixir/elixir.ts
 var conf = {
@@ -47,7 +46,6 @@ var language = {
     { open: "{", close: "}", token: "delimiter.curly" },
     { open: "<<", close: ">>", token: "delimiter.angle.special" }
   ],
-  // Below are lists/regexps to which we reference later.
   declarationKeywords: [
     "def",
     "defp",
@@ -93,17 +91,12 @@ var language = {
   ],
   constants: ["true", "false", "nil"],
   nameBuiltin: ["__MODULE__", "__DIR__", "__ENV__", "__CALLER__", "__STACKTRACE__"],
-  // Matches any of the operator names:
-  // <<< >>> ||| &&& ^^^ ~~~ === !== ~>> <~> |~> <|> == != <= >= && || \\ <> ++ -- |> =~ -> <- ~> <~ :: .. = < > + - * / | . ^ & !
   operator: /-[->]?|!={0,2}|\*{1,2}|\/|\\\\|&{1,3}|\.\.?|\^(?:\^\^)?|\+\+?|<(?:-|<<|=|>|\|>|~>?)?|=~|={1,3}|>(?:=|>>)?|\|~>|\|>|\|{1,3}|~>>?|~~~|::/,
-  // See https://hexdocs.pm/elixir/syntax-reference.html#variables
   variableName: /[a-z_][a-zA-Z0-9_]*[?!]?/,
-  // See https://hexdocs.pm/elixir/syntax-reference.html#atoms
   atomName: /[a-zA-Z_][a-zA-Z0-9_@]*[?!]?|@specialAtomName|@operator/,
   specialAtomName: /\.\.\.|<<>>|%\{\}|%|\{\}/,
   aliasPart: /[A-Z][a-zA-Z0-9_]*/,
   moduleName: /@aliasPart(?:\.@aliasPart)*/,
-  // Sigil pairs are: """ """, ''' ''', " ", ' ', / /, | |, < >, { }, [ ], ( )
   sigilSymmetricDelimiter: /"""|'''|"|'|\/|\|/,
   sigilStartDelimiter: /@sigilSymmetricDelimiter|<|\{|\[|\(/,
   sigilEndDelimiter: /@sigilSymmetricDelimiter|>|\}|\]|\)/,
@@ -112,19 +105,11 @@ var language = {
   hex: /[0-9a-fA-F](_?[0-9a-fA-F])*/,
   octal: /[0-7](_?[0-7])*/,
   binary: /[01](_?[01])*/,
-  // See https://hexdocs.pm/elixir/master/String.html#module-escape-characters
   escape: /\\u[0-9a-fA-F]{4}|\\x[0-9a-fA-F]{2}|\\./,
-  // The keys below correspond to tokenizer states.
-  // We start from the root state and match against its rules
-  // until we explicitly transition into another state.
-  // The `include` simply brings in all operations from the given state
-  // and is useful for improving readability.
   tokenizer: {
     root: [
       { include: "@whitespace" },
       { include: "@comments" },
-      // Keywords start as either an identifier or a string,
-      // but end with a : so it's important to match this first.
       { include: "@keywordsShorthand" },
       { include: "@numbers" },
       { include: "@identifiers" },
@@ -134,15 +119,10 @@ var language = {
       { include: "@attributes" },
       { include: "@symbols" }
     ],
-    // Whitespace
     whitespace: [[/\s+/, "white"]],
-    // Comments
     comments: [[/(#)(.*)/, ["comment.punctuation", "comment"]]],
-    // Keyword list shorthand
     keywordsShorthand: [
       [/(@atomName)(:)(\s+)/, ["constant", "constant.punctuation", "white"]],
-      // Use positive look-ahead to ensure the string is followed by :
-      // and should be considered a keyword.
       [
         /"(?=([^"]|#\{.*?\}|\\")*":)/,
         { token: "constant.delimiter", next: "@doubleQuotedStringKeyword" }
@@ -160,7 +140,6 @@ var language = {
       [/':/, { token: "constant.delimiter", next: "@pop" }],
       { include: "@stringConstantContentInterpol" }
     ],
-    // Numbers
     numbers: [
       [/0b@binary/, "number.binary"],
       [/0o@octal/, "number.octal"],
@@ -168,11 +147,7 @@ var language = {
       [/@decimal\.@decimal([eE]-?@decimal)?/, "number.float"],
       [/@decimal/, "number"]
     ],
-    // Identifiers
     identifiers: [
-      // Tokenize identifier name in function-like definitions.
-      // Note: given `def a + b, do: nil`, `a` is not a function name,
-      // so we use negative look-ahead to ensure there's no operator.
       [
         /\b(defp?|defnp?|defmacrop?|defguardp?|defdelegate)(\s+)(@variableName)(?!\s+@operator)/,
         [
@@ -186,13 +161,10 @@ var language = {
           }
         ]
       ],
-      // Tokenize function calls
       [
-        // In-scope call - an identifier followed by ( or .(
         /(@variableName)(?=\s*\.?\s*\()/,
         {
           cases: {
-            // Tokenize as keyword in cases like `if(..., do: ..., else: ...)`
             "@declarationKeywords": "keyword.declaration",
             "@namespaceKeywords": "keyword",
             "@otherKeywords": "keyword",
@@ -201,17 +173,14 @@ var language = {
         }
       ],
       [
-        // Referencing function in a module
         /(@moduleName)(\s*)(\.)(\s*)(@variableName)/,
         ["type.identifier", "white", "operator", "white", "function.call"]
       ],
       [
-        // Referencing function in an Erlang module
         /(:)(@atomName)(\s*)(\.)(\s*)(@variableName)/,
         ["constant.punctuation", "constant", "white", "operator", "white", "function.call"]
       ],
       [
-        // Piping into a function (tokenized separately as it may not have parentheses)
         /(\|>)(\s*)(@variableName)/,
         [
           "operator",
@@ -225,11 +194,9 @@ var language = {
         ]
       ],
       [
-        // Function reference passed to another function
         /(&)(\s*)(@variableName)/,
         ["operator", "white", "function.call"]
       ],
-      // Language keywords, builtins, constants and variables
       [
         /@variableName/,
         {
@@ -245,10 +212,8 @@ var language = {
           }
         }
       ],
-      // Module names
       [/@moduleName/, "type.identifier"]
     ],
-    // Strings
     strings: [
       [/"""/, { token: "string.delimiter", next: "@doubleQuotedHeredoc" }],
       [/'''/, { token: "string.delimiter", next: "@singleQuotedHeredoc" }],
@@ -271,7 +236,6 @@ var language = {
       [/'/, { token: "string.delimiter", next: "@pop" }],
       { include: "@stringContentInterpol" }
     ],
-    // Atoms
     atoms: [
       [/(:)(@atomName)/, ["constant.punctuation", "constant"]],
       [/:"/, { token: "constant.delimiter", next: "@doubleQuotedStringAtom" }],
@@ -285,27 +249,6 @@ var language = {
       [/'/, { token: "constant.delimiter", next: "@pop" }],
       { include: "@stringConstantContentInterpol" }
     ],
-    // Sigils
-    // See https://elixir-lang.org/getting-started/sigils.html
-    // Sigils allow for typing values using their textual representation.
-    // All sigils start with ~ followed by a letter or
-    // multi-letter uppercase starting at Elixir v1.15.0, indicating sigil type
-    // and then a delimiter pair enclosing the textual representation.
-    // Optional modifiers are allowed after the closing delimiter.
-    // For instance a regular expressions can be written as:
-    // ~r/foo|bar/ ~r{foo|bar} ~r/foo|bar/g
-    //
-    // In general lowercase sigils allow for interpolation
-    // and escaped characters, whereas uppercase sigils don't
-    //
-    // During tokenization we want to distinguish some
-    // specific sigil types, namely string and regexp,
-    // so that they cen be themed separately.
-    //
-    // To reasonably handle all those combinations we leverage
-    // dot-separated states, so if we transition to @sigilStart.interpol.s.{.}
-    // then "sigilStart.interpol.s" state will match and also all
-    // the individual dot-separated parameters can be accessed.
     sigils: [
       [/~[a-z]@sigilStartDelimiter/, { token: "@rematch", next: "@sigil.interpol" }],
       [/~([A-Z]+)@sigilStartDelimiter/, { token: "@rematch", next: "@sigil.noInterpol" }]
@@ -320,14 +263,6 @@ var language = {
         { token: "@rematch", switchTo: "@sigilStart.$S2.$1.$2.$2" }
       ]
     ],
-    // The definitions below expect states to be of the form:
-    //
-    // sigilStart.<interpol-or-noInterpol>.<sigil-letter>.<start-delimiter>.<end-delimiter>
-    // sigilContinue.<interpol-or-noInterpol>.<sigil-letter>.<start-delimiter>.<end-delimiter>
-    //
-    // The sigilStart state is used only to properly classify the token (as string/regex/sigil)
-    // and immediately switches to the sigilContinue sate, which handles the actual content
-    // and waits for the corresponding end delimiter.
     "sigilStart.interpol.s": [
       [
         /~s@sigilStartDelimiter/,
@@ -359,7 +294,6 @@ var language = {
       ]
     ],
     "sigilContinue.noInterpol.S": [
-      // Ignore escaped sigil end
       [/(^|[^\\])\\@sigilEndDelimiter/, "string"],
       [
         /(@sigilEndDelimiter)@sigilModifiers/,
@@ -403,7 +337,6 @@ var language = {
       ]
     ],
     "sigilContinue.noInterpol.R": [
-      // Ignore escaped sigil end
       [/(^|[^\\])\\@sigilEndDelimiter/, "regexp"],
       [
         /(@sigilEndDelimiter)@sigilModifiers/,
@@ -416,7 +349,6 @@ var language = {
       ],
       { include: "@regexpContent" }
     ],
-    // Fallback to the generic sigil by default
     "sigilStart.interpol": [
       [
         /~([a-z]|[A-Z]+)@sigilStartDelimiter/,
@@ -448,7 +380,6 @@ var language = {
       ]
     ],
     "sigilContinue.noInterpol": [
-      // Ignore escaped sigil end
       [/(^|[^\\])\\@sigilEndDelimiter/, "sigil"],
       [
         /(@sigilEndDelimiter)@sigilModifiers/,
@@ -461,9 +392,7 @@ var language = {
       ],
       { include: "@sigilContent" }
     ],
-    // Attributes
     attributes: [
-      // Module @doc* attributes - tokenized as comments
       [
         /\@(module|type)?doc (~[sS])?"""/,
         {
@@ -493,7 +422,6 @@ var language = {
         }
       ],
       [/\@(module|type)?doc false/, "comment.block.documentation"],
-      // Module attributes
       [/\@(@variableName)/, "variable"]
     ],
     doubleQuotedHeredocDocstring: [
@@ -512,26 +440,16 @@ var language = {
       [/'/, { token: "comment.block.documentation", next: "@pop" }],
       { include: "@docstringContent" }
     ],
-    // Operators, punctuation, brackets
     symbols: [
-      // Code point operator (either with regular character ?a or an escaped one ?\n)
       [/\?(\\.|[^\\\s])/, "number.constant"],
-      // Anonymous function arguments
       [/&\d+/, "operator"],
-      // Bitshift operators (must go before delimiters, so that << >> don't match first)
       [/<<<|>>>/, "operator"],
-      // Delimiter pairs
       [/[()\[\]\{\}]|<<|>>/, "@brackets"],
-      // Triple dot is a valid name (must go before operators, so that .. doesn't match instead)
       [/\.\.\./, "identifier"],
-      // Punctuation => (must go before operators, so it's not tokenized as = then >)
       [/=>/, "punctuation"],
-      // Operators
       [/@operator/, "operator"],
-      // Punctuation
       [/[:;,.%]/, "punctuation"]
     ],
-    // Generic helpers
     stringContentInterpol: [
       { include: "@interpolation" },
       { include: "@escapeChar" },
@@ -550,8 +468,6 @@ var language = {
       { include: "@regexpContent" }
     ],
     regexpContent: [
-      // # may be a regular regexp char, so we use a heuristic
-      // assuming a # surrounded by whitespace is actually a comment.
       [/(\s)(#)(\s.*)$/, ["white", "comment.punctuation", "comment"]],
       [/./, "regexp"]
     ],
@@ -566,9 +482,6 @@ var language = {
     interpolation: [[/#{/, { token: "delimiter.bracket.embed", next: "@interpolationContinue" }]],
     interpolationContinue: [
       [/}/, { token: "delimiter.bracket.embed", next: "@pop" }],
-      // Interpolation brackets may contain arbitrary code,
-      // so we simply match against all the root rules,
-      // until we reach interpolation end (the above matches).
       { include: "@root" }
     ]
   }

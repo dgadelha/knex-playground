@@ -1,11 +1,11 @@
+"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/scala/scala", ["require"],(require)=>{
-"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -32,12 +32,6 @@ var moduleExports = (() => {
     language: () => language
   });
   var conf = {
-    /*
-     * `...` is allowed as an identifier.
-     * $ is allowed in identifiers.
-     * unary_<op> is allowed as an identifier.
-     * <name>_= is allowed as an identifier.
-     */
     wordPattern: /(unary_[@~!#%^&*()\-=+\\|:<>\/?]+)|([a-zA-Z_$][\w$]*?_=)|(`[^`]+`)|([a-zA-Z_$][\w$]*)/g,
     comments: {
       lineComment: "//",
@@ -71,7 +65,6 @@ var moduleExports = (() => {
   };
   var language = {
     tokenPostfix: ".scala",
-    // We can't easily add everything from Dotty, but we can at least add some of its keywords
     keywords: [
       "asInstanceOf",
       "catch",
@@ -104,12 +97,10 @@ var moduleExports = (() => {
       "while",
       "with",
       "yield",
-      // Dotty-specific:
       "given",
       "enum",
       "then"
     ],
-    // Dotty-specific:
     softKeywords: ["as", "export", "extension", "end", "derives", "on"],
     constants: ["true", "false", "null", "this", "super"],
     modifiers: [
@@ -122,21 +113,16 @@ var moduleExports = (() => {
       "protected",
       "sealed"
     ],
-    // Dotty-specific:
     softModifiers: ["inline", "opaque", "open", "transparent", "using"],
     name: /(?:[a-z_$][\w$]*|`[^`]+`)/,
     type: /(?:[A-Z][\w$]*)/,
-    // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/^\\%@#]+/,
     digits: /\d+(_+\d+)*/,
     hexdigits: /[[0-9a-fA-F]+(_+[0-9a-fA-F]+)*/,
-    // C# style strings
     escapes: /\\(?:[btnfr\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
     fstring_conv: /[bBhHsScCdoxXeEfgGaAt]|[Tn](?:[HIklMSLNpzZsQ]|[BbhAaCYyjmde]|[RTrDFC])/,
-    // The main tokenizer for our languages
     tokenizer: {
       root: [
-        // strings
         [/\braw"""/, { token: "string.quote", bracket: "@open", next: "@rawstringt" }],
         [/\braw"/, { token: "string.quote", bracket: "@open", next: "@rawstring" }],
         [/\bs"""/, { token: "string.quote", bracket: "@open", next: "@sstringt" }],
@@ -145,7 +131,6 @@ var moduleExports = (() => {
         [/\bf"/, { token: "string.quote", bracket: "@open", next: "@fstring" }],
         [/"""/, { token: "string.quote", bracket: "@open", next: "@stringt" }],
         [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
-        // numbers
         [/(@digits)[eE]([\-+]?(@digits))?[fFdD]?/, "number.float", "@allowMethod"],
         [/(@digits)\.(@digits)([eE][\-+]?(@digits))?[fFdD]?/, "number.float", "@allowMethod"],
         [/0[xX](@hexdigits)[Ll]?/, "number.hex", "@allowMethod"],
@@ -153,7 +138,6 @@ var moduleExports = (() => {
         [/(@digits)[lL]?/, "number", "@allowMethod"],
         [/\b_\*/, "key"],
         [/\b(_)\b/, "keyword", "@allowMethod"],
-        // identifiers and keywords
         [/\bimport\b/, "keyword", "@import"],
         [/\b(case)([ \t]+)(class)\b/, ["keyword.modifier", "white", "keyword"]],
         [/\bcase\b/, "keyword", "@case"],
@@ -185,11 +169,8 @@ var moduleExports = (() => {
           }
         ],
         [/@type/, "type", "@allowMethod"],
-        // whitespace
         { include: "@whitespace" },
-        // @ annotations.
         [/@[a-zA-Z_$][\w$]*(?:\.[a-zA-Z_$][\w$]*)*/, "annotation"],
-        // delimiters and operators
         [/[{(]/, "@brackets"],
         [/[})]/, "@brackets", "@allowMethod"],
         [/\[/, "operator.square"],
@@ -197,11 +178,8 @@ var moduleExports = (() => {
         [/]/, "operator.square"],
         [/([=-]>|<-|>:|<:|:>|<%)(?=[\s\w()[\]{},\."'`])/, "keyword"],
         [/@symbols/, "operator"],
-        // delimiter: after number because of .\d floats
         [/[;,\.]/, "delimiter"],
-        // symbols
         [/'[a-zA-Z$][\w$]*(?!')/, "attribute.name"],
-        // characters
         [/'[^\\']'/, "string", "@allowMethod"],
         [/(')(@escapes)(')/, ["string", "string.escape", { token: "string", next: "@allowMethod" }]],
         [/'/, "string.invalid"]
@@ -238,7 +216,6 @@ var moduleExports = (() => {
       comment: [
         [/[^\/*]+/, "comment"],
         [/\/\*/, "comment", "@push"],
-        // nested comment
         [/\*\//, "comment", "@pop"],
         [/[\/*]/, "comment"]
       ],

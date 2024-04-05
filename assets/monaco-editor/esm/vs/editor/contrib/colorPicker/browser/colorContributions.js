@@ -7,7 +7,7 @@ import { registerEditorContribution } from '../../../browser/editorExtensions.js
 import { Range } from '../../../common/core/range.js';
 import { ColorDecorationInjectedTextMarker } from './colorDetector.js';
 import { ColorHoverParticipant } from './colorHoverParticipant.js';
-import { HoverController } from '../../hover/browser/hover.js';
+import { ModesHoverController } from '../../hover/browser/hover.js';
 import { HoverParticipantRegistry } from '../../hover/browser/hoverTypes.js';
 export class ColorContribution extends Disposable {
     constructor(_editor) {
@@ -19,7 +19,7 @@ export class ColorContribution extends Disposable {
         super.dispose();
     }
     onMouseDown(mouseEvent) {
-        const colorDecoratorsActivatedOn = this._editor.getOption(147 /* EditorOption.colorDecoratorsActivatedOn */);
+        const colorDecoratorsActivatedOn = this._editor.getOption(146 /* EditorOption.colorDecoratorsActivatedOn */);
         if (colorDecoratorsActivatedOn !== 'click' && colorDecoratorsActivatedOn !== 'clickAndHover') {
             return;
         }
@@ -36,7 +36,7 @@ export class ColorContribution extends Disposable {
         if (!target.range) {
             return;
         }
-        const hoverController = this._editor.getContribution(HoverController.ID);
+        const hoverController = this._editor.getContribution(ModesHoverController.ID);
         if (!hoverController) {
             return;
         }

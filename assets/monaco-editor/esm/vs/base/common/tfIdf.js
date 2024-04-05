@@ -57,7 +57,8 @@ export class TfIdfCalculator {
         // Only match on words that are at least 3 characters long and start with a letter
         for (const [word] of input.matchAll(/\b\p{Letter}[\p{Letter}\d]{2,}\b/gu)) {
             yield normalize(word);
-            const camelParts = word.replace(/([a-z])([A-Z])/g, '$1 $2').split(/\s+/g);
+            // eslint-disable-next-line local/code-no-look-behind-regex
+            const camelParts = word.split(/(?<=[a-z])(?=[A-Z])/g);
             if (camelParts.length > 1) {
                 for (const part of camelParts) {
                     // Require at least 3 letters in the parts of a camel case word

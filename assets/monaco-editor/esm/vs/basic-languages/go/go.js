@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/go/go.ts
 var conf = {
@@ -135,13 +134,10 @@ var language = {
     ".",
     ":"
   ],
-  // we include these common regular expressions
   symbols: /[=><!~?:&|+\-*\/\^%]+/,
   escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // identifiers and keywords
       [
         /[a-zA-Z_]\w*/,
         {
@@ -151,13 +147,9 @@ var language = {
           }
         }
       ],
-      // whitespace
       { include: "@whitespace" },
-      // [[ attributes ]].
       [/\[\[.*\]\]/, "annotation"],
-      // Preprocessor directive
       [/^\s*#\w+/, "keyword"],
-      // delimiters and operators
       [/[{}()\[\]]/, "@brackets"],
       [/[<>](?!@symbols)/, "@brackets"],
       [
@@ -169,7 +161,6 @@ var language = {
           }
         }
       ],
-      // numbers
       [/\d*\d+[eE]([\-+]?\d+)?/, "number.float"],
       [/\d*\.\d+([eE][\-+]?\d+)?/, "number.float"],
       [/0[xX][0-9a-fA-F']*[0-9a-fA-F]/, "number.hex"],
@@ -177,14 +168,10 @@ var language = {
       [/0[bB][0-1']*[0-1]/, "number.binary"],
       [/\d[\d']*/, "number"],
       [/\d/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
-      // strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/"/, "string", "@string"],
       [/`/, "string", "@rawstring"],
-      // characters
       [/'[^\\']'/, "string"],
       [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
       [/'/, "string.invalid"]
@@ -197,15 +184,11 @@ var language = {
     ],
     comment: [
       [/[^\/*]+/, "comment"],
-      // [/\/\*/, 'comment', '@push' ],    // nested comment not allowed :-(
-      // [/\/\*/,    'comment.invalid' ],    // this breaks block comments in the shape of /* //*/
       [/\*\//, "comment", "@pop"],
       [/[\/*]/, "comment"]
     ],
-    //Identical copy of comment above, except for the addition of .doc
     doccomment: [
       [/[^\/*]+/, "comment.doc"],
-      // [/\/\*/, 'comment.doc', '@push' ],    // nested comment not allowed :-(
       [/\/\*/, "comment.doc.invalid"],
       [/\*\//, "comment.doc", "@pop"],
       [/[\/*]/, "comment.doc"]

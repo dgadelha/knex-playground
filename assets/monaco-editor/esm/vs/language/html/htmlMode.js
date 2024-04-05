@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -27,6 +27,12 @@ import * as monaco_editor_core_star from "../../editor/editor.api.js";
 // src/language/html/workerManager.ts
 var STOP_WHEN_IDLE_FOR = 2 * 60 * 1e3;
 var WorkerManager = class {
+  _defaults;
+  _idleCheckInterval;
+  _lastUsedTime;
+  _configChangeListener;
+  _worker;
+  _client;
   constructor(defaults) {
     this._defaults = defaults;
     this._worker = null;
@@ -60,9 +66,7 @@ var WorkerManager = class {
     this._lastUsedTime = Date.now();
     if (!this._client) {
       this._worker = monaco_editor_core_exports.editor.createWebWorker({
-        // module that exports the create() method and returns a `HTMLWorker` instance
         moduleId: "vs/language/html/htmlWorker",
-        // passed in to the create() method
         createData: {
           languageSettings: this._defaults.options,
           languageId: this._defaults.languageId
@@ -476,294 +480,281 @@ var WorkspaceEdit;
   }
   WorkspaceEdit2.is = is;
 })(WorkspaceEdit || (WorkspaceEdit = {}));
-var TextEditChangeImpl = (
-  /** @class */
-  function() {
-    function TextEditChangeImpl2(edits, changeAnnotations) {
-      this.edits = edits;
-      this.changeAnnotations = changeAnnotations;
+var TextEditChangeImpl = function() {
+  function TextEditChangeImpl2(edits, changeAnnotations) {
+    this.edits = edits;
+    this.changeAnnotations = changeAnnotations;
+  }
+  TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
+    var edit;
+    var id;
+    if (annotation === void 0) {
+      edit = TextEdit.insert(position, newText);
+    } else if (ChangeAnnotationIdentifier.is(annotation)) {
+      id = annotation;
+      edit = AnnotatedTextEdit.insert(position, newText, annotation);
+    } else {
+      this.assertChangeAnnotations(this.changeAnnotations);
+      id = this.changeAnnotations.manage(annotation);
+      edit = AnnotatedTextEdit.insert(position, newText, id);
     }
-    TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.insert(position, newText);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.insert(position, newText, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.insert(position, newText, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.replace(range, newText);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.replace(range, newText, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.replace(range, newText, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.delete = function(range, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.del(range);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.del(range, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.del(range, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.add = function(edit) {
-      this.edits.push(edit);
-    };
-    TextEditChangeImpl2.prototype.all = function() {
-      return this.edits;
-    };
-    TextEditChangeImpl2.prototype.clear = function() {
-      this.edits.splice(0, this.edits.length);
-    };
-    TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
-      if (value === void 0) {
-        throw new Error("Text edit change is not configured to manage change annotations.");
-      }
-    };
-    return TextEditChangeImpl2;
-  }()
-);
-var ChangeAnnotations = (
-  /** @class */
-  function() {
-    function ChangeAnnotations2(annotations) {
-      this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
-      this._counter = 0;
-      this._size = 0;
-    }
-    ChangeAnnotations2.prototype.all = function() {
-      return this._annotations;
-    };
-    Object.defineProperty(ChangeAnnotations2.prototype, "size", {
-      get: function() {
-        return this._size;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
-      var id;
-      if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
-        id = idOrAnnotation;
-      } else {
-        id = this.nextId();
-        annotation = idOrAnnotation;
-      }
-      if (this._annotations[id] !== void 0) {
-        throw new Error("Id " + id + " is already in use.");
-      }
-      if (annotation === void 0) {
-        throw new Error("No annotation provided for id " + id);
-      }
-      this._annotations[id] = annotation;
-      this._size++;
+    this.edits.push(edit);
+    if (id !== void 0) {
       return id;
-    };
-    ChangeAnnotations2.prototype.nextId = function() {
-      this._counter++;
-      return this._counter.toString();
-    };
-    return ChangeAnnotations2;
-  }()
-);
-var WorkspaceChange = (
-  /** @class */
-  function() {
-    function WorkspaceChange2(workspaceEdit) {
-      var _this = this;
-      this._textEditChanges = /* @__PURE__ */ Object.create(null);
-      if (workspaceEdit !== void 0) {
-        this._workspaceEdit = workspaceEdit;
-        if (workspaceEdit.documentChanges) {
-          this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
-          workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-          workspaceEdit.documentChanges.forEach(function(change) {
-            if (TextDocumentEdit.is(change)) {
-              var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
-              _this._textEditChanges[change.textDocument.uri] = textEditChange;
-            }
-          });
-        } else if (workspaceEdit.changes) {
-          Object.keys(workspaceEdit.changes).forEach(function(key) {
-            var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
-            _this._textEditChanges[key] = textEditChange;
-          });
-        }
-      } else {
-        this._workspaceEdit = {};
-      }
     }
-    Object.defineProperty(WorkspaceChange2.prototype, "edit", {
-      /**
-       * Returns the underlying [WorkspaceEdit](#WorkspaceEdit) literal
-       * use to be returned from a workspace edit operation like rename.
-       */
-      get: function() {
-        this.initDocumentChanges();
-        if (this._changeAnnotations !== void 0) {
-          if (this._changeAnnotations.size === 0) {
-            this._workspaceEdit.changeAnnotations = void 0;
-          } else {
-            this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+  };
+  TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
+    var edit;
+    var id;
+    if (annotation === void 0) {
+      edit = TextEdit.replace(range, newText);
+    } else if (ChangeAnnotationIdentifier.is(annotation)) {
+      id = annotation;
+      edit = AnnotatedTextEdit.replace(range, newText, annotation);
+    } else {
+      this.assertChangeAnnotations(this.changeAnnotations);
+      id = this.changeAnnotations.manage(annotation);
+      edit = AnnotatedTextEdit.replace(range, newText, id);
+    }
+    this.edits.push(edit);
+    if (id !== void 0) {
+      return id;
+    }
+  };
+  TextEditChangeImpl2.prototype.delete = function(range, annotation) {
+    var edit;
+    var id;
+    if (annotation === void 0) {
+      edit = TextEdit.del(range);
+    } else if (ChangeAnnotationIdentifier.is(annotation)) {
+      id = annotation;
+      edit = AnnotatedTextEdit.del(range, annotation);
+    } else {
+      this.assertChangeAnnotations(this.changeAnnotations);
+      id = this.changeAnnotations.manage(annotation);
+      edit = AnnotatedTextEdit.del(range, id);
+    }
+    this.edits.push(edit);
+    if (id !== void 0) {
+      return id;
+    }
+  };
+  TextEditChangeImpl2.prototype.add = function(edit) {
+    this.edits.push(edit);
+  };
+  TextEditChangeImpl2.prototype.all = function() {
+    return this.edits;
+  };
+  TextEditChangeImpl2.prototype.clear = function() {
+    this.edits.splice(0, this.edits.length);
+  };
+  TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
+    if (value === void 0) {
+      throw new Error("Text edit change is not configured to manage change annotations.");
+    }
+  };
+  return TextEditChangeImpl2;
+}();
+var ChangeAnnotations = function() {
+  function ChangeAnnotations2(annotations) {
+    this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
+    this._counter = 0;
+    this._size = 0;
+  }
+  ChangeAnnotations2.prototype.all = function() {
+    return this._annotations;
+  };
+  Object.defineProperty(ChangeAnnotations2.prototype, "size", {
+    get: function() {
+      return this._size;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
+    var id;
+    if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
+      id = idOrAnnotation;
+    } else {
+      id = this.nextId();
+      annotation = idOrAnnotation;
+    }
+    if (this._annotations[id] !== void 0) {
+      throw new Error("Id " + id + " is already in use.");
+    }
+    if (annotation === void 0) {
+      throw new Error("No annotation provided for id " + id);
+    }
+    this._annotations[id] = annotation;
+    this._size++;
+    return id;
+  };
+  ChangeAnnotations2.prototype.nextId = function() {
+    this._counter++;
+    return this._counter.toString();
+  };
+  return ChangeAnnotations2;
+}();
+var WorkspaceChange = function() {
+  function WorkspaceChange2(workspaceEdit) {
+    var _this = this;
+    this._textEditChanges = /* @__PURE__ */ Object.create(null);
+    if (workspaceEdit !== void 0) {
+      this._workspaceEdit = workspaceEdit;
+      if (workspaceEdit.documentChanges) {
+        this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
+        workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+        workspaceEdit.documentChanges.forEach(function(change) {
+          if (TextDocumentEdit.is(change)) {
+            var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
+            _this._textEditChanges[change.textDocument.uri] = textEditChange;
           }
-        }
-        return this._workspaceEdit;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    WorkspaceChange2.prototype.getTextEditChange = function(key) {
-      if (OptionalVersionedTextDocumentIdentifier.is(key)) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        var textDocument = { uri: key.uri, version: key.version };
-        var result = this._textEditChanges[textDocument.uri];
-        if (!result) {
-          var edits = [];
-          var textDocumentEdit = {
-            textDocument,
-            edits
-          };
-          this._workspaceEdit.documentChanges.push(textDocumentEdit);
-          result = new TextEditChangeImpl(edits, this._changeAnnotations);
-          this._textEditChanges[textDocument.uri] = result;
-        }
-        return result;
-      } else {
-        this.initChanges();
-        if (this._workspaceEdit.changes === void 0) {
-          throw new Error("Workspace edit is not configured for normal text edit changes.");
-        }
-        var result = this._textEditChanges[key];
-        if (!result) {
-          var edits = [];
-          this._workspaceEdit.changes[key] = edits;
-          result = new TextEditChangeImpl(edits);
-          this._textEditChanges[key] = result;
-        }
-        return result;
+        });
+      } else if (workspaceEdit.changes) {
+        Object.keys(workspaceEdit.changes).forEach(function(key) {
+          var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
+          _this._textEditChanges[key] = textEditChange;
+        });
       }
-    };
-    WorkspaceChange2.prototype.initDocumentChanges = function() {
-      if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-        this._changeAnnotations = new ChangeAnnotations();
-        this._workspaceEdit.documentChanges = [];
-        this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+    } else {
+      this._workspaceEdit = {};
+    }
+  }
+  Object.defineProperty(WorkspaceChange2.prototype, "edit", {
+    get: function() {
+      this.initDocumentChanges();
+      if (this._changeAnnotations !== void 0) {
+        if (this._changeAnnotations.size === 0) {
+          this._workspaceEdit.changeAnnotations = void 0;
+        } else {
+          this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+        }
       }
-    };
-    WorkspaceChange2.prototype.initChanges = function() {
-      if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-        this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
-      }
-    };
-    WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
+      return this._workspaceEdit;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  WorkspaceChange2.prototype.getTextEditChange = function(key) {
+    if (OptionalVersionedTextDocumentIdentifier.is(key)) {
       this.initDocumentChanges();
       if (this._workspaceEdit.documentChanges === void 0) {
         throw new Error("Workspace edit is not configured for document changes.");
       }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
+      var textDocument = { uri: key.uri, version: key.version };
+      var result = this._textEditChanges[textDocument.uri];
+      if (!result) {
+        var edits = [];
+        var textDocumentEdit = {
+          textDocument,
+          edits
+        };
+        this._workspaceEdit.documentChanges.push(textDocumentEdit);
+        result = new TextEditChangeImpl(edits, this._changeAnnotations);
+        this._textEditChanges[textDocument.uri] = result;
       }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = CreateFile.create(uri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = CreateFile.create(uri, options, id);
+      return result;
+    } else {
+      this.initChanges();
+      if (this._workspaceEdit.changes === void 0) {
+        throw new Error("Workspace edit is not configured for normal text edit changes.");
       }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
+      var result = this._textEditChanges[key];
+      if (!result) {
+        var edits = [];
+        this._workspaceEdit.changes[key] = edits;
+        result = new TextEditChangeImpl(edits);
+        this._textEditChanges[key] = result;
       }
-    };
-    WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = RenameFile.create(oldUri, newUri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = RenameFile.create(oldUri, newUri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = DeleteFile.create(uri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = DeleteFile.create(uri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    return WorkspaceChange2;
-  }()
-);
+      return result;
+    }
+  };
+  WorkspaceChange2.prototype.initDocumentChanges = function() {
+    if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+      this._changeAnnotations = new ChangeAnnotations();
+      this._workspaceEdit.documentChanges = [];
+      this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+    }
+  };
+  WorkspaceChange2.prototype.initChanges = function() {
+    if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+      this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
+    }
+  };
+  WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
+    this.initDocumentChanges();
+    if (this._workspaceEdit.documentChanges === void 0) {
+      throw new Error("Workspace edit is not configured for document changes.");
+    }
+    var annotation;
+    if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+      annotation = optionsOrAnnotation;
+    } else {
+      options = optionsOrAnnotation;
+    }
+    var operation;
+    var id;
+    if (annotation === void 0) {
+      operation = CreateFile.create(uri, options);
+    } else {
+      id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+      operation = CreateFile.create(uri, options, id);
+    }
+    this._workspaceEdit.documentChanges.push(operation);
+    if (id !== void 0) {
+      return id;
+    }
+  };
+  WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
+    this.initDocumentChanges();
+    if (this._workspaceEdit.documentChanges === void 0) {
+      throw new Error("Workspace edit is not configured for document changes.");
+    }
+    var annotation;
+    if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+      annotation = optionsOrAnnotation;
+    } else {
+      options = optionsOrAnnotation;
+    }
+    var operation;
+    var id;
+    if (annotation === void 0) {
+      operation = RenameFile.create(oldUri, newUri, options);
+    } else {
+      id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+      operation = RenameFile.create(oldUri, newUri, options, id);
+    }
+    this._workspaceEdit.documentChanges.push(operation);
+    if (id !== void 0) {
+      return id;
+    }
+  };
+  WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
+    this.initDocumentChanges();
+    if (this._workspaceEdit.documentChanges === void 0) {
+      throw new Error("Workspace edit is not configured for document changes.");
+    }
+    var annotation;
+    if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+      annotation = optionsOrAnnotation;
+    } else {
+      options = optionsOrAnnotation;
+    }
+    var operation;
+    var id;
+    if (annotation === void 0) {
+      operation = DeleteFile.create(uri, options);
+    } else {
+      id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+      operation = DeleteFile.create(uri, options, id);
+    }
+    this._workspaceEdit.documentChanges.push(operation);
+    if (id !== void 0) {
+      return id;
+    }
+  };
+  return WorkspaceChange2;
+}();
 var TextDocumentIdentifier;
 (function(TextDocumentIdentifier2) {
   function create(uri) {
@@ -1203,112 +1194,109 @@ var TextDocument;
     return data;
   }
 })(TextDocument || (TextDocument = {}));
-var FullTextDocument = (
-  /** @class */
-  function() {
-    function FullTextDocument2(uri, languageId, version, content) {
-      this._uri = uri;
-      this._languageId = languageId;
-      this._version = version;
-      this._content = content;
-      this._lineOffsets = void 0;
+var FullTextDocument = function() {
+  function FullTextDocument2(uri, languageId, version, content) {
+    this._uri = uri;
+    this._languageId = languageId;
+    this._version = version;
+    this._content = content;
+    this._lineOffsets = void 0;
+  }
+  Object.defineProperty(FullTextDocument2.prototype, "uri", {
+    get: function() {
+      return this._uri;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  Object.defineProperty(FullTextDocument2.prototype, "languageId", {
+    get: function() {
+      return this._languageId;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  Object.defineProperty(FullTextDocument2.prototype, "version", {
+    get: function() {
+      return this._version;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  FullTextDocument2.prototype.getText = function(range) {
+    if (range) {
+      var start = this.offsetAt(range.start);
+      var end = this.offsetAt(range.end);
+      return this._content.substring(start, end);
     }
-    Object.defineProperty(FullTextDocument2.prototype, "uri", {
-      get: function() {
-        return this._uri;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(FullTextDocument2.prototype, "languageId", {
-      get: function() {
-        return this._languageId;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(FullTextDocument2.prototype, "version", {
-      get: function() {
-        return this._version;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    FullTextDocument2.prototype.getText = function(range) {
-      if (range) {
-        var start = this.offsetAt(range.start);
-        var end = this.offsetAt(range.end);
-        return this._content.substring(start, end);
-      }
-      return this._content;
-    };
-    FullTextDocument2.prototype.update = function(event, version) {
-      this._content = event.text;
-      this._version = version;
-      this._lineOffsets = void 0;
-    };
-    FullTextDocument2.prototype.getLineOffsets = function() {
-      if (this._lineOffsets === void 0) {
-        var lineOffsets = [];
-        var text = this._content;
-        var isLineStart = true;
-        for (var i = 0; i < text.length; i++) {
-          if (isLineStart) {
-            lineOffsets.push(i);
-            isLineStart = false;
-          }
-          var ch = text.charAt(i);
-          isLineStart = ch === "\r" || ch === "\n";
-          if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
-            i++;
-          }
+    return this._content;
+  };
+  FullTextDocument2.prototype.update = function(event, version) {
+    this._content = event.text;
+    this._version = version;
+    this._lineOffsets = void 0;
+  };
+  FullTextDocument2.prototype.getLineOffsets = function() {
+    if (this._lineOffsets === void 0) {
+      var lineOffsets = [];
+      var text = this._content;
+      var isLineStart = true;
+      for (var i = 0; i < text.length; i++) {
+        if (isLineStart) {
+          lineOffsets.push(i);
+          isLineStart = false;
         }
-        if (isLineStart && text.length > 0) {
-          lineOffsets.push(text.length);
-        }
-        this._lineOffsets = lineOffsets;
-      }
-      return this._lineOffsets;
-    };
-    FullTextDocument2.prototype.positionAt = function(offset) {
-      offset = Math.max(Math.min(offset, this._content.length), 0);
-      var lineOffsets = this.getLineOffsets();
-      var low = 0, high = lineOffsets.length;
-      if (high === 0) {
-        return Position.create(0, offset);
-      }
-      while (low < high) {
-        var mid = Math.floor((low + high) / 2);
-        if (lineOffsets[mid] > offset) {
-          high = mid;
-        } else {
-          low = mid + 1;
+        var ch = text.charAt(i);
+        isLineStart = ch === "\r" || ch === "\n";
+        if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
+          i++;
         }
       }
-      var line = low - 1;
-      return Position.create(line, offset - lineOffsets[line]);
-    };
-    FullTextDocument2.prototype.offsetAt = function(position) {
-      var lineOffsets = this.getLineOffsets();
-      if (position.line >= lineOffsets.length) {
-        return this._content.length;
-      } else if (position.line < 0) {
-        return 0;
+      if (isLineStart && text.length > 0) {
+        lineOffsets.push(text.length);
       }
-      var lineOffset = lineOffsets[position.line];
-      var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-      return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
-    };
-    Object.defineProperty(FullTextDocument2.prototype, "lineCount", {
-      get: function() {
-        return this.getLineOffsets().length;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return FullTextDocument2;
-  }()
-);
+      this._lineOffsets = lineOffsets;
+    }
+    return this._lineOffsets;
+  };
+  FullTextDocument2.prototype.positionAt = function(offset) {
+    offset = Math.max(Math.min(offset, this._content.length), 0);
+    var lineOffsets = this.getLineOffsets();
+    var low = 0, high = lineOffsets.length;
+    if (high === 0) {
+      return Position.create(0, offset);
+    }
+    while (low < high) {
+      var mid = Math.floor((low + high) / 2);
+      if (lineOffsets[mid] > offset) {
+        high = mid;
+      } else {
+        low = mid + 1;
+      }
+    }
+    var line = low - 1;
+    return Position.create(line, offset - lineOffsets[line]);
+  };
+  FullTextDocument2.prototype.offsetAt = function(position) {
+    var lineOffsets = this.getLineOffsets();
+    if (position.line >= lineOffsets.length) {
+      return this._content.length;
+    } else if (position.line < 0) {
+      return 0;
+    }
+    var lineOffset = lineOffsets[position.line];
+    var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+    return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
+  };
+  Object.defineProperty(FullTextDocument2.prototype, "lineCount", {
+    get: function() {
+      return this.getLineOffsets().length;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  return FullTextDocument2;
+}();
 var Is;
 (function(Is2) {
   var toString = Object.prototype.toString;
@@ -1363,8 +1351,6 @@ var DiagnosticsAdapter = class {
   constructor(_languageId, _worker, configChangeEvent) {
     this._languageId = _languageId;
     this._worker = _worker;
-    this._disposables = [];
-    this._listener = /* @__PURE__ */ Object.create(null);
     const onModelAdd = (model) => {
       let modeId = model.getLanguageId();
       if (modeId !== this._languageId) {
@@ -1388,22 +1374,18 @@ var DiagnosticsAdapter = class {
     };
     this._disposables.push(monaco_editor_core_exports.editor.onDidCreateModel(onModelAdd));
     this._disposables.push(monaco_editor_core_exports.editor.onWillDisposeModel(onModelRemoved));
-    this._disposables.push(
-      monaco_editor_core_exports.editor.onDidChangeModelLanguage((event) => {
-        onModelRemoved(event.model);
-        onModelAdd(event.model);
-      })
-    );
-    this._disposables.push(
-      configChangeEvent((_) => {
-        monaco_editor_core_exports.editor.getModels().forEach((model) => {
-          if (model.getLanguageId() === this._languageId) {
-            onModelRemoved(model);
-            onModelAdd(model);
-          }
-        });
-      })
-    );
+    this._disposables.push(monaco_editor_core_exports.editor.onDidChangeModelLanguage((event) => {
+      onModelRemoved(event.model);
+      onModelAdd(event.model);
+    }));
+    this._disposables.push(configChangeEvent((_) => {
+      monaco_editor_core_exports.editor.getModels().forEach((model) => {
+        if (model.getLanguageId() === this._languageId) {
+          onModelRemoved(model);
+          onModelAdd(model);
+        }
+      });
+    }));
     this._disposables.push({
       dispose: () => {
         monaco_editor_core_exports.editor.getModels().forEach(onModelRemoved);
@@ -1414,6 +1396,8 @@ var DiagnosticsAdapter = class {
     });
     monaco_editor_core_exports.editor.getModels().forEach(onModelAdd);
   }
+  _disposables = [];
+  _listener = /* @__PURE__ */ Object.create(null);
   dispose() {
     this._disposables.forEach((d) => d && d.dispose());
     this._disposables.length = 0;
@@ -1476,12 +1460,7 @@ var CompletionAdapter = class {
         return;
       }
       const wordInfo = model.getWordUntilPosition(position);
-      const wordRange = new monaco_editor_core_exports.Range(
-        position.lineNumber,
-        wordInfo.startColumn,
-        position.lineNumber,
-        wordInfo.endColumn
-      );
+      const wordRange = new monaco_editor_core_exports.Range(position.lineNumber, wordInfo.startColumn, position.lineNumber, wordInfo.endColumn);
       const items = info.items.map((entry) => {
         const item = {
           label: entry.label,
@@ -1542,12 +1521,7 @@ function toRange(range) {
   if (!range) {
     return void 0;
   }
-  return new monaco_editor_core_exports.Range(
-    range.start.line + 1,
-    range.start.character + 1,
-    range.end.line + 1,
-    range.end.character + 1
-  );
+  return new monaco_editor_core_exports.Range(range.start.line + 1, range.start.character + 1, range.end.line + 1, range.end.character + 1);
 }
 function isInsertReplaceEdit(edit) {
   return typeof edit.insert !== "undefined" && typeof edit.replace !== "undefined";
@@ -1768,42 +1742,23 @@ var DocumentSymbolAdapter = class {
       if (!items) {
         return;
       }
-      return items.map((item) => {
-        if (isDocumentSymbol(item)) {
-          return toDocumentSymbol(item);
-        }
-        return {
-          name: item.name,
-          detail: "",
-          containerName: item.containerName,
-          kind: toSymbolKind(item.kind),
-          range: toRange(item.location.range),
-          selectionRange: toRange(item.location.range),
-          tags: []
-        };
-      });
+      return items.map((item) => ({
+        name: item.name,
+        detail: "",
+        containerName: item.containerName,
+        kind: toSymbolKind(item.kind),
+        range: toRange(item.location.range),
+        selectionRange: toRange(item.location.range),
+        tags: []
+      }));
     });
   }
 };
-function isDocumentSymbol(symbol) {
-  return "children" in symbol;
-}
-function toDocumentSymbol(symbol) {
-  return {
-    name: symbol.name,
-    detail: symbol.detail ?? "",
-    kind: toSymbolKind(symbol.kind),
-    range: toRange(symbol.range),
-    selectionRange: toRange(symbol.selectionRange),
-    tags: symbol.tags ?? [],
-    children: (symbol.children ?? []).map((item) => toDocumentSymbol(item))
-  };
-}
 function toSymbolKind(kind) {
   let mKind = monaco_editor_core_exports.languages.SymbolKind;
   switch (kind) {
     case SymbolKind.File:
-      return mKind.File;
+      return mKind.Array;
     case SymbolKind.Module:
       return mKind.Module;
     case SymbolKind.Namespace:
@@ -1879,8 +1834,8 @@ var DocumentFormattingEditProvider = class {
 var DocumentRangeFormattingEditProvider = class {
   constructor(_worker) {
     this._worker = _worker;
-    this.canFormatMultipleRanges = false;
   }
+  canFormatMultipleRanges = false;
   provideDocumentRangeFormattingEdits(model, range, options, token) {
     const resource = model.uri;
     return this._worker(resource).then((worker) => {
@@ -1917,9 +1872,7 @@ var DocumentColorAdapter = class {
   }
   provideColorPresentations(model, info, token) {
     const resource = model.uri;
-    return this._worker(resource).then(
-      (worker) => worker.getColorPresentations(resource.toString(), info.color, fromRange(info.range))
-    ).then((presentations) => {
+    return this._worker(resource).then((worker) => worker.getColorPresentations(resource.toString(), info.color, fromRange(info.range))).then((presentations) => {
       if (!presentations) {
         return;
       }
@@ -1978,12 +1931,7 @@ var SelectionRangeAdapter = class {
   }
   provideSelectionRanges(model, positions, token) {
     const resource = model.uri;
-    return this._worker(resource).then(
-      (worker) => worker.getSelectionRanges(
-        resource.toString(),
-        positions.map(fromPosition)
-      )
-    ).then((selectionRanges) => {
+    return this._worker(resource).then((worker) => worker.getSelectionRanges(resource.toString(), positions.map(fromPosition))).then((selectionRanges) => {
       if (!selectionRanges) {
         return;
       }
@@ -2013,33 +1961,15 @@ function setupMode1(defaults) {
   let languageId = defaults.languageId;
   monaco_editor_core_exports.languages.registerCompletionItemProvider(languageId, new HTMLCompletionAdapter(worker));
   monaco_editor_core_exports.languages.registerHoverProvider(languageId, new HoverAdapter(worker));
-  monaco_editor_core_exports.languages.registerDocumentHighlightProvider(
-    languageId,
-    new DocumentHighlightAdapter(worker)
-  );
+  monaco_editor_core_exports.languages.registerDocumentHighlightProvider(languageId, new DocumentHighlightAdapter(worker));
   monaco_editor_core_exports.languages.registerLinkProvider(languageId, new DocumentLinkAdapter(worker));
-  monaco_editor_core_exports.languages.registerFoldingRangeProvider(
-    languageId,
-    new FoldingRangeAdapter(worker)
-  );
-  monaco_editor_core_exports.languages.registerDocumentSymbolProvider(
-    languageId,
-    new DocumentSymbolAdapter(worker)
-  );
-  monaco_editor_core_exports.languages.registerSelectionRangeProvider(
-    languageId,
-    new SelectionRangeAdapter(worker)
-  );
+  monaco_editor_core_exports.languages.registerFoldingRangeProvider(languageId, new FoldingRangeAdapter(worker));
+  monaco_editor_core_exports.languages.registerDocumentSymbolProvider(languageId, new DocumentSymbolAdapter(worker));
+  monaco_editor_core_exports.languages.registerSelectionRangeProvider(languageId, new SelectionRangeAdapter(worker));
   monaco_editor_core_exports.languages.registerRenameProvider(languageId, new RenameAdapter(worker));
   if (languageId === "html") {
-    monaco_editor_core_exports.languages.registerDocumentFormattingEditProvider(
-      languageId,
-      new DocumentFormattingEditProvider(worker)
-    );
-    monaco_editor_core_exports.languages.registerDocumentRangeFormattingEditProvider(
-      languageId,
-      new DocumentRangeFormattingEditProvider(worker)
-    );
+    monaco_editor_core_exports.languages.registerDocumentFormattingEditProvider(languageId, new DocumentFormattingEditProvider(worker));
+    monaco_editor_core_exports.languages.registerDocumentRangeFormattingEditProvider(languageId, new DocumentRangeFormattingEditProvider(worker));
   }
 }
 function setupMode(defaults) {
@@ -2054,72 +1984,34 @@ function setupMode(defaults) {
     const { languageId, modeConfiguration } = defaults;
     disposeAll(providers);
     if (modeConfiguration.completionItems) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerCompletionItemProvider(languageId, new HTMLCompletionAdapter(worker))
-      );
+      providers.push(monaco_editor_core_exports.languages.registerCompletionItemProvider(languageId, new HTMLCompletionAdapter(worker)));
     }
     if (modeConfiguration.hovers) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerHoverProvider(languageId, new HoverAdapter(worker))
-      );
+      providers.push(monaco_editor_core_exports.languages.registerHoverProvider(languageId, new HoverAdapter(worker)));
     }
     if (modeConfiguration.documentHighlights) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerDocumentHighlightProvider(
-          languageId,
-          new DocumentHighlightAdapter(worker)
-        )
-      );
+      providers.push(monaco_editor_core_exports.languages.registerDocumentHighlightProvider(languageId, new DocumentHighlightAdapter(worker)));
     }
     if (modeConfiguration.links) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerLinkProvider(languageId, new DocumentLinkAdapter(worker))
-      );
+      providers.push(monaco_editor_core_exports.languages.registerLinkProvider(languageId, new DocumentLinkAdapter(worker)));
     }
     if (modeConfiguration.documentSymbols) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerDocumentSymbolProvider(
-          languageId,
-          new DocumentSymbolAdapter(worker)
-        )
-      );
+      providers.push(monaco_editor_core_exports.languages.registerDocumentSymbolProvider(languageId, new DocumentSymbolAdapter(worker)));
     }
     if (modeConfiguration.rename) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerRenameProvider(languageId, new RenameAdapter(worker))
-      );
+      providers.push(monaco_editor_core_exports.languages.registerRenameProvider(languageId, new RenameAdapter(worker)));
     }
     if (modeConfiguration.foldingRanges) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerFoldingRangeProvider(
-          languageId,
-          new FoldingRangeAdapter(worker)
-        )
-      );
+      providers.push(monaco_editor_core_exports.languages.registerFoldingRangeProvider(languageId, new FoldingRangeAdapter(worker)));
     }
     if (modeConfiguration.selectionRanges) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerSelectionRangeProvider(
-          languageId,
-          new SelectionRangeAdapter(worker)
-        )
-      );
+      providers.push(monaco_editor_core_exports.languages.registerSelectionRangeProvider(languageId, new SelectionRangeAdapter(worker)));
     }
     if (modeConfiguration.documentFormattingEdits) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerDocumentFormattingEditProvider(
-          languageId,
-          new DocumentFormattingEditProvider(worker)
-        )
-      );
+      providers.push(monaco_editor_core_exports.languages.registerDocumentFormattingEditProvider(languageId, new DocumentFormattingEditProvider(worker)));
     }
     if (modeConfiguration.documentRangeFormattingEdits) {
-      providers.push(
-        monaco_editor_core_exports.languages.registerDocumentRangeFormattingEditProvider(
-          languageId,
-          new DocumentRangeFormattingEditProvider(worker)
-        )
-      );
+      providers.push(monaco_editor_core_exports.languages.registerDocumentRangeFormattingEditProvider(languageId, new DocumentRangeFormattingEditProvider(worker)));
     }
   }
   registerProviders();

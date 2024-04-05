@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/cameligo/cameligo.ts
 var conf = {
@@ -115,12 +114,9 @@ var language = {
     "&&",
     "||"
   ],
-  // we include these common regular expressions
   symbols: /[=><:@\^&|+\-*\/\^%]+/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // identifiers and keywords
       [
         /[a-zA-Z_][\w]*/,
         {
@@ -130,9 +126,7 @@ var language = {
           }
         }
       ],
-      // whitespace
       { include: "@whitespace" },
-      // delimiters and operators
       [/[{}()\[\]]/, "@brackets"],
       [/[<>](?!@symbols)/, "@brackets"],
       [
@@ -144,25 +138,18 @@ var language = {
           }
         }
       ],
-      // numbers
       [/\d*\.\d+([eE][\-+]?\d+)?/, "number.float"],
       [/\$[0-9a-fA-F]{1,16}/, "number.hex"],
       [/\d+/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
-      // strings
       [/'([^'\\]|\\.)*$/, "string.invalid"],
-      // non-teminated string
       [/'/, "string", "@string"],
-      // characters
       [/'[^\\']'/, "string"],
       [/'/, "string.invalid"],
       [/\#\d+/, "string"]
     ],
-    /* */
     comment: [
       [/[^\(\*]+/, "comment"],
-      //[/\(\*/,    'comment', '@push' ],    // nested comment  not allowed :-(
       [/\*\)/, "comment", "@pop"],
       [/\(\*/, "comment"]
     ],

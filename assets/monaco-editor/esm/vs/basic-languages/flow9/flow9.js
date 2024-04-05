@@ -1,10 +1,9 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
+ * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
-
 
 // src/basic-languages/flow9/flow9.ts
 var conf = {
@@ -92,10 +91,8 @@ var language = {
   ],
   symbols: /[@$=><!~?:&|+\-*\\\/\^%]+/,
   escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
-  // The main tokenizer for our languages
   tokenizer: {
     root: [
-      // identifiers and keywords
       [
         /[a-zA-Z_]\w*/,
         {
@@ -106,9 +103,7 @@ var language = {
           }
         }
       ],
-      // whitespace
       { include: "@whitespace" },
-      // delimiters and operators
       [/[{}()\[\]]/, "delimiter"],
       [/[<>](?!@symbols)/, "delimiter"],
       [
@@ -120,11 +115,8 @@ var language = {
           }
         }
       ],
-      // numbers
       [/((0(x|X)[0-9a-fA-F]*)|(([0-9]+\.?[0-9]*)|(\.[0-9]+))((e|E)(\+|-)?[0-9]+)?)/, "number"],
-      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
-      // strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
       [/"/, "string", "@string"]
     ],

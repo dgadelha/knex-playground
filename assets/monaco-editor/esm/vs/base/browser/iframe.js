@@ -2,7 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-const sameOriginWindowChainCache = new WeakMap();
+let hasDifferentOriginAncestorFlag = false;
+let sameOriginWindowChainCache = null;
 function getParentWindowIfSameOrigin(w) {
     if (!w.parent || w.parent === w) {
         return null;
@@ -12,10 +13,12 @@ function getParentWindowIfSameOrigin(w) {
         const location = w.location;
         const parentLocation = w.parent.location;
         if (location.origin !== 'null' && parentLocation.origin !== 'null' && location.origin !== parentLocation.origin) {
+            hasDifferentOriginAncestorFlag = true;
             return null;
         }
     }
     catch (e) {
+        hasDifferentOriginAncestorFlag = true;
         return null;
     }
     return w.parent;
@@ -24,38 +27,36 @@ export class IframeUtils {
     /**
      * Returns a chain of embedded windows with the same origin (which can be accessed programmatically).
      * Having a chain of length 1 might mean that the current execution environment is running outside of an iframe or inside an iframe embedded in a window with a different origin.
+     * To distinguish if at one point the current execution environment is running inside a window with a different origin, see hasDifferentOriginAncestor()
      */
-    static getSameOriginWindowChain(targetWindow) {
-        let windowChainCache = sameOriginWindowChainCache.get(targetWindow);
-        if (!windowChainCache) {
-            windowChainCache = [];
-            sameOriginWindowChainCache.set(targetWindow, windowChainCache);
-            let w = targetWindow;
+    static getSameOriginWindowChain() {
+        if (!sameOriginWindowChainCache) {
+            sameOriginWindowChainCache = [];
+            let w = window;
             let parent;
             do {
                 parent = getParentWindowIfSameOrigin(w);
                 if (parent) {
-                    windowChainCache.push({
-                        window: new WeakRef(w),
+                    sameOriginWindowChainCache.push({
+                        window: w,
                         iframeElement: w.frameElement || null
                     });
                 }
                 else {
-                    windowChainCache.push({
-                        window: new WeakRef(w),
+                    sameOriginWindowChainCache.push({
+                        window: w,
                         iframeElement: null
                     });
                 }
                 w = parent;
             } while (w);
         }
-        return windowChainCache.slice(0);
+        return sameOriginWindowChainCache.slice(0);
     }
     /**
      * Returns the position of `childWindow` relative to `ancestorWindow`
      */
     static getPositionOfChildWindowRelativeToAncestorWindow(childWindow, ancestorWindow) {
-        var _a, _b;
         if (!ancestorWindow || childWindow === ancestorWindow) {
             return {
                 top: 0,
@@ -63,12 +64,11 @@ export class IframeUtils {
             };
         }
         let top = 0, left = 0;
-        const windowChain = this.getSameOriginWindowChain(childWindow);
+        const windowChain = this.getSameOriginWindowChain();
         for (const windowChainEl of windowChain) {
-            const windowInChain = windowChainEl.window.deref();
-            top += (_a = windowInChain === null || windowInChain === void 0 ? void 0 : windowInChain.scrollY) !== null && _a !== void 0 ? _a : 0;
-            left += (_b = windowInChain === null || windowInChain === void 0 ? void 0 : windowInChain.scrollX) !== null && _b !== void 0 ? _b : 0;
-            if (windowInChain === ancestorWindow) {
+            top += windowChainEl.window.scrollY;
+            left += windowChainEl.window.scrollX;
+            if (windowChainEl.window === ancestorWindow) {
                 break;
             }
             if (!windowChainEl.iframeElement) {
