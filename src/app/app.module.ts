@@ -1,24 +1,19 @@
-import { BrowserModule } from "@angular/platform-browser";
 import { NgModule } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { BrowserModule } from "@angular/platform-browser";
 import { MonacoEditorModule } from "@materia-ui/ngx-monaco-editor";
 import { AngularSplitModule } from "angular-split";
 
-import { AppComponent } from "./app.component";
-import { FooterComponent } from './footer/footer.component';
 import { RouterModule } from "@angular/router";
+import { AppComponent } from "./app.component";
+import { FooterComponent } from "./footer/footer.component";
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    FooterComponent,
-  ],
+  declarations: [AppComponent, FooterComponent],
   imports: [
     BrowserModule,
     FormsModule,
-    RouterModule.forRoot([
-      { path: "", pathMatch: "prefix", component: AppComponent },
-    ]),
+    RouterModule.forRoot([{ path: "", pathMatch: "prefix", component: AppComponent }]),
     MonacoEditorModule,
     AngularSplitModule,
   ],

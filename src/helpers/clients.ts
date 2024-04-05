@@ -1,4 +1,6 @@
-export type KnexClient = { id: string; name: string; formatter: string };
+import type { SqlLanguage } from "sql-formatter";
+
+export type KnexClient = { id: string; name: string; formatter: SqlLanguage };
 
 export const knexClients: KnexClient[] = [
   { id: "pg", name: "PostgreSQL", formatter: "postgresql" },
