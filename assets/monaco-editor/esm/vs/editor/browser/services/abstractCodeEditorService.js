@@ -7,15 +7,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { Emitter } from '../../../base/common/event.js';
 import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
 import { LinkedList } from '../../../base/common/linkedList.js';
@@ -111,16 +102,14 @@ let AbstractCodeEditorService = class AbstractCodeEditorService extends Disposab
         }
         return undefined;
     }
-    openCodeEditor(input, source, sideBySide) {
-        return __awaiter(this, void 0, void 0, function* () {
-            for (const handler of this._codeEditorOpenHandlers) {
-                const candidate = yield handler(input, source, sideBySide);
-                if (candidate !== null) {
-                    return candidate;
-                }
+    async openCodeEditor(input, source, sideBySide) {
+        for (const handler of this._codeEditorOpenHandlers) {
+            const candidate = await handler(input, source, sideBySide);
+            if (candidate !== null) {
+                return candidate;
             }
-            return null;
-        });
+        }
+        return null;
     }
     registerCodeEditorOpenHandler(handler) {
         const rm = this._codeEditorOpenHandlers.unshift(handler);

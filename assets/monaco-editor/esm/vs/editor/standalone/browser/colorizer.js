@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { createTrustedTypesPolicy } from '../../../base/browser/trustedTypes.js';
 import * as strings from '../../../base/common/strings.js';
 import { TokenizationRegistry } from '../../common/languages.js';
@@ -39,26 +30,24 @@ export class Colorizer {
         };
         return this.colorize(languageService, text || '', languageId, options).then(render, (err) => console.error(err));
     }
-    static colorize(languageService, text, languageId, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const languageIdCodec = languageService.languageIdCodec;
-            let tabSize = 4;
-            if (options && typeof options.tabSize === 'number') {
-                tabSize = options.tabSize;
-            }
-            if (strings.startsWithUTF8BOM(text)) {
-                text = text.substr(1);
-            }
-            const lines = strings.splitLines(text);
-            if (!languageService.isRegisteredLanguageId(languageId)) {
-                return _fakeColorize(lines, tabSize, languageIdCodec);
-            }
-            const tokenizationSupport = yield TokenizationRegistry.getOrCreate(languageId);
-            if (tokenizationSupport) {
-                return _colorize(lines, tabSize, tokenizationSupport, languageIdCodec);
-            }
+    static async colorize(languageService, text, languageId, options) {
+        const languageIdCodec = languageService.languageIdCodec;
+        let tabSize = 4;
+        if (options && typeof options.tabSize === 'number') {
+            tabSize = options.tabSize;
+        }
+        if (strings.startsWithUTF8BOM(text)) {
+            text = text.substr(1);
+        }
+        const lines = strings.splitLines(text);
+        if (!languageService.isRegisteredLanguageId(languageId)) {
             return _fakeColorize(lines, tabSize, languageIdCodec);
-        });
+        }
+        const tokenizationSupport = await TokenizationRegistry.getOrCreate(languageId);
+        if (tokenizationSupport) {
+            return _colorize(lines, tabSize, tokenizationSupport, languageIdCodec);
+        }
+        return _fakeColorize(lines, tabSize, languageIdCodec);
     }
     static colorizeLine(line, mightContainNonBasicASCII, mightContainRTL, tokens, tabSize = 4) {
         const isBasicASCII = ViewLineRenderingData.isBasicASCII(line, mightContainNonBasicASCII);

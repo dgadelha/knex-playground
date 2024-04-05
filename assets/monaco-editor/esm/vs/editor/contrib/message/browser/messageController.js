@@ -20,7 +20,7 @@ import { DisposableStore, MutableDisposable } from '../../../../base/common/life
 import './messageController.css';
 import { EditorCommand, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { Range } from '../../../common/core/range.js';
-import { openLinkFromMarkdown } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { openLinkFromMarkdown } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import * as nls from '../../../../nls.js';
 import { IContextKeyService, RawContextKey } from '../../../../platform/contextkey/common/contextkey.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
@@ -51,7 +51,10 @@ let MessageController = MessageController_1 = class MessageController {
         this._messageListeners.clear();
         this._message = isMarkdownString(message) ? renderMarkdown(message, {
             actionHandler: {
-                callback: (url) => openLinkFromMarkdown(this._openerService, url, isMarkdownString(message) ? message.isTrusted : undefined),
+                callback: (url) => {
+                    this.closeMessage();
+                    openLinkFromMarkdown(this._openerService, url, isMarkdownString(message) ? message.isTrusted : undefined);
+                },
                 disposables: this._messageListeners
             },
         }) : undefined;

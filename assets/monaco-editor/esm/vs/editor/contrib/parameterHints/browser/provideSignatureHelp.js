@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { assertType } from '../../../../base/common/types.js';
@@ -25,32 +16,30 @@ export const Context = {
     Visible: new RawContextKey('parameterHintsVisible', false),
     MultipleSignatures: new RawContextKey('parameterHintsMultipleSignatures', false),
 };
-export function provideSignatureHelp(registry, model, position, context, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const supports = registry.ordered(model);
-        for (const support of supports) {
-            try {
-                const result = yield support.provideSignatureHelp(model, position, token, context);
-                if (result) {
-                    return result;
-                }
-            }
-            catch (err) {
-                onUnexpectedExternalError(err);
+export async function provideSignatureHelp(registry, model, position, context, token) {
+    const supports = registry.ordered(model);
+    for (const support of supports) {
+        try {
+            const result = await support.provideSignatureHelp(model, position, token, context);
+            if (result) {
+                return result;
             }
         }
-        return undefined;
-    });
+        catch (err) {
+            onUnexpectedExternalError(err);
+        }
+    }
+    return undefined;
 }
-CommandsRegistry.registerCommand('_executeSignatureHelpProvider', (accessor, ...args) => __awaiter(void 0, void 0, void 0, function* () {
+CommandsRegistry.registerCommand('_executeSignatureHelpProvider', async (accessor, ...args) => {
     const [uri, position, triggerCharacter] = args;
     assertType(URI.isUri(uri));
     assertType(Position.isIPosition(position));
     assertType(typeof triggerCharacter === 'string' || !triggerCharacter);
     const languageFeaturesService = accessor.get(ILanguageFeaturesService);
-    const ref = yield accessor.get(ITextModelService).createModelReference(uri);
+    const ref = await accessor.get(ITextModelService).createModelReference(uri);
     try {
-        const result = yield provideSignatureHelp(languageFeaturesService.signatureHelpProvider, ref.object.textEditorModel, Position.lift(position), {
+        const result = await provideSignatureHelp(languageFeaturesService.signatureHelpProvider, ref.object.textEditorModel, Position.lift(position), {
             triggerKind: languages.SignatureHelpTriggerKind.Invoke,
             isRetrigger: false,
             triggerCharacter,
@@ -64,4 +53,4 @@ CommandsRegistry.registerCommand('_executeSignatureHelpProvider', (accessor, ...
     finally {
         ref.dispose();
     }
-}));
+});

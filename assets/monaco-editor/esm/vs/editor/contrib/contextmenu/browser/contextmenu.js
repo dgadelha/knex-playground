@@ -183,7 +183,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             const posy = editorCoords.top + cursorCoords.top + cursorCoords.height;
             anchor = { x: posx, y: posy };
         }
-        const useShadowDOM = this._editor.getOption(126 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
+        const useShadowDOM = this._editor.getOption(127 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         // Show menu
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
@@ -220,7 +220,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             // can't update the configuration properly in the standalone editor
             return;
         }
-        const minimapOptions = this._editor.getOption(72 /* EditorOption.minimap */);
+        const minimapOptions = this._editor.getOption(73 /* EditorOption.minimap */);
         let lastId = 0;
         const createAction = (opts) => {
             return {
@@ -289,7 +289,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
                 label: nls.localize('context.minimap.slider.always', "Always"),
                 value: 'always'
             }]));
-        const useShadowDOM = this._editor.getOption(126 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
+        const useShadowDOM = this._editor.getOption(127 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
             domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,

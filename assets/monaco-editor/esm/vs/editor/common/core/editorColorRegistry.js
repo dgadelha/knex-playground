@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as nls from '../../../nls.js';
 import { Color, RGBA } from '../../../base/common/color.js';
-import { activeContrastBorder, editorBackground, registerColor, editorWarningForeground, editorInfoForeground, editorWarningBorder, editorInfoBorder, contrastBorder, editorFindMatchHighlight } from '../../../platform/theme/common/colorRegistry.js';
+import { activeContrastBorder, editorBackground, registerColor, editorWarningForeground, editorInfoForeground, editorWarningBorder, editorInfoBorder, contrastBorder, editorFindMatchHighlight, editorWarningBackground } from '../../../platform/theme/common/colorRegistry.js';
 import { registerThemingParticipant } from '../../../platform/theme/common/themeService.js';
 /**
  * Definition of the editor colors
@@ -72,8 +72,8 @@ export const editorBracketPairGuideActiveBackground3 = registerColor('editorBrac
 export const editorBracketPairGuideActiveBackground4 = registerColor('editorBracketPairGuide.activeBackground4', { dark: '#00000000', light: '#00000000', hcDark: '#00000000', hcLight: '#00000000' }, nls.localize('editorBracketPairGuide.activeBackground4', 'Background color of active bracket pair guides (4). Requires enabling bracket pair guides.'));
 export const editorBracketPairGuideActiveBackground5 = registerColor('editorBracketPairGuide.activeBackground5', { dark: '#00000000', light: '#00000000', hcDark: '#00000000', hcLight: '#00000000' }, nls.localize('editorBracketPairGuide.activeBackground5', 'Background color of active bracket pair guides (5). Requires enabling bracket pair guides.'));
 export const editorBracketPairGuideActiveBackground6 = registerColor('editorBracketPairGuide.activeBackground6', { dark: '#00000000', light: '#00000000', hcDark: '#00000000', hcLight: '#00000000' }, nls.localize('editorBracketPairGuide.activeBackground6', 'Background color of active bracket pair guides (6). Requires enabling bracket pair guides.'));
-export const editorUnicodeHighlightBorder = registerColor('editorUnicodeHighlight.border', { dark: '#BD9B03', light: '#CEA33D', hcDark: '#ff0000', hcLight: '#CEA33D' }, nls.localize('editorUnicodeHighlight.border', 'Border color used to highlight unicode characters.'));
-export const editorUnicodeHighlightBackground = registerColor('editorUnicodeHighlight.background', { dark: '#bd9b0326', light: '#cea33d14', hcDark: '#00000000', hcLight: '#cea33d14' }, nls.localize('editorUnicodeHighlight.background', 'Background color used to highlight unicode characters.'));
+export const editorUnicodeHighlightBorder = registerColor('editorUnicodeHighlight.border', { dark: editorWarningForeground, light: editorWarningForeground, hcDark: editorWarningForeground, hcLight: editorWarningForeground }, nls.localize('editorUnicodeHighlight.border', 'Border color used to highlight unicode characters.'));
+export const editorUnicodeHighlightBackground = registerColor('editorUnicodeHighlight.background', { dark: editorWarningBackground, light: editorWarningBackground, hcDark: editorWarningBackground, hcLight: editorWarningBackground }, nls.localize('editorUnicodeHighlight.background', 'Background color used to highlight unicode characters.'));
 // contains all color rules that used to defined in editor/browser/widget/editor.css
 registerThemingParticipant((theme, collector) => {
     const background = theme.getColor(editorBackground);

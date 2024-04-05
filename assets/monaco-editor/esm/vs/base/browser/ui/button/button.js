@@ -3,11 +3,14 @@ import { sanitize } from '../../dompurify/dompurify.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { renderMarkdown, renderStringAsPlaintext } from '../../markdownRenderer.js';
 import { Gesture, EventType as TouchEventType } from '../../touch.js';
+import { getDefaultHoverDelegate } from '../hover/hoverDelegate.js';
+import { setupCustomHover } from '../iconLabel/iconLabelHover.js';
 import { renderLabelWithIcons } from '../iconLabel/iconLabels.js';
 import { Color } from '../../../common/color.js';
 import { Emitter } from '../../../common/event.js';
 import { isMarkdownString, markdownStringEqual } from '../../../common/htmlContent.js';
 import { Disposable } from '../../../common/lifecycle.js';
+import { ThemeIcon } from '../../../common/themables.js';
 import './button.css';
 export const unthemedButtonStyles = {
     buttonBackground: '#0E639C',
@@ -25,6 +28,7 @@ export class Button extends Disposable {
         super();
         this._label = '';
         this._onDidClick = this._register(new Emitter());
+        this._onDidEscape = this._register(new Emitter());
         this.options = options;
         this._element = document.createElement('a');
         this._element.classList.add('monaco-button');
@@ -43,6 +47,9 @@ export class Button extends Disposable {
             this._labelElement.classList.add('monaco-button-label');
             this._element.appendChild(this._labelElement);
             this._element.classList.add('monaco-text-button-with-short-label');
+        }
+        if (typeof options.ariaLabel === 'string') {
+            this._element.setAttribute('aria-label', options.ariaLabel);
         }
         container.appendChild(this._element);
         this._register(Gesture.addTarget(this._element));
@@ -63,6 +70,7 @@ export class Button extends Disposable {
                 eventHandled = true;
             }
             else if (event.equals(9 /* KeyCode.Escape */)) {
+                this._onDidEscape.fire(e);
                 this._element.blur();
                 eventHandled = true;
             }
@@ -158,16 +166,32 @@ export class Button extends Disposable {
                 labelElement.textContent = value;
             }
         }
+        let title = '';
         if (typeof this.options.title === 'string') {
-            this._element.title = this.options.title;
+            title = this.options.title;
         }
         else if (this.options.title) {
-            this._element.title = renderStringAsPlaintext(value);
+            title = renderStringAsPlaintext(value);
+        }
+        if (!this._hover) {
+            this._hover = this._register(setupCustomHover(getDefaultHoverDelegate('mouse'), this._element, title));
+        }
+        else {
+            this._hover.update(title);
+        }
+        if (typeof this.options.ariaLabel === 'string') {
+            this._element.setAttribute('aria-label', this.options.ariaLabel);
+        }
+        else if (this.options.ariaLabel) {
+            this._element.setAttribute('aria-label', this._element.title);
         }
         this._label = value;
     }
     get label() {
         return this._label;
+    }
+    set icon(icon) {
+        this._element.classList.add(...ThemeIcon.asClassNameArray(icon));
     }
     set enabled(value) {
         if (value) {

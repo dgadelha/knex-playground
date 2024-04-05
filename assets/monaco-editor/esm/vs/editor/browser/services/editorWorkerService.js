@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { IntervalTimer, timeout } from '../../../base/common/async.js';
 import { Disposable, dispose, toDisposable, DisposableStore } from '../../../base/common/lifecycle.js';
 import { SimpleWorkerClient, logOnceWebWorkerWarning } from '../../../base/common/worker/simpleWorker.js';
@@ -37,6 +28,8 @@ import { ILanguageFeaturesService } from '../../common/services/languageFeatures
 import { MovedText } from '../../common/diff/linesDiffComputer.js';
 import { DetailedLineRangeMapping, RangeMapping, LineRangeMapping } from '../../common/diff/rangeMapping.js';
 import { LineRange } from '../../common/core/lineRange.js';
+import { $window } from '../../../base/browser/window.js';
+import { WindowIntervalTimer } from '../../../base/browser/dom.js';
 /**
  * Stop syncing a model to the worker if it was not needed for 1 min.
  */
@@ -83,27 +76,25 @@ let EditorWorkerService = class EditorWorkerService extends Disposable {
     computedUnicodeHighlights(uri, options, range) {
         return this._workerManager.withWorker().then(client => client.computedUnicodeHighlights(uri, options, range));
     }
-    computeDiff(original, modified, options, algorithm) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const result = yield this._workerManager.withWorker().then(client => client.computeDiff(original, modified, options, algorithm));
-            if (!result) {
-                return null;
-            }
-            // Convert from space efficient JSON data to rich objects.
-            const diff = {
-                identical: result.identical,
-                quitEarly: result.quitEarly,
-                changes: toLineRangeMappings(result.changes),
-                moves: result.moves.map(m => new MovedText(new LineRangeMapping(new LineRange(m[0], m[1]), new LineRange(m[2], m[3])), toLineRangeMappings(m[4])))
-            };
-            return diff;
-            function toLineRangeMappings(changes) {
-                return changes.map((c) => {
-                    var _a;
-                    return new DetailedLineRangeMapping(new LineRange(c[0], c[1]), new LineRange(c[2], c[3]), (_a = c[4]) === null || _a === void 0 ? void 0 : _a.map((c) => new RangeMapping(new Range(c[0], c[1], c[2], c[3]), new Range(c[4], c[5], c[6], c[7]))));
-                });
-            }
-        });
+    async computeDiff(original, modified, options, algorithm) {
+        const result = await this._workerManager.withWorker().then(client => client.computeDiff(original, modified, options, algorithm));
+        if (!result) {
+            return null;
+        }
+        // Convert from space efficient JSON data to rich objects.
+        const diff = {
+            identical: result.identical,
+            quitEarly: result.quitEarly,
+            changes: toLineRangeMappings(result.changes),
+            moves: result.moves.map(m => new MovedText(new LineRangeMapping(new LineRange(m[0], m[1]), new LineRange(m[2], m[3])), toLineRangeMappings(m[4])))
+        };
+        return diff;
+        function toLineRangeMappings(changes) {
+            return changes.map((c) => {
+                var _a;
+                return new DetailedLineRangeMapping(new LineRange(c[0], c[1]), new LineRange(c[2], c[3]), (_a = c[4]) === null || _a === void 0 ? void 0 : _a.map((c) => new RangeMapping(new Range(c[0], c[1], c[2], c[3]), new Range(c[4], c[5], c[6], c[7]))));
+            });
+        }
     }
     computeMoreMinimalEdits(resource, edits, pretty = false) {
         if (isNonEmptyArray(edits)) {
@@ -148,57 +139,55 @@ class WordBasedCompletionItemProvider {
         this._configurationService = configurationService;
         this._modelService = modelService;
     }
-    provideCompletionItems(model, position) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const config = this._configurationService.getValue(model.uri, position, 'editor');
-            if (!config.wordBasedSuggestions) {
-                return undefined;
+    async provideCompletionItems(model, position) {
+        const config = this._configurationService.getValue(model.uri, position, 'editor');
+        if (config.wordBasedSuggestions === 'off') {
+            return undefined;
+        }
+        const models = [];
+        if (config.wordBasedSuggestions === 'currentDocument') {
+            // only current file and only if not too large
+            if (canSyncModel(this._modelService, model.uri)) {
+                models.push(model.uri);
             }
-            const models = [];
-            if (config.wordBasedSuggestionsMode === 'currentDocument') {
-                // only current file and only if not too large
-                if (canSyncModel(this._modelService, model.uri)) {
-                    models.push(model.uri);
+        }
+        else {
+            // either all files or files of same language
+            for (const candidate of this._modelService.getModels()) {
+                if (!canSyncModel(this._modelService, candidate.uri)) {
+                    continue;
+                }
+                if (candidate === model) {
+                    models.unshift(candidate.uri);
+                }
+                else if (config.wordBasedSuggestions === 'allDocuments' || candidate.getLanguageId() === model.getLanguageId()) {
+                    models.push(candidate.uri);
                 }
             }
-            else {
-                // either all files or files of same language
-                for (const candidate of this._modelService.getModels()) {
-                    if (!canSyncModel(this._modelService, candidate.uri)) {
-                        continue;
-                    }
-                    if (candidate === model) {
-                        models.unshift(candidate.uri);
-                    }
-                    else if (config.wordBasedSuggestionsMode === 'allDocuments' || candidate.getLanguageId() === model.getLanguageId()) {
-                        models.push(candidate.uri);
-                    }
-                }
-            }
-            if (models.length === 0) {
-                return undefined; // File too large, no other files
-            }
-            const wordDefRegExp = this.languageConfigurationService.getLanguageConfiguration(model.getLanguageId()).getWordDefinition();
-            const word = model.getWordAtPosition(position);
-            const replace = !word ? Range.fromPositions(position) : new Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
-            const insert = replace.setEndPosition(position.lineNumber, position.column);
-            const client = yield this._workerManager.withWorker();
-            const data = yield client.textualSuggest(models, word === null || word === void 0 ? void 0 : word.word, wordDefRegExp);
-            if (!data) {
-                return undefined;
-            }
-            return {
-                duration: data.duration,
-                suggestions: data.words.map((word) => {
-                    return {
-                        kind: 18 /* languages.CompletionItemKind.Text */,
-                        label: word,
-                        insertText: word,
-                        range: { insert, replace }
-                    };
-                }),
-            };
-        });
+        }
+        if (models.length === 0) {
+            return undefined; // File too large, no other files
+        }
+        const wordDefRegExp = this.languageConfigurationService.getLanguageConfiguration(model.getLanguageId()).getWordDefinition();
+        const word = model.getWordAtPosition(position);
+        const replace = !word ? Range.fromPositions(position) : new Range(position.lineNumber, word.startColumn, position.lineNumber, word.endColumn);
+        const insert = replace.setEndPosition(position.lineNumber, position.column);
+        const client = await this._workerManager.withWorker();
+        const data = await client.textualSuggest(models, word === null || word === void 0 ? void 0 : word.word, wordDefRegExp);
+        if (!data) {
+            return undefined;
+        }
+        return {
+            duration: data.duration,
+            suggestions: data.words.map((word) => {
+                return {
+                    kind: 18 /* languages.CompletionItemKind.Text */,
+                    label: word,
+                    insertText: word,
+                    range: { insert, replace }
+                };
+            }),
+        };
     }
 }
 class WorkerManager extends Disposable {
@@ -208,8 +197,8 @@ class WorkerManager extends Disposable {
         this._modelService = modelService;
         this._editorWorkerClient = null;
         this._lastWorkerUsedTime = (new Date()).getTime();
-        const stopWorkerInterval = this._register(new IntervalTimer());
-        stopWorkerInterval.cancelAndSet(() => this._checkStopIdleWorker(), Math.round(STOP_WORKER_DELTA_TIME_MS / 2));
+        const stopWorkerInterval = this._register(new WindowIntervalTimer());
+        stopWorkerInterval.cancelAndSet(() => this._checkStopIdleWorker(), Math.round(STOP_WORKER_DELTA_TIME_MS / 2), $window);
         this._register(this._modelService.onModelRemoved(_ => this._checkStopEmptyWorker()));
     }
     dispose() {
@@ -394,15 +383,13 @@ export class EditorWorkerClient extends Disposable {
         }
         return this._modelManager;
     }
-    _withSyncedResources(resources, forceLargeModels = false) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._disposed) {
-                return Promise.reject(canceled());
-            }
-            return this._getProxy().then((proxy) => {
-                this._getOrCreateModelManager(proxy).ensureSyncedResources(resources, forceLargeModels);
-                return proxy;
-            });
+    async _withSyncedResources(resources, forceLargeModels = false) {
+        if (this._disposed) {
+            return Promise.reject(canceled());
+        }
+        return this._getProxy().then((proxy) => {
+            this._getOrCreateModelManager(proxy).ensureSyncedResources(resources, forceLargeModels);
+            return proxy;
         });
     }
     computedUnicodeHighlights(uri, options, range) {
@@ -430,13 +417,11 @@ export class EditorWorkerClient extends Disposable {
             return proxy.computeDefaultDocumentColors(resource.toString());
         });
     }
-    textualSuggest(resources, leadingWord, wordDefRegExp) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const proxy = yield this._withSyncedResources(resources);
-            const wordDef = wordDefRegExp.source;
-            const wordDefFlags = wordDefRegExp.flags;
-            return proxy.textualSuggest(resources.map(r => r.toString()), leadingWord, wordDef, wordDefFlags);
-        });
+    async textualSuggest(resources, leadingWord, wordDefRegExp) {
+        const proxy = await this._withSyncedResources(resources);
+        const wordDef = wordDefRegExp.source;
+        const wordDefFlags = wordDefRegExp.flags;
+        return proxy.textualSuggest(resources.map(r => r.toString()), leadingWord, wordDef, wordDefFlags);
     }
     computeWordRanges(resource, range) {
         return this._withSyncedResources([resource]).then(proxy => {

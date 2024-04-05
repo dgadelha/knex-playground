@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/language/html/htmlWorker", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -443,281 +443,294 @@ var moduleExports = (() => {
     }
     WorkspaceEdit2.is = is;
   })(WorkspaceEdit || (WorkspaceEdit = {}));
-  var TextEditChangeImpl = function() {
-    function TextEditChangeImpl2(edits, changeAnnotations) {
-      this.edits = edits;
-      this.changeAnnotations = changeAnnotations;
-    }
-    TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.insert(position, newText);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.insert(position, newText, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.insert(position, newText, id);
+  var TextEditChangeImpl = (
+    /** @class */
+    function() {
+      function TextEditChangeImpl2(edits, changeAnnotations) {
+        this.edits = edits;
+        this.changeAnnotations = changeAnnotations;
       }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.replace(range, newText);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.replace(range, newText, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.replace(range, newText, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.delete = function(range, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.del(range);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.del(range, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.del(range, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.add = function(edit) {
-      this.edits.push(edit);
-    };
-    TextEditChangeImpl2.prototype.all = function() {
-      return this.edits;
-    };
-    TextEditChangeImpl2.prototype.clear = function() {
-      this.edits.splice(0, this.edits.length);
-    };
-    TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
-      if (value === void 0) {
-        throw new Error("Text edit change is not configured to manage change annotations.");
-      }
-    };
-    return TextEditChangeImpl2;
-  }();
-  var ChangeAnnotations = function() {
-    function ChangeAnnotations2(annotations) {
-      this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
-      this._counter = 0;
-      this._size = 0;
-    }
-    ChangeAnnotations2.prototype.all = function() {
-      return this._annotations;
-    };
-    Object.defineProperty(ChangeAnnotations2.prototype, "size", {
-      get: function() {
-        return this._size;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
-      var id;
-      if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
-        id = idOrAnnotation;
-      } else {
-        id = this.nextId();
-        annotation = idOrAnnotation;
-      }
-      if (this._annotations[id] !== void 0) {
-        throw new Error("Id " + id + " is already in use.");
-      }
-      if (annotation === void 0) {
-        throw new Error("No annotation provided for id " + id);
-      }
-      this._annotations[id] = annotation;
-      this._size++;
-      return id;
-    };
-    ChangeAnnotations2.prototype.nextId = function() {
-      this._counter++;
-      return this._counter.toString();
-    };
-    return ChangeAnnotations2;
-  }();
-  var WorkspaceChange = function() {
-    function WorkspaceChange2(workspaceEdit) {
-      var _this = this;
-      this._textEditChanges = /* @__PURE__ */ Object.create(null);
-      if (workspaceEdit !== void 0) {
-        this._workspaceEdit = workspaceEdit;
-        if (workspaceEdit.documentChanges) {
-          this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
-          workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-          workspaceEdit.documentChanges.forEach(function(change) {
-            if (TextDocumentEdit.is(change)) {
-              var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
-              _this._textEditChanges[change.textDocument.uri] = textEditChange;
-            }
-          });
-        } else if (workspaceEdit.changes) {
-          Object.keys(workspaceEdit.changes).forEach(function(key) {
-            var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
-            _this._textEditChanges[key] = textEditChange;
-          });
+      TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
+        var edit;
+        var id;
+        if (annotation === void 0) {
+          edit = TextEdit.insert(position, newText);
+        } else if (ChangeAnnotationIdentifier.is(annotation)) {
+          id = annotation;
+          edit = AnnotatedTextEdit.insert(position, newText, annotation);
+        } else {
+          this.assertChangeAnnotations(this.changeAnnotations);
+          id = this.changeAnnotations.manage(annotation);
+          edit = AnnotatedTextEdit.insert(position, newText, id);
         }
-      } else {
-        this._workspaceEdit = {};
+        this.edits.push(edit);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
+        var edit;
+        var id;
+        if (annotation === void 0) {
+          edit = TextEdit.replace(range, newText);
+        } else if (ChangeAnnotationIdentifier.is(annotation)) {
+          id = annotation;
+          edit = AnnotatedTextEdit.replace(range, newText, annotation);
+        } else {
+          this.assertChangeAnnotations(this.changeAnnotations);
+          id = this.changeAnnotations.manage(annotation);
+          edit = AnnotatedTextEdit.replace(range, newText, id);
+        }
+        this.edits.push(edit);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      TextEditChangeImpl2.prototype.delete = function(range, annotation) {
+        var edit;
+        var id;
+        if (annotation === void 0) {
+          edit = TextEdit.del(range);
+        } else if (ChangeAnnotationIdentifier.is(annotation)) {
+          id = annotation;
+          edit = AnnotatedTextEdit.del(range, annotation);
+        } else {
+          this.assertChangeAnnotations(this.changeAnnotations);
+          id = this.changeAnnotations.manage(annotation);
+          edit = AnnotatedTextEdit.del(range, id);
+        }
+        this.edits.push(edit);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      TextEditChangeImpl2.prototype.add = function(edit) {
+        this.edits.push(edit);
+      };
+      TextEditChangeImpl2.prototype.all = function() {
+        return this.edits;
+      };
+      TextEditChangeImpl2.prototype.clear = function() {
+        this.edits.splice(0, this.edits.length);
+      };
+      TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
+        if (value === void 0) {
+          throw new Error("Text edit change is not configured to manage change annotations.");
+        }
+      };
+      return TextEditChangeImpl2;
+    }()
+  );
+  var ChangeAnnotations = (
+    /** @class */
+    function() {
+      function ChangeAnnotations2(annotations) {
+        this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
+        this._counter = 0;
+        this._size = 0;
       }
-    }
-    Object.defineProperty(WorkspaceChange2.prototype, "edit", {
-      get: function() {
-        this.initDocumentChanges();
-        if (this._changeAnnotations !== void 0) {
-          if (this._changeAnnotations.size === 0) {
-            this._workspaceEdit.changeAnnotations = void 0;
-          } else {
-            this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+      ChangeAnnotations2.prototype.all = function() {
+        return this._annotations;
+      };
+      Object.defineProperty(ChangeAnnotations2.prototype, "size", {
+        get: function() {
+          return this._size;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
+        var id;
+        if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
+          id = idOrAnnotation;
+        } else {
+          id = this.nextId();
+          annotation = idOrAnnotation;
+        }
+        if (this._annotations[id] !== void 0) {
+          throw new Error("Id " + id + " is already in use.");
+        }
+        if (annotation === void 0) {
+          throw new Error("No annotation provided for id " + id);
+        }
+        this._annotations[id] = annotation;
+        this._size++;
+        return id;
+      };
+      ChangeAnnotations2.prototype.nextId = function() {
+        this._counter++;
+        return this._counter.toString();
+      };
+      return ChangeAnnotations2;
+    }()
+  );
+  var WorkspaceChange = (
+    /** @class */
+    function() {
+      function WorkspaceChange2(workspaceEdit) {
+        var _this = this;
+        this._textEditChanges = /* @__PURE__ */ Object.create(null);
+        if (workspaceEdit !== void 0) {
+          this._workspaceEdit = workspaceEdit;
+          if (workspaceEdit.documentChanges) {
+            this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
+            workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+            workspaceEdit.documentChanges.forEach(function(change) {
+              if (TextDocumentEdit.is(change)) {
+                var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
+                _this._textEditChanges[change.textDocument.uri] = textEditChange;
+              }
+            });
+          } else if (workspaceEdit.changes) {
+            Object.keys(workspaceEdit.changes).forEach(function(key) {
+              var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
+              _this._textEditChanges[key] = textEditChange;
+            });
           }
+        } else {
+          this._workspaceEdit = {};
         }
-        return this._workspaceEdit;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    WorkspaceChange2.prototype.getTextEditChange = function(key) {
-      if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+      }
+      Object.defineProperty(WorkspaceChange2.prototype, "edit", {
+        /**
+         * Returns the underlying [WorkspaceEdit](#WorkspaceEdit) literal
+         * use to be returned from a workspace edit operation like rename.
+         */
+        get: function() {
+          this.initDocumentChanges();
+          if (this._changeAnnotations !== void 0) {
+            if (this._changeAnnotations.size === 0) {
+              this._workspaceEdit.changeAnnotations = void 0;
+            } else {
+              this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+            }
+          }
+          return this._workspaceEdit;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      WorkspaceChange2.prototype.getTextEditChange = function(key) {
+        if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+          this.initDocumentChanges();
+          if (this._workspaceEdit.documentChanges === void 0) {
+            throw new Error("Workspace edit is not configured for document changes.");
+          }
+          var textDocument = { uri: key.uri, version: key.version };
+          var result = this._textEditChanges[textDocument.uri];
+          if (!result) {
+            var edits = [];
+            var textDocumentEdit = {
+              textDocument,
+              edits
+            };
+            this._workspaceEdit.documentChanges.push(textDocumentEdit);
+            result = new TextEditChangeImpl(edits, this._changeAnnotations);
+            this._textEditChanges[textDocument.uri] = result;
+          }
+          return result;
+        } else {
+          this.initChanges();
+          if (this._workspaceEdit.changes === void 0) {
+            throw new Error("Workspace edit is not configured for normal text edit changes.");
+          }
+          var result = this._textEditChanges[key];
+          if (!result) {
+            var edits = [];
+            this._workspaceEdit.changes[key] = edits;
+            result = new TextEditChangeImpl(edits);
+            this._textEditChanges[key] = result;
+          }
+          return result;
+        }
+      };
+      WorkspaceChange2.prototype.initDocumentChanges = function() {
+        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+          this._changeAnnotations = new ChangeAnnotations();
+          this._workspaceEdit.documentChanges = [];
+          this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+        }
+      };
+      WorkspaceChange2.prototype.initChanges = function() {
+        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+          this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
+        }
+      };
+      WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
         this.initDocumentChanges();
         if (this._workspaceEdit.documentChanges === void 0) {
           throw new Error("Workspace edit is not configured for document changes.");
         }
-        var textDocument = { uri: key.uri, version: key.version };
-        var result = this._textEditChanges[textDocument.uri];
-        if (!result) {
-          var edits = [];
-          var textDocumentEdit = {
-            textDocument,
-            edits
-          };
-          this._workspaceEdit.documentChanges.push(textDocumentEdit);
-          result = new TextEditChangeImpl(edits, this._changeAnnotations);
-          this._textEditChanges[textDocument.uri] = result;
+        var annotation;
+        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+          annotation = optionsOrAnnotation;
+        } else {
+          options = optionsOrAnnotation;
         }
-        return result;
-      } else {
-        this.initChanges();
-        if (this._workspaceEdit.changes === void 0) {
-          throw new Error("Workspace edit is not configured for normal text edit changes.");
+        var operation;
+        var id;
+        if (annotation === void 0) {
+          operation = CreateFile.create(uri, options);
+        } else {
+          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+          operation = CreateFile.create(uri, options, id);
         }
-        var result = this._textEditChanges[key];
-        if (!result) {
-          var edits = [];
-          this._workspaceEdit.changes[key] = edits;
-          result = new TextEditChangeImpl(edits);
-          this._textEditChanges[key] = result;
+        this._workspaceEdit.documentChanges.push(operation);
+        if (id !== void 0) {
+          return id;
         }
-        return result;
-      }
-    };
-    WorkspaceChange2.prototype.initDocumentChanges = function() {
-      if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-        this._changeAnnotations = new ChangeAnnotations();
-        this._workspaceEdit.documentChanges = [];
-        this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-      }
-    };
-    WorkspaceChange2.prototype.initChanges = function() {
-      if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-        this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
-      }
-    };
-    WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = CreateFile.create(uri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = CreateFile.create(uri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = RenameFile.create(oldUri, newUri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = RenameFile.create(oldUri, newUri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = DeleteFile.create(uri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = DeleteFile.create(uri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    return WorkspaceChange2;
-  }();
+      };
+      WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
+        this.initDocumentChanges();
+        if (this._workspaceEdit.documentChanges === void 0) {
+          throw new Error("Workspace edit is not configured for document changes.");
+        }
+        var annotation;
+        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+          annotation = optionsOrAnnotation;
+        } else {
+          options = optionsOrAnnotation;
+        }
+        var operation;
+        var id;
+        if (annotation === void 0) {
+          operation = RenameFile.create(oldUri, newUri, options);
+        } else {
+          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+          operation = RenameFile.create(oldUri, newUri, options, id);
+        }
+        this._workspaceEdit.documentChanges.push(operation);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
+        this.initDocumentChanges();
+        if (this._workspaceEdit.documentChanges === void 0) {
+          throw new Error("Workspace edit is not configured for document changes.");
+        }
+        var annotation;
+        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+          annotation = optionsOrAnnotation;
+        } else {
+          options = optionsOrAnnotation;
+        }
+        var operation;
+        var id;
+        if (annotation === void 0) {
+          operation = DeleteFile.create(uri, options);
+        } else {
+          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+          operation = DeleteFile.create(uri, options, id);
+        }
+        this._workspaceEdit.documentChanges.push(operation);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      return WorkspaceChange2;
+    }()
+  );
   var TextDocumentIdentifier;
   (function(TextDocumentIdentifier2) {
     function create2(uri) {
@@ -1157,109 +1170,112 @@ var moduleExports = (() => {
       return data;
     }
   })(TextDocument || (TextDocument = {}));
-  var FullTextDocument = function() {
-    function FullTextDocument3(uri, languageId, version, content) {
-      this._uri = uri;
-      this._languageId = languageId;
-      this._version = version;
-      this._content = content;
-      this._lineOffsets = void 0;
-    }
-    Object.defineProperty(FullTextDocument3.prototype, "uri", {
-      get: function() {
-        return this._uri;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(FullTextDocument3.prototype, "languageId", {
-      get: function() {
-        return this._languageId;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(FullTextDocument3.prototype, "version", {
-      get: function() {
-        return this._version;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    FullTextDocument3.prototype.getText = function(range) {
-      if (range) {
-        var start = this.offsetAt(range.start);
-        var end = this.offsetAt(range.end);
-        return this._content.substring(start, end);
+  var FullTextDocument = (
+    /** @class */
+    function() {
+      function FullTextDocument3(uri, languageId, version, content) {
+        this._uri = uri;
+        this._languageId = languageId;
+        this._version = version;
+        this._content = content;
+        this._lineOffsets = void 0;
       }
-      return this._content;
-    };
-    FullTextDocument3.prototype.update = function(event, version) {
-      this._content = event.text;
-      this._version = version;
-      this._lineOffsets = void 0;
-    };
-    FullTextDocument3.prototype.getLineOffsets = function() {
-      if (this._lineOffsets === void 0) {
-        var lineOffsets = [];
-        var text = this._content;
-        var isLineStart = true;
-        for (var i = 0; i < text.length; i++) {
-          if (isLineStart) {
-            lineOffsets.push(i);
-            isLineStart = false;
+      Object.defineProperty(FullTextDocument3.prototype, "uri", {
+        get: function() {
+          return this._uri;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Object.defineProperty(FullTextDocument3.prototype, "languageId", {
+        get: function() {
+          return this._languageId;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Object.defineProperty(FullTextDocument3.prototype, "version", {
+        get: function() {
+          return this._version;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      FullTextDocument3.prototype.getText = function(range) {
+        if (range) {
+          var start = this.offsetAt(range.start);
+          var end = this.offsetAt(range.end);
+          return this._content.substring(start, end);
+        }
+        return this._content;
+      };
+      FullTextDocument3.prototype.update = function(event, version) {
+        this._content = event.text;
+        this._version = version;
+        this._lineOffsets = void 0;
+      };
+      FullTextDocument3.prototype.getLineOffsets = function() {
+        if (this._lineOffsets === void 0) {
+          var lineOffsets = [];
+          var text = this._content;
+          var isLineStart = true;
+          for (var i = 0; i < text.length; i++) {
+            if (isLineStart) {
+              lineOffsets.push(i);
+              isLineStart = false;
+            }
+            var ch = text.charAt(i);
+            isLineStart = ch === "\r" || ch === "\n";
+            if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
+              i++;
+            }
           }
-          var ch = text.charAt(i);
-          isLineStart = ch === "\r" || ch === "\n";
-          if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
-            i++;
+          if (isLineStart && text.length > 0) {
+            lineOffsets.push(text.length);
+          }
+          this._lineOffsets = lineOffsets;
+        }
+        return this._lineOffsets;
+      };
+      FullTextDocument3.prototype.positionAt = function(offset) {
+        offset = Math.max(Math.min(offset, this._content.length), 0);
+        var lineOffsets = this.getLineOffsets();
+        var low = 0, high = lineOffsets.length;
+        if (high === 0) {
+          return Position.create(0, offset);
+        }
+        while (low < high) {
+          var mid = Math.floor((low + high) / 2);
+          if (lineOffsets[mid] > offset) {
+            high = mid;
+          } else {
+            low = mid + 1;
           }
         }
-        if (isLineStart && text.length > 0) {
-          lineOffsets.push(text.length);
+        var line = low - 1;
+        return Position.create(line, offset - lineOffsets[line]);
+      };
+      FullTextDocument3.prototype.offsetAt = function(position) {
+        var lineOffsets = this.getLineOffsets();
+        if (position.line >= lineOffsets.length) {
+          return this._content.length;
+        } else if (position.line < 0) {
+          return 0;
         }
-        this._lineOffsets = lineOffsets;
-      }
-      return this._lineOffsets;
-    };
-    FullTextDocument3.prototype.positionAt = function(offset) {
-      offset = Math.max(Math.min(offset, this._content.length), 0);
-      var lineOffsets = this.getLineOffsets();
-      var low = 0, high = lineOffsets.length;
-      if (high === 0) {
-        return Position.create(0, offset);
-      }
-      while (low < high) {
-        var mid = Math.floor((low + high) / 2);
-        if (lineOffsets[mid] > offset) {
-          high = mid;
-        } else {
-          low = mid + 1;
-        }
-      }
-      var line = low - 1;
-      return Position.create(line, offset - lineOffsets[line]);
-    };
-    FullTextDocument3.prototype.offsetAt = function(position) {
-      var lineOffsets = this.getLineOffsets();
-      if (position.line >= lineOffsets.length) {
-        return this._content.length;
-      } else if (position.line < 0) {
-        return 0;
-      }
-      var lineOffset = lineOffsets[position.line];
-      var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-      return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
-    };
-    Object.defineProperty(FullTextDocument3.prototype, "lineCount", {
-      get: function() {
-        return this.getLineOffsets().length;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return FullTextDocument3;
-  }();
+        var lineOffset = lineOffsets[position.line];
+        var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+        return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
+      };
+      Object.defineProperty(FullTextDocument3.prototype, "lineCount", {
+        get: function() {
+          return this.getLineOffsets().length;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      return FullTextDocument3;
+    }()
+  );
   var Is;
   (function(Is2) {
     var toString = Object.prototype.toString;
@@ -1310,7 +1326,7 @@ var moduleExports = (() => {
   })(Is || (Is = {}));
 
   // node_modules/vscode-languageserver-textdocument/lib/esm/main.js
-  var FullTextDocument2 = class {
+  var FullTextDocument2 = class _FullTextDocument {
     constructor(uri, languageId, version, content) {
       this._uri = uri;
       this._languageId = languageId;
@@ -1337,7 +1353,7 @@ var moduleExports = (() => {
     }
     update(changes, version) {
       for (let change of changes) {
-        if (FullTextDocument2.isIncremental(change)) {
+        if (_FullTextDocument.isIncremental(change)) {
           const range = getWellformedRange(change.range);
           const startOffset = this.offsetAt(range.start);
           const endOffset = this.offsetAt(range.end);
@@ -1363,7 +1379,7 @@ var moduleExports = (() => {
               lineOffsets[i] = lineOffsets[i] + diff;
             }
           }
-        } else if (FullTextDocument2.isFull(change)) {
+        } else if (_FullTextDocument.isFull(change)) {
           this._content = change.text;
           this._lineOffsets = void 0;
         } else {
@@ -1584,119 +1600,122 @@ var moduleExports = (() => {
 
   // node_modules/vscode-html-languageservice/lib/esm/parser/htmlScanner.js
   var localize2 = loadMessageBundle();
-  var MultiLineStream = function() {
-    function MultiLineStream2(source, position) {
-      this.source = source;
-      this.len = source.length;
-      this.position = position;
-    }
-    MultiLineStream2.prototype.eos = function() {
-      return this.len <= this.position;
-    };
-    MultiLineStream2.prototype.getSource = function() {
-      return this.source;
-    };
-    MultiLineStream2.prototype.pos = function() {
-      return this.position;
-    };
-    MultiLineStream2.prototype.goBackTo = function(pos) {
-      this.position = pos;
-    };
-    MultiLineStream2.prototype.goBack = function(n) {
-      this.position -= n;
-    };
-    MultiLineStream2.prototype.advance = function(n) {
-      this.position += n;
-    };
-    MultiLineStream2.prototype.goToEnd = function() {
-      this.position = this.source.length;
-    };
-    MultiLineStream2.prototype.nextChar = function() {
-      return this.source.charCodeAt(this.position++) || 0;
-    };
-    MultiLineStream2.prototype.peekChar = function(n) {
-      if (n === void 0) {
-        n = 0;
+  var MultiLineStream = (
+    /** @class */
+    function() {
+      function MultiLineStream2(source, position) {
+        this.source = source;
+        this.len = source.length;
+        this.position = position;
       }
-      return this.source.charCodeAt(this.position + n) || 0;
-    };
-    MultiLineStream2.prototype.advanceIfChar = function(ch) {
-      if (ch === this.source.charCodeAt(this.position)) {
-        this.position++;
-        return true;
-      }
-      return false;
-    };
-    MultiLineStream2.prototype.advanceIfChars = function(ch) {
-      var i;
-      if (this.position + ch.length > this.source.length) {
+      MultiLineStream2.prototype.eos = function() {
+        return this.len <= this.position;
+      };
+      MultiLineStream2.prototype.getSource = function() {
+        return this.source;
+      };
+      MultiLineStream2.prototype.pos = function() {
+        return this.position;
+      };
+      MultiLineStream2.prototype.goBackTo = function(pos) {
+        this.position = pos;
+      };
+      MultiLineStream2.prototype.goBack = function(n) {
+        this.position -= n;
+      };
+      MultiLineStream2.prototype.advance = function(n) {
+        this.position += n;
+      };
+      MultiLineStream2.prototype.goToEnd = function() {
+        this.position = this.source.length;
+      };
+      MultiLineStream2.prototype.nextChar = function() {
+        return this.source.charCodeAt(this.position++) || 0;
+      };
+      MultiLineStream2.prototype.peekChar = function(n) {
+        if (n === void 0) {
+          n = 0;
+        }
+        return this.source.charCodeAt(this.position + n) || 0;
+      };
+      MultiLineStream2.prototype.advanceIfChar = function(ch) {
+        if (ch === this.source.charCodeAt(this.position)) {
+          this.position++;
+          return true;
+        }
         return false;
-      }
-      for (i = 0; i < ch.length; i++) {
-        if (this.source.charCodeAt(this.position + i) !== ch[i]) {
+      };
+      MultiLineStream2.prototype.advanceIfChars = function(ch) {
+        var i;
+        if (this.position + ch.length > this.source.length) {
           return false;
         }
-      }
-      this.advance(i);
-      return true;
-    };
-    MultiLineStream2.prototype.advanceIfRegExp = function(regex) {
-      var str = this.source.substr(this.position);
-      var match = str.match(regex);
-      if (match) {
-        this.position = this.position + match.index + match[0].length;
-        return match[0];
-      }
-      return "";
-    };
-    MultiLineStream2.prototype.advanceUntilRegExp = function(regex) {
-      var str = this.source.substr(this.position);
-      var match = str.match(regex);
-      if (match) {
-        this.position = this.position + match.index;
-        return match[0];
-      } else {
+        for (i = 0; i < ch.length; i++) {
+          if (this.source.charCodeAt(this.position + i) !== ch[i]) {
+            return false;
+          }
+        }
+        this.advance(i);
+        return true;
+      };
+      MultiLineStream2.prototype.advanceIfRegExp = function(regex) {
+        var str = this.source.substr(this.position);
+        var match = str.match(regex);
+        if (match) {
+          this.position = this.position + match.index + match[0].length;
+          return match[0];
+        }
+        return "";
+      };
+      MultiLineStream2.prototype.advanceUntilRegExp = function(regex) {
+        var str = this.source.substr(this.position);
+        var match = str.match(regex);
+        if (match) {
+          this.position = this.position + match.index;
+          return match[0];
+        } else {
+          this.goToEnd();
+        }
+        return "";
+      };
+      MultiLineStream2.prototype.advanceUntilChar = function(ch) {
+        while (this.position < this.source.length) {
+          if (this.source.charCodeAt(this.position) === ch) {
+            return true;
+          }
+          this.advance(1);
+        }
+        return false;
+      };
+      MultiLineStream2.prototype.advanceUntilChars = function(ch) {
+        while (this.position + ch.length <= this.source.length) {
+          var i = 0;
+          for (; i < ch.length && this.source.charCodeAt(this.position + i) === ch[i]; i++) {
+          }
+          if (i === ch.length) {
+            return true;
+          }
+          this.advance(1);
+        }
         this.goToEnd();
-      }
-      return "";
-    };
-    MultiLineStream2.prototype.advanceUntilChar = function(ch) {
-      while (this.position < this.source.length) {
-        if (this.source.charCodeAt(this.position) === ch) {
-          return true;
+        return false;
+      };
+      MultiLineStream2.prototype.skipWhitespace = function() {
+        var n = this.advanceWhileChar(function(ch) {
+          return ch === _WSP || ch === _TAB || ch === _NWL || ch === _LFD || ch === _CAR;
+        });
+        return n > 0;
+      };
+      MultiLineStream2.prototype.advanceWhileChar = function(condition) {
+        var posNow = this.position;
+        while (this.position < this.len && condition(this.source.charCodeAt(this.position))) {
+          this.position++;
         }
-        this.advance(1);
-      }
-      return false;
-    };
-    MultiLineStream2.prototype.advanceUntilChars = function(ch) {
-      while (this.position + ch.length <= this.source.length) {
-        var i = 0;
-        for (; i < ch.length && this.source.charCodeAt(this.position + i) === ch[i]; i++) {
-        }
-        if (i === ch.length) {
-          return true;
-        }
-        this.advance(1);
-      }
-      this.goToEnd();
-      return false;
-    };
-    MultiLineStream2.prototype.skipWhitespace = function() {
-      var n = this.advanceWhileChar(function(ch) {
-        return ch === _WSP || ch === _TAB || ch === _NWL || ch === _LFD || ch === _CAR;
-      });
-      return n > 0;
-    };
-    MultiLineStream2.prototype.advanceWhileChar = function(condition) {
-      var posNow = this.position;
-      while (this.position < this.len && condition(this.source.charCodeAt(this.position))) {
-        this.position++;
-      }
-      return this.position - posNow;
-    };
-    return MultiLineStream2;
-  }();
+        return this.position - posNow;
+      };
+      return MultiLineStream2;
+    }()
+  );
   var _BNG = "!".charCodeAt(0);
   var _MIN = "-".charCodeAt(0);
   var _LAN = "<".charCodeAt(0);
@@ -1712,6 +1731,7 @@ var moduleExports = (() => {
   var _TAB = "	".charCodeAt(0);
   var htmlScriptContents = {
     "text/x-handlebars-template": true,
+    // Fix for https://github.com/microsoft/vscode/issues/77977
     "text/html": true
   };
   function createScanner(input, initialOffset, initialState, emitPseudoCloseTags) {
@@ -2036,75 +2056,78 @@ var moduleExports = (() => {
   }
 
   // node_modules/vscode-html-languageservice/lib/esm/parser/htmlParser.js
-  var Node = function() {
-    function Node2(start, end, children, parent) {
-      this.start = start;
-      this.end = end;
-      this.children = children;
-      this.parent = parent;
-      this.closed = false;
-    }
-    Object.defineProperty(Node2.prototype, "attributeNames", {
-      get: function() {
-        return this.attributes ? Object.keys(this.attributes) : [];
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Node2.prototype.isSameTag = function(tagInLowerCase) {
-      if (this.tag === void 0) {
-        return tagInLowerCase === void 0;
-      } else {
-        return tagInLowerCase !== void 0 && this.tag.length === tagInLowerCase.length && this.tag.toLowerCase() === tagInLowerCase;
+  var Node = (
+    /** @class */
+    function() {
+      function Node2(start, end, children, parent) {
+        this.start = start;
+        this.end = end;
+        this.children = children;
+        this.parent = parent;
+        this.closed = false;
       }
-    };
-    Object.defineProperty(Node2.prototype, "firstChild", {
-      get: function() {
-        return this.children[0];
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(Node2.prototype, "lastChild", {
-      get: function() {
-        return this.children.length ? this.children[this.children.length - 1] : void 0;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Node2.prototype.findNodeBefore = function(offset) {
-      var idx = findFirst(this.children, function(c) {
-        return offset <= c.start;
-      }) - 1;
-      if (idx >= 0) {
-        var child = this.children[idx];
-        if (offset > child.start) {
-          if (offset < child.end) {
-            return child.findNodeBefore(offset);
-          }
-          var lastChild = child.lastChild;
-          if (lastChild && lastChild.end === child.end) {
-            return child.findNodeBefore(offset);
-          }
-          return child;
+      Object.defineProperty(Node2.prototype, "attributeNames", {
+        get: function() {
+          return this.attributes ? Object.keys(this.attributes) : [];
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Node2.prototype.isSameTag = function(tagInLowerCase) {
+        if (this.tag === void 0) {
+          return tagInLowerCase === void 0;
+        } else {
+          return tagInLowerCase !== void 0 && this.tag.length === tagInLowerCase.length && this.tag.toLowerCase() === tagInLowerCase;
         }
-      }
-      return this;
-    };
-    Node2.prototype.findNodeAt = function(offset) {
-      var idx = findFirst(this.children, function(c) {
-        return offset <= c.start;
-      }) - 1;
-      if (idx >= 0) {
-        var child = this.children[idx];
-        if (offset > child.start && offset <= child.end) {
-          return child.findNodeAt(offset);
+      };
+      Object.defineProperty(Node2.prototype, "firstChild", {
+        get: function() {
+          return this.children[0];
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Object.defineProperty(Node2.prototype, "lastChild", {
+        get: function() {
+          return this.children.length ? this.children[this.children.length - 1] : void 0;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Node2.prototype.findNodeBefore = function(offset) {
+        var idx = findFirst(this.children, function(c) {
+          return offset <= c.start;
+        }) - 1;
+        if (idx >= 0) {
+          var child = this.children[idx];
+          if (offset > child.start) {
+            if (offset < child.end) {
+              return child.findNodeBefore(offset);
+            }
+            var lastChild = child.lastChild;
+            if (lastChild && lastChild.end === child.end) {
+              return child.findNodeBefore(offset);
+            }
+            return child;
+          }
         }
-      }
-      return this;
-    };
-    return Node2;
-  }();
+        return this;
+      };
+      Node2.prototype.findNodeAt = function(offset) {
+        var idx = findFirst(this.children, function(c) {
+          return offset <= c.start;
+        }) - 1;
+        if (idx >= 0) {
+          var child = this.children[idx];
+          if (offset > child.start && offset <= child.end) {
+            return child.findNodeAt(offset);
+          }
+        }
+        return this;
+      };
+      return Node2;
+    }()
+  );
   function parse(text) {
     var scanner = createScanner(text, void 0, void 0, true);
     var htmlDocument = new Node(0, text.length, [], void 0);
@@ -4504,76 +4527,79 @@ var moduleExports = (() => {
   }
 
   // node_modules/vscode-html-languageservice/lib/esm/languageFacts/dataProvider.js
-  var HTMLDataProvider = function() {
-    function HTMLDataProvider2(id, customData) {
-      var _this = this;
-      this.id = id;
-      this._tags = [];
-      this._tagMap = {};
-      this._valueSetMap = {};
-      this._tags = customData.tags || [];
-      this._globalAttributes = customData.globalAttributes || [];
-      this._tags.forEach(function(t) {
-        _this._tagMap[t.name.toLowerCase()] = t;
-      });
-      if (customData.valueSets) {
-        customData.valueSets.forEach(function(vs) {
-          _this._valueSetMap[vs.name] = vs.values;
+  var HTMLDataProvider = (
+    /** @class */
+    function() {
+      function HTMLDataProvider2(id, customData) {
+        var _this = this;
+        this.id = id;
+        this._tags = [];
+        this._tagMap = {};
+        this._valueSetMap = {};
+        this._tags = customData.tags || [];
+        this._globalAttributes = customData.globalAttributes || [];
+        this._tags.forEach(function(t) {
+          _this._tagMap[t.name.toLowerCase()] = t;
         });
+        if (customData.valueSets) {
+          customData.valueSets.forEach(function(vs) {
+            _this._valueSetMap[vs.name] = vs.values;
+          });
+        }
       }
-    }
-    HTMLDataProvider2.prototype.isApplicable = function() {
-      return true;
-    };
-    HTMLDataProvider2.prototype.getId = function() {
-      return this.id;
-    };
-    HTMLDataProvider2.prototype.provideTags = function() {
-      return this._tags;
-    };
-    HTMLDataProvider2.prototype.provideAttributes = function(tag) {
-      var attributes = [];
-      var processAttribute = function(a) {
-        attributes.push(a);
+      HTMLDataProvider2.prototype.isApplicable = function() {
+        return true;
       };
-      var tagEntry = this._tagMap[tag.toLowerCase()];
-      if (tagEntry) {
-        tagEntry.attributes.forEach(processAttribute);
-      }
-      this._globalAttributes.forEach(processAttribute);
-      return attributes;
-    };
-    HTMLDataProvider2.prototype.provideValues = function(tag, attribute) {
-      var _this = this;
-      var values = [];
-      attribute = attribute.toLowerCase();
-      var processAttributes = function(attributes) {
-        attributes.forEach(function(a) {
-          if (a.name.toLowerCase() === attribute) {
-            if (a.values) {
-              a.values.forEach(function(v) {
-                values.push(v);
-              });
-            }
-            if (a.valueSet) {
-              if (_this._valueSetMap[a.valueSet]) {
-                _this._valueSetMap[a.valueSet].forEach(function(v) {
+      HTMLDataProvider2.prototype.getId = function() {
+        return this.id;
+      };
+      HTMLDataProvider2.prototype.provideTags = function() {
+        return this._tags;
+      };
+      HTMLDataProvider2.prototype.provideAttributes = function(tag) {
+        var attributes = [];
+        var processAttribute = function(a) {
+          attributes.push(a);
+        };
+        var tagEntry = this._tagMap[tag.toLowerCase()];
+        if (tagEntry) {
+          tagEntry.attributes.forEach(processAttribute);
+        }
+        this._globalAttributes.forEach(processAttribute);
+        return attributes;
+      };
+      HTMLDataProvider2.prototype.provideValues = function(tag, attribute) {
+        var _this = this;
+        var values = [];
+        attribute = attribute.toLowerCase();
+        var processAttributes = function(attributes) {
+          attributes.forEach(function(a) {
+            if (a.name.toLowerCase() === attribute) {
+              if (a.values) {
+                a.values.forEach(function(v) {
                   values.push(v);
                 });
               }
+              if (a.valueSet) {
+                if (_this._valueSetMap[a.valueSet]) {
+                  _this._valueSetMap[a.valueSet].forEach(function(v) {
+                    values.push(v);
+                  });
+                }
+              }
             }
-          }
-        });
+          });
+        };
+        var tagEntry = this._tagMap[tag.toLowerCase()];
+        if (tagEntry) {
+          processAttributes(tagEntry.attributes);
+        }
+        processAttributes(this._globalAttributes);
+        return values;
       };
-      var tagEntry = this._tagMap[tag.toLowerCase()];
-      if (tagEntry) {
-        processAttributes(tagEntry.attributes);
-      }
-      processAttributes(this._globalAttributes);
-      return values;
-    };
-    return HTMLDataProvider2;
-  }();
+      return HTMLDataProvider2;
+    }()
+  );
   function generateDocumentation(item, settings, doesSupportMarkdown) {
     if (settings === void 0) {
       settings = {};
@@ -4712,90 +4738,93 @@ var moduleExports = (() => {
       return { value: op[0] ? op[1] : void 0, done: true };
     }
   };
-  var PathCompletionParticipant = function() {
-    function PathCompletionParticipant2(readDirectory) {
-      this.readDirectory = readDirectory;
-      this.atributeCompletions = [];
-    }
-    PathCompletionParticipant2.prototype.onHtmlAttributeValue = function(context) {
-      if (isPathAttribute(context.tag, context.attribute)) {
-        this.atributeCompletions.push(context);
+  var PathCompletionParticipant = (
+    /** @class */
+    function() {
+      function PathCompletionParticipant2(readDirectory) {
+        this.readDirectory = readDirectory;
+        this.atributeCompletions = [];
       }
-    };
-    PathCompletionParticipant2.prototype.computeCompletions = function(document, documentContext) {
-      return __awaiter(this, void 0, void 0, function() {
-        var result, _i, _a2, attributeCompletion, fullValue, replaceRange, suggestions, _b, suggestions_1, item;
-        return __generator(this, function(_c) {
-          switch (_c.label) {
-            case 0:
-              result = { items: [], isIncomplete: false };
-              _i = 0, _a2 = this.atributeCompletions;
-              _c.label = 1;
-            case 1:
-              if (!(_i < _a2.length))
-                return [3, 5];
-              attributeCompletion = _a2[_i];
-              fullValue = stripQuotes(document.getText(attributeCompletion.range));
-              if (!isCompletablePath(fullValue))
+      PathCompletionParticipant2.prototype.onHtmlAttributeValue = function(context) {
+        if (isPathAttribute(context.tag, context.attribute)) {
+          this.atributeCompletions.push(context);
+        }
+      };
+      PathCompletionParticipant2.prototype.computeCompletions = function(document, documentContext) {
+        return __awaiter(this, void 0, void 0, function() {
+          var result, _i, _a2, attributeCompletion, fullValue, replaceRange, suggestions, _b, suggestions_1, item;
+          return __generator(this, function(_c) {
+            switch (_c.label) {
+              case 0:
+                result = { items: [], isIncomplete: false };
+                _i = 0, _a2 = this.atributeCompletions;
+                _c.label = 1;
+              case 1:
+                if (!(_i < _a2.length))
+                  return [3, 5];
+                attributeCompletion = _a2[_i];
+                fullValue = stripQuotes(document.getText(attributeCompletion.range));
+                if (!isCompletablePath(fullValue))
+                  return [3, 4];
+                if (!(fullValue === "." || fullValue === ".."))
+                  return [3, 2];
+                result.isIncomplete = true;
                 return [3, 4];
-              if (!(fullValue === "." || fullValue === ".."))
-                return [3, 2];
-              result.isIncomplete = true;
-              return [3, 4];
-            case 2:
-              replaceRange = pathToReplaceRange(attributeCompletion.value, fullValue, attributeCompletion.range);
-              return [4, this.providePathSuggestions(attributeCompletion.value, replaceRange, document, documentContext)];
-            case 3:
-              suggestions = _c.sent();
-              for (_b = 0, suggestions_1 = suggestions; _b < suggestions_1.length; _b++) {
-                item = suggestions_1[_b];
-                result.items.push(item);
-              }
-              _c.label = 4;
-            case 4:
-              _i++;
-              return [3, 1];
-            case 5:
-              return [2, result];
-          }
-        });
-      });
-    };
-    PathCompletionParticipant2.prototype.providePathSuggestions = function(valueBeforeCursor, replaceRange, document, documentContext) {
-      return __awaiter(this, void 0, void 0, function() {
-        var valueBeforeLastSlash, parentDir, result, infos, _i, infos_1, _a2, name, type, e_1;
-        return __generator(this, function(_b) {
-          switch (_b.label) {
-            case 0:
-              valueBeforeLastSlash = valueBeforeCursor.substring(0, valueBeforeCursor.lastIndexOf("/") + 1);
-              parentDir = documentContext.resolveReference(valueBeforeLastSlash || ".", document.uri);
-              if (!parentDir)
-                return [3, 4];
-              _b.label = 1;
-            case 1:
-              _b.trys.push([1, 3, , 4]);
-              result = [];
-              return [4, this.readDirectory(parentDir)];
-            case 2:
-              infos = _b.sent();
-              for (_i = 0, infos_1 = infos; _i < infos_1.length; _i++) {
-                _a2 = infos_1[_i], name = _a2[0], type = _a2[1];
-                if (name.charCodeAt(0) !== CharCode_dot) {
-                  result.push(createCompletionItem(name, type === FileType.Directory, replaceRange));
+              case 2:
+                replaceRange = pathToReplaceRange(attributeCompletion.value, fullValue, attributeCompletion.range);
+                return [4, this.providePathSuggestions(attributeCompletion.value, replaceRange, document, documentContext)];
+              case 3:
+                suggestions = _c.sent();
+                for (_b = 0, suggestions_1 = suggestions; _b < suggestions_1.length; _b++) {
+                  item = suggestions_1[_b];
+                  result.items.push(item);
                 }
-              }
-              return [2, result];
-            case 3:
-              e_1 = _b.sent();
-              return [3, 4];
-            case 4:
-              return [2, []];
-          }
+                _c.label = 4;
+              case 4:
+                _i++;
+                return [3, 1];
+              case 5:
+                return [2, result];
+            }
+          });
         });
-      });
-    };
-    return PathCompletionParticipant2;
-  }();
+      };
+      PathCompletionParticipant2.prototype.providePathSuggestions = function(valueBeforeCursor, replaceRange, document, documentContext) {
+        return __awaiter(this, void 0, void 0, function() {
+          var valueBeforeLastSlash, parentDir, result, infos, _i, infos_1, _a2, name, type, e_1;
+          return __generator(this, function(_b) {
+            switch (_b.label) {
+              case 0:
+                valueBeforeLastSlash = valueBeforeCursor.substring(0, valueBeforeCursor.lastIndexOf("/") + 1);
+                parentDir = documentContext.resolveReference(valueBeforeLastSlash || ".", document.uri);
+                if (!parentDir)
+                  return [3, 4];
+                _b.label = 1;
+              case 1:
+                _b.trys.push([1, 3, , 4]);
+                result = [];
+                return [4, this.readDirectory(parentDir)];
+              case 2:
+                infos = _b.sent();
+                for (_i = 0, infos_1 = infos; _i < infos_1.length; _i++) {
+                  _a2 = infos_1[_i], name = _a2[0], type = _a2[1];
+                  if (name.charCodeAt(0) !== CharCode_dot) {
+                    result.push(createCompletionItem(name, type === FileType.Directory, replaceRange));
+                  }
+                }
+                return [2, result];
+              case 3:
+                e_1 = _b.sent();
+                return [3, 4];
+              case 4:
+                return [2, []];
+            }
+          });
+        });
+      };
+      return PathCompletionParticipant2;
+    }()
+  );
   var CharCode_dot = ".".charCodeAt(0);
   function stripQuotes(fullValue) {
     if (startsWith(fullValue, "'") || startsWith(fullValue, '"')) {
@@ -4872,6 +4901,7 @@ var moduleExports = (() => {
     return Range.create(start, end);
   }
   var PATH_TAG_AND_ATTR = {
+    // HTML 4
     a: "href",
     area: "href",
     body: "background",
@@ -4884,6 +4914,7 @@ var moduleExports = (() => {
     object: "data",
     q: "cite",
     script: "src",
+    // HTML 5
     audio: "src",
     button: "formaction",
     command: "icon",
@@ -5000,565 +5031,574 @@ var moduleExports = (() => {
     }
   };
   var localize3 = loadMessageBundle();
-  var HTMLCompletion = function() {
-    function HTMLCompletion2(lsOptions, dataManager) {
-      this.lsOptions = lsOptions;
-      this.dataManager = dataManager;
-      this.completionParticipants = [];
-    }
-    HTMLCompletion2.prototype.setCompletionParticipants = function(registeredCompletionParticipants) {
-      this.completionParticipants = registeredCompletionParticipants || [];
-    };
-    HTMLCompletion2.prototype.doComplete2 = function(document, position, htmlDocument, documentContext, settings) {
-      return __awaiter2(this, void 0, void 0, function() {
-        var participant, contributedParticipants, result, pathCompletionResult;
-        return __generator2(this, function(_a2) {
-          switch (_a2.label) {
-            case 0:
-              if (!this.lsOptions.fileSystemProvider || !this.lsOptions.fileSystemProvider.readDirectory) {
-                return [2, this.doComplete(document, position, htmlDocument, settings)];
-              }
-              participant = new PathCompletionParticipant(this.lsOptions.fileSystemProvider.readDirectory);
-              contributedParticipants = this.completionParticipants;
-              this.completionParticipants = [participant].concat(contributedParticipants);
-              result = this.doComplete(document, position, htmlDocument, settings);
-              _a2.label = 1;
-            case 1:
-              _a2.trys.push([1, , 3, 4]);
-              return [4, participant.computeCompletions(document, documentContext)];
-            case 2:
-              pathCompletionResult = _a2.sent();
-              return [2, {
-                isIncomplete: result.isIncomplete || pathCompletionResult.isIncomplete,
-                items: pathCompletionResult.items.concat(result.items)
-              }];
-            case 3:
-              this.completionParticipants = contributedParticipants;
-              return [7];
-            case 4:
-              return [2];
-          }
-        });
-      });
-    };
-    HTMLCompletion2.prototype.doComplete = function(document, position, htmlDocument, settings) {
-      var result = this._doComplete(document, position, htmlDocument, settings);
-      return this.convertCompletionList(result);
-    };
-    HTMLCompletion2.prototype._doComplete = function(document, position, htmlDocument, settings) {
-      var result = {
-        isIncomplete: false,
-        items: []
+  var HTMLCompletion = (
+    /** @class */
+    function() {
+      function HTMLCompletion2(lsOptions, dataManager) {
+        this.lsOptions = lsOptions;
+        this.dataManager = dataManager;
+        this.completionParticipants = [];
+      }
+      HTMLCompletion2.prototype.setCompletionParticipants = function(registeredCompletionParticipants) {
+        this.completionParticipants = registeredCompletionParticipants || [];
       };
-      var completionParticipants = this.completionParticipants;
-      var dataProviders = this.dataManager.getDataProviders().filter(function(p) {
-        return p.isApplicable(document.languageId) && (!settings || settings[p.getId()] !== false);
-      });
-      var doesSupportMarkdown = this.doesSupportMarkdown();
-      var text = document.getText();
-      var offset = document.offsetAt(position);
-      var node = htmlDocument.findNodeBefore(offset);
-      if (!node) {
-        return result;
-      }
-      var scanner = createScanner(text, node.start);
-      var currentTag = "";
-      var currentAttributeName;
-      function getReplaceRange(replaceStart, replaceEnd) {
-        if (replaceEnd === void 0) {
-          replaceEnd = offset;
-        }
-        if (replaceStart > offset) {
-          replaceStart = offset;
-        }
-        return { start: document.positionAt(replaceStart), end: document.positionAt(replaceEnd) };
-      }
-      function collectOpenTagSuggestions(afterOpenBracket2, tagNameEnd) {
-        var range = getReplaceRange(afterOpenBracket2, tagNameEnd);
-        dataProviders.forEach(function(provider) {
-          provider.provideTags().forEach(function(tag) {
-            result.items.push({
-              label: tag.name,
-              kind: CompletionItemKind.Property,
-              documentation: generateDocumentation(tag, void 0, doesSupportMarkdown),
-              textEdit: TextEdit.replace(range, tag.name),
-              insertTextFormat: InsertTextFormat.PlainText
-            });
+      HTMLCompletion2.prototype.doComplete2 = function(document, position, htmlDocument, documentContext, settings) {
+        return __awaiter2(this, void 0, void 0, function() {
+          var participant, contributedParticipants, result, pathCompletionResult;
+          return __generator2(this, function(_a2) {
+            switch (_a2.label) {
+              case 0:
+                if (!this.lsOptions.fileSystemProvider || !this.lsOptions.fileSystemProvider.readDirectory) {
+                  return [2, this.doComplete(document, position, htmlDocument, settings)];
+                }
+                participant = new PathCompletionParticipant(this.lsOptions.fileSystemProvider.readDirectory);
+                contributedParticipants = this.completionParticipants;
+                this.completionParticipants = [participant].concat(contributedParticipants);
+                result = this.doComplete(document, position, htmlDocument, settings);
+                _a2.label = 1;
+              case 1:
+                _a2.trys.push([1, , 3, 4]);
+                return [4, participant.computeCompletions(document, documentContext)];
+              case 2:
+                pathCompletionResult = _a2.sent();
+                return [2, {
+                  isIncomplete: result.isIncomplete || pathCompletionResult.isIncomplete,
+                  items: pathCompletionResult.items.concat(result.items)
+                }];
+              case 3:
+                this.completionParticipants = contributedParticipants;
+                return [
+                  7
+                  /*endfinally*/
+                ];
+              case 4:
+                return [
+                  2
+                  /*return*/
+                ];
+            }
           });
         });
-        return result;
-      }
-      function getLineIndent(offset2) {
-        var start2 = offset2;
-        while (start2 > 0) {
-          var ch2 = text.charAt(start2 - 1);
-          if ("\n\r".indexOf(ch2) >= 0) {
-            return text.substring(start2, offset2);
-          }
-          if (!isWhiteSpace(ch2)) {
-            return null;
-          }
-          start2--;
-        }
-        return text.substring(0, offset2);
-      }
-      function collectCloseTagSuggestions(afterOpenBracket2, inOpenTag, tagNameEnd) {
-        if (tagNameEnd === void 0) {
-          tagNameEnd = offset;
-        }
-        var range = getReplaceRange(afterOpenBracket2, tagNameEnd);
-        var closeTag = isFollowedBy(text, tagNameEnd, ScannerState.WithinEndTag, TokenType.EndTagClose) ? "" : ">";
-        var curr = node;
-        if (inOpenTag) {
-          curr = curr.parent;
-        }
-        while (curr) {
-          var tag = curr.tag;
-          if (tag && (!curr.closed || curr.endTagStart && curr.endTagStart > offset)) {
-            var item = {
-              label: "/" + tag,
-              kind: CompletionItemKind.Property,
-              filterText: "/" + tag,
-              textEdit: TextEdit.replace(range, "/" + tag + closeTag),
-              insertTextFormat: InsertTextFormat.PlainText
-            };
-            var startIndent = getLineIndent(curr.start);
-            var endIndent = getLineIndent(afterOpenBracket2 - 1);
-            if (startIndent !== null && endIndent !== null && startIndent !== endIndent) {
-              var insertText = startIndent + "</" + tag + closeTag;
-              item.textEdit = TextEdit.replace(getReplaceRange(afterOpenBracket2 - 1 - endIndent.length), insertText);
-              item.filterText = endIndent + "</" + tag;
-            }
-            result.items.push(item);
-            return result;
-          }
-          curr = curr.parent;
-        }
-        if (inOpenTag) {
+      };
+      HTMLCompletion2.prototype.doComplete = function(document, position, htmlDocument, settings) {
+        var result = this._doComplete(document, position, htmlDocument, settings);
+        return this.convertCompletionList(result);
+      };
+      HTMLCompletion2.prototype._doComplete = function(document, position, htmlDocument, settings) {
+        var result = {
+          isIncomplete: false,
+          items: []
+        };
+        var completionParticipants = this.completionParticipants;
+        var dataProviders = this.dataManager.getDataProviders().filter(function(p) {
+          return p.isApplicable(document.languageId) && (!settings || settings[p.getId()] !== false);
+        });
+        var doesSupportMarkdown = this.doesSupportMarkdown();
+        var text = document.getText();
+        var offset = document.offsetAt(position);
+        var node = htmlDocument.findNodeBefore(offset);
+        if (!node) {
           return result;
         }
-        dataProviders.forEach(function(provider) {
-          provider.provideTags().forEach(function(tag2) {
-            result.items.push({
-              label: "/" + tag2.name,
-              kind: CompletionItemKind.Property,
-              documentation: generateDocumentation(tag2, void 0, doesSupportMarkdown),
-              filterText: "/" + tag2.name + closeTag,
-              textEdit: TextEdit.replace(range, "/" + tag2.name + closeTag),
-              insertTextFormat: InsertTextFormat.PlainText
-            });
-          });
-        });
-        return result;
-      }
-      function collectAutoCloseTagSuggestion(tagCloseEnd, tag) {
-        if (settings && settings.hideAutoCompleteProposals) {
-          return result;
-        }
-        if (!isVoidElement(tag)) {
-          var pos = document.positionAt(tagCloseEnd);
-          result.items.push({
-            label: "</" + tag + ">",
-            kind: CompletionItemKind.Property,
-            filterText: "</" + tag + ">",
-            textEdit: TextEdit.insert(pos, "$0</" + tag + ">"),
-            insertTextFormat: InsertTextFormat.Snippet
-          });
-        }
-        return result;
-      }
-      function collectTagSuggestions(tagStart, tagEnd) {
-        collectOpenTagSuggestions(tagStart, tagEnd);
-        collectCloseTagSuggestions(tagStart, true, tagEnd);
-        return result;
-      }
-      function getExistingAttributes() {
-        var existingAttributes = /* @__PURE__ */ Object.create(null);
-        node.attributeNames.forEach(function(attribute) {
-          existingAttributes[attribute] = true;
-        });
-        return existingAttributes;
-      }
-      function collectAttributeNameSuggestions(nameStart, nameEnd) {
-        var _a2;
-        if (nameEnd === void 0) {
-          nameEnd = offset;
-        }
-        var replaceEnd = offset;
-        while (replaceEnd < nameEnd && text[replaceEnd] !== "<") {
-          replaceEnd++;
-        }
-        var currentAttribute = text.substring(nameStart, nameEnd);
-        var range = getReplaceRange(nameStart, replaceEnd);
-        var value = "";
-        if (!isFollowedBy(text, nameEnd, ScannerState.AfterAttributeName, TokenType.DelimiterAssign)) {
-          var defaultValue = (_a2 = settings === null || settings === void 0 ? void 0 : settings.attributeDefaultValue) !== null && _a2 !== void 0 ? _a2 : "doublequotes";
-          if (defaultValue === "empty") {
-            value = "=$1";
-          } else if (defaultValue === "singlequotes") {
-            value = "='$1'";
-          } else {
-            value = '="$1"';
+        var scanner = createScanner(text, node.start);
+        var currentTag = "";
+        var currentAttributeName;
+        function getReplaceRange(replaceStart, replaceEnd) {
+          if (replaceEnd === void 0) {
+            replaceEnd = offset;
           }
-        }
-        var seenAttributes = getExistingAttributes();
-        seenAttributes[currentAttribute] = false;
-        dataProviders.forEach(function(provider) {
-          provider.provideAttributes(currentTag).forEach(function(attr) {
-            if (seenAttributes[attr.name]) {
-              return;
-            }
-            seenAttributes[attr.name] = true;
-            var codeSnippet = attr.name;
-            var command;
-            if (attr.valueSet !== "v" && value.length) {
-              codeSnippet = codeSnippet + value;
-              if (attr.valueSet || attr.name === "style") {
-                command = {
-                  title: "Suggest",
-                  command: "editor.action.triggerSuggest"
-                };
-              }
-            }
-            result.items.push({
-              label: attr.name,
-              kind: attr.valueSet === "handler" ? CompletionItemKind.Function : CompletionItemKind.Value,
-              documentation: generateDocumentation(attr, void 0, doesSupportMarkdown),
-              textEdit: TextEdit.replace(range, codeSnippet),
-              insertTextFormat: InsertTextFormat.Snippet,
-              command
-            });
-          });
-        });
-        collectDataAttributesSuggestions(range, seenAttributes);
-        return result;
-      }
-      function collectDataAttributesSuggestions(range, seenAttributes) {
-        var dataAttr = "data-";
-        var dataAttributes = {};
-        dataAttributes[dataAttr] = "".concat(dataAttr, '$1="$2"');
-        function addNodeDataAttributes(node2) {
-          node2.attributeNames.forEach(function(attr) {
-            if (startsWith(attr, dataAttr) && !dataAttributes[attr] && !seenAttributes[attr]) {
-              dataAttributes[attr] = attr + '="$1"';
-            }
-          });
-          node2.children.forEach(function(child) {
-            return addNodeDataAttributes(child);
-          });
-        }
-        if (htmlDocument) {
-          htmlDocument.roots.forEach(function(root) {
-            return addNodeDataAttributes(root);
-          });
-        }
-        Object.keys(dataAttributes).forEach(function(attr) {
-          return result.items.push({
-            label: attr,
-            kind: CompletionItemKind.Value,
-            textEdit: TextEdit.replace(range, dataAttributes[attr]),
-            insertTextFormat: InsertTextFormat.Snippet
-          });
-        });
-      }
-      function collectAttributeValueSuggestions(valueStart, valueEnd) {
-        if (valueEnd === void 0) {
-          valueEnd = offset;
-        }
-        var range;
-        var addQuotes;
-        var valuePrefix;
-        if (offset > valueStart && offset <= valueEnd && isQuote(text[valueStart])) {
-          var valueContentStart = valueStart + 1;
-          var valueContentEnd = valueEnd;
-          if (valueEnd > valueStart && text[valueEnd - 1] === text[valueStart]) {
-            valueContentEnd--;
+          if (replaceStart > offset) {
+            replaceStart = offset;
           }
-          var wsBefore = getWordStart(text, offset, valueContentStart);
-          var wsAfter = getWordEnd(text, offset, valueContentEnd);
-          range = getReplaceRange(wsBefore, wsAfter);
-          valuePrefix = offset >= valueContentStart && offset <= valueContentEnd ? text.substring(valueContentStart, offset) : "";
-          addQuotes = false;
-        } else {
-          range = getReplaceRange(valueStart, valueEnd);
-          valuePrefix = text.substring(valueStart, offset);
-          addQuotes = true;
+          return { start: document.positionAt(replaceStart), end: document.positionAt(replaceEnd) };
         }
-        if (completionParticipants.length > 0) {
-          var tag = currentTag.toLowerCase();
-          var attribute = currentAttributeName.toLowerCase();
-          var fullRange = getReplaceRange(valueStart, valueEnd);
-          for (var _i = 0, completionParticipants_1 = completionParticipants; _i < completionParticipants_1.length; _i++) {
-            var participant = completionParticipants_1[_i];
-            if (participant.onHtmlAttributeValue) {
-              participant.onHtmlAttributeValue({ document, position, tag, attribute, value: valuePrefix, range: fullRange });
-            }
-          }
-        }
-        dataProviders.forEach(function(provider) {
-          provider.provideValues(currentTag, currentAttributeName).forEach(function(value) {
-            var insertText = addQuotes ? '"' + value.name + '"' : value.name;
-            result.items.push({
-              label: value.name,
-              filterText: insertText,
-              kind: CompletionItemKind.Unit,
-              documentation: generateDocumentation(value, void 0, doesSupportMarkdown),
-              textEdit: TextEdit.replace(range, insertText),
-              insertTextFormat: InsertTextFormat.PlainText
-            });
-          });
-        });
-        collectCharacterEntityProposals();
-        return result;
-      }
-      function scanNextForEndPos(nextToken) {
-        if (offset === scanner.getTokenEnd()) {
-          token = scanner.scan();
-          if (token === nextToken && scanner.getTokenOffset() === offset) {
-            return scanner.getTokenEnd();
-          }
-        }
-        return offset;
-      }
-      function collectInsideContent() {
-        for (var _i = 0, completionParticipants_2 = completionParticipants; _i < completionParticipants_2.length; _i++) {
-          var participant = completionParticipants_2[_i];
-          if (participant.onHtmlContent) {
-            participant.onHtmlContent({ document, position });
-          }
-        }
-        return collectCharacterEntityProposals();
-      }
-      function collectCharacterEntityProposals() {
-        var k = offset - 1;
-        var characterStart = position.character;
-        while (k >= 0 && isLetterOrDigit(text, k)) {
-          k--;
-          characterStart--;
-        }
-        if (k >= 0 && text[k] === "&") {
-          var range = Range.create(Position.create(position.line, characterStart - 1), position);
-          for (var entity in entities) {
-            if (endsWith(entity, ";")) {
-              var label = "&" + entity;
+        function collectOpenTagSuggestions(afterOpenBracket2, tagNameEnd) {
+          var range = getReplaceRange(afterOpenBracket2, tagNameEnd);
+          dataProviders.forEach(function(provider) {
+            provider.provideTags().forEach(function(tag) {
               result.items.push({
-                label,
-                kind: CompletionItemKind.Keyword,
-                documentation: localize3("entity.propose", "Character entity representing '".concat(entities[entity], "'")),
-                textEdit: TextEdit.replace(range, label),
+                label: tag.name,
+                kind: CompletionItemKind.Property,
+                documentation: generateDocumentation(tag, void 0, doesSupportMarkdown),
+                textEdit: TextEdit.replace(range, tag.name),
                 insertTextFormat: InsertTextFormat.PlainText
               });
-            }
-          }
+            });
+          });
+          return result;
         }
-        return result;
-      }
-      function suggestDoctype(replaceStart, replaceEnd) {
-        var range = getReplaceRange(replaceStart, replaceEnd);
-        result.items.push({
-          label: "!DOCTYPE",
-          kind: CompletionItemKind.Property,
-          documentation: "A preamble for an HTML document.",
-          textEdit: TextEdit.replace(range, "!DOCTYPE html>"),
-          insertTextFormat: InsertTextFormat.PlainText
-        });
-      }
-      var token = scanner.scan();
-      while (token !== TokenType.EOS && scanner.getTokenOffset() <= offset) {
-        switch (token) {
-          case TokenType.StartTagOpen:
-            if (scanner.getTokenEnd() === offset) {
-              var endPos = scanNextForEndPos(TokenType.StartTag);
-              if (position.line === 0) {
-                suggestDoctype(offset, endPos);
+        function getLineIndent(offset2) {
+          var start2 = offset2;
+          while (start2 > 0) {
+            var ch2 = text.charAt(start2 - 1);
+            if ("\n\r".indexOf(ch2) >= 0) {
+              return text.substring(start2, offset2);
+            }
+            if (!isWhiteSpace(ch2)) {
+              return null;
+            }
+            start2--;
+          }
+          return text.substring(0, offset2);
+        }
+        function collectCloseTagSuggestions(afterOpenBracket2, inOpenTag, tagNameEnd) {
+          if (tagNameEnd === void 0) {
+            tagNameEnd = offset;
+          }
+          var range = getReplaceRange(afterOpenBracket2, tagNameEnd);
+          var closeTag = isFollowedBy(text, tagNameEnd, ScannerState.WithinEndTag, TokenType.EndTagClose) ? "" : ">";
+          var curr = node;
+          if (inOpenTag) {
+            curr = curr.parent;
+          }
+          while (curr) {
+            var tag = curr.tag;
+            if (tag && (!curr.closed || curr.endTagStart && curr.endTagStart > offset)) {
+              var item = {
+                label: "/" + tag,
+                kind: CompletionItemKind.Property,
+                filterText: "/" + tag,
+                textEdit: TextEdit.replace(range, "/" + tag + closeTag),
+                insertTextFormat: InsertTextFormat.PlainText
+              };
+              var startIndent = getLineIndent(curr.start);
+              var endIndent = getLineIndent(afterOpenBracket2 - 1);
+              if (startIndent !== null && endIndent !== null && startIndent !== endIndent) {
+                var insertText = startIndent + "</" + tag + closeTag;
+                item.textEdit = TextEdit.replace(getReplaceRange(afterOpenBracket2 - 1 - endIndent.length), insertText);
+                item.filterText = endIndent + "</" + tag;
               }
-              return collectTagSuggestions(offset, endPos);
-            }
-            break;
-          case TokenType.StartTag:
-            if (scanner.getTokenOffset() <= offset && offset <= scanner.getTokenEnd()) {
-              return collectOpenTagSuggestions(scanner.getTokenOffset(), scanner.getTokenEnd());
-            }
-            currentTag = scanner.getTokenText();
-            break;
-          case TokenType.AttributeName:
-            if (scanner.getTokenOffset() <= offset && offset <= scanner.getTokenEnd()) {
-              return collectAttributeNameSuggestions(scanner.getTokenOffset(), scanner.getTokenEnd());
-            }
-            currentAttributeName = scanner.getTokenText();
-            break;
-          case TokenType.DelimiterAssign:
-            if (scanner.getTokenEnd() === offset) {
-              var endPos = scanNextForEndPos(TokenType.AttributeValue);
-              return collectAttributeValueSuggestions(offset, endPos);
-            }
-            break;
-          case TokenType.AttributeValue:
-            if (scanner.getTokenOffset() <= offset && offset <= scanner.getTokenEnd()) {
-              return collectAttributeValueSuggestions(scanner.getTokenOffset(), scanner.getTokenEnd());
-            }
-            break;
-          case TokenType.Whitespace:
-            if (offset <= scanner.getTokenEnd()) {
-              switch (scanner.getScannerState()) {
-                case ScannerState.AfterOpeningStartTag:
-                  var startPos = scanner.getTokenOffset();
-                  var endTagPos = scanNextForEndPos(TokenType.StartTag);
-                  return collectTagSuggestions(startPos, endTagPos);
-                case ScannerState.WithinTag:
-                case ScannerState.AfterAttributeName:
-                  return collectAttributeNameSuggestions(scanner.getTokenEnd());
-                case ScannerState.BeforeAttributeValue:
-                  return collectAttributeValueSuggestions(scanner.getTokenEnd());
-                case ScannerState.AfterOpeningEndTag:
-                  return collectCloseTagSuggestions(scanner.getTokenOffset() - 1, false);
-                case ScannerState.WithinContent:
-                  return collectInsideContent();
-              }
-            }
-            break;
-          case TokenType.EndTagOpen:
-            if (offset <= scanner.getTokenEnd()) {
-              var afterOpenBracket = scanner.getTokenOffset() + 1;
-              var endOffset = scanNextForEndPos(TokenType.EndTag);
-              return collectCloseTagSuggestions(afterOpenBracket, false, endOffset);
-            }
-            break;
-          case TokenType.EndTag:
-            if (offset <= scanner.getTokenEnd()) {
-              var start = scanner.getTokenOffset() - 1;
-              while (start >= 0) {
-                var ch = text.charAt(start);
-                if (ch === "/") {
-                  return collectCloseTagSuggestions(start, false, scanner.getTokenEnd());
-                } else if (!isWhiteSpace(ch)) {
-                  break;
-                }
-                start--;
-              }
-            }
-            break;
-          case TokenType.StartTagClose:
-            if (offset <= scanner.getTokenEnd()) {
-              if (currentTag) {
-                return collectAutoCloseTagSuggestion(scanner.getTokenEnd(), currentTag);
-              }
-            }
-            break;
-          case TokenType.Content:
-            if (offset <= scanner.getTokenEnd()) {
-              return collectInsideContent();
-            }
-            break;
-          default:
-            if (offset <= scanner.getTokenEnd()) {
+              result.items.push(item);
               return result;
             }
-            break;
+            curr = curr.parent;
+          }
+          if (inOpenTag) {
+            return result;
+          }
+          dataProviders.forEach(function(provider) {
+            provider.provideTags().forEach(function(tag2) {
+              result.items.push({
+                label: "/" + tag2.name,
+                kind: CompletionItemKind.Property,
+                documentation: generateDocumentation(tag2, void 0, doesSupportMarkdown),
+                filterText: "/" + tag2.name + closeTag,
+                textEdit: TextEdit.replace(range, "/" + tag2.name + closeTag),
+                insertTextFormat: InsertTextFormat.PlainText
+              });
+            });
+          });
+          return result;
         }
-        token = scanner.scan();
-      }
-      return result;
-    };
-    HTMLCompletion2.prototype.doQuoteComplete = function(document, position, htmlDocument, settings) {
-      var _a2;
-      var offset = document.offsetAt(position);
-      if (offset <= 0) {
-        return null;
-      }
-      var defaultValue = (_a2 = settings === null || settings === void 0 ? void 0 : settings.attributeDefaultValue) !== null && _a2 !== void 0 ? _a2 : "doublequotes";
-      if (defaultValue === "empty") {
-        return null;
-      }
-      var char = document.getText().charAt(offset - 1);
-      if (char !== "=") {
-        return null;
-      }
-      var value = defaultValue === "doublequotes" ? '"$1"' : "'$1'";
-      var node = htmlDocument.findNodeBefore(offset);
-      if (node && node.attributes && node.start < offset && (!node.endTagStart || node.endTagStart > offset)) {
-        var scanner = createScanner(document.getText(), node.start);
+        function collectAutoCloseTagSuggestion(tagCloseEnd, tag) {
+          if (settings && settings.hideAutoCompleteProposals) {
+            return result;
+          }
+          if (!isVoidElement(tag)) {
+            var pos = document.positionAt(tagCloseEnd);
+            result.items.push({
+              label: "</" + tag + ">",
+              kind: CompletionItemKind.Property,
+              filterText: "</" + tag + ">",
+              textEdit: TextEdit.insert(pos, "$0</" + tag + ">"),
+              insertTextFormat: InsertTextFormat.Snippet
+            });
+          }
+          return result;
+        }
+        function collectTagSuggestions(tagStart, tagEnd) {
+          collectOpenTagSuggestions(tagStart, tagEnd);
+          collectCloseTagSuggestions(tagStart, true, tagEnd);
+          return result;
+        }
+        function getExistingAttributes() {
+          var existingAttributes = /* @__PURE__ */ Object.create(null);
+          node.attributeNames.forEach(function(attribute) {
+            existingAttributes[attribute] = true;
+          });
+          return existingAttributes;
+        }
+        function collectAttributeNameSuggestions(nameStart, nameEnd) {
+          var _a2;
+          if (nameEnd === void 0) {
+            nameEnd = offset;
+          }
+          var replaceEnd = offset;
+          while (replaceEnd < nameEnd && text[replaceEnd] !== "<") {
+            replaceEnd++;
+          }
+          var currentAttribute = text.substring(nameStart, nameEnd);
+          var range = getReplaceRange(nameStart, replaceEnd);
+          var value = "";
+          if (!isFollowedBy(text, nameEnd, ScannerState.AfterAttributeName, TokenType.DelimiterAssign)) {
+            var defaultValue = (_a2 = settings === null || settings === void 0 ? void 0 : settings.attributeDefaultValue) !== null && _a2 !== void 0 ? _a2 : "doublequotes";
+            if (defaultValue === "empty") {
+              value = "=$1";
+            } else if (defaultValue === "singlequotes") {
+              value = "='$1'";
+            } else {
+              value = '="$1"';
+            }
+          }
+          var seenAttributes = getExistingAttributes();
+          seenAttributes[currentAttribute] = false;
+          dataProviders.forEach(function(provider) {
+            provider.provideAttributes(currentTag).forEach(function(attr) {
+              if (seenAttributes[attr.name]) {
+                return;
+              }
+              seenAttributes[attr.name] = true;
+              var codeSnippet = attr.name;
+              var command;
+              if (attr.valueSet !== "v" && value.length) {
+                codeSnippet = codeSnippet + value;
+                if (attr.valueSet || attr.name === "style") {
+                  command = {
+                    title: "Suggest",
+                    command: "editor.action.triggerSuggest"
+                  };
+                }
+              }
+              result.items.push({
+                label: attr.name,
+                kind: attr.valueSet === "handler" ? CompletionItemKind.Function : CompletionItemKind.Value,
+                documentation: generateDocumentation(attr, void 0, doesSupportMarkdown),
+                textEdit: TextEdit.replace(range, codeSnippet),
+                insertTextFormat: InsertTextFormat.Snippet,
+                command
+              });
+            });
+          });
+          collectDataAttributesSuggestions(range, seenAttributes);
+          return result;
+        }
+        function collectDataAttributesSuggestions(range, seenAttributes) {
+          var dataAttr = "data-";
+          var dataAttributes = {};
+          dataAttributes[dataAttr] = "".concat(dataAttr, '$1="$2"');
+          function addNodeDataAttributes(node2) {
+            node2.attributeNames.forEach(function(attr) {
+              if (startsWith(attr, dataAttr) && !dataAttributes[attr] && !seenAttributes[attr]) {
+                dataAttributes[attr] = attr + '="$1"';
+              }
+            });
+            node2.children.forEach(function(child) {
+              return addNodeDataAttributes(child);
+            });
+          }
+          if (htmlDocument) {
+            htmlDocument.roots.forEach(function(root) {
+              return addNodeDataAttributes(root);
+            });
+          }
+          Object.keys(dataAttributes).forEach(function(attr) {
+            return result.items.push({
+              label: attr,
+              kind: CompletionItemKind.Value,
+              textEdit: TextEdit.replace(range, dataAttributes[attr]),
+              insertTextFormat: InsertTextFormat.Snippet
+            });
+          });
+        }
+        function collectAttributeValueSuggestions(valueStart, valueEnd) {
+          if (valueEnd === void 0) {
+            valueEnd = offset;
+          }
+          var range;
+          var addQuotes;
+          var valuePrefix;
+          if (offset > valueStart && offset <= valueEnd && isQuote(text[valueStart])) {
+            var valueContentStart = valueStart + 1;
+            var valueContentEnd = valueEnd;
+            if (valueEnd > valueStart && text[valueEnd - 1] === text[valueStart]) {
+              valueContentEnd--;
+            }
+            var wsBefore = getWordStart(text, offset, valueContentStart);
+            var wsAfter = getWordEnd(text, offset, valueContentEnd);
+            range = getReplaceRange(wsBefore, wsAfter);
+            valuePrefix = offset >= valueContentStart && offset <= valueContentEnd ? text.substring(valueContentStart, offset) : "";
+            addQuotes = false;
+          } else {
+            range = getReplaceRange(valueStart, valueEnd);
+            valuePrefix = text.substring(valueStart, offset);
+            addQuotes = true;
+          }
+          if (completionParticipants.length > 0) {
+            var tag = currentTag.toLowerCase();
+            var attribute = currentAttributeName.toLowerCase();
+            var fullRange = getReplaceRange(valueStart, valueEnd);
+            for (var _i = 0, completionParticipants_1 = completionParticipants; _i < completionParticipants_1.length; _i++) {
+              var participant = completionParticipants_1[_i];
+              if (participant.onHtmlAttributeValue) {
+                participant.onHtmlAttributeValue({ document, position, tag, attribute, value: valuePrefix, range: fullRange });
+              }
+            }
+          }
+          dataProviders.forEach(function(provider) {
+            provider.provideValues(currentTag, currentAttributeName).forEach(function(value) {
+              var insertText = addQuotes ? '"' + value.name + '"' : value.name;
+              result.items.push({
+                label: value.name,
+                filterText: insertText,
+                kind: CompletionItemKind.Unit,
+                documentation: generateDocumentation(value, void 0, doesSupportMarkdown),
+                textEdit: TextEdit.replace(range, insertText),
+                insertTextFormat: InsertTextFormat.PlainText
+              });
+            });
+          });
+          collectCharacterEntityProposals();
+          return result;
+        }
+        function scanNextForEndPos(nextToken) {
+          if (offset === scanner.getTokenEnd()) {
+            token = scanner.scan();
+            if (token === nextToken && scanner.getTokenOffset() === offset) {
+              return scanner.getTokenEnd();
+            }
+          }
+          return offset;
+        }
+        function collectInsideContent() {
+          for (var _i = 0, completionParticipants_2 = completionParticipants; _i < completionParticipants_2.length; _i++) {
+            var participant = completionParticipants_2[_i];
+            if (participant.onHtmlContent) {
+              participant.onHtmlContent({ document, position });
+            }
+          }
+          return collectCharacterEntityProposals();
+        }
+        function collectCharacterEntityProposals() {
+          var k = offset - 1;
+          var characterStart = position.character;
+          while (k >= 0 && isLetterOrDigit(text, k)) {
+            k--;
+            characterStart--;
+          }
+          if (k >= 0 && text[k] === "&") {
+            var range = Range.create(Position.create(position.line, characterStart - 1), position);
+            for (var entity in entities) {
+              if (endsWith(entity, ";")) {
+                var label = "&" + entity;
+                result.items.push({
+                  label,
+                  kind: CompletionItemKind.Keyword,
+                  documentation: localize3("entity.propose", "Character entity representing '".concat(entities[entity], "'")),
+                  textEdit: TextEdit.replace(range, label),
+                  insertTextFormat: InsertTextFormat.PlainText
+                });
+              }
+            }
+          }
+          return result;
+        }
+        function suggestDoctype(replaceStart, replaceEnd) {
+          var range = getReplaceRange(replaceStart, replaceEnd);
+          result.items.push({
+            label: "!DOCTYPE",
+            kind: CompletionItemKind.Property,
+            documentation: "A preamble for an HTML document.",
+            textEdit: TextEdit.replace(range, "!DOCTYPE html>"),
+            insertTextFormat: InsertTextFormat.PlainText
+          });
+        }
         var token = scanner.scan();
-        while (token !== TokenType.EOS && scanner.getTokenEnd() <= offset) {
-          if (token === TokenType.AttributeName && scanner.getTokenEnd() === offset - 1) {
-            token = scanner.scan();
-            if (token !== TokenType.DelimiterAssign) {
-              return null;
-            }
-            token = scanner.scan();
-            if (token === TokenType.Unknown || token === TokenType.AttributeValue) {
-              return null;
-            }
-            return value;
+        while (token !== TokenType.EOS && scanner.getTokenOffset() <= offset) {
+          switch (token) {
+            case TokenType.StartTagOpen:
+              if (scanner.getTokenEnd() === offset) {
+                var endPos = scanNextForEndPos(TokenType.StartTag);
+                if (position.line === 0) {
+                  suggestDoctype(offset, endPos);
+                }
+                return collectTagSuggestions(offset, endPos);
+              }
+              break;
+            case TokenType.StartTag:
+              if (scanner.getTokenOffset() <= offset && offset <= scanner.getTokenEnd()) {
+                return collectOpenTagSuggestions(scanner.getTokenOffset(), scanner.getTokenEnd());
+              }
+              currentTag = scanner.getTokenText();
+              break;
+            case TokenType.AttributeName:
+              if (scanner.getTokenOffset() <= offset && offset <= scanner.getTokenEnd()) {
+                return collectAttributeNameSuggestions(scanner.getTokenOffset(), scanner.getTokenEnd());
+              }
+              currentAttributeName = scanner.getTokenText();
+              break;
+            case TokenType.DelimiterAssign:
+              if (scanner.getTokenEnd() === offset) {
+                var endPos = scanNextForEndPos(TokenType.AttributeValue);
+                return collectAttributeValueSuggestions(offset, endPos);
+              }
+              break;
+            case TokenType.AttributeValue:
+              if (scanner.getTokenOffset() <= offset && offset <= scanner.getTokenEnd()) {
+                return collectAttributeValueSuggestions(scanner.getTokenOffset(), scanner.getTokenEnd());
+              }
+              break;
+            case TokenType.Whitespace:
+              if (offset <= scanner.getTokenEnd()) {
+                switch (scanner.getScannerState()) {
+                  case ScannerState.AfterOpeningStartTag:
+                    var startPos = scanner.getTokenOffset();
+                    var endTagPos = scanNextForEndPos(TokenType.StartTag);
+                    return collectTagSuggestions(startPos, endTagPos);
+                  case ScannerState.WithinTag:
+                  case ScannerState.AfterAttributeName:
+                    return collectAttributeNameSuggestions(scanner.getTokenEnd());
+                  case ScannerState.BeforeAttributeValue:
+                    return collectAttributeValueSuggestions(scanner.getTokenEnd());
+                  case ScannerState.AfterOpeningEndTag:
+                    return collectCloseTagSuggestions(scanner.getTokenOffset() - 1, false);
+                  case ScannerState.WithinContent:
+                    return collectInsideContent();
+                }
+              }
+              break;
+            case TokenType.EndTagOpen:
+              if (offset <= scanner.getTokenEnd()) {
+                var afterOpenBracket = scanner.getTokenOffset() + 1;
+                var endOffset = scanNextForEndPos(TokenType.EndTag);
+                return collectCloseTagSuggestions(afterOpenBracket, false, endOffset);
+              }
+              break;
+            case TokenType.EndTag:
+              if (offset <= scanner.getTokenEnd()) {
+                var start = scanner.getTokenOffset() - 1;
+                while (start >= 0) {
+                  var ch = text.charAt(start);
+                  if (ch === "/") {
+                    return collectCloseTagSuggestions(start, false, scanner.getTokenEnd());
+                  } else if (!isWhiteSpace(ch)) {
+                    break;
+                  }
+                  start--;
+                }
+              }
+              break;
+            case TokenType.StartTagClose:
+              if (offset <= scanner.getTokenEnd()) {
+                if (currentTag) {
+                  return collectAutoCloseTagSuggestion(scanner.getTokenEnd(), currentTag);
+                }
+              }
+              break;
+            case TokenType.Content:
+              if (offset <= scanner.getTokenEnd()) {
+                return collectInsideContent();
+              }
+              break;
+            default:
+              if (offset <= scanner.getTokenEnd()) {
+                return result;
+              }
+              break;
           }
           token = scanner.scan();
         }
-      }
-      return null;
-    };
-    HTMLCompletion2.prototype.doTagComplete = function(document, position, htmlDocument) {
-      var offset = document.offsetAt(position);
-      if (offset <= 0) {
+        return result;
+      };
+      HTMLCompletion2.prototype.doQuoteComplete = function(document, position, htmlDocument, settings) {
+        var _a2;
+        var offset = document.offsetAt(position);
+        if (offset <= 0) {
+          return null;
+        }
+        var defaultValue = (_a2 = settings === null || settings === void 0 ? void 0 : settings.attributeDefaultValue) !== null && _a2 !== void 0 ? _a2 : "doublequotes";
+        if (defaultValue === "empty") {
+          return null;
+        }
+        var char = document.getText().charAt(offset - 1);
+        if (char !== "=") {
+          return null;
+        }
+        var value = defaultValue === "doublequotes" ? '"$1"' : "'$1'";
+        var node = htmlDocument.findNodeBefore(offset);
+        if (node && node.attributes && node.start < offset && (!node.endTagStart || node.endTagStart > offset)) {
+          var scanner = createScanner(document.getText(), node.start);
+          var token = scanner.scan();
+          while (token !== TokenType.EOS && scanner.getTokenEnd() <= offset) {
+            if (token === TokenType.AttributeName && scanner.getTokenEnd() === offset - 1) {
+              token = scanner.scan();
+              if (token !== TokenType.DelimiterAssign) {
+                return null;
+              }
+              token = scanner.scan();
+              if (token === TokenType.Unknown || token === TokenType.AttributeValue) {
+                return null;
+              }
+              return value;
+            }
+            token = scanner.scan();
+          }
+        }
         return null;
-      }
-      var char = document.getText().charAt(offset - 1);
-      if (char === ">") {
-        var node = htmlDocument.findNodeBefore(offset);
-        if (node && node.tag && !isVoidElement(node.tag) && node.start < offset && (!node.endTagStart || node.endTagStart > offset)) {
-          var scanner = createScanner(document.getText(), node.start);
-          var token = scanner.scan();
-          while (token !== TokenType.EOS && scanner.getTokenEnd() <= offset) {
-            if (token === TokenType.StartTagClose && scanner.getTokenEnd() === offset) {
-              return "$0</".concat(node.tag, ">");
+      };
+      HTMLCompletion2.prototype.doTagComplete = function(document, position, htmlDocument) {
+        var offset = document.offsetAt(position);
+        if (offset <= 0) {
+          return null;
+        }
+        var char = document.getText().charAt(offset - 1);
+        if (char === ">") {
+          var node = htmlDocument.findNodeBefore(offset);
+          if (node && node.tag && !isVoidElement(node.tag) && node.start < offset && (!node.endTagStart || node.endTagStart > offset)) {
+            var scanner = createScanner(document.getText(), node.start);
+            var token = scanner.scan();
+            while (token !== TokenType.EOS && scanner.getTokenEnd() <= offset) {
+              if (token === TokenType.StartTagClose && scanner.getTokenEnd() === offset) {
+                return "$0</".concat(node.tag, ">");
+              }
+              token = scanner.scan();
             }
-            token = scanner.scan();
           }
-        }
-      } else if (char === "/") {
-        var node = htmlDocument.findNodeBefore(offset);
-        while (node && node.closed && !(node.endTagStart && node.endTagStart > offset)) {
-          node = node.parent;
-        }
-        if (node && node.tag) {
-          var scanner = createScanner(document.getText(), node.start);
-          var token = scanner.scan();
-          while (token !== TokenType.EOS && scanner.getTokenEnd() <= offset) {
-            if (token === TokenType.EndTagOpen && scanner.getTokenEnd() === offset) {
-              return "".concat(node.tag, ">");
+        } else if (char === "/") {
+          var node = htmlDocument.findNodeBefore(offset);
+          while (node && node.closed && !(node.endTagStart && node.endTagStart > offset)) {
+            node = node.parent;
+          }
+          if (node && node.tag) {
+            var scanner = createScanner(document.getText(), node.start);
+            var token = scanner.scan();
+            while (token !== TokenType.EOS && scanner.getTokenEnd() <= offset) {
+              if (token === TokenType.EndTagOpen && scanner.getTokenEnd() === offset) {
+                return "".concat(node.tag, ">");
+              }
+              token = scanner.scan();
             }
-            token = scanner.scan();
           }
         }
-      }
-      return null;
-    };
-    HTMLCompletion2.prototype.convertCompletionList = function(list) {
-      if (!this.doesSupportMarkdown()) {
-        list.items.forEach(function(item) {
-          if (item.documentation && typeof item.documentation !== "string") {
-            item.documentation = {
-              kind: "plaintext",
-              value: item.documentation.value
-            };
-          }
-        });
-      }
-      return list;
-    };
-    HTMLCompletion2.prototype.doesSupportMarkdown = function() {
-      var _a2, _b, _c;
-      if (!isDefined(this.supportsMarkdown)) {
-        if (!isDefined(this.lsOptions.clientCapabilities)) {
-          this.supportsMarkdown = true;
-          return this.supportsMarkdown;
+        return null;
+      };
+      HTMLCompletion2.prototype.convertCompletionList = function(list) {
+        if (!this.doesSupportMarkdown()) {
+          list.items.forEach(function(item) {
+            if (item.documentation && typeof item.documentation !== "string") {
+              item.documentation = {
+                kind: "plaintext",
+                value: item.documentation.value
+              };
+            }
+          });
         }
-        var documentationFormat = (_c = (_b = (_a2 = this.lsOptions.clientCapabilities.textDocument) === null || _a2 === void 0 ? void 0 : _a2.completion) === null || _b === void 0 ? void 0 : _b.completionItem) === null || _c === void 0 ? void 0 : _c.documentationFormat;
-        this.supportsMarkdown = Array.isArray(documentationFormat) && documentationFormat.indexOf(MarkupKind.Markdown) !== -1;
-      }
-      return this.supportsMarkdown;
-    };
-    return HTMLCompletion2;
-  }();
+        return list;
+      };
+      HTMLCompletion2.prototype.doesSupportMarkdown = function() {
+        var _a2, _b, _c;
+        if (!isDefined(this.supportsMarkdown)) {
+          if (!isDefined(this.lsOptions.clientCapabilities)) {
+            this.supportsMarkdown = true;
+            return this.supportsMarkdown;
+          }
+          var documentationFormat = (_c = (_b = (_a2 = this.lsOptions.clientCapabilities.textDocument) === null || _a2 === void 0 ? void 0 : _a2.completion) === null || _b === void 0 ? void 0 : _b.completionItem) === null || _c === void 0 ? void 0 : _c.documentationFormat;
+          this.supportsMarkdown = Array.isArray(documentationFormat) && documentationFormat.indexOf(MarkupKind.Markdown) !== -1;
+        }
+        return this.supportsMarkdown;
+      };
+      return HTMLCompletion2;
+    }()
+  );
   function isQuote(s) {
     return /^["']*$/.test(s);
   }
@@ -5588,260 +5628,263 @@ var moduleExports = (() => {
 
   // node_modules/vscode-html-languageservice/lib/esm/services/htmlHover.js
   var localize4 = loadMessageBundle();
-  var HTMLHover = function() {
-    function HTMLHover2(lsOptions, dataManager) {
-      this.lsOptions = lsOptions;
-      this.dataManager = dataManager;
-    }
-    HTMLHover2.prototype.doHover = function(document, position, htmlDocument, options) {
-      var convertContents = this.convertContents.bind(this);
-      var doesSupportMarkdown = this.doesSupportMarkdown();
-      var offset = document.offsetAt(position);
-      var node = htmlDocument.findNodeAt(offset);
-      var text = document.getText();
-      if (!node || !node.tag) {
-        return null;
+  var HTMLHover = (
+    /** @class */
+    function() {
+      function HTMLHover2(lsOptions, dataManager) {
+        this.lsOptions = lsOptions;
+        this.dataManager = dataManager;
       }
-      var dataProviders = this.dataManager.getDataProviders().filter(function(p) {
-        return p.isApplicable(document.languageId);
-      });
-      function getTagHover(currTag, range, open) {
-        var _loop_1 = function(provider2) {
-          var hover = null;
-          provider2.provideTags().forEach(function(tag2) {
-            if (tag2.name.toLowerCase() === currTag.toLowerCase()) {
-              var markupContent = generateDocumentation(tag2, options, doesSupportMarkdown);
-              if (!markupContent) {
-                markupContent = {
-                  kind: doesSupportMarkdown ? "markdown" : "plaintext",
-                  value: ""
-                };
+      HTMLHover2.prototype.doHover = function(document, position, htmlDocument, options) {
+        var convertContents = this.convertContents.bind(this);
+        var doesSupportMarkdown = this.doesSupportMarkdown();
+        var offset = document.offsetAt(position);
+        var node = htmlDocument.findNodeAt(offset);
+        var text = document.getText();
+        if (!node || !node.tag) {
+          return null;
+        }
+        var dataProviders = this.dataManager.getDataProviders().filter(function(p) {
+          return p.isApplicable(document.languageId);
+        });
+        function getTagHover(currTag, range, open) {
+          var _loop_1 = function(provider2) {
+            var hover = null;
+            provider2.provideTags().forEach(function(tag2) {
+              if (tag2.name.toLowerCase() === currTag.toLowerCase()) {
+                var markupContent = generateDocumentation(tag2, options, doesSupportMarkdown);
+                if (!markupContent) {
+                  markupContent = {
+                    kind: doesSupportMarkdown ? "markdown" : "plaintext",
+                    value: ""
+                  };
+                }
+                hover = { contents: markupContent, range };
               }
-              hover = { contents: markupContent, range };
+            });
+            if (hover) {
+              hover.contents = convertContents(hover.contents);
+              return { value: hover };
             }
-          });
-          if (hover) {
-            hover.contents = convertContents(hover.contents);
-            return { value: hover };
-          }
-        };
-        for (var _i = 0, dataProviders_1 = dataProviders; _i < dataProviders_1.length; _i++) {
-          var provider = dataProviders_1[_i];
-          var state_1 = _loop_1(provider);
-          if (typeof state_1 === "object")
-            return state_1.value;
-        }
-        return null;
-      }
-      function getAttrHover(currTag, currAttr, range) {
-        var _loop_2 = function(provider2) {
-          var hover = null;
-          provider2.provideAttributes(currTag).forEach(function(attr2) {
-            if (currAttr === attr2.name && attr2.description) {
-              var contentsDoc = generateDocumentation(attr2, options, doesSupportMarkdown);
-              if (contentsDoc) {
-                hover = { contents: contentsDoc, range };
-              } else {
-                hover = null;
-              }
-            }
-          });
-          if (hover) {
-            hover.contents = convertContents(hover.contents);
-            return { value: hover };
-          }
-        };
-        for (var _i = 0, dataProviders_2 = dataProviders; _i < dataProviders_2.length; _i++) {
-          var provider = dataProviders_2[_i];
-          var state_2 = _loop_2(provider);
-          if (typeof state_2 === "object")
-            return state_2.value;
-        }
-        return null;
-      }
-      function getAttrValueHover(currTag, currAttr, currAttrValue, range) {
-        var _loop_3 = function(provider2) {
-          var hover = null;
-          provider2.provideValues(currTag, currAttr).forEach(function(attrValue2) {
-            if (currAttrValue === attrValue2.name && attrValue2.description) {
-              var contentsDoc = generateDocumentation(attrValue2, options, doesSupportMarkdown);
-              if (contentsDoc) {
-                hover = { contents: contentsDoc, range };
-              } else {
-                hover = null;
-              }
-            }
-          });
-          if (hover) {
-            hover.contents = convertContents(hover.contents);
-            return { value: hover };
-          }
-        };
-        for (var _i = 0, dataProviders_3 = dataProviders; _i < dataProviders_3.length; _i++) {
-          var provider = dataProviders_3[_i];
-          var state_3 = _loop_3(provider);
-          if (typeof state_3 === "object")
-            return state_3.value;
-        }
-        return null;
-      }
-      function getEntityHover(text2, range) {
-        var currEntity = filterEntity(text2);
-        for (var entity in entities) {
-          var hover = null;
-          var label = "&" + entity;
-          if (currEntity === label) {
-            var code = entities[entity].charCodeAt(0).toString(16).toUpperCase();
-            var hex = "U+";
-            if (code.length < 4) {
-              var zeroes = 4 - code.length;
-              var k = 0;
-              while (k < zeroes) {
-                hex += "0";
-                k += 1;
-              }
-            }
-            hex += code;
-            var contentsDoc = localize4("entity.propose", "Character entity representing '".concat(entities[entity], "', unicode equivalent '").concat(hex, "'"));
-            if (contentsDoc) {
-              hover = { contents: contentsDoc, range };
-            } else {
-              hover = null;
-            }
-          }
-          if (hover) {
-            hover.contents = convertContents(hover.contents);
-            return hover;
-          }
-        }
-        return null;
-      }
-      function getTagNameRange2(tokenType, startOffset) {
-        var scanner = createScanner(document.getText(), startOffset);
-        var token = scanner.scan();
-        while (token !== TokenType.EOS && (scanner.getTokenEnd() < offset || scanner.getTokenEnd() === offset && token !== tokenType)) {
-          token = scanner.scan();
-        }
-        if (token === tokenType && offset <= scanner.getTokenEnd()) {
-          return { start: document.positionAt(scanner.getTokenOffset()), end: document.positionAt(scanner.getTokenEnd()) };
-        }
-        return null;
-      }
-      function getEntityRange() {
-        var k = offset - 1;
-        var characterStart = position.character;
-        while (k >= 0 && isLetterOrDigit(text, k)) {
-          k--;
-          characterStart--;
-        }
-        var n = k + 1;
-        var characterEnd = characterStart;
-        while (isLetterOrDigit(text, n)) {
-          n++;
-          characterEnd++;
-        }
-        if (k >= 0 && text[k] === "&") {
-          var range = null;
-          if (text[n] === ";") {
-            range = Range.create(Position.create(position.line, characterStart), Position.create(position.line, characterEnd + 1));
-          } else {
-            range = Range.create(Position.create(position.line, characterStart), Position.create(position.line, characterEnd));
-          }
-          return range;
-        }
-        return null;
-      }
-      function filterEntity(text2) {
-        var k = offset - 1;
-        var newText = "&";
-        while (k >= 0 && isLetterOrDigit(text2, k)) {
-          k--;
-        }
-        k = k + 1;
-        while (isLetterOrDigit(text2, k)) {
-          newText += text2[k];
-          k += 1;
-        }
-        newText += ";";
-        return newText;
-      }
-      if (node.endTagStart && offset >= node.endTagStart) {
-        var tagRange_1 = getTagNameRange2(TokenType.EndTag, node.endTagStart);
-        if (tagRange_1) {
-          return getTagHover(node.tag, tagRange_1, false);
-        }
-        return null;
-      }
-      var tagRange = getTagNameRange2(TokenType.StartTag, node.start);
-      if (tagRange) {
-        return getTagHover(node.tag, tagRange, true);
-      }
-      var attrRange = getTagNameRange2(TokenType.AttributeName, node.start);
-      if (attrRange) {
-        var tag = node.tag;
-        var attr = document.getText(attrRange);
-        return getAttrHover(tag, attr, attrRange);
-      }
-      var entityRange = getEntityRange();
-      if (entityRange) {
-        return getEntityHover(text, entityRange);
-      }
-      function scanAttrAndAttrValue(nodeStart, attrValueStart) {
-        var scanner = createScanner(document.getText(), nodeStart);
-        var token = scanner.scan();
-        var prevAttr = void 0;
-        while (token !== TokenType.EOS && scanner.getTokenEnd() <= attrValueStart) {
-          token = scanner.scan();
-          if (token === TokenType.AttributeName) {
-            prevAttr = scanner.getTokenText();
-          }
-        }
-        return prevAttr;
-      }
-      var attrValueRange = getTagNameRange2(TokenType.AttributeValue, node.start);
-      if (attrValueRange) {
-        var tag = node.tag;
-        var attrValue = trimQuotes(document.getText(attrValueRange));
-        var matchAttr = scanAttrAndAttrValue(node.start, document.offsetAt(attrValueRange.start));
-        if (matchAttr) {
-          return getAttrValueHover(tag, matchAttr, attrValue, attrValueRange);
-        }
-      }
-      return null;
-    };
-    HTMLHover2.prototype.convertContents = function(contents) {
-      if (!this.doesSupportMarkdown()) {
-        if (typeof contents === "string") {
-          return contents;
-        } else if ("kind" in contents) {
-          return {
-            kind: "plaintext",
-            value: contents.value
           };
-        } else if (Array.isArray(contents)) {
-          contents.map(function(c) {
-            return typeof c === "string" ? c : c.value;
-          });
-        } else {
-          return contents.value;
+          for (var _i = 0, dataProviders_1 = dataProviders; _i < dataProviders_1.length; _i++) {
+            var provider = dataProviders_1[_i];
+            var state_1 = _loop_1(provider);
+            if (typeof state_1 === "object")
+              return state_1.value;
+          }
+          return null;
         }
-      }
-      return contents;
-    };
-    HTMLHover2.prototype.doesSupportMarkdown = function() {
-      var _a2, _b, _c;
-      if (!isDefined(this.supportsMarkdown)) {
-        if (!isDefined(this.lsOptions.clientCapabilities)) {
-          this.supportsMarkdown = true;
-          return this.supportsMarkdown;
+        function getAttrHover(currTag, currAttr, range) {
+          var _loop_2 = function(provider2) {
+            var hover = null;
+            provider2.provideAttributes(currTag).forEach(function(attr2) {
+              if (currAttr === attr2.name && attr2.description) {
+                var contentsDoc = generateDocumentation(attr2, options, doesSupportMarkdown);
+                if (contentsDoc) {
+                  hover = { contents: contentsDoc, range };
+                } else {
+                  hover = null;
+                }
+              }
+            });
+            if (hover) {
+              hover.contents = convertContents(hover.contents);
+              return { value: hover };
+            }
+          };
+          for (var _i = 0, dataProviders_2 = dataProviders; _i < dataProviders_2.length; _i++) {
+            var provider = dataProviders_2[_i];
+            var state_2 = _loop_2(provider);
+            if (typeof state_2 === "object")
+              return state_2.value;
+          }
+          return null;
         }
-        var contentFormat = (_c = (_b = (_a2 = this.lsOptions.clientCapabilities) === null || _a2 === void 0 ? void 0 : _a2.textDocument) === null || _b === void 0 ? void 0 : _b.hover) === null || _c === void 0 ? void 0 : _c.contentFormat;
-        this.supportsMarkdown = Array.isArray(contentFormat) && contentFormat.indexOf(MarkupKind.Markdown) !== -1;
-      }
-      return this.supportsMarkdown;
-    };
-    return HTMLHover2;
-  }();
+        function getAttrValueHover(currTag, currAttr, currAttrValue, range) {
+          var _loop_3 = function(provider2) {
+            var hover = null;
+            provider2.provideValues(currTag, currAttr).forEach(function(attrValue2) {
+              if (currAttrValue === attrValue2.name && attrValue2.description) {
+                var contentsDoc = generateDocumentation(attrValue2, options, doesSupportMarkdown);
+                if (contentsDoc) {
+                  hover = { contents: contentsDoc, range };
+                } else {
+                  hover = null;
+                }
+              }
+            });
+            if (hover) {
+              hover.contents = convertContents(hover.contents);
+              return { value: hover };
+            }
+          };
+          for (var _i = 0, dataProviders_3 = dataProviders; _i < dataProviders_3.length; _i++) {
+            var provider = dataProviders_3[_i];
+            var state_3 = _loop_3(provider);
+            if (typeof state_3 === "object")
+              return state_3.value;
+          }
+          return null;
+        }
+        function getEntityHover(text2, range) {
+          var currEntity = filterEntity(text2);
+          for (var entity in entities) {
+            var hover = null;
+            var label = "&" + entity;
+            if (currEntity === label) {
+              var code = entities[entity].charCodeAt(0).toString(16).toUpperCase();
+              var hex = "U+";
+              if (code.length < 4) {
+                var zeroes = 4 - code.length;
+                var k = 0;
+                while (k < zeroes) {
+                  hex += "0";
+                  k += 1;
+                }
+              }
+              hex += code;
+              var contentsDoc = localize4("entity.propose", "Character entity representing '".concat(entities[entity], "', unicode equivalent '").concat(hex, "'"));
+              if (contentsDoc) {
+                hover = { contents: contentsDoc, range };
+              } else {
+                hover = null;
+              }
+            }
+            if (hover) {
+              hover.contents = convertContents(hover.contents);
+              return hover;
+            }
+          }
+          return null;
+        }
+        function getTagNameRange2(tokenType, startOffset) {
+          var scanner = createScanner(document.getText(), startOffset);
+          var token = scanner.scan();
+          while (token !== TokenType.EOS && (scanner.getTokenEnd() < offset || scanner.getTokenEnd() === offset && token !== tokenType)) {
+            token = scanner.scan();
+          }
+          if (token === tokenType && offset <= scanner.getTokenEnd()) {
+            return { start: document.positionAt(scanner.getTokenOffset()), end: document.positionAt(scanner.getTokenEnd()) };
+          }
+          return null;
+        }
+        function getEntityRange() {
+          var k = offset - 1;
+          var characterStart = position.character;
+          while (k >= 0 && isLetterOrDigit(text, k)) {
+            k--;
+            characterStart--;
+          }
+          var n = k + 1;
+          var characterEnd = characterStart;
+          while (isLetterOrDigit(text, n)) {
+            n++;
+            characterEnd++;
+          }
+          if (k >= 0 && text[k] === "&") {
+            var range = null;
+            if (text[n] === ";") {
+              range = Range.create(Position.create(position.line, characterStart), Position.create(position.line, characterEnd + 1));
+            } else {
+              range = Range.create(Position.create(position.line, characterStart), Position.create(position.line, characterEnd));
+            }
+            return range;
+          }
+          return null;
+        }
+        function filterEntity(text2) {
+          var k = offset - 1;
+          var newText = "&";
+          while (k >= 0 && isLetterOrDigit(text2, k)) {
+            k--;
+          }
+          k = k + 1;
+          while (isLetterOrDigit(text2, k)) {
+            newText += text2[k];
+            k += 1;
+          }
+          newText += ";";
+          return newText;
+        }
+        if (node.endTagStart && offset >= node.endTagStart) {
+          var tagRange_1 = getTagNameRange2(TokenType.EndTag, node.endTagStart);
+          if (tagRange_1) {
+            return getTagHover(node.tag, tagRange_1, false);
+          }
+          return null;
+        }
+        var tagRange = getTagNameRange2(TokenType.StartTag, node.start);
+        if (tagRange) {
+          return getTagHover(node.tag, tagRange, true);
+        }
+        var attrRange = getTagNameRange2(TokenType.AttributeName, node.start);
+        if (attrRange) {
+          var tag = node.tag;
+          var attr = document.getText(attrRange);
+          return getAttrHover(tag, attr, attrRange);
+        }
+        var entityRange = getEntityRange();
+        if (entityRange) {
+          return getEntityHover(text, entityRange);
+        }
+        function scanAttrAndAttrValue(nodeStart, attrValueStart) {
+          var scanner = createScanner(document.getText(), nodeStart);
+          var token = scanner.scan();
+          var prevAttr = void 0;
+          while (token !== TokenType.EOS && scanner.getTokenEnd() <= attrValueStart) {
+            token = scanner.scan();
+            if (token === TokenType.AttributeName) {
+              prevAttr = scanner.getTokenText();
+            }
+          }
+          return prevAttr;
+        }
+        var attrValueRange = getTagNameRange2(TokenType.AttributeValue, node.start);
+        if (attrValueRange) {
+          var tag = node.tag;
+          var attrValue = trimQuotes(document.getText(attrValueRange));
+          var matchAttr = scanAttrAndAttrValue(node.start, document.offsetAt(attrValueRange.start));
+          if (matchAttr) {
+            return getAttrValueHover(tag, matchAttr, attrValue, attrValueRange);
+          }
+        }
+        return null;
+      };
+      HTMLHover2.prototype.convertContents = function(contents) {
+        if (!this.doesSupportMarkdown()) {
+          if (typeof contents === "string") {
+            return contents;
+          } else if ("kind" in contents) {
+            return {
+              kind: "plaintext",
+              value: contents.value
+            };
+          } else if (Array.isArray(contents)) {
+            contents.map(function(c) {
+              return typeof c === "string" ? c : c.value;
+            });
+          } else {
+            return contents.value;
+          }
+        }
+        return contents;
+      };
+      HTMLHover2.prototype.doesSupportMarkdown = function() {
+        var _a2, _b, _c;
+        if (!isDefined(this.supportsMarkdown)) {
+          if (!isDefined(this.lsOptions.clientCapabilities)) {
+            this.supportsMarkdown = true;
+            return this.supportsMarkdown;
+          }
+          var contentFormat = (_c = (_b = (_a2 = this.lsOptions.clientCapabilities) === null || _a2 === void 0 ? void 0 : _a2.textDocument) === null || _b === void 0 ? void 0 : _b.hover) === null || _c === void 0 ? void 0 : _c.contentFormat;
+          this.supportsMarkdown = Array.isArray(contentFormat) && contentFormat.indexOf(MarkupKind.Markdown) !== -1;
+        }
+        return this.supportsMarkdown;
+      };
+      return HTMLHover2;
+    }()
+  );
   function trimQuotes(s) {
     if (s.length <= 1) {
       return s.replace(/['"]/, "");
@@ -5867,6 +5910,8 @@ var moduleExports = (() => {
     var __webpack_modules__ = [
       ,
       ,
+      /* 2 */
+      /***/
       function(module) {
         function OutputLine(parent) {
           this.__parent = parent;
@@ -6188,6 +6233,8 @@ var moduleExports = (() => {
       ,
       ,
       ,
+      /* 6 */
+      /***/
       function(module) {
         function Options(options, merge_child_field) {
           this.raw_options = _mergeOpts(options, merge_child_field);
@@ -6253,7 +6300,9 @@ var moduleExports = (() => {
         Options.prototype._get_selection = function(name, selection_list, default_value) {
           var result = this._get_selection_list(name, selection_list, default_value);
           if (result.length !== 1) {
-            throw new Error("Invalid Option Value: The option '" + name + "' can only be one of the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'");
+            throw new Error(
+              "Invalid Option Value: The option '" + name + "' can only be one of the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'"
+            );
           }
           return result[0];
         };
@@ -6267,7 +6316,9 @@ var moduleExports = (() => {
           }
           var result = this._get_array(name, default_value);
           if (!this._is_valid_selection(result, selection_list)) {
-            throw new Error("Invalid Option Value: The option '" + name + "' can contain only the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'");
+            throw new Error(
+              "Invalid Option Value: The option '" + name + "' can contain only the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'"
+            );
           }
           return result;
         };
@@ -6306,6 +6357,8 @@ var moduleExports = (() => {
         module.exports.mergeOpts = _mergeOpts;
       },
       ,
+      /* 8 */
+      /***/
       function(module) {
         var regexp_has_sticky = RegExp.prototype.hasOwnProperty("sticky");
         function InputScanner(input_string) {
@@ -6440,6 +6493,8 @@ var moduleExports = (() => {
       ,
       ,
       ,
+      /* 13 */
+      /***/
       function(module) {
         function Directives(start_block_pattern, end_block_pattern) {
           start_block_pattern = typeof start_block_pattern === "string" ? start_block_pattern : start_block_pattern.source;
@@ -6467,6 +6522,8 @@ var moduleExports = (() => {
         module.exports.Directives = Directives;
       },
       ,
+      /* 15 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var Beautifier = __webpack_require__2(16).Beautifier, Options = __webpack_require__2(17).Options;
         function css_beautify2(source_text, options) {
@@ -6478,6 +6535,8 @@ var moduleExports = (() => {
           return new Options();
         };
       },
+      /* 16 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var Options = __webpack_require__2(17).Options;
         var Output = __webpack_require__2(2).Output;
@@ -6499,6 +6558,7 @@ var moduleExports = (() => {
             "@page": true,
             "@font-face": true,
             "@keyframes": true,
+            // also in CONDITIONAL_GROUP_RULE below
             "@media": true,
             "@supports": true,
             "@document": true
@@ -6831,6 +6891,8 @@ var moduleExports = (() => {
         };
         module.exports.Beautifier = Beautifier;
       },
+      /* 17 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var BaseOptions = __webpack_require__2(6).Options;
         function Options(options) {
@@ -6852,6 +6914,7 @@ var moduleExports = (() => {
         Options.prototype = new BaseOptions();
         module.exports.Options = Options;
       }
+      /******/
     ];
     var __webpack_module_cache__ = {};
     function __webpack_require__(moduleId) {
@@ -6860,7 +6923,13 @@ var moduleExports = (() => {
         return cachedModule.exports;
       }
       var module = __webpack_module_cache__[moduleId] = {
+        /******/
+        // no module.id needed
+        /******/
+        // no module.loaded needed
+        /******/
         exports: {}
+        /******/
       };
       __webpack_modules__[moduleId](module, module.exports, __webpack_require__);
       return module.exports;
@@ -6877,6 +6946,8 @@ var moduleExports = (() => {
     var __webpack_modules__ = [
       ,
       ,
+      /* 2 */
+      /***/
       function(module) {
         function OutputLine(parent) {
           this.__parent = parent;
@@ -7195,6 +7266,8 @@ var moduleExports = (() => {
         };
         module.exports.Output = Output;
       },
+      /* 3 */
+      /***/
       function(module) {
         function Token(type, text, newlines, whitespace_before) {
           this.type = type;
@@ -7213,6 +7286,8 @@ var moduleExports = (() => {
       },
       ,
       ,
+      /* 6 */
+      /***/
       function(module) {
         function Options(options, merge_child_field) {
           this.raw_options = _mergeOpts(options, merge_child_field);
@@ -7278,7 +7353,9 @@ var moduleExports = (() => {
         Options.prototype._get_selection = function(name, selection_list, default_value) {
           var result = this._get_selection_list(name, selection_list, default_value);
           if (result.length !== 1) {
-            throw new Error("Invalid Option Value: The option '" + name + "' can only be one of the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'");
+            throw new Error(
+              "Invalid Option Value: The option '" + name + "' can only be one of the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'"
+            );
           }
           return result[0];
         };
@@ -7292,7 +7369,9 @@ var moduleExports = (() => {
           }
           var result = this._get_array(name, default_value);
           if (!this._is_valid_selection(result, selection_list)) {
-            throw new Error("Invalid Option Value: The option '" + name + "' can contain only the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'");
+            throw new Error(
+              "Invalid Option Value: The option '" + name + "' can contain only the following values:\n" + selection_list + "\nYou passed in: '" + this.raw_options[name] + "'"
+            );
           }
           return result;
         };
@@ -7331,6 +7410,8 @@ var moduleExports = (() => {
         module.exports.mergeOpts = _mergeOpts;
       },
       ,
+      /* 8 */
+      /***/
       function(module) {
         var regexp_has_sticky = RegExp.prototype.hasOwnProperty("sticky");
         function InputScanner(input_string) {
@@ -7461,6 +7542,8 @@ var moduleExports = (() => {
         };
         module.exports.InputScanner = InputScanner;
       },
+      /* 9 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var InputScanner = __webpack_require__2(8).InputScanner;
         var Token = __webpack_require__2(3).Token;
@@ -7538,7 +7621,12 @@ var moduleExports = (() => {
           return false;
         };
         Tokenizer.prototype._create_token = function(type, text) {
-          var token = new Token(type, text, this._patterns.whitespace.newline_count, this._patterns.whitespace.whitespace_before_token);
+          var token = new Token(
+            type,
+            text,
+            this._patterns.whitespace.newline_count,
+            this._patterns.whitespace.whitespace_before_token
+          );
           return token;
         };
         Tokenizer.prototype._readWhitespace = function() {
@@ -7547,6 +7635,8 @@ var moduleExports = (() => {
         module.exports.Tokenizer = Tokenizer;
         module.exports.TOKEN = TOKEN;
       },
+      /* 10 */
+      /***/
       function(module) {
         function TokenStream(parent_token) {
           this.__tokens = [];
@@ -7589,6 +7679,8 @@ var moduleExports = (() => {
         };
         module.exports.TokenStream = TokenStream;
       },
+      /* 11 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var Pattern = __webpack_require__2(12).Pattern;
         function WhitespacePattern(input_scanner, parent) {
@@ -7605,8 +7697,13 @@ var moduleExports = (() => {
         WhitespacePattern.prototype.__set_whitespace_patterns = function(whitespace_chars, newline_chars) {
           whitespace_chars += "\\t ";
           newline_chars += "\\n\\r";
-          this._match_pattern = this._input.get_regexp("[" + whitespace_chars + newline_chars + "]+", true);
-          this._newline_regexp = this._input.get_regexp("\\r\\n|[" + newline_chars + "]");
+          this._match_pattern = this._input.get_regexp(
+            "[" + whitespace_chars + newline_chars + "]+",
+            true
+          );
+          this._newline_regexp = this._input.get_regexp(
+            "\\r\\n|[" + newline_chars + "]"
+          );
         };
         WhitespacePattern.prototype.read = function() {
           this.newline_count = 0;
@@ -7649,6 +7746,8 @@ var moduleExports = (() => {
         };
         module.exports.WhitespacePattern = WhitespacePattern;
       },
+      /* 12 */
+      /***/
       function(module) {
         function Pattern(input_scanner, parent) {
           this._input = input_scanner;
@@ -7706,6 +7805,8 @@ var moduleExports = (() => {
         };
         module.exports.Pattern = Pattern;
       },
+      /* 13 */
+      /***/
       function(module) {
         function Directives(start_block_pattern, end_block_pattern) {
           start_block_pattern = typeof start_block_pattern === "string" ? start_block_pattern : start_block_pattern.source;
@@ -7732,6 +7833,8 @@ var moduleExports = (() => {
         };
         module.exports.Directives = Directives;
       },
+      /* 14 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var Pattern = __webpack_require__2(12).Pattern;
         var template_names = {
@@ -7758,6 +7861,7 @@ var moduleExports = (() => {
             handlebars: pattern.starting_with(/{{/).until_after(/}}/),
             php: pattern.starting_with(/<\?(?:[= ]|php)/).until_after(/\?>/),
             erb: pattern.starting_with(/<%[^%]/).until_after(/[^%]%>/),
+            // django coflicts with handlebars a bit.
             django: pattern.starting_with(/{%/).until_after(/%}/),
             django_value: pattern.starting_with(/{{/).until_after(/}}/),
             django_comment: pattern.starting_with(/{#/).until_after(/#}/),
@@ -7880,6 +7984,8 @@ var moduleExports = (() => {
       ,
       ,
       ,
+      /* 18 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var Beautifier = __webpack_require__2(19).Beautifier, Options = __webpack_require__2(20).Options;
         function style_html(html_source, options, js_beautify2, css_beautify2) {
@@ -7891,6 +7997,8 @@ var moduleExports = (() => {
           return new Options();
         };
       },
+      /* 19 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var Options = __webpack_require__2(20).Options;
         var Output = __webpack_require__2(2).Output;
@@ -8481,6 +8589,8 @@ var moduleExports = (() => {
         };
         module.exports.Beautifier = Beautifier;
       },
+      /* 20 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var BaseOptions = __webpack_require__2(6).Options;
         function Options(options) {
@@ -8492,7 +8602,10 @@ var moduleExports = (() => {
           this.indent_body_inner_html = this._get_boolean("indent_body_inner_html", true);
           this.indent_head_inner_html = this._get_boolean("indent_head_inner_html", true);
           this.indent_handlebars = this._get_boolean("indent_handlebars", true);
-          this.wrap_attributes = this._get_selection("wrap_attributes", ["auto", "force", "force-aligned", "force-expand-multiline", "aligned-multiple", "preserve", "preserve-aligned"]);
+          this.wrap_attributes = this._get_selection(
+            "wrap_attributes",
+            ["auto", "force", "force-aligned", "force-expand-multiline", "aligned-multiple", "preserve", "preserve-aligned"]
+          );
           this.wrap_attributes_indent_size = this._get_number("wrap_attributes_indent_size", this.indent_size);
           this.extra_liners = this._get_array("extra_liners", ["head", "body", "/html"]);
           this.inline = this._get_array("inline", [
@@ -8534,6 +8647,7 @@ var moduleExports = (() => {
             "ruby",
             "s",
             "samp",
+            /* 'script', */
             "select",
             "small",
             "span",
@@ -8549,12 +8663,15 @@ var moduleExports = (() => {
             "video",
             "wbr",
             "text",
+            // obsolete inline tags
             "acronym",
             "big",
             "strike",
             "tt"
           ]);
           this.void_elements = this._get_array("void_elements", [
+            // HTLM void elements - aka self-closing tags - aka singletons
+            // https://www.w3.org/html/wg/drafts/html/master/syntax.html#void-elements
             "area",
             "base",
             "br",
@@ -8571,8 +8688,14 @@ var moduleExports = (() => {
             "source",
             "track",
             "wbr",
+            // NOTE: Optional tags are too complex for a simple list
+            // they are hard coded in _do_optional_end_element
+            // Doctype and xml elements
             "!doctype",
             "?xml",
+            // obsolete tags
+            // basefont: https://www.computerhope.com/jargon/h/html-basefont-tag.htm
+            // isndex: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/isindex
             "basefont",
             "isindex"
           ]);
@@ -8587,6 +8710,8 @@ var moduleExports = (() => {
         Options.prototype = new BaseOptions();
         module.exports.Options = Options;
       },
+      /* 21 */
+      /***/
       function(module, __unused_webpack_exports, __webpack_require__2) {
         var BaseTokenizer = __webpack_require__2(9).Tokenizer;
         var BASETOKEN = __webpack_require__2(9).TOKEN;
@@ -8624,6 +8749,7 @@ var moduleExports = (() => {
             handlebars_raw_close: pattern_reader.until(/}}/),
             comment: pattern_reader.starting_with(/<!--/).until_after(/-->/),
             cdata: pattern_reader.starting_with(/<!\[CDATA\[/).until_after(/]]>/),
+            // https://en.wikipedia.org/wiki/Conditional_comment
             conditional_comment: pattern_reader.starting_with(/<!\[/).until_after(/]>/),
             processing: pattern_reader.starting_with(/<\?/).until_after(/\?>/)
           };
@@ -8827,6 +8953,7 @@ var moduleExports = (() => {
         module.exports.Tokenizer = Tokenizer;
         module.exports.TOKEN = TOKEN;
       }
+      /******/
     ];
     var __webpack_module_cache__ = {};
     function __webpack_require__(moduleId) {
@@ -8835,7 +8962,13 @@ var moduleExports = (() => {
         return cachedModule.exports;
       }
       var module = __webpack_module_cache__[moduleId] = {
+        /******/
+        // no module.id needed
+        /******/
+        // no module.loaded needed
+        /******/
         exports: {}
+        /******/
       };
       __webpack_modules__[moduleId](module, module.exports, __webpack_require__);
       return module.exports;
@@ -9191,7 +9324,7 @@ var moduleExports = (() => {
       }
       var l = "", p = "/", g = /^(([^:/?#]+?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/, d = function() {
         function t3(t4, e3, r3, n2, o2, i2) {
-          void 0 === i2 && (i2 = false), "object" == typeof t4 ? (this.scheme = t4.scheme || l, this.authority = t4.authority || l, this.path = t4.path || l, this.query = t4.query || l, this.fragment = t4.fragment || l) : (this.scheme = function(t5, e4) {
+          void 0 === i2 && (i2 = false), "object" == typeof t4 ? (this.scheme = t4.scheme || l, this.authority = t4.authority || l, this.path = t4.path || l, this.query = t4.query || l, this.fragment = t4.fragment || l) : (this.scheme = /* @__PURE__ */ function(t5, e4) {
             return t5 || e4 ? t5 : "file";
           }(t4, i2), this.authority = e3 || l, this.path = function(t5, e4) {
             switch (t5) {
@@ -9625,7 +9758,11 @@ var moduleExports = (() => {
     if (!node.endTagStart) {
       return null;
     }
-    if (node.start + "<".length <= offset && offset <= node.start + "<".length + tagLength || node.endTagStart + "</".length <= offset && offset <= node.endTagStart + "</".length + tagLength) {
+    if (
+      // Within open tag, compute close tag
+      node.start + "<".length <= offset && offset <= node.start + "<".length + tagLength || // Within closing tag, compute open tag
+      node.endTagStart + "</".length <= offset && offset <= node.endTagStart + "</".length + tagLength
+    ) {
       return [
         Range.create(document.positionAt(node.start + "<".length), document.positionAt(node.start + "<".length + tagLength)),
         Range.create(document.positionAt(node.endTagStart + "</".length), document.positionAt(node.endTagStart + "</".length + tagLength))
@@ -15945,24 +16082,27 @@ var moduleExports = (() => {
   };
 
   // node_modules/vscode-html-languageservice/lib/esm/languageFacts/dataManager.js
-  var HTMLDataManager = function() {
-    function HTMLDataManager2(options) {
-      this.dataProviders = [];
-      this.setDataProviders(options.useDefaultDataProvider !== false, options.customDataProviders || []);
-    }
-    HTMLDataManager2.prototype.setDataProviders = function(builtIn, providers) {
-      var _a2;
-      this.dataProviders = [];
-      if (builtIn) {
-        this.dataProviders.push(new HTMLDataProvider("html5", htmlData));
+  var HTMLDataManager = (
+    /** @class */
+    function() {
+      function HTMLDataManager2(options) {
+        this.dataProviders = [];
+        this.setDataProviders(options.useDefaultDataProvider !== false, options.customDataProviders || []);
       }
-      (_a2 = this.dataProviders).push.apply(_a2, providers);
-    };
-    HTMLDataManager2.prototype.getDataProviders = function() {
-      return this.dataProviders;
-    };
-    return HTMLDataManager2;
-  }();
+      HTMLDataManager2.prototype.setDataProviders = function(builtIn, providers) {
+        var _a2;
+        this.dataProviders = [];
+        if (builtIn) {
+          this.dataProviders.push(new HTMLDataProvider("html5", htmlData));
+        }
+        (_a2 = this.dataProviders).push.apply(_a2, providers);
+      };
+      HTMLDataManager2.prototype.getDataProviders = function() {
+        return this.dataProviders;
+      };
+      return HTMLDataManager2;
+    }()
+  );
 
   // node_modules/vscode-html-languageservice/lib/esm/htmlLanguageService.js
   var defaultLanguageServiceOptions = {};
@@ -16003,10 +16143,6 @@ var moduleExports = (() => {
 
   // src/language/html/htmlWorker.ts
   var HTMLWorker = class {
-    _ctx;
-    _languageService;
-    _languageSettings;
-    _languageId;
     constructor(ctx, createData) {
       this._ctx = ctx;
       this._languageSettings = createData.languageSettings;
@@ -16030,7 +16166,14 @@ var moduleExports = (() => {
         return null;
       }
       let htmlDocument = this._languageService.parseHTMLDocument(document);
-      return Promise.resolve(this._languageService.doComplete(document, position, htmlDocument, this._languageSettings && this._languageSettings.suggest));
+      return Promise.resolve(
+        this._languageService.doComplete(
+          document,
+          position,
+          htmlDocument,
+          this._languageSettings && this._languageSettings.suggest
+        )
+      );
     }
     async format(uri, range, options) {
       let document = this._getTextDocument(uri);
@@ -16064,7 +16207,11 @@ var moduleExports = (() => {
       if (!document) {
         return [];
       }
-      let links = this._languageService.findDocumentLinks(document, null);
+      let links = this._languageService.findDocumentLinks(
+        document,
+        null
+        /*TODO@aeschli*/
+      );
       return Promise.resolve(links);
     }
     async findDocumentSymbols(uri) {
@@ -16105,7 +16252,12 @@ var moduleExports = (() => {
       let models = this._ctx.getMirrorModels();
       for (let model of models) {
         if (model.uri.toString() === uri) {
-          return TextDocument2.create(uri, this._languageId, model.version, model.getValue());
+          return TextDocument2.create(
+            uri,
+            this._languageId,
+            model.version,
+            model.getValue()
+          );
         }
       }
       return null;

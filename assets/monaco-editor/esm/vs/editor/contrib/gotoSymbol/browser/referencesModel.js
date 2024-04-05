@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { onUnexpectedError } from '../../../../base/common/errors.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { defaultGenerator } from '../../../../base/common/idGenerator.js';
@@ -98,25 +89,23 @@ export class FileReferences {
             return localize('aria.fileReferences.N', "{0} symbols in {1}, full path {2}", len, basename(this.uri), this.uri.fsPath);
         }
     }
-    resolve(textModelResolverService) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._previews.size !== 0) {
-                return this;
-            }
-            for (const child of this.children) {
-                if (this._previews.has(child.uri)) {
-                    continue;
-                }
-                try {
-                    const ref = yield textModelResolverService.createModelReference(child.uri);
-                    this._previews.set(child.uri, new FilePreview(ref));
-                }
-                catch (err) {
-                    onUnexpectedError(err);
-                }
-            }
+    async resolve(textModelResolverService) {
+        if (this._previews.size !== 0) {
             return this;
-        });
+        }
+        for (const child of this.children) {
+            if (this._previews.has(child.uri)) {
+                continue;
+            }
+            try {
+                const ref = await textModelResolverService.createModelReference(child.uri);
+                this._previews.set(child.uri, new FilePreview(ref));
+            }
+            catch (err) {
+                onUnexpectedError(err);
+            }
+        }
+        return this;
     }
 }
 export class ReferencesModel {

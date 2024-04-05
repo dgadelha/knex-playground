@@ -13,17 +13,17 @@ import { equals } from '../../../../base/common/arrays.js';
 class Settings {
     constructor(config, theme) {
         const options = config.options;
-        this.lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        this.pixelRatio = options.get(141 /* EditorOption.pixelRatio */);
-        this.overviewRulerLanes = options.get(82 /* EditorOption.overviewRulerLanes */);
-        this.renderBorder = options.get(81 /* EditorOption.overviewRulerBorder */);
+        this.lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        this.pixelRatio = options.get(142 /* EditorOption.pixelRatio */);
+        this.overviewRulerLanes = options.get(83 /* EditorOption.overviewRulerLanes */);
+        this.renderBorder = options.get(82 /* EditorOption.overviewRulerBorder */);
         const borderColor = theme.getColor(editorOverviewRulerBorder);
         this.borderColor = borderColor ? borderColor.toString() : null;
         this.hideCursor = options.get(59 /* EditorOption.hideCursorInOverviewRuler */);
         const cursorColor = theme.getColor(editorCursorForeground);
         this.cursorColor = cursorColor ? cursorColor.transparent(0.7).toString() : null;
         this.themeType = theme.type;
-        const minimapOpts = options.get(72 /* EditorOption.minimap */);
+        const minimapOpts = options.get(73 /* EditorOption.minimap */);
         const minimapEnabled = minimapOpts.enabled;
         const minimapSide = minimapOpts.side;
         const themeColor = theme.getColor(editorOverviewRulerBackground);
@@ -37,7 +37,7 @@ class Settings {
         else {
             this.backgroundColor = null;
         }
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        const layoutInfo = options.get(144 /* EditorOption.layoutInfo */);
         const position = layoutInfo.overviewRuler;
         this.top = position.top;
         this.right = position.right;
@@ -176,7 +176,7 @@ export class DecorationsOverviewRuler extends ViewPart {
                 this._updateSettings(true);
             }
         });
-        this._cursorPositions = [];
+        this._cursorPositions = [new Position(1, 1)];
     }
     dispose() {
         super.dispose();

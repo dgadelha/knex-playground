@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/mips/mips", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -109,10 +109,13 @@ var moduleExports = (() => {
       "mtlo",
       "move"
     ],
+    // we include these common regular expressions
     symbols: /[\.,\:]+/,
     escapes: /\\(?:[abfnrtv\\"'$]|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+    // The main tokenizer for our languages
     tokenizer: {
       root: [
+        // identifiers and keywords
         [/\$[a-zA-Z_]\w*/, "variable.predefined"],
         [
           /[.a-zA-Z_]\w*/,
@@ -124,19 +127,26 @@ var moduleExports = (() => {
             }
           }
         ],
+        // whitespace
         [/[ \t\r\n]+/, ""],
+        // Comments
         [/#.*$/, "comment"],
+        // regular expressions
         ["///", { token: "regexp", next: "@hereregexp" }],
         [/^(\s*)(@regEx)/, ["", "regexp"]],
         [/(\,)(\s*)(@regEx)/, ["delimiter", "", "regexp"]],
         [/(\:)(\s*)(@regEx)/, ["delimiter", "", "regexp"]],
+        // delimiters
         [/@symbols/, "delimiter"],
+        // numbers
         [/\d+[eE]([\-+]?\d+)?/, "number.float"],
         [/\d+\.\d+([eE][\-+]?\d+)?/, "number.float"],
         [/0[xX][0-9a-fA-F]+/, "number.hex"],
         [/0[0-7]+(?!\d)/, "number.octal"],
         [/\d+/, "number"],
+        // delimiter: after number because of .\d floats
         [/[,.]/, "delimiter"],
+        // strings:
         [/"""/, "string", '@herestring."""'],
         [/'''/, "string", "@herestring.'''"],
         [

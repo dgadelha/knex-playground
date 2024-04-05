@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { IdleValue } from '../../../base/common/async.js';
+import { GlobalIdleValue } from '../../../base/common/async.js';
 import { illegalState } from '../../../base/common/errors.js';
 import { toDisposable } from '../../../base/common/lifecycle.js';
 import { SyncDescriptor } from './descriptors.js';
@@ -217,15 +217,15 @@ export class InstantiationService {
             // needed but not when injected into a consumer
             // return "empty events" when the service isn't instantiated yet
             const earlyListeners = new Map();
-            const idle = new IdleValue(() => {
+            const idle = new GlobalIdleValue(() => {
                 const result = child._createInstance(ctor, args, _trace);
                 // early listeners that we kept are now being subscribed to
                 // the real service
                 for (const [key, values] of earlyListeners) {
                     const candidate = result[key];
                     if (typeof candidate === 'function') {
-                        for (const listener of values) {
-                            candidate.apply(result, listener);
+                        for (const value of values) {
+                            value.disposable = candidate.apply(result, value.listener);
                         }
                     }
                 }
@@ -243,8 +243,19 @@ export class InstantiationService {
                                 earlyListeners.set(key, list);
                             }
                             const event = (callback, thisArg, disposables) => {
-                                const rm = list.push([callback, thisArg, disposables]);
-                                return toDisposable(rm);
+                                if (idle.isInitialized) {
+                                    return idle.value[key](callback, thisArg, disposables);
+                                }
+                                else {
+                                    const entry = { listener: [callback, thisArg, disposables], disposable: undefined };
+                                    const rm = list.push(entry);
+                                    const result = toDisposable(() => {
+                                        var _a;
+                                        rm();
+                                        (_a = entry.disposable) === null || _a === void 0 ? void 0 : _a.dispose();
+                                    });
+                                    return result;
+                                }
                             };
                             return event;
                         }

@@ -20,7 +20,7 @@ import { ILanguageService } from '../../../common/languages/language.js';
 import { HoverForeignElementAnchor } from '../../hover/browser/hoverTypes.js';
 import { InlineCompletionsController } from './inlineCompletionsController.js';
 import { InlineSuggestionHintsContentWidget } from './inlineCompletionsHintsWidget.js';
-import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import * as nls from '../../../../nls.js';
 import { IAccessibilityService } from '../../../../platform/accessibility/common/accessibility.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -77,7 +77,7 @@ let InlineCompletionsHoverParticipant = class InlineCompletionsHoverParticipant 
         return null;
     }
     computeSync(anchor, lineDecorations) {
-        if (this._editor.getOption(62 /* EditorOption.inlineSuggest */).showToolbar === 'always') {
+        if (this._editor.getOption(62 /* EditorOption.inlineSuggest */).showToolbar !== 'onHover') {
             return [];
         }
         const controller = InlineCompletionsController.get(this._editor);
@@ -94,7 +94,7 @@ let InlineCompletionsHoverParticipant = class InlineCompletionsHoverParticipant 
             this.renderScreenReaderText(context, part, disposableStore);
         }
         const model = part.controller.model.get();
-        const w = this._instantiationService.createInstance(InlineSuggestionHintsContentWidget, this._editor, false, constObservable(null), model.selectedInlineCompletionIndex, model.inlineCompletionsCount, model.selectedInlineCompletion.map(v => { var _a; return (_a = v === null || v === void 0 ? void 0 : v.inlineCompletion.source.inlineCompletions.commands) !== null && _a !== void 0 ? _a : []; }));
+        const w = this._instantiationService.createInstance(InlineSuggestionHintsContentWidget, this._editor, false, constObservable(null), model.selectedInlineCompletionIndex, model.inlineCompletionsCount, model.selectedInlineCompletion.map(v => /** @description commands */ { var _a; /** @description commands */ return (_a = v === null || v === void 0 ? void 0 : v.inlineCompletion.source.inlineCompletions.commands) !== null && _a !== void 0 ? _a : []; }));
         context.fragment.appendChild(w.getDomNode());
         model.triggerExplicitly();
         disposableStore.add(w);
@@ -117,7 +117,7 @@ let InlineCompletionsHoverParticipant = class InlineCompletionsHoverParticipant 
         disposableStore.add(autorun(reader => {
             var _a;
             /** @description update hover */
-            const ghostText = (_a = part.controller.model.read(reader)) === null || _a === void 0 ? void 0 : _a.ghostText.read(reader);
+            const ghostText = (_a = part.controller.model.read(reader)) === null || _a === void 0 ? void 0 : _a.primaryGhostText.read(reader);
             if (ghostText) {
                 const lineText = this._editor.getModel().getLineContent(ghostText.lineNumber);
                 render(ghostText.renderForScreenReader(lineText));

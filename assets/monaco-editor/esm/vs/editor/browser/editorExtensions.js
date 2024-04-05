@@ -24,7 +24,7 @@ export class Command {
         this.precondition = opts.precondition;
         this._kbOpts = opts.kbOpts;
         this._menuOpts = opts.menuOpts;
-        this._description = opts.description;
+        this.metadata = opts.metadata;
     }
     register() {
         if (Array.isArray(this._menuOpts)) {
@@ -62,7 +62,7 @@ export class Command {
         CommandsRegistry.registerCommand({
             id: this.id,
             handler: (accessor, args) => this.runCommand(accessor, args),
-            description: this._description
+            metadata: this.metadata
         });
     }
     _registerMenuItem(item) {

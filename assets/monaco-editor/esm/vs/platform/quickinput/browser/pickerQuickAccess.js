@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { timeout } from '../../../base/common/async.js';
 import { CancellationTokenSource } from '../../../base/common/cancellation.js';
 import { Disposable, DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
@@ -58,7 +49,8 @@ export class PickerQuickAccessProvider extends Disposable {
         // Set initial picks and update on type
         let picksCts = undefined;
         const picksDisposable = disposables.add(new MutableDisposable());
-        const updatePickerItems = () => __awaiter(this, void 0, void 0, function* () {
+        const updatePickerItems = async () => {
+            var _a;
             const picksDisposables = picksDisposable.value = new DisposableStore();
             // Cancel any previous ask for picks and busy
             picksCts === null || picksCts === void 0 ? void 0 : picksCts.dispose(true);
@@ -67,7 +59,10 @@ export class PickerQuickAccessProvider extends Disposable {
             picksCts = new CancellationTokenSource(token);
             // Collect picks and support both long running and short or combined
             const picksToken = picksCts.token;
-            const picksFilter = picker.value.substr(this.prefix.length).trim();
+            let picksFilter = picker.value.substring(this.prefix.length);
+            if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.shouldSkipTrimPickFilter)) {
+                picksFilter = picksFilter.trim();
+            }
             const providedPicks = this._getPicks(picksFilter, picksDisposables, picksToken, runOptions);
             const applyPicks = (picks, skipEmpty) => {
                 var _a;
@@ -100,18 +95,18 @@ export class PickerQuickAccessProvider extends Disposable {
                 }
                 return true;
             };
-            const applyFastAndSlowPicks = (fastAndSlowPicks) => __awaiter(this, void 0, void 0, function* () {
+            const applyFastAndSlowPicks = async (fastAndSlowPicks) => {
                 let fastPicksApplied = false;
                 let slowPicksApplied = false;
-                yield Promise.all([
+                await Promise.all([
                     // Fast Picks: if `mergeDelay` is configured, in order to reduce
                     // amount of flicker, we race against the slow picks over some delay
                     // and then set the fast picks.
                     // If the slow picks are faster, we reduce the flicker by only
                     // setting the items once.
-                    (() => __awaiter(this, void 0, void 0, function* () {
+                    (async () => {
                         if (typeof fastAndSlowPicks.mergeDelay === 'number') {
-                            yield timeout(fastAndSlowPicks.mergeDelay);
+                            await timeout(fastAndSlowPicks.mergeDelay);
                             if (picksToken.isCancellationRequested) {
                                 return;
                             }
@@ -119,14 +114,14 @@ export class PickerQuickAccessProvider extends Disposable {
                         if (!slowPicksApplied) {
                             fastPicksApplied = applyPicks(fastAndSlowPicks.picks, true /* skip over empty to reduce flicker */);
                         }
-                    }))(),
+                    })(),
                     // Slow Picks: we await the slow picks and then set them at
                     // once together with the fast picks, but only if we actually
                     // have additional results.
-                    (() => __awaiter(this, void 0, void 0, function* () {
+                    (async () => {
                         picker.busy = true;
                         try {
-                            const awaitedAdditionalPicks = yield fastAndSlowPicks.additionalPicks;
+                            const awaitedAdditionalPicks = await fastAndSlowPicks.additionalPicks;
                             if (picksToken.isCancellationRequested) {
                                 return;
                             }
@@ -174,16 +169,16 @@ export class PickerQuickAccessProvider extends Disposable {
                             }
                             slowPicksApplied = true;
                         }
-                    }))()
+                    })()
                 ]);
-            });
+            };
             // No Picks
             if (providedPicks === null) {
                 // Ignore
             }
             // Fast and Slow Picks
             else if (isFastAndSlowPicks(providedPicks)) {
-                yield applyFastAndSlowPicks(providedPicks);
+                await applyFastAndSlowPicks(providedPicks);
             }
             // Fast Picks
             else if (!(providedPicks instanceof Promise)) {
@@ -193,12 +188,12 @@ export class PickerQuickAccessProvider extends Disposable {
             else {
                 picker.busy = true;
                 try {
-                    const awaitedPicks = yield providedPicks;
+                    const awaitedPicks = await providedPicks;
                     if (picksToken.isCancellationRequested) {
                         return;
                     }
                     if (isFastAndSlowPicks(awaitedPicks)) {
-                        yield applyFastAndSlowPicks(awaitedPicks);
+                        await applyFastAndSlowPicks(awaitedPicks);
                     }
                     else {
                         applyPicks(awaitedPicks);
@@ -210,7 +205,7 @@ export class PickerQuickAccessProvider extends Disposable {
                     }
                 }
             }
-        });
+        };
         disposables.add(picker.onDidChangeValue(() => updatePickerItems()));
         updatePickerItems();
         // Accept the pick on accept and hide picker
@@ -224,13 +219,13 @@ export class PickerQuickAccessProvider extends Disposable {
             }
         }));
         // Trigger the pick with button index if button triggered
-        disposables.add(picker.onDidTriggerItemButton(({ button, item }) => __awaiter(this, void 0, void 0, function* () {
-            var _b, _c;
+        disposables.add(picker.onDidTriggerItemButton(async ({ button, item }) => {
+            var _a, _b;
             if (typeof item.trigger === 'function') {
-                const buttonIndex = (_c = (_b = item.buttons) === null || _b === void 0 ? void 0 : _b.indexOf(button)) !== null && _c !== void 0 ? _c : -1;
+                const buttonIndex = (_b = (_a = item.buttons) === null || _a === void 0 ? void 0 : _a.indexOf(button)) !== null && _b !== void 0 ? _b : -1;
                 if (buttonIndex >= 0) {
                     const result = item.trigger(buttonIndex, picker.keyMods);
-                    const action = (typeof result === 'number') ? result : yield result;
+                    const action = (typeof result === 'number') ? result : await result;
                     if (token.isCancellationRequested) {
                         return;
                     }
@@ -262,7 +257,7 @@ export class PickerQuickAccessProvider extends Disposable {
                     }
                 }
             }
-        })));
+        }));
         return disposables;
     }
 }

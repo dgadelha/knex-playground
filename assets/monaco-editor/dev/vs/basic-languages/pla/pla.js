@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/pla/pla", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -76,13 +76,17 @@ var moduleExports = (() => {
       ".e",
       ".end"
     ],
+    // regular expressions
     comment: /#.*$/,
     identifier: /[a-zA-Z]+[a-zA-Z0-9_\-]*/,
     plaContent: /[01\-~\|]+/,
+    // The main tokenizer for our languages
     tokenizer: {
       root: [
+        // comments and whitespace
         { include: "@whitespace" },
         [/@comment/, "comment"],
+        // keyword
         [
           /\.([a-zA-Z_\-]+)/,
           {
@@ -98,12 +102,15 @@ var moduleExports = (() => {
             }
           }
         ],
+        // identifiers
         [/@identifier/, "identifier"],
+        // PLA row
         [/@plaContent/, "string"]
       ],
       whitespace: [[/[ \t\r\n]+/, ""]],
       type: [{ include: "@whitespace" }, [/\w+/, { token: "type", next: "@pop" }]],
       keywordArg: [
+        // whitespace
         [
           /[ \t\r\n]+/,
           {
@@ -113,7 +120,9 @@ var moduleExports = (() => {
             }
           }
         ],
+        // comments
         [/@comment/, "comment", "@pop"],
+        // brackets
         [
           /[<>()\[\]]/,
           {
@@ -123,6 +132,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // numbers
         [
           /\-?\d+/,
           {
@@ -132,6 +142,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // identifiers
         [
           /@identifier/,
           {
@@ -141,6 +152,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // delimiter
         [
           /[;=]/,
           {

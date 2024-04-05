@@ -6,6 +6,8 @@ import * as dom from '../../dom.js';
 import { DomEmitter } from '../../event.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { renderMarkdown } from '../../markdownRenderer.js';
+import { getDefaultHoverDelegate } from '../hover/hoverDelegate.js';
+import { setupCustomHover } from '../iconLabel/iconLabelHover.js';
 import { List } from '../list/listWidget.js';
 import * as arrays from '../../../common/arrays.js';
 import { Emitter, Event } from '../../../common/event.js';
@@ -74,6 +76,7 @@ export class SelectBoxList extends Disposable {
         if (typeof this.selectBoxOptions.ariaDescription === 'string') {
             this.selectElement.setAttribute('aria-description', this.selectBoxOptions.ariaDescription);
         }
+        this._hover = this._register(setupCustomHover(getDefaultHoverDelegate('mouse'), this.selectElement, ''));
         this._onDidSelect = new Emitter();
         this._register(this._onDidSelect);
         this.registerListeners();
@@ -124,7 +127,7 @@ export class SelectBoxList extends Disposable {
                 selected: e.target.value
             });
             if (!!this.options[this.selected] && !!this.options[this.selected].text) {
-                this.selectElement.title = this.options[this.selected].text;
+                this._hover.update(this.options[this.selected].text);
             }
         }));
         // Have to implement both keyboard and mouse controllers to handle disabled options
@@ -220,7 +223,7 @@ export class SelectBoxList extends Disposable {
         }
         this.selectElement.selectedIndex = this.selected;
         if (!!this.options[this.selected] && !!this.options[this.selected].text) {
-            this.selectElement.title = this.options[this.selected].text;
+            this._hover.update(this.options[this.selected].text);
         }
     }
     focus() {
@@ -403,8 +406,9 @@ export class SelectBoxList extends Disposable {
         if (this.selectList) {
             // Make visible to enable measurements
             this.selectDropDownContainer.classList.add('visible');
+            const window = dom.getWindow(this.selectElement);
             const selectPosition = dom.getDomNodePagePosition(this.selectElement);
-            const styles = getComputedStyle(this.selectElement);
+            const styles = dom.getWindow(this.selectElement).getComputedStyle(this.selectElement);
             const verticalPadding = parseFloat(styles.getPropertyValue('--dropdown-padding-top')) + parseFloat(styles.getPropertyValue('--dropdown-padding-bottom'));
             const maxSelectDropDownHeightBelow = (window.innerHeight - selectPosition.top - selectPosition.height - (this.selectBoxOptions.minBottomMargin || 0));
             const maxSelectDropDownHeightAbove = (selectPosition.top - SelectBoxList.DEFAULT_DROPDOWN_MINIMUM_TOP_MARGIN);
@@ -637,7 +641,7 @@ export class SelectBoxList extends Disposable {
                     selected: this.options[this.selected].text
                 });
                 if (!!this.options[this.selected] && !!this.options[this.selected].text) {
-                    this.selectElement.title = this.options[this.selected].text;
+                    this._hover.update(this.options[this.selected].text);
                 }
             }
             this.hideSelectDropDown(true);
@@ -723,7 +727,7 @@ export class SelectBoxList extends Disposable {
                 selected: this.options[this.selected].text
             });
             if (!!this.options[this.selected] && !!this.options[this.selected].text) {
-                this.selectElement.title = this.options[this.selected].text;
+                this._hover.update(this.options[this.selected].text);
             }
         }
         this.hideSelectDropDown(true);

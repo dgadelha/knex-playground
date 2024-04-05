@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/language/json/jsonWorker", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -716,37 +716,61 @@ var moduleExports = (() => {
         var token = _scanner.scan();
         switch (_scanner.getTokenError()) {
           case 4:
-            handleError(14);
+            handleError(
+              14
+              /* InvalidUnicode */
+            );
             break;
           case 5:
-            handleError(15);
+            handleError(
+              15
+              /* InvalidEscapeCharacter */
+            );
             break;
           case 3:
-            handleError(13);
+            handleError(
+              13
+              /* UnexpectedEndOfNumber */
+            );
             break;
           case 1:
             if (!disallowComments) {
-              handleError(11);
+              handleError(
+                11
+                /* UnexpectedEndOfComment */
+              );
             }
             break;
           case 2:
-            handleError(12);
+            handleError(
+              12
+              /* UnexpectedEndOfString */
+            );
             break;
           case 6:
-            handleError(16);
+            handleError(
+              16
+              /* InvalidCharacter */
+            );
             break;
         }
         switch (token) {
           case 12:
           case 13:
             if (disallowComments) {
-              handleError(10);
+              handleError(
+                10
+                /* InvalidCommentToken */
+              );
             } else {
               onComment();
             }
             break;
           case 16:
-            handleError(1);
+            handleError(
+              1
+              /* InvalidSymbol */
+            );
             break;
           case 15:
           case 14:
@@ -793,7 +817,10 @@ var moduleExports = (() => {
           var tokenValue = _scanner.getTokenValue();
           var value = Number(tokenValue);
           if (isNaN(value)) {
-            handleError(2);
+            handleError(
+              2
+              /* InvalidNumberFormat */
+            );
             value = 0;
           }
           onLiteralValue(value);
@@ -815,7 +842,11 @@ var moduleExports = (() => {
     }
     function parseProperty() {
       if (_scanner.getToken() !== 10) {
-        handleError(3, [], [2, 5]);
+        handleError(3, [], [
+          2,
+          5
+          /* CommaToken */
+        ]);
         return false;
       }
       parseString(false);
@@ -823,10 +854,18 @@ var moduleExports = (() => {
         onSeparator(":");
         scanNext();
         if (!parseValue()) {
-          handleError(4, [], [2, 5]);
+          handleError(4, [], [
+            2,
+            5
+            /* CommaToken */
+          ]);
         }
       } else {
-        handleError(5, [], [2, 5]);
+        handleError(5, [], [
+          2,
+          5
+          /* CommaToken */
+        ]);
       }
       return true;
     }
@@ -848,13 +887,20 @@ var moduleExports = (() => {
           handleError(6, [], []);
         }
         if (!parseProperty()) {
-          handleError(4, [], [2, 5]);
+          handleError(4, [], [
+            2,
+            5
+            /* CommaToken */
+          ]);
         }
         needsComma = true;
       }
       onObjectEnd();
       if (_scanner.getToken() !== 2) {
-        handleError(7, [2], []);
+        handleError(7, [
+          2
+          /* CloseBraceToken */
+        ], []);
       } else {
         scanNext();
       }
@@ -878,13 +924,20 @@ var moduleExports = (() => {
           handleError(6, [], []);
         }
         if (!parseValue()) {
-          handleError(4, [], [4, 5]);
+          handleError(4, [], [
+            4,
+            5
+            /* CommaToken */
+          ]);
         }
         needsComma = true;
       }
       onArrayEnd();
       if (_scanner.getToken() !== 4) {
-        handleError(8, [4], []);
+        handleError(8, [
+          4
+          /* CloseBracketToken */
+        ], []);
       } else {
         scanNext();
       }
@@ -1422,281 +1475,294 @@ var moduleExports = (() => {
     }
     WorkspaceEdit2.is = is;
   })(WorkspaceEdit || (WorkspaceEdit = {}));
-  var TextEditChangeImpl = function() {
-    function TextEditChangeImpl2(edits, changeAnnotations) {
-      this.edits = edits;
-      this.changeAnnotations = changeAnnotations;
-    }
-    TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.insert(position, newText);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.insert(position, newText, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.insert(position, newText, id);
+  var TextEditChangeImpl = (
+    /** @class */
+    function() {
+      function TextEditChangeImpl2(edits, changeAnnotations) {
+        this.edits = edits;
+        this.changeAnnotations = changeAnnotations;
       }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.replace(range, newText);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.replace(range, newText, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.replace(range, newText, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.delete = function(range, annotation) {
-      var edit;
-      var id;
-      if (annotation === void 0) {
-        edit = TextEdit.del(range);
-      } else if (ChangeAnnotationIdentifier.is(annotation)) {
-        id = annotation;
-        edit = AnnotatedTextEdit.del(range, annotation);
-      } else {
-        this.assertChangeAnnotations(this.changeAnnotations);
-        id = this.changeAnnotations.manage(annotation);
-        edit = AnnotatedTextEdit.del(range, id);
-      }
-      this.edits.push(edit);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    TextEditChangeImpl2.prototype.add = function(edit) {
-      this.edits.push(edit);
-    };
-    TextEditChangeImpl2.prototype.all = function() {
-      return this.edits;
-    };
-    TextEditChangeImpl2.prototype.clear = function() {
-      this.edits.splice(0, this.edits.length);
-    };
-    TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
-      if (value === void 0) {
-        throw new Error("Text edit change is not configured to manage change annotations.");
-      }
-    };
-    return TextEditChangeImpl2;
-  }();
-  var ChangeAnnotations = function() {
-    function ChangeAnnotations2(annotations) {
-      this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
-      this._counter = 0;
-      this._size = 0;
-    }
-    ChangeAnnotations2.prototype.all = function() {
-      return this._annotations;
-    };
-    Object.defineProperty(ChangeAnnotations2.prototype, "size", {
-      get: function() {
-        return this._size;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
-      var id;
-      if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
-        id = idOrAnnotation;
-      } else {
-        id = this.nextId();
-        annotation = idOrAnnotation;
-      }
-      if (this._annotations[id] !== void 0) {
-        throw new Error("Id " + id + " is already in use.");
-      }
-      if (annotation === void 0) {
-        throw new Error("No annotation provided for id " + id);
-      }
-      this._annotations[id] = annotation;
-      this._size++;
-      return id;
-    };
-    ChangeAnnotations2.prototype.nextId = function() {
-      this._counter++;
-      return this._counter.toString();
-    };
-    return ChangeAnnotations2;
-  }();
-  var WorkspaceChange = function() {
-    function WorkspaceChange2(workspaceEdit) {
-      var _this = this;
-      this._textEditChanges = /* @__PURE__ */ Object.create(null);
-      if (workspaceEdit !== void 0) {
-        this._workspaceEdit = workspaceEdit;
-        if (workspaceEdit.documentChanges) {
-          this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
-          workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-          workspaceEdit.documentChanges.forEach(function(change) {
-            if (TextDocumentEdit.is(change)) {
-              var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
-              _this._textEditChanges[change.textDocument.uri] = textEditChange;
-            }
-          });
-        } else if (workspaceEdit.changes) {
-          Object.keys(workspaceEdit.changes).forEach(function(key) {
-            var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
-            _this._textEditChanges[key] = textEditChange;
-          });
+      TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
+        var edit;
+        var id;
+        if (annotation === void 0) {
+          edit = TextEdit.insert(position, newText);
+        } else if (ChangeAnnotationIdentifier.is(annotation)) {
+          id = annotation;
+          edit = AnnotatedTextEdit.insert(position, newText, annotation);
+        } else {
+          this.assertChangeAnnotations(this.changeAnnotations);
+          id = this.changeAnnotations.manage(annotation);
+          edit = AnnotatedTextEdit.insert(position, newText, id);
         }
-      } else {
-        this._workspaceEdit = {};
+        this.edits.push(edit);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
+        var edit;
+        var id;
+        if (annotation === void 0) {
+          edit = TextEdit.replace(range, newText);
+        } else if (ChangeAnnotationIdentifier.is(annotation)) {
+          id = annotation;
+          edit = AnnotatedTextEdit.replace(range, newText, annotation);
+        } else {
+          this.assertChangeAnnotations(this.changeAnnotations);
+          id = this.changeAnnotations.manage(annotation);
+          edit = AnnotatedTextEdit.replace(range, newText, id);
+        }
+        this.edits.push(edit);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      TextEditChangeImpl2.prototype.delete = function(range, annotation) {
+        var edit;
+        var id;
+        if (annotation === void 0) {
+          edit = TextEdit.del(range);
+        } else if (ChangeAnnotationIdentifier.is(annotation)) {
+          id = annotation;
+          edit = AnnotatedTextEdit.del(range, annotation);
+        } else {
+          this.assertChangeAnnotations(this.changeAnnotations);
+          id = this.changeAnnotations.manage(annotation);
+          edit = AnnotatedTextEdit.del(range, id);
+        }
+        this.edits.push(edit);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      TextEditChangeImpl2.prototype.add = function(edit) {
+        this.edits.push(edit);
+      };
+      TextEditChangeImpl2.prototype.all = function() {
+        return this.edits;
+      };
+      TextEditChangeImpl2.prototype.clear = function() {
+        this.edits.splice(0, this.edits.length);
+      };
+      TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
+        if (value === void 0) {
+          throw new Error("Text edit change is not configured to manage change annotations.");
+        }
+      };
+      return TextEditChangeImpl2;
+    }()
+  );
+  var ChangeAnnotations = (
+    /** @class */
+    function() {
+      function ChangeAnnotations2(annotations) {
+        this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
+        this._counter = 0;
+        this._size = 0;
       }
-    }
-    Object.defineProperty(WorkspaceChange2.prototype, "edit", {
-      get: function() {
-        this.initDocumentChanges();
-        if (this._changeAnnotations !== void 0) {
-          if (this._changeAnnotations.size === 0) {
-            this._workspaceEdit.changeAnnotations = void 0;
-          } else {
-            this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+      ChangeAnnotations2.prototype.all = function() {
+        return this._annotations;
+      };
+      Object.defineProperty(ChangeAnnotations2.prototype, "size", {
+        get: function() {
+          return this._size;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
+        var id;
+        if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
+          id = idOrAnnotation;
+        } else {
+          id = this.nextId();
+          annotation = idOrAnnotation;
+        }
+        if (this._annotations[id] !== void 0) {
+          throw new Error("Id " + id + " is already in use.");
+        }
+        if (annotation === void 0) {
+          throw new Error("No annotation provided for id " + id);
+        }
+        this._annotations[id] = annotation;
+        this._size++;
+        return id;
+      };
+      ChangeAnnotations2.prototype.nextId = function() {
+        this._counter++;
+        return this._counter.toString();
+      };
+      return ChangeAnnotations2;
+    }()
+  );
+  var WorkspaceChange = (
+    /** @class */
+    function() {
+      function WorkspaceChange2(workspaceEdit) {
+        var _this = this;
+        this._textEditChanges = /* @__PURE__ */ Object.create(null);
+        if (workspaceEdit !== void 0) {
+          this._workspaceEdit = workspaceEdit;
+          if (workspaceEdit.documentChanges) {
+            this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
+            workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+            workspaceEdit.documentChanges.forEach(function(change) {
+              if (TextDocumentEdit.is(change)) {
+                var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
+                _this._textEditChanges[change.textDocument.uri] = textEditChange;
+              }
+            });
+          } else if (workspaceEdit.changes) {
+            Object.keys(workspaceEdit.changes).forEach(function(key) {
+              var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
+              _this._textEditChanges[key] = textEditChange;
+            });
           }
+        } else {
+          this._workspaceEdit = {};
         }
-        return this._workspaceEdit;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    WorkspaceChange2.prototype.getTextEditChange = function(key) {
-      if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+      }
+      Object.defineProperty(WorkspaceChange2.prototype, "edit", {
+        /**
+         * Returns the underlying [WorkspaceEdit](#WorkspaceEdit) literal
+         * use to be returned from a workspace edit operation like rename.
+         */
+        get: function() {
+          this.initDocumentChanges();
+          if (this._changeAnnotations !== void 0) {
+            if (this._changeAnnotations.size === 0) {
+              this._workspaceEdit.changeAnnotations = void 0;
+            } else {
+              this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+            }
+          }
+          return this._workspaceEdit;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      WorkspaceChange2.prototype.getTextEditChange = function(key) {
+        if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+          this.initDocumentChanges();
+          if (this._workspaceEdit.documentChanges === void 0) {
+            throw new Error("Workspace edit is not configured for document changes.");
+          }
+          var textDocument = { uri: key.uri, version: key.version };
+          var result = this._textEditChanges[textDocument.uri];
+          if (!result) {
+            var edits = [];
+            var textDocumentEdit = {
+              textDocument,
+              edits
+            };
+            this._workspaceEdit.documentChanges.push(textDocumentEdit);
+            result = new TextEditChangeImpl(edits, this._changeAnnotations);
+            this._textEditChanges[textDocument.uri] = result;
+          }
+          return result;
+        } else {
+          this.initChanges();
+          if (this._workspaceEdit.changes === void 0) {
+            throw new Error("Workspace edit is not configured for normal text edit changes.");
+          }
+          var result = this._textEditChanges[key];
+          if (!result) {
+            var edits = [];
+            this._workspaceEdit.changes[key] = edits;
+            result = new TextEditChangeImpl(edits);
+            this._textEditChanges[key] = result;
+          }
+          return result;
+        }
+      };
+      WorkspaceChange2.prototype.initDocumentChanges = function() {
+        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+          this._changeAnnotations = new ChangeAnnotations();
+          this._workspaceEdit.documentChanges = [];
+          this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+        }
+      };
+      WorkspaceChange2.prototype.initChanges = function() {
+        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+          this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
+        }
+      };
+      WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
         this.initDocumentChanges();
         if (this._workspaceEdit.documentChanges === void 0) {
           throw new Error("Workspace edit is not configured for document changes.");
         }
-        var textDocument = { uri: key.uri, version: key.version };
-        var result = this._textEditChanges[textDocument.uri];
-        if (!result) {
-          var edits = [];
-          var textDocumentEdit = {
-            textDocument,
-            edits
-          };
-          this._workspaceEdit.documentChanges.push(textDocumentEdit);
-          result = new TextEditChangeImpl(edits, this._changeAnnotations);
-          this._textEditChanges[textDocument.uri] = result;
+        var annotation;
+        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+          annotation = optionsOrAnnotation;
+        } else {
+          options = optionsOrAnnotation;
         }
-        return result;
-      } else {
-        this.initChanges();
-        if (this._workspaceEdit.changes === void 0) {
-          throw new Error("Workspace edit is not configured for normal text edit changes.");
+        var operation;
+        var id;
+        if (annotation === void 0) {
+          operation = CreateFile.create(uri, options);
+        } else {
+          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+          operation = CreateFile.create(uri, options, id);
         }
-        var result = this._textEditChanges[key];
-        if (!result) {
-          var edits = [];
-          this._workspaceEdit.changes[key] = edits;
-          result = new TextEditChangeImpl(edits);
-          this._textEditChanges[key] = result;
+        this._workspaceEdit.documentChanges.push(operation);
+        if (id !== void 0) {
+          return id;
         }
-        return result;
-      }
-    };
-    WorkspaceChange2.prototype.initDocumentChanges = function() {
-      if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-        this._changeAnnotations = new ChangeAnnotations();
-        this._workspaceEdit.documentChanges = [];
-        this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-      }
-    };
-    WorkspaceChange2.prototype.initChanges = function() {
-      if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-        this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
-      }
-    };
-    WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = CreateFile.create(uri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = CreateFile.create(uri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = RenameFile.create(oldUri, newUri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = RenameFile.create(oldUri, newUri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
-      this.initDocumentChanges();
-      if (this._workspaceEdit.documentChanges === void 0) {
-        throw new Error("Workspace edit is not configured for document changes.");
-      }
-      var annotation;
-      if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-        annotation = optionsOrAnnotation;
-      } else {
-        options = optionsOrAnnotation;
-      }
-      var operation;
-      var id;
-      if (annotation === void 0) {
-        operation = DeleteFile.create(uri, options);
-      } else {
-        id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-        operation = DeleteFile.create(uri, options, id);
-      }
-      this._workspaceEdit.documentChanges.push(operation);
-      if (id !== void 0) {
-        return id;
-      }
-    };
-    return WorkspaceChange2;
-  }();
+      };
+      WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
+        this.initDocumentChanges();
+        if (this._workspaceEdit.documentChanges === void 0) {
+          throw new Error("Workspace edit is not configured for document changes.");
+        }
+        var annotation;
+        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+          annotation = optionsOrAnnotation;
+        } else {
+          options = optionsOrAnnotation;
+        }
+        var operation;
+        var id;
+        if (annotation === void 0) {
+          operation = RenameFile.create(oldUri, newUri, options);
+        } else {
+          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+          operation = RenameFile.create(oldUri, newUri, options, id);
+        }
+        this._workspaceEdit.documentChanges.push(operation);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
+        this.initDocumentChanges();
+        if (this._workspaceEdit.documentChanges === void 0) {
+          throw new Error("Workspace edit is not configured for document changes.");
+        }
+        var annotation;
+        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+          annotation = optionsOrAnnotation;
+        } else {
+          options = optionsOrAnnotation;
+        }
+        var operation;
+        var id;
+        if (annotation === void 0) {
+          operation = DeleteFile.create(uri, options);
+        } else {
+          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+          operation = DeleteFile.create(uri, options, id);
+        }
+        this._workspaceEdit.documentChanges.push(operation);
+        if (id !== void 0) {
+          return id;
+        }
+      };
+      return WorkspaceChange2;
+    }()
+  );
   var TextDocumentIdentifier;
   (function(TextDocumentIdentifier2) {
     function create2(uri) {
@@ -2136,109 +2202,112 @@ var moduleExports = (() => {
       return data;
     }
   })(TextDocument || (TextDocument = {}));
-  var FullTextDocument = function() {
-    function FullTextDocument3(uri, languageId, version, content) {
-      this._uri = uri;
-      this._languageId = languageId;
-      this._version = version;
-      this._content = content;
-      this._lineOffsets = void 0;
-    }
-    Object.defineProperty(FullTextDocument3.prototype, "uri", {
-      get: function() {
-        return this._uri;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(FullTextDocument3.prototype, "languageId", {
-      get: function() {
-        return this._languageId;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    Object.defineProperty(FullTextDocument3.prototype, "version", {
-      get: function() {
-        return this._version;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    FullTextDocument3.prototype.getText = function(range) {
-      if (range) {
-        var start = this.offsetAt(range.start);
-        var end = this.offsetAt(range.end);
-        return this._content.substring(start, end);
+  var FullTextDocument = (
+    /** @class */
+    function() {
+      function FullTextDocument3(uri, languageId, version, content) {
+        this._uri = uri;
+        this._languageId = languageId;
+        this._version = version;
+        this._content = content;
+        this._lineOffsets = void 0;
       }
-      return this._content;
-    };
-    FullTextDocument3.prototype.update = function(event, version) {
-      this._content = event.text;
-      this._version = version;
-      this._lineOffsets = void 0;
-    };
-    FullTextDocument3.prototype.getLineOffsets = function() {
-      if (this._lineOffsets === void 0) {
-        var lineOffsets = [];
-        var text = this._content;
-        var isLineStart = true;
-        for (var i = 0; i < text.length; i++) {
-          if (isLineStart) {
-            lineOffsets.push(i);
-            isLineStart = false;
+      Object.defineProperty(FullTextDocument3.prototype, "uri", {
+        get: function() {
+          return this._uri;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Object.defineProperty(FullTextDocument3.prototype, "languageId", {
+        get: function() {
+          return this._languageId;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      Object.defineProperty(FullTextDocument3.prototype, "version", {
+        get: function() {
+          return this._version;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      FullTextDocument3.prototype.getText = function(range) {
+        if (range) {
+          var start = this.offsetAt(range.start);
+          var end = this.offsetAt(range.end);
+          return this._content.substring(start, end);
+        }
+        return this._content;
+      };
+      FullTextDocument3.prototype.update = function(event, version) {
+        this._content = event.text;
+        this._version = version;
+        this._lineOffsets = void 0;
+      };
+      FullTextDocument3.prototype.getLineOffsets = function() {
+        if (this._lineOffsets === void 0) {
+          var lineOffsets = [];
+          var text = this._content;
+          var isLineStart = true;
+          for (var i = 0; i < text.length; i++) {
+            if (isLineStart) {
+              lineOffsets.push(i);
+              isLineStart = false;
+            }
+            var ch = text.charAt(i);
+            isLineStart = ch === "\r" || ch === "\n";
+            if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
+              i++;
+            }
           }
-          var ch = text.charAt(i);
-          isLineStart = ch === "\r" || ch === "\n";
-          if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
-            i++;
+          if (isLineStart && text.length > 0) {
+            lineOffsets.push(text.length);
+          }
+          this._lineOffsets = lineOffsets;
+        }
+        return this._lineOffsets;
+      };
+      FullTextDocument3.prototype.positionAt = function(offset) {
+        offset = Math.max(Math.min(offset, this._content.length), 0);
+        var lineOffsets = this.getLineOffsets();
+        var low = 0, high = lineOffsets.length;
+        if (high === 0) {
+          return Position.create(0, offset);
+        }
+        while (low < high) {
+          var mid = Math.floor((low + high) / 2);
+          if (lineOffsets[mid] > offset) {
+            high = mid;
+          } else {
+            low = mid + 1;
           }
         }
-        if (isLineStart && text.length > 0) {
-          lineOffsets.push(text.length);
+        var line = low - 1;
+        return Position.create(line, offset - lineOffsets[line]);
+      };
+      FullTextDocument3.prototype.offsetAt = function(position) {
+        var lineOffsets = this.getLineOffsets();
+        if (position.line >= lineOffsets.length) {
+          return this._content.length;
+        } else if (position.line < 0) {
+          return 0;
         }
-        this._lineOffsets = lineOffsets;
-      }
-      return this._lineOffsets;
-    };
-    FullTextDocument3.prototype.positionAt = function(offset) {
-      offset = Math.max(Math.min(offset, this._content.length), 0);
-      var lineOffsets = this.getLineOffsets();
-      var low = 0, high = lineOffsets.length;
-      if (high === 0) {
-        return Position.create(0, offset);
-      }
-      while (low < high) {
-        var mid = Math.floor((low + high) / 2);
-        if (lineOffsets[mid] > offset) {
-          high = mid;
-        } else {
-          low = mid + 1;
-        }
-      }
-      var line = low - 1;
-      return Position.create(line, offset - lineOffsets[line]);
-    };
-    FullTextDocument3.prototype.offsetAt = function(position) {
-      var lineOffsets = this.getLineOffsets();
-      if (position.line >= lineOffsets.length) {
-        return this._content.length;
-      } else if (position.line < 0) {
-        return 0;
-      }
-      var lineOffset = lineOffsets[position.line];
-      var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-      return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
-    };
-    Object.defineProperty(FullTextDocument3.prototype, "lineCount", {
-      get: function() {
-        return this.getLineOffsets().length;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return FullTextDocument3;
-  }();
+        var lineOffset = lineOffsets[position.line];
+        var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+        return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
+      };
+      Object.defineProperty(FullTextDocument3.prototype, "lineCount", {
+        get: function() {
+          return this.getLineOffsets().length;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      return FullTextDocument3;
+    }()
+  );
   var Is;
   (function(Is2) {
     var toString = Object.prototype.toString;
@@ -2289,7 +2358,7 @@ var moduleExports = (() => {
   })(Is || (Is = {}));
 
   // node_modules/vscode-languageserver-textdocument/lib/esm/main.js
-  var FullTextDocument2 = class {
+  var FullTextDocument2 = class _FullTextDocument {
     constructor(uri, languageId, version, content) {
       this._uri = uri;
       this._languageId = languageId;
@@ -2316,7 +2385,7 @@ var moduleExports = (() => {
     }
     update(changes, version) {
       for (let change of changes) {
-        if (FullTextDocument2.isIncremental(change)) {
+        if (_FullTextDocument.isIncremental(change)) {
           const range = getWellformedRange(change.range);
           const startOffset = this.offsetAt(range.start);
           const endOffset = this.offsetAt(range.end);
@@ -2342,7 +2411,7 @@ var moduleExports = (() => {
               lineOffsets[i] = lineOffsets[i] + diff;
             }
           }
-        } else if (FullTextDocument2.isFull(change)) {
+        } else if (_FullTextDocument.isFull(change)) {
           this._content = change.text;
           this._lineOffsets = void 0;
         } else {
@@ -2556,7 +2625,7 @@ var moduleExports = (() => {
   }
 
   // node_modules/vscode-json-languageservice/lib/esm/parser/jsonParser.js
-  var __extends = function() {
+  var __extends = /* @__PURE__ */ function() {
     var extendStatics = function(d, b) {
       extendStatics = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(d2, b2) {
         d2.__proto__ = b2;
@@ -2588,120 +2657,144 @@ var moduleExports = (() => {
     "ipv4": { errorMessage: localize2("ipv4FormatWarning", "String is not an IPv4 address."), pattern: /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/ },
     "ipv6": { errorMessage: localize2("ipv6FormatWarning", "String is not an IPv6 address."), pattern: /^((([0-9a-f]{1,4}:){7}([0-9a-f]{1,4}|:))|(([0-9a-f]{1,4}:){6}(:[0-9a-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9a-f]{1,4}:){5}(((:[0-9a-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9a-f]{1,4}:){4}(((:[0-9a-f]{1,4}){1,3})|((:[0-9a-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9a-f]{1,4}:){3}(((:[0-9a-f]{1,4}){1,4})|((:[0-9a-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9a-f]{1,4}:){2}(((:[0-9a-f]{1,4}){1,5})|((:[0-9a-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9a-f]{1,4}:){1}(((:[0-9a-f]{1,4}){1,6})|((:[0-9a-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9a-f]{1,4}){1,7})|((:[0-9a-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))$/i }
   };
-  var ASTNodeImpl = function() {
-    function ASTNodeImpl2(parent, offset, length) {
-      if (length === void 0) {
-        length = 0;
+  var ASTNodeImpl = (
+    /** @class */
+    function() {
+      function ASTNodeImpl2(parent, offset, length) {
+        if (length === void 0) {
+          length = 0;
+        }
+        this.offset = offset;
+        this.length = length;
+        this.parent = parent;
       }
-      this.offset = offset;
-      this.length = length;
-      this.parent = parent;
-    }
-    Object.defineProperty(ASTNodeImpl2.prototype, "children", {
-      get: function() {
-        return [];
-      },
-      enumerable: false,
-      configurable: true
-    });
-    ASTNodeImpl2.prototype.toString = function() {
-      return "type: " + this.type + " (" + this.offset + "/" + this.length + ")" + (this.parent ? " parent: {" + this.parent.toString() + "}" : "");
-    };
-    return ASTNodeImpl2;
-  }();
-  var NullASTNodeImpl = function(_super) {
-    __extends(NullASTNodeImpl2, _super);
-    function NullASTNodeImpl2(parent, offset) {
-      var _this = _super.call(this, parent, offset) || this;
-      _this.type = "null";
-      _this.value = null;
-      return _this;
-    }
-    return NullASTNodeImpl2;
-  }(ASTNodeImpl);
-  var BooleanASTNodeImpl = function(_super) {
-    __extends(BooleanASTNodeImpl2, _super);
-    function BooleanASTNodeImpl2(parent, boolValue, offset) {
-      var _this = _super.call(this, parent, offset) || this;
-      _this.type = "boolean";
-      _this.value = boolValue;
-      return _this;
-    }
-    return BooleanASTNodeImpl2;
-  }(ASTNodeImpl);
-  var ArrayASTNodeImpl = function(_super) {
-    __extends(ArrayASTNodeImpl2, _super);
-    function ArrayASTNodeImpl2(parent, offset) {
-      var _this = _super.call(this, parent, offset) || this;
-      _this.type = "array";
-      _this.items = [];
-      return _this;
-    }
-    Object.defineProperty(ArrayASTNodeImpl2.prototype, "children", {
-      get: function() {
-        return this.items;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return ArrayASTNodeImpl2;
-  }(ASTNodeImpl);
-  var NumberASTNodeImpl = function(_super) {
-    __extends(NumberASTNodeImpl2, _super);
-    function NumberASTNodeImpl2(parent, offset) {
-      var _this = _super.call(this, parent, offset) || this;
-      _this.type = "number";
-      _this.isInteger = true;
-      _this.value = Number.NaN;
-      return _this;
-    }
-    return NumberASTNodeImpl2;
-  }(ASTNodeImpl);
-  var StringASTNodeImpl = function(_super) {
-    __extends(StringASTNodeImpl2, _super);
-    function StringASTNodeImpl2(parent, offset, length) {
-      var _this = _super.call(this, parent, offset, length) || this;
-      _this.type = "string";
-      _this.value = "";
-      return _this;
-    }
-    return StringASTNodeImpl2;
-  }(ASTNodeImpl);
-  var PropertyASTNodeImpl = function(_super) {
-    __extends(PropertyASTNodeImpl2, _super);
-    function PropertyASTNodeImpl2(parent, offset, keyNode) {
-      var _this = _super.call(this, parent, offset) || this;
-      _this.type = "property";
-      _this.colonOffset = -1;
-      _this.keyNode = keyNode;
-      return _this;
-    }
-    Object.defineProperty(PropertyASTNodeImpl2.prototype, "children", {
-      get: function() {
-        return this.valueNode ? [this.keyNode, this.valueNode] : [this.keyNode];
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return PropertyASTNodeImpl2;
-  }(ASTNodeImpl);
-  var ObjectASTNodeImpl = function(_super) {
-    __extends(ObjectASTNodeImpl2, _super);
-    function ObjectASTNodeImpl2(parent, offset) {
-      var _this = _super.call(this, parent, offset) || this;
-      _this.type = "object";
-      _this.properties = [];
-      return _this;
-    }
-    Object.defineProperty(ObjectASTNodeImpl2.prototype, "children", {
-      get: function() {
-        return this.properties;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    return ObjectASTNodeImpl2;
-  }(ASTNodeImpl);
+      Object.defineProperty(ASTNodeImpl2.prototype, "children", {
+        get: function() {
+          return [];
+        },
+        enumerable: false,
+        configurable: true
+      });
+      ASTNodeImpl2.prototype.toString = function() {
+        return "type: " + this.type + " (" + this.offset + "/" + this.length + ")" + (this.parent ? " parent: {" + this.parent.toString() + "}" : "");
+      };
+      return ASTNodeImpl2;
+    }()
+  );
+  var NullASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(NullASTNodeImpl2, _super);
+      function NullASTNodeImpl2(parent, offset) {
+        var _this = _super.call(this, parent, offset) || this;
+        _this.type = "null";
+        _this.value = null;
+        return _this;
+      }
+      return NullASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
+  var BooleanASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(BooleanASTNodeImpl2, _super);
+      function BooleanASTNodeImpl2(parent, boolValue, offset) {
+        var _this = _super.call(this, parent, offset) || this;
+        _this.type = "boolean";
+        _this.value = boolValue;
+        return _this;
+      }
+      return BooleanASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
+  var ArrayASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(ArrayASTNodeImpl2, _super);
+      function ArrayASTNodeImpl2(parent, offset) {
+        var _this = _super.call(this, parent, offset) || this;
+        _this.type = "array";
+        _this.items = [];
+        return _this;
+      }
+      Object.defineProperty(ArrayASTNodeImpl2.prototype, "children", {
+        get: function() {
+          return this.items;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      return ArrayASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
+  var NumberASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(NumberASTNodeImpl2, _super);
+      function NumberASTNodeImpl2(parent, offset) {
+        var _this = _super.call(this, parent, offset) || this;
+        _this.type = "number";
+        _this.isInteger = true;
+        _this.value = Number.NaN;
+        return _this;
+      }
+      return NumberASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
+  var StringASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(StringASTNodeImpl2, _super);
+      function StringASTNodeImpl2(parent, offset, length) {
+        var _this = _super.call(this, parent, offset, length) || this;
+        _this.type = "string";
+        _this.value = "";
+        return _this;
+      }
+      return StringASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
+  var PropertyASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(PropertyASTNodeImpl2, _super);
+      function PropertyASTNodeImpl2(parent, offset, keyNode) {
+        var _this = _super.call(this, parent, offset) || this;
+        _this.type = "property";
+        _this.colonOffset = -1;
+        _this.keyNode = keyNode;
+        return _this;
+      }
+      Object.defineProperty(PropertyASTNodeImpl2.prototype, "children", {
+        get: function() {
+          return this.valueNode ? [this.keyNode, this.valueNode] : [this.keyNode];
+        },
+        enumerable: false,
+        configurable: true
+      });
+      return PropertyASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
+  var ObjectASTNodeImpl = (
+    /** @class */
+    function(_super) {
+      __extends(ObjectASTNodeImpl2, _super);
+      function ObjectASTNodeImpl2(parent, offset) {
+        var _this = _super.call(this, parent, offset) || this;
+        _this.type = "object";
+        _this.properties = [];
+        return _this;
+      }
+      Object.defineProperty(ObjectASTNodeImpl2.prototype, "children", {
+        get: function() {
+          return this.properties;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      return ObjectASTNodeImpl2;
+    }(ASTNodeImpl)
+  );
   function asSchema(schema) {
     if (isBoolean(schema)) {
       return schema ? {} : { "not": {} };
@@ -2713,114 +2806,123 @@ var moduleExports = (() => {
     EnumMatch2[EnumMatch2["Key"] = 0] = "Key";
     EnumMatch2[EnumMatch2["Enum"] = 1] = "Enum";
   })(EnumMatch || (EnumMatch = {}));
-  var SchemaCollector = function() {
-    function SchemaCollector2(focusOffset, exclude) {
-      if (focusOffset === void 0) {
-        focusOffset = -1;
+  var SchemaCollector = (
+    /** @class */
+    function() {
+      function SchemaCollector2(focusOffset, exclude) {
+        if (focusOffset === void 0) {
+          focusOffset = -1;
+        }
+        this.focusOffset = focusOffset;
+        this.exclude = exclude;
+        this.schemas = [];
       }
-      this.focusOffset = focusOffset;
-      this.exclude = exclude;
-      this.schemas = [];
-    }
-    SchemaCollector2.prototype.add = function(schema) {
-      this.schemas.push(schema);
-    };
-    SchemaCollector2.prototype.merge = function(other) {
-      Array.prototype.push.apply(this.schemas, other.schemas);
-    };
-    SchemaCollector2.prototype.include = function(node) {
-      return (this.focusOffset === -1 || contains2(node, this.focusOffset)) && node !== this.exclude;
-    };
-    SchemaCollector2.prototype.newSub = function() {
-      return new SchemaCollector2(-1, this.exclude);
-    };
-    return SchemaCollector2;
-  }();
-  var NoOpSchemaCollector = function() {
-    function NoOpSchemaCollector2() {
-    }
-    Object.defineProperty(NoOpSchemaCollector2.prototype, "schemas", {
-      get: function() {
-        return [];
-      },
-      enumerable: false,
-      configurable: true
-    });
-    NoOpSchemaCollector2.prototype.add = function(schema) {
-    };
-    NoOpSchemaCollector2.prototype.merge = function(other) {
-    };
-    NoOpSchemaCollector2.prototype.include = function(node) {
-      return true;
-    };
-    NoOpSchemaCollector2.prototype.newSub = function() {
-      return this;
-    };
-    NoOpSchemaCollector2.instance = new NoOpSchemaCollector2();
-    return NoOpSchemaCollector2;
-  }();
-  var ValidationResult = function() {
-    function ValidationResult2() {
-      this.problems = [];
-      this.propertiesMatches = 0;
-      this.propertiesValueMatches = 0;
-      this.primaryValueMatches = 0;
-      this.enumValueMatch = false;
-      this.enumValues = void 0;
-    }
-    ValidationResult2.prototype.hasProblems = function() {
-      return !!this.problems.length;
-    };
-    ValidationResult2.prototype.mergeAll = function(validationResults) {
-      for (var _i = 0, validationResults_1 = validationResults; _i < validationResults_1.length; _i++) {
-        var validationResult = validationResults_1[_i];
-        this.merge(validationResult);
+      SchemaCollector2.prototype.add = function(schema) {
+        this.schemas.push(schema);
+      };
+      SchemaCollector2.prototype.merge = function(other) {
+        Array.prototype.push.apply(this.schemas, other.schemas);
+      };
+      SchemaCollector2.prototype.include = function(node) {
+        return (this.focusOffset === -1 || contains2(node, this.focusOffset)) && node !== this.exclude;
+      };
+      SchemaCollector2.prototype.newSub = function() {
+        return new SchemaCollector2(-1, this.exclude);
+      };
+      return SchemaCollector2;
+    }()
+  );
+  var NoOpSchemaCollector = (
+    /** @class */
+    function() {
+      function NoOpSchemaCollector2() {
       }
-    };
-    ValidationResult2.prototype.merge = function(validationResult) {
-      this.problems = this.problems.concat(validationResult.problems);
-    };
-    ValidationResult2.prototype.mergeEnumValues = function(validationResult) {
-      if (!this.enumValueMatch && !validationResult.enumValueMatch && this.enumValues && validationResult.enumValues) {
-        this.enumValues = this.enumValues.concat(validationResult.enumValues);
-        for (var _i = 0, _a = this.problems; _i < _a.length; _i++) {
-          var error = _a[_i];
-          if (error.code === ErrorCode.EnumValueMismatch) {
-            error.message = localize2("enumWarning", "Value is not accepted. Valid values: {0}.", this.enumValues.map(function(v) {
-              return JSON.stringify(v);
-            }).join(", "));
+      Object.defineProperty(NoOpSchemaCollector2.prototype, "schemas", {
+        get: function() {
+          return [];
+        },
+        enumerable: false,
+        configurable: true
+      });
+      NoOpSchemaCollector2.prototype.add = function(schema) {
+      };
+      NoOpSchemaCollector2.prototype.merge = function(other) {
+      };
+      NoOpSchemaCollector2.prototype.include = function(node) {
+        return true;
+      };
+      NoOpSchemaCollector2.prototype.newSub = function() {
+        return this;
+      };
+      NoOpSchemaCollector2.instance = new NoOpSchemaCollector2();
+      return NoOpSchemaCollector2;
+    }()
+  );
+  var ValidationResult = (
+    /** @class */
+    function() {
+      function ValidationResult2() {
+        this.problems = [];
+        this.propertiesMatches = 0;
+        this.propertiesValueMatches = 0;
+        this.primaryValueMatches = 0;
+        this.enumValueMatch = false;
+        this.enumValues = void 0;
+      }
+      ValidationResult2.prototype.hasProblems = function() {
+        return !!this.problems.length;
+      };
+      ValidationResult2.prototype.mergeAll = function(validationResults) {
+        for (var _i = 0, validationResults_1 = validationResults; _i < validationResults_1.length; _i++) {
+          var validationResult = validationResults_1[_i];
+          this.merge(validationResult);
+        }
+      };
+      ValidationResult2.prototype.merge = function(validationResult) {
+        this.problems = this.problems.concat(validationResult.problems);
+      };
+      ValidationResult2.prototype.mergeEnumValues = function(validationResult) {
+        if (!this.enumValueMatch && !validationResult.enumValueMatch && this.enumValues && validationResult.enumValues) {
+          this.enumValues = this.enumValues.concat(validationResult.enumValues);
+          for (var _i = 0, _a = this.problems; _i < _a.length; _i++) {
+            var error = _a[_i];
+            if (error.code === ErrorCode.EnumValueMismatch) {
+              error.message = localize2("enumWarning", "Value is not accepted. Valid values: {0}.", this.enumValues.map(function(v) {
+                return JSON.stringify(v);
+              }).join(", "));
+            }
           }
         }
-      }
-    };
-    ValidationResult2.prototype.mergePropertyMatch = function(propertyValidationResult) {
-      this.merge(propertyValidationResult);
-      this.propertiesMatches++;
-      if (propertyValidationResult.enumValueMatch || !propertyValidationResult.hasProblems() && propertyValidationResult.propertiesMatches) {
-        this.propertiesValueMatches++;
-      }
-      if (propertyValidationResult.enumValueMatch && propertyValidationResult.enumValues && propertyValidationResult.enumValues.length === 1) {
-        this.primaryValueMatches++;
-      }
-    };
-    ValidationResult2.prototype.compare = function(other) {
-      var hasProblems = this.hasProblems();
-      if (hasProblems !== other.hasProblems()) {
-        return hasProblems ? -1 : 1;
-      }
-      if (this.enumValueMatch !== other.enumValueMatch) {
-        return other.enumValueMatch ? -1 : 1;
-      }
-      if (this.primaryValueMatches !== other.primaryValueMatches) {
-        return this.primaryValueMatches - other.primaryValueMatches;
-      }
-      if (this.propertiesValueMatches !== other.propertiesValueMatches) {
-        return this.propertiesValueMatches - other.propertiesValueMatches;
-      }
-      return this.propertiesMatches - other.propertiesMatches;
-    };
-    return ValidationResult2;
-  }();
+      };
+      ValidationResult2.prototype.mergePropertyMatch = function(propertyValidationResult) {
+        this.merge(propertyValidationResult);
+        this.propertiesMatches++;
+        if (propertyValidationResult.enumValueMatch || !propertyValidationResult.hasProblems() && propertyValidationResult.propertiesMatches) {
+          this.propertiesValueMatches++;
+        }
+        if (propertyValidationResult.enumValueMatch && propertyValidationResult.enumValues && propertyValidationResult.enumValues.length === 1) {
+          this.primaryValueMatches++;
+        }
+      };
+      ValidationResult2.prototype.compare = function(other) {
+        var hasProblems = this.hasProblems();
+        if (hasProblems !== other.hasProblems()) {
+          return hasProblems ? -1 : 1;
+        }
+        if (this.enumValueMatch !== other.enumValueMatch) {
+          return other.enumValueMatch ? -1 : 1;
+        }
+        if (this.primaryValueMatches !== other.primaryValueMatches) {
+          return this.primaryValueMatches - other.primaryValueMatches;
+        }
+        if (this.propertiesValueMatches !== other.propertiesValueMatches) {
+          return this.propertiesValueMatches - other.propertiesValueMatches;
+        }
+        return this.propertiesMatches - other.propertiesMatches;
+      };
+      return ValidationResult2;
+    }()
+  );
   function newJSONDocument(root, diagnostics) {
     if (diagnostics === void 0) {
       diagnostics = [];
@@ -2839,69 +2941,72 @@ var moduleExports = (() => {
     }
     return offset >= node.offset && offset < node.offset + node.length || includeRightBound && offset === node.offset + node.length;
   }
-  var JSONDocument = function() {
-    function JSONDocument2(root, syntaxErrors, comments) {
-      if (syntaxErrors === void 0) {
-        syntaxErrors = [];
+  var JSONDocument = (
+    /** @class */
+    function() {
+      function JSONDocument2(root, syntaxErrors, comments) {
+        if (syntaxErrors === void 0) {
+          syntaxErrors = [];
+        }
+        if (comments === void 0) {
+          comments = [];
+        }
+        this.root = root;
+        this.syntaxErrors = syntaxErrors;
+        this.comments = comments;
       }
-      if (comments === void 0) {
-        comments = [];
-      }
-      this.root = root;
-      this.syntaxErrors = syntaxErrors;
-      this.comments = comments;
-    }
-    JSONDocument2.prototype.getNodeFromOffset = function(offset, includeRightBound) {
-      if (includeRightBound === void 0) {
-        includeRightBound = false;
-      }
-      if (this.root) {
-        return findNodeAtOffset2(this.root, offset, includeRightBound);
-      }
-      return void 0;
-    };
-    JSONDocument2.prototype.visit = function(visitor) {
-      if (this.root) {
-        var doVisit_1 = function(node) {
-          var ctn = visitor(node);
-          var children = node.children;
-          if (Array.isArray(children)) {
-            for (var i = 0; i < children.length && ctn; i++) {
-              ctn = doVisit_1(children[i]);
+      JSONDocument2.prototype.getNodeFromOffset = function(offset, includeRightBound) {
+        if (includeRightBound === void 0) {
+          includeRightBound = false;
+        }
+        if (this.root) {
+          return findNodeAtOffset2(this.root, offset, includeRightBound);
+        }
+        return void 0;
+      };
+      JSONDocument2.prototype.visit = function(visitor) {
+        if (this.root) {
+          var doVisit_1 = function(node) {
+            var ctn = visitor(node);
+            var children = node.children;
+            if (Array.isArray(children)) {
+              for (var i = 0; i < children.length && ctn; i++) {
+                ctn = doVisit_1(children[i]);
+              }
             }
-          }
-          return ctn;
-        };
-        doVisit_1(this.root);
-      }
-    };
-    JSONDocument2.prototype.validate = function(textDocument, schema, severity) {
-      if (severity === void 0) {
-        severity = DiagnosticSeverity.Warning;
-      }
-      if (this.root && schema) {
-        var validationResult = new ValidationResult();
-        validate(this.root, schema, validationResult, NoOpSchemaCollector.instance);
-        return validationResult.problems.map(function(p) {
-          var _a;
-          var range = Range.create(textDocument.positionAt(p.location.offset), textDocument.positionAt(p.location.offset + p.location.length));
-          return Diagnostic.create(range, p.message, (_a = p.severity) !== null && _a !== void 0 ? _a : severity, p.code);
-        });
-      }
-      return void 0;
-    };
-    JSONDocument2.prototype.getMatchingSchemas = function(schema, focusOffset, exclude) {
-      if (focusOffset === void 0) {
-        focusOffset = -1;
-      }
-      var matchingSchemas = new SchemaCollector(focusOffset, exclude);
-      if (this.root && schema) {
-        validate(this.root, schema, new ValidationResult(), matchingSchemas);
-      }
-      return matchingSchemas.schemas;
-    };
-    return JSONDocument2;
-  }();
+            return ctn;
+          };
+          doVisit_1(this.root);
+        }
+      };
+      JSONDocument2.prototype.validate = function(textDocument, schema, severity) {
+        if (severity === void 0) {
+          severity = DiagnosticSeverity.Warning;
+        }
+        if (this.root && schema) {
+          var validationResult = new ValidationResult();
+          validate(this.root, schema, validationResult, NoOpSchemaCollector.instance);
+          return validationResult.problems.map(function(p) {
+            var _a;
+            var range = Range.create(textDocument.positionAt(p.location.offset), textDocument.positionAt(p.location.offset + p.location.length));
+            return Diagnostic.create(range, p.message, (_a = p.severity) !== null && _a !== void 0 ? _a : severity, p.code);
+          });
+        }
+        return void 0;
+      };
+      JSONDocument2.prototype.getMatchingSchemas = function(schema, focusOffset, exclude) {
+        if (focusOffset === void 0) {
+          focusOffset = -1;
+        }
+        var matchingSchemas = new SchemaCollector(focusOffset, exclude);
+        if (this.root && schema) {
+          validate(this.root, schema, new ValidationResult(), matchingSchemas);
+        }
+        return matchingSchemas.schemas;
+      };
+      return JSONDocument2;
+    }()
+  );
   function validate(n, schema, validationResult, matchingSchemas) {
     if (!n || !matchingSchemas.include(n)) {
       return;
@@ -3616,7 +3721,11 @@ var moduleExports = (() => {
         }
         var item = _parseValue(node);
         if (!item) {
-          _error(localize2("PropertyExpected", "Value expected"), ErrorCode.ValueExpected, void 0, [], [4, 5]);
+          _error(localize2("PropertyExpected", "Value expected"), ErrorCode.ValueExpected, void 0, [], [
+            4,
+            5
+            /* CommaToken */
+          ]);
         } else {
           node.items.push(item);
         }
@@ -3665,7 +3774,11 @@ var moduleExports = (() => {
       }
       var value = _parseValue(node);
       if (!value) {
-        return _error(localize2("ValueExpected", "Value expected"), ErrorCode.ValueExpected, node, [], [2, 5]);
+        return _error(localize2("ValueExpected", "Value expected"), ErrorCode.ValueExpected, node, [], [
+          2,
+          5
+          /* CommaToken */
+        ]);
       }
       node.valueNode = value;
       node.length = value.offset + value.length - node.offset;
@@ -3697,7 +3810,11 @@ var moduleExports = (() => {
         }
         var property = _parseProperty(node, keysSeen);
         if (!property) {
-          _error(localize2("PropertyExpected", "Property expected"), ErrorCode.PropertyExpected, void 0, [], [2, 5]);
+          _error(localize2("PropertyExpected", "Property expected"), ErrorCode.PropertyExpected, void 0, [], [
+            2,
+            5
+            /* CommaToken */
+          ]);
         } else {
           node.properties.push(property);
         }
@@ -3808,205 +3925,234 @@ var moduleExports = (() => {
   var localize3 = loadMessageBundle();
   var valueCommitCharacters = [",", "}", "]"];
   var propertyCommitCharacters = [":"];
-  var JSONCompletion = function() {
-    function JSONCompletion2(schemaService, contributions, promiseConstructor, clientCapabilities) {
-      if (contributions === void 0) {
-        contributions = [];
+  var JSONCompletion = (
+    /** @class */
+    function() {
+      function JSONCompletion2(schemaService, contributions, promiseConstructor, clientCapabilities) {
+        if (contributions === void 0) {
+          contributions = [];
+        }
+        if (promiseConstructor === void 0) {
+          promiseConstructor = Promise;
+        }
+        if (clientCapabilities === void 0) {
+          clientCapabilities = {};
+        }
+        this.schemaService = schemaService;
+        this.contributions = contributions;
+        this.promiseConstructor = promiseConstructor;
+        this.clientCapabilities = clientCapabilities;
       }
-      if (promiseConstructor === void 0) {
-        promiseConstructor = Promise;
-      }
-      if (clientCapabilities === void 0) {
-        clientCapabilities = {};
-      }
-      this.schemaService = schemaService;
-      this.contributions = contributions;
-      this.promiseConstructor = promiseConstructor;
-      this.clientCapabilities = clientCapabilities;
-    }
-    JSONCompletion2.prototype.doResolve = function(item) {
-      for (var i = this.contributions.length - 1; i >= 0; i--) {
-        var resolveCompletion = this.contributions[i].resolveCompletion;
-        if (resolveCompletion) {
-          var resolver = resolveCompletion(item);
-          if (resolver) {
-            return resolver;
+      JSONCompletion2.prototype.doResolve = function(item) {
+        for (var i = this.contributions.length - 1; i >= 0; i--) {
+          var resolveCompletion = this.contributions[i].resolveCompletion;
+          if (resolveCompletion) {
+            var resolver = resolveCompletion(item);
+            if (resolver) {
+              return resolver;
+            }
           }
         }
-      }
-      return this.promiseConstructor.resolve(item);
-    };
-    JSONCompletion2.prototype.doComplete = function(document, position, doc) {
-      var _this = this;
-      var result = {
-        items: [],
-        isIncomplete: false
+        return this.promiseConstructor.resolve(item);
       };
-      var text = document.getText();
-      var offset = document.offsetAt(position);
-      var node = doc.getNodeFromOffset(offset, true);
-      if (this.isInComment(document, node ? node.offset : 0, offset)) {
-        return Promise.resolve(result);
-      }
-      if (node && offset === node.offset + node.length && offset > 0) {
-        var ch = text[offset - 1];
-        if (node.type === "object" && ch === "}" || node.type === "array" && ch === "]") {
-          node = node.parent;
+      JSONCompletion2.prototype.doComplete = function(document, position, doc) {
+        var _this = this;
+        var result = {
+          items: [],
+          isIncomplete: false
+        };
+        var text = document.getText();
+        var offset = document.offsetAt(position);
+        var node = doc.getNodeFromOffset(offset, true);
+        if (this.isInComment(document, node ? node.offset : 0, offset)) {
+          return Promise.resolve(result);
         }
-      }
-      var currentWord = this.getCurrentWord(document, offset);
-      var overwriteRange;
-      if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
-        overwriteRange = Range.create(document.positionAt(node.offset), document.positionAt(node.offset + node.length));
-      } else {
-        var overwriteStart = offset - currentWord.length;
-        if (overwriteStart > 0 && text[overwriteStart - 1] === '"') {
-          overwriteStart--;
-        }
-        overwriteRange = Range.create(document.positionAt(overwriteStart), position);
-      }
-      var supportsCommitCharacters = false;
-      var proposed = {};
-      var collector = {
-        add: function(suggestion) {
-          var label = suggestion.label;
-          var existing = proposed[label];
-          if (!existing) {
-            label = label.replace(/[\n]/g, "\u21B5");
-            if (label.length > 60) {
-              var shortendedLabel = label.substr(0, 57).trim() + "...";
-              if (!proposed[shortendedLabel]) {
-                label = shortendedLabel;
-              }
-            }
-            if (overwriteRange && suggestion.insertText !== void 0) {
-              suggestion.textEdit = TextEdit.replace(overwriteRange, suggestion.insertText);
-            }
-            if (supportsCommitCharacters) {
-              suggestion.commitCharacters = suggestion.kind === CompletionItemKind.Property ? propertyCommitCharacters : valueCommitCharacters;
-            }
-            suggestion.label = label;
-            proposed[label] = suggestion;
-            result.items.push(suggestion);
-          } else {
-            if (!existing.documentation) {
-              existing.documentation = suggestion.documentation;
-            }
-            if (!existing.detail) {
-              existing.detail = suggestion.detail;
-            }
-          }
-        },
-        setAsIncomplete: function() {
-          result.isIncomplete = true;
-        },
-        error: function(message) {
-          console.error(message);
-        },
-        log: function(message) {
-          console.log(message);
-        },
-        getNumberOfProposals: function() {
-          return result.items.length;
-        }
-      };
-      return this.schemaService.getSchemaForResource(document.uri, doc).then(function(schema) {
-        var collectionPromises = [];
-        var addValue = true;
-        var currentKey = "";
-        var currentProperty = void 0;
-        if (node) {
-          if (node.type === "string") {
-            var parent = node.parent;
-            if (parent && parent.type === "property" && parent.keyNode === node) {
-              addValue = !parent.valueNode;
-              currentProperty = parent;
-              currentKey = text.substr(node.offset + 1, node.length - 2);
-              if (parent) {
-                node = parent.parent;
-              }
-            }
+        if (node && offset === node.offset + node.length && offset > 0) {
+          var ch = text[offset - 1];
+          if (node.type === "object" && ch === "}" || node.type === "array" && ch === "]") {
+            node = node.parent;
           }
         }
-        if (node && node.type === "object") {
-          if (node.offset === offset) {
-            return result;
-          }
-          var properties = node.properties;
-          properties.forEach(function(p) {
-            if (!currentProperty || currentProperty !== p) {
-              proposed[p.keyNode.value] = CompletionItem.create("__");
-            }
-          });
-          var separatorAfter_1 = "";
-          if (addValue) {
-            separatorAfter_1 = _this.evaluateSeparatorAfter(document, document.offsetAt(overwriteRange.end));
-          }
-          if (schema) {
-            _this.getPropertyCompletions(schema, doc, node, addValue, separatorAfter_1, collector);
-          } else {
-            _this.getSchemaLessPropertyCompletions(doc, node, currentKey, collector);
-          }
-          var location_1 = getNodePath3(node);
-          _this.contributions.forEach(function(contribution) {
-            var collectPromise = contribution.collectPropertyCompletions(document.uri, location_1, currentWord, addValue, separatorAfter_1 === "", collector);
-            if (collectPromise) {
-              collectionPromises.push(collectPromise);
-            }
-          });
-          if (!schema && currentWord.length > 0 && text.charAt(offset - currentWord.length - 1) !== '"') {
-            collector.add({
-              kind: CompletionItemKind.Property,
-              label: _this.getLabelForValue(currentWord),
-              insertText: _this.getInsertTextForProperty(currentWord, void 0, false, separatorAfter_1),
-              insertTextFormat: InsertTextFormat.Snippet,
-              documentation: ""
-            });
-            collector.setAsIncomplete();
-          }
-        }
-        var types = {};
-        if (schema) {
-          _this.getValueCompletions(schema, doc, node, offset, document, collector, types);
+        var currentWord = this.getCurrentWord(document, offset);
+        var overwriteRange;
+        if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
+          overwriteRange = Range.create(document.positionAt(node.offset), document.positionAt(node.offset + node.length));
         } else {
-          _this.getSchemaLessValueCompletions(doc, node, offset, document, collector);
-        }
-        if (_this.contributions.length > 0) {
-          _this.getContributedValueCompletions(doc, node, offset, document, collector, collectionPromises);
-        }
-        return _this.promiseConstructor.all(collectionPromises).then(function() {
-          if (collector.getNumberOfProposals() === 0) {
-            var offsetForSeparator = offset;
-            if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
-              offsetForSeparator = node.offset + node.length;
-            }
-            var separatorAfter = _this.evaluateSeparatorAfter(document, offsetForSeparator);
-            _this.addFillerValueCompletions(types, separatorAfter, collector);
+          var overwriteStart = offset - currentWord.length;
+          if (overwriteStart > 0 && text[overwriteStart - 1] === '"') {
+            overwriteStart--;
           }
-          return result;
+          overwriteRange = Range.create(document.positionAt(overwriteStart), position);
+        }
+        var supportsCommitCharacters = false;
+        var proposed = {};
+        var collector = {
+          add: function(suggestion) {
+            var label = suggestion.label;
+            var existing = proposed[label];
+            if (!existing) {
+              label = label.replace(/[\n]/g, "\u21B5");
+              if (label.length > 60) {
+                var shortendedLabel = label.substr(0, 57).trim() + "...";
+                if (!proposed[shortendedLabel]) {
+                  label = shortendedLabel;
+                }
+              }
+              if (overwriteRange && suggestion.insertText !== void 0) {
+                suggestion.textEdit = TextEdit.replace(overwriteRange, suggestion.insertText);
+              }
+              if (supportsCommitCharacters) {
+                suggestion.commitCharacters = suggestion.kind === CompletionItemKind.Property ? propertyCommitCharacters : valueCommitCharacters;
+              }
+              suggestion.label = label;
+              proposed[label] = suggestion;
+              result.items.push(suggestion);
+            } else {
+              if (!existing.documentation) {
+                existing.documentation = suggestion.documentation;
+              }
+              if (!existing.detail) {
+                existing.detail = suggestion.detail;
+              }
+            }
+          },
+          setAsIncomplete: function() {
+            result.isIncomplete = true;
+          },
+          error: function(message) {
+            console.error(message);
+          },
+          log: function(message) {
+            console.log(message);
+          },
+          getNumberOfProposals: function() {
+            return result.items.length;
+          }
+        };
+        return this.schemaService.getSchemaForResource(document.uri, doc).then(function(schema) {
+          var collectionPromises = [];
+          var addValue = true;
+          var currentKey = "";
+          var currentProperty = void 0;
+          if (node) {
+            if (node.type === "string") {
+              var parent = node.parent;
+              if (parent && parent.type === "property" && parent.keyNode === node) {
+                addValue = !parent.valueNode;
+                currentProperty = parent;
+                currentKey = text.substr(node.offset + 1, node.length - 2);
+                if (parent) {
+                  node = parent.parent;
+                }
+              }
+            }
+          }
+          if (node && node.type === "object") {
+            if (node.offset === offset) {
+              return result;
+            }
+            var properties = node.properties;
+            properties.forEach(function(p) {
+              if (!currentProperty || currentProperty !== p) {
+                proposed[p.keyNode.value] = CompletionItem.create("__");
+              }
+            });
+            var separatorAfter_1 = "";
+            if (addValue) {
+              separatorAfter_1 = _this.evaluateSeparatorAfter(document, document.offsetAt(overwriteRange.end));
+            }
+            if (schema) {
+              _this.getPropertyCompletions(schema, doc, node, addValue, separatorAfter_1, collector);
+            } else {
+              _this.getSchemaLessPropertyCompletions(doc, node, currentKey, collector);
+            }
+            var location_1 = getNodePath3(node);
+            _this.contributions.forEach(function(contribution) {
+              var collectPromise = contribution.collectPropertyCompletions(document.uri, location_1, currentWord, addValue, separatorAfter_1 === "", collector);
+              if (collectPromise) {
+                collectionPromises.push(collectPromise);
+              }
+            });
+            if (!schema && currentWord.length > 0 && text.charAt(offset - currentWord.length - 1) !== '"') {
+              collector.add({
+                kind: CompletionItemKind.Property,
+                label: _this.getLabelForValue(currentWord),
+                insertText: _this.getInsertTextForProperty(currentWord, void 0, false, separatorAfter_1),
+                insertTextFormat: InsertTextFormat.Snippet,
+                documentation: ""
+              });
+              collector.setAsIncomplete();
+            }
+          }
+          var types = {};
+          if (schema) {
+            _this.getValueCompletions(schema, doc, node, offset, document, collector, types);
+          } else {
+            _this.getSchemaLessValueCompletions(doc, node, offset, document, collector);
+          }
+          if (_this.contributions.length > 0) {
+            _this.getContributedValueCompletions(doc, node, offset, document, collector, collectionPromises);
+          }
+          return _this.promiseConstructor.all(collectionPromises).then(function() {
+            if (collector.getNumberOfProposals() === 0) {
+              var offsetForSeparator = offset;
+              if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
+                offsetForSeparator = node.offset + node.length;
+              }
+              var separatorAfter = _this.evaluateSeparatorAfter(document, offsetForSeparator);
+              _this.addFillerValueCompletions(types, separatorAfter, collector);
+            }
+            return result;
+          });
         });
-      });
-    };
-    JSONCompletion2.prototype.getPropertyCompletions = function(schema, doc, node, addValue, separatorAfter, collector) {
-      var _this = this;
-      var matchingSchemas = doc.getMatchingSchemas(schema.schema, node.offset);
-      matchingSchemas.forEach(function(s) {
-        if (s.node === node && !s.inverted) {
-          var schemaProperties_1 = s.schema.properties;
-          if (schemaProperties_1) {
-            Object.keys(schemaProperties_1).forEach(function(key) {
-              var propertySchema = schemaProperties_1[key];
-              if (typeof propertySchema === "object" && !propertySchema.deprecationMessage && !propertySchema.doNotSuggest) {
+      };
+      JSONCompletion2.prototype.getPropertyCompletions = function(schema, doc, node, addValue, separatorAfter, collector) {
+        var _this = this;
+        var matchingSchemas = doc.getMatchingSchemas(schema.schema, node.offset);
+        matchingSchemas.forEach(function(s) {
+          if (s.node === node && !s.inverted) {
+            var schemaProperties_1 = s.schema.properties;
+            if (schemaProperties_1) {
+              Object.keys(schemaProperties_1).forEach(function(key) {
+                var propertySchema = schemaProperties_1[key];
+                if (typeof propertySchema === "object" && !propertySchema.deprecationMessage && !propertySchema.doNotSuggest) {
+                  var proposal = {
+                    kind: CompletionItemKind.Property,
+                    label: key,
+                    insertText: _this.getInsertTextForProperty(key, propertySchema, addValue, separatorAfter),
+                    insertTextFormat: InsertTextFormat.Snippet,
+                    filterText: _this.getFilterTextForValue(key),
+                    documentation: _this.fromMarkup(propertySchema.markdownDescription) || propertySchema.description || ""
+                  };
+                  if (propertySchema.suggestSortText !== void 0) {
+                    proposal.sortText = propertySchema.suggestSortText;
+                  }
+                  if (proposal.insertText && endsWith(proposal.insertText, "$1".concat(separatorAfter))) {
+                    proposal.command = {
+                      title: "Suggest",
+                      command: "editor.action.triggerSuggest"
+                    };
+                  }
+                  collector.add(proposal);
+                }
+              });
+            }
+            var schemaPropertyNames_1 = s.schema.propertyNames;
+            if (typeof schemaPropertyNames_1 === "object" && !schemaPropertyNames_1.deprecationMessage && !schemaPropertyNames_1.doNotSuggest) {
+              var propertyNameCompletionItem = function(name, enumDescription2) {
+                if (enumDescription2 === void 0) {
+                  enumDescription2 = void 0;
+                }
                 var proposal = {
                   kind: CompletionItemKind.Property,
-                  label: key,
-                  insertText: _this.getInsertTextForProperty(key, propertySchema, addValue, separatorAfter),
+                  label: name,
+                  insertText: _this.getInsertTextForProperty(name, void 0, addValue, separatorAfter),
                   insertTextFormat: InsertTextFormat.Snippet,
-                  filterText: _this.getFilterTextForValue(key),
-                  documentation: _this.fromMarkup(propertySchema.markdownDescription) || propertySchema.description || ""
+                  filterText: _this.getFilterTextForValue(name),
+                  documentation: enumDescription2 || _this.fromMarkup(schemaPropertyNames_1.markdownDescription) || schemaPropertyNames_1.description || ""
                 };
-                if (propertySchema.suggestSortText !== void 0) {
-                  proposal.sortText = propertySchema.suggestSortText;
+                if (schemaPropertyNames_1.suggestSortText !== void 0) {
+                  proposal.sortText = schemaPropertyNames_1.suggestSortText;
                 }
                 if (proposal.insertText && endsWith(proposal.insertText, "$1".concat(separatorAfter))) {
                   proposal.command = {
@@ -4015,811 +4161,788 @@ var moduleExports = (() => {
                   };
                 }
                 collector.add(proposal);
+              };
+              if (schemaPropertyNames_1.enum) {
+                for (var i = 0; i < schemaPropertyNames_1.enum.length; i++) {
+                  var enumDescription = void 0;
+                  if (schemaPropertyNames_1.markdownEnumDescriptions && i < schemaPropertyNames_1.markdownEnumDescriptions.length) {
+                    enumDescription = _this.fromMarkup(schemaPropertyNames_1.markdownEnumDescriptions[i]);
+                  } else if (schemaPropertyNames_1.enumDescriptions && i < schemaPropertyNames_1.enumDescriptions.length) {
+                    enumDescription = schemaPropertyNames_1.enumDescriptions[i];
+                  }
+                  propertyNameCompletionItem(schemaPropertyNames_1.enum[i], enumDescription);
+                }
+              }
+              if (schemaPropertyNames_1.const) {
+                propertyNameCompletionItem(schemaPropertyNames_1.const);
+              }
+            }
+          }
+        });
+      };
+      JSONCompletion2.prototype.getSchemaLessPropertyCompletions = function(doc, node, currentKey, collector) {
+        var _this = this;
+        var collectCompletionsForSimilarObject = function(obj) {
+          obj.properties.forEach(function(p) {
+            var key = p.keyNode.value;
+            collector.add({
+              kind: CompletionItemKind.Property,
+              label: key,
+              insertText: _this.getInsertTextForValue(key, ""),
+              insertTextFormat: InsertTextFormat.Snippet,
+              filterText: _this.getFilterTextForValue(key),
+              documentation: ""
+            });
+          });
+        };
+        if (node.parent) {
+          if (node.parent.type === "property") {
+            var parentKey_1 = node.parent.keyNode.value;
+            doc.visit(function(n) {
+              if (n.type === "property" && n !== node.parent && n.keyNode.value === parentKey_1 && n.valueNode && n.valueNode.type === "object") {
+                collectCompletionsForSimilarObject(n.valueNode);
+              }
+              return true;
+            });
+          } else if (node.parent.type === "array") {
+            node.parent.items.forEach(function(n) {
+              if (n.type === "object" && n !== node) {
+                collectCompletionsForSimilarObject(n);
               }
             });
           }
-          var schemaPropertyNames_1 = s.schema.propertyNames;
-          if (typeof schemaPropertyNames_1 === "object" && !schemaPropertyNames_1.deprecationMessage && !schemaPropertyNames_1.doNotSuggest) {
-            var propertyNameCompletionItem = function(name, enumDescription2) {
-              if (enumDescription2 === void 0) {
-                enumDescription2 = void 0;
-              }
-              var proposal = {
-                kind: CompletionItemKind.Property,
-                label: name,
-                insertText: _this.getInsertTextForProperty(name, void 0, addValue, separatorAfter),
-                insertTextFormat: InsertTextFormat.Snippet,
-                filterText: _this.getFilterTextForValue(name),
-                documentation: enumDescription2 || _this.fromMarkup(schemaPropertyNames_1.markdownDescription) || schemaPropertyNames_1.description || ""
-              };
-              if (schemaPropertyNames_1.suggestSortText !== void 0) {
-                proposal.sortText = schemaPropertyNames_1.suggestSortText;
-              }
-              if (proposal.insertText && endsWith(proposal.insertText, "$1".concat(separatorAfter))) {
-                proposal.command = {
-                  title: "Suggest",
-                  command: "editor.action.triggerSuggest"
-                };
-              }
-              collector.add(proposal);
-            };
-            if (schemaPropertyNames_1.enum) {
-              for (var i = 0; i < schemaPropertyNames_1.enum.length; i++) {
-                var enumDescription = void 0;
-                if (schemaPropertyNames_1.markdownEnumDescriptions && i < schemaPropertyNames_1.markdownEnumDescriptions.length) {
-                  enumDescription = _this.fromMarkup(schemaPropertyNames_1.markdownEnumDescriptions[i]);
-                } else if (schemaPropertyNames_1.enumDescriptions && i < schemaPropertyNames_1.enumDescriptions.length) {
-                  enumDescription = schemaPropertyNames_1.enumDescriptions[i];
-                }
-                propertyNameCompletionItem(schemaPropertyNames_1.enum[i], enumDescription);
-              }
-            }
-            if (schemaPropertyNames_1.const) {
-              propertyNameCompletionItem(schemaPropertyNames_1.const);
-            }
-          }
-        }
-      });
-    };
-    JSONCompletion2.prototype.getSchemaLessPropertyCompletions = function(doc, node, currentKey, collector) {
-      var _this = this;
-      var collectCompletionsForSimilarObject = function(obj) {
-        obj.properties.forEach(function(p) {
-          var key = p.keyNode.value;
+        } else if (node.type === "object") {
           collector.add({
             kind: CompletionItemKind.Property,
-            label: key,
-            insertText: _this.getInsertTextForValue(key, ""),
+            label: "$schema",
+            insertText: this.getInsertTextForProperty("$schema", void 0, true, ""),
             insertTextFormat: InsertTextFormat.Snippet,
-            filterText: _this.getFilterTextForValue(key),
-            documentation: ""
-          });
-        });
-      };
-      if (node.parent) {
-        if (node.parent.type === "property") {
-          var parentKey_1 = node.parent.keyNode.value;
-          doc.visit(function(n) {
-            if (n.type === "property" && n !== node.parent && n.keyNode.value === parentKey_1 && n.valueNode && n.valueNode.type === "object") {
-              collectCompletionsForSimilarObject(n.valueNode);
-            }
-            return true;
-          });
-        } else if (node.parent.type === "array") {
-          node.parent.items.forEach(function(n) {
-            if (n.type === "object" && n !== node) {
-              collectCompletionsForSimilarObject(n);
-            }
+            documentation: "",
+            filterText: this.getFilterTextForValue("$schema")
           });
         }
-      } else if (node.type === "object") {
-        collector.add({
-          kind: CompletionItemKind.Property,
-          label: "$schema",
-          insertText: this.getInsertTextForProperty("$schema", void 0, true, ""),
-          insertTextFormat: InsertTextFormat.Snippet,
-          documentation: "",
-          filterText: this.getFilterTextForValue("$schema")
-        });
-      }
-    };
-    JSONCompletion2.prototype.getSchemaLessValueCompletions = function(doc, node, offset, document, collector) {
-      var _this = this;
-      var offsetForSeparator = offset;
-      if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
-        offsetForSeparator = node.offset + node.length;
-        node = node.parent;
-      }
-      if (!node) {
-        collector.add({
-          kind: this.getSuggestionKind("object"),
-          label: "Empty object",
-          insertText: this.getInsertTextForValue({}, ""),
-          insertTextFormat: InsertTextFormat.Snippet,
-          documentation: ""
-        });
-        collector.add({
-          kind: this.getSuggestionKind("array"),
-          label: "Empty array",
-          insertText: this.getInsertTextForValue([], ""),
-          insertTextFormat: InsertTextFormat.Snippet,
-          documentation: ""
-        });
-        return;
-      }
-      var separatorAfter = this.evaluateSeparatorAfter(document, offsetForSeparator);
-      var collectSuggestionsForValues = function(value) {
-        if (value.parent && !contains2(value.parent, offset, true)) {
+      };
+      JSONCompletion2.prototype.getSchemaLessValueCompletions = function(doc, node, offset, document, collector) {
+        var _this = this;
+        var offsetForSeparator = offset;
+        if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
+          offsetForSeparator = node.offset + node.length;
+          node = node.parent;
+        }
+        if (!node) {
           collector.add({
-            kind: _this.getSuggestionKind(value.type),
-            label: _this.getLabelTextForMatchingNode(value, document),
-            insertText: _this.getInsertTextForMatchingNode(value, document, separatorAfter),
+            kind: this.getSuggestionKind("object"),
+            label: "Empty object",
+            insertText: this.getInsertTextForValue({}, ""),
             insertTextFormat: InsertTextFormat.Snippet,
             documentation: ""
           });
-        }
-        if (value.type === "boolean") {
-          _this.addBooleanValueCompletion(!value.value, separatorAfter, collector);
-        }
-      };
-      if (node.type === "property") {
-        if (offset > (node.colonOffset || 0)) {
-          var valueNode = node.valueNode;
-          if (valueNode && (offset > valueNode.offset + valueNode.length || valueNode.type === "object" || valueNode.type === "array")) {
-            return;
-          }
-          var parentKey_2 = node.keyNode.value;
-          doc.visit(function(n) {
-            if (n.type === "property" && n.keyNode.value === parentKey_2 && n.valueNode) {
-              collectSuggestionsForValues(n.valueNode);
-            }
-            return true;
+          collector.add({
+            kind: this.getSuggestionKind("array"),
+            label: "Empty array",
+            insertText: this.getInsertTextForValue([], ""),
+            insertTextFormat: InsertTextFormat.Snippet,
+            documentation: ""
           });
-          if (parentKey_2 === "$schema" && node.parent && !node.parent.parent) {
-            this.addDollarSchemaCompletions(separatorAfter, collector);
-          }
-        }
-      }
-      if (node.type === "array") {
-        if (node.parent && node.parent.type === "property") {
-          var parentKey_3 = node.parent.keyNode.value;
-          doc.visit(function(n) {
-            if (n.type === "property" && n.keyNode.value === parentKey_3 && n.valueNode && n.valueNode.type === "array") {
-              n.valueNode.items.forEach(collectSuggestionsForValues);
-            }
-            return true;
-          });
-        } else {
-          node.items.forEach(collectSuggestionsForValues);
-        }
-      }
-    };
-    JSONCompletion2.prototype.getValueCompletions = function(schema, doc, node, offset, document, collector, types) {
-      var offsetForSeparator = offset;
-      var parentKey = void 0;
-      var valueNode = void 0;
-      if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
-        offsetForSeparator = node.offset + node.length;
-        valueNode = node;
-        node = node.parent;
-      }
-      if (!node) {
-        this.addSchemaValueCompletions(schema.schema, "", collector, types);
-        return;
-      }
-      if (node.type === "property" && offset > (node.colonOffset || 0)) {
-        var valueNode_1 = node.valueNode;
-        if (valueNode_1 && offset > valueNode_1.offset + valueNode_1.length) {
           return;
         }
-        parentKey = node.keyNode.value;
-        node = node.parent;
-      }
-      if (node && (parentKey !== void 0 || node.type === "array")) {
         var separatorAfter = this.evaluateSeparatorAfter(document, offsetForSeparator);
-        var matchingSchemas = doc.getMatchingSchemas(schema.schema, node.offset, valueNode);
-        for (var _i = 0, matchingSchemas_1 = matchingSchemas; _i < matchingSchemas_1.length; _i++) {
-          var s = matchingSchemas_1[_i];
-          if (s.node === node && !s.inverted && s.schema) {
-            if (node.type === "array" && s.schema.items) {
-              if (Array.isArray(s.schema.items)) {
-                var index = this.findItemAtOffset(node, document, offset);
-                if (index < s.schema.items.length) {
-                  this.addSchemaValueCompletions(s.schema.items[index], separatorAfter, collector, types);
-                }
-              } else {
-                this.addSchemaValueCompletions(s.schema.items, separatorAfter, collector, types);
-              }
+        var collectSuggestionsForValues = function(value) {
+          if (value.parent && !contains2(value.parent, offset, true)) {
+            collector.add({
+              kind: _this.getSuggestionKind(value.type),
+              label: _this.getLabelTextForMatchingNode(value, document),
+              insertText: _this.getInsertTextForMatchingNode(value, document, separatorAfter),
+              insertTextFormat: InsertTextFormat.Snippet,
+              documentation: ""
+            });
+          }
+          if (value.type === "boolean") {
+            _this.addBooleanValueCompletion(!value.value, separatorAfter, collector);
+          }
+        };
+        if (node.type === "property") {
+          if (offset > (node.colonOffset || 0)) {
+            var valueNode = node.valueNode;
+            if (valueNode && (offset > valueNode.offset + valueNode.length || valueNode.type === "object" || valueNode.type === "array")) {
+              return;
             }
-            if (parentKey !== void 0) {
-              var propertyMatched = false;
-              if (s.schema.properties) {
-                var propertySchema = s.schema.properties[parentKey];
-                if (propertySchema) {
-                  propertyMatched = true;
-                  this.addSchemaValueCompletions(propertySchema, separatorAfter, collector, types);
+            var parentKey_2 = node.keyNode.value;
+            doc.visit(function(n) {
+              if (n.type === "property" && n.keyNode.value === parentKey_2 && n.valueNode) {
+                collectSuggestionsForValues(n.valueNode);
+              }
+              return true;
+            });
+            if (parentKey_2 === "$schema" && node.parent && !node.parent.parent) {
+              this.addDollarSchemaCompletions(separatorAfter, collector);
+            }
+          }
+        }
+        if (node.type === "array") {
+          if (node.parent && node.parent.type === "property") {
+            var parentKey_3 = node.parent.keyNode.value;
+            doc.visit(function(n) {
+              if (n.type === "property" && n.keyNode.value === parentKey_3 && n.valueNode && n.valueNode.type === "array") {
+                n.valueNode.items.forEach(collectSuggestionsForValues);
+              }
+              return true;
+            });
+          } else {
+            node.items.forEach(collectSuggestionsForValues);
+          }
+        }
+      };
+      JSONCompletion2.prototype.getValueCompletions = function(schema, doc, node, offset, document, collector, types) {
+        var offsetForSeparator = offset;
+        var parentKey = void 0;
+        var valueNode = void 0;
+        if (node && (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null")) {
+          offsetForSeparator = node.offset + node.length;
+          valueNode = node;
+          node = node.parent;
+        }
+        if (!node) {
+          this.addSchemaValueCompletions(schema.schema, "", collector, types);
+          return;
+        }
+        if (node.type === "property" && offset > (node.colonOffset || 0)) {
+          var valueNode_1 = node.valueNode;
+          if (valueNode_1 && offset > valueNode_1.offset + valueNode_1.length) {
+            return;
+          }
+          parentKey = node.keyNode.value;
+          node = node.parent;
+        }
+        if (node && (parentKey !== void 0 || node.type === "array")) {
+          var separatorAfter = this.evaluateSeparatorAfter(document, offsetForSeparator);
+          var matchingSchemas = doc.getMatchingSchemas(schema.schema, node.offset, valueNode);
+          for (var _i = 0, matchingSchemas_1 = matchingSchemas; _i < matchingSchemas_1.length; _i++) {
+            var s = matchingSchemas_1[_i];
+            if (s.node === node && !s.inverted && s.schema) {
+              if (node.type === "array" && s.schema.items) {
+                if (Array.isArray(s.schema.items)) {
+                  var index = this.findItemAtOffset(node, document, offset);
+                  if (index < s.schema.items.length) {
+                    this.addSchemaValueCompletions(s.schema.items[index], separatorAfter, collector, types);
+                  }
+                } else {
+                  this.addSchemaValueCompletions(s.schema.items, separatorAfter, collector, types);
                 }
               }
-              if (s.schema.patternProperties && !propertyMatched) {
-                for (var _a = 0, _b = Object.keys(s.schema.patternProperties); _a < _b.length; _a++) {
-                  var pattern = _b[_a];
-                  var regex = extendedRegExp(pattern);
-                  if (regex === null || regex === void 0 ? void 0 : regex.test(parentKey)) {
+              if (parentKey !== void 0) {
+                var propertyMatched = false;
+                if (s.schema.properties) {
+                  var propertySchema = s.schema.properties[parentKey];
+                  if (propertySchema) {
                     propertyMatched = true;
-                    var propertySchema = s.schema.patternProperties[pattern];
                     this.addSchemaValueCompletions(propertySchema, separatorAfter, collector, types);
                   }
                 }
-              }
-              if (s.schema.additionalProperties && !propertyMatched) {
-                var propertySchema = s.schema.additionalProperties;
-                this.addSchemaValueCompletions(propertySchema, separatorAfter, collector, types);
+                if (s.schema.patternProperties && !propertyMatched) {
+                  for (var _a = 0, _b = Object.keys(s.schema.patternProperties); _a < _b.length; _a++) {
+                    var pattern = _b[_a];
+                    var regex = extendedRegExp(pattern);
+                    if (regex === null || regex === void 0 ? void 0 : regex.test(parentKey)) {
+                      propertyMatched = true;
+                      var propertySchema = s.schema.patternProperties[pattern];
+                      this.addSchemaValueCompletions(propertySchema, separatorAfter, collector, types);
+                    }
+                  }
+                }
+                if (s.schema.additionalProperties && !propertyMatched) {
+                  var propertySchema = s.schema.additionalProperties;
+                  this.addSchemaValueCompletions(propertySchema, separatorAfter, collector, types);
+                }
               }
             }
           }
-        }
-        if (parentKey === "$schema" && !node.parent) {
-          this.addDollarSchemaCompletions(separatorAfter, collector);
-        }
-        if (types["boolean"]) {
-          this.addBooleanValueCompletion(true, separatorAfter, collector);
-          this.addBooleanValueCompletion(false, separatorAfter, collector);
-        }
-        if (types["null"]) {
-          this.addNullValueCompletion(separatorAfter, collector);
-        }
-      }
-    };
-    JSONCompletion2.prototype.getContributedValueCompletions = function(doc, node, offset, document, collector, collectionPromises) {
-      if (!node) {
-        this.contributions.forEach(function(contribution) {
-          var collectPromise = contribution.collectDefaultCompletions(document.uri, collector);
-          if (collectPromise) {
-            collectionPromises.push(collectPromise);
+          if (parentKey === "$schema" && !node.parent) {
+            this.addDollarSchemaCompletions(separatorAfter, collector);
           }
-        });
-      } else {
-        if (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null") {
-          node = node.parent;
+          if (types["boolean"]) {
+            this.addBooleanValueCompletion(true, separatorAfter, collector);
+            this.addBooleanValueCompletion(false, separatorAfter, collector);
+          }
+          if (types["null"]) {
+            this.addNullValueCompletion(separatorAfter, collector);
+          }
         }
-        if (node && node.type === "property" && offset > (node.colonOffset || 0)) {
-          var parentKey_4 = node.keyNode.value;
-          var valueNode = node.valueNode;
-          if ((!valueNode || offset <= valueNode.offset + valueNode.length) && node.parent) {
-            var location_2 = getNodePath3(node.parent);
-            this.contributions.forEach(function(contribution) {
-              var collectPromise = contribution.collectValueCompletions(document.uri, location_2, parentKey_4, collector);
-              if (collectPromise) {
-                collectionPromises.push(collectPromise);
-              }
+      };
+      JSONCompletion2.prototype.getContributedValueCompletions = function(doc, node, offset, document, collector, collectionPromises) {
+        if (!node) {
+          this.contributions.forEach(function(contribution) {
+            var collectPromise = contribution.collectDefaultCompletions(document.uri, collector);
+            if (collectPromise) {
+              collectionPromises.push(collectPromise);
+            }
+          });
+        } else {
+          if (node.type === "string" || node.type === "number" || node.type === "boolean" || node.type === "null") {
+            node = node.parent;
+          }
+          if (node && node.type === "property" && offset > (node.colonOffset || 0)) {
+            var parentKey_4 = node.keyNode.value;
+            var valueNode = node.valueNode;
+            if ((!valueNode || offset <= valueNode.offset + valueNode.length) && node.parent) {
+              var location_2 = getNodePath3(node.parent);
+              this.contributions.forEach(function(contribution) {
+                var collectPromise = contribution.collectValueCompletions(document.uri, location_2, parentKey_4, collector);
+                if (collectPromise) {
+                  collectionPromises.push(collectPromise);
+                }
+              });
+            }
+          }
+        }
+      };
+      JSONCompletion2.prototype.addSchemaValueCompletions = function(schema, separatorAfter, collector, types) {
+        var _this = this;
+        if (typeof schema === "object") {
+          this.addEnumValueCompletions(schema, separatorAfter, collector);
+          this.addDefaultValueCompletions(schema, separatorAfter, collector);
+          this.collectTypes(schema, types);
+          if (Array.isArray(schema.allOf)) {
+            schema.allOf.forEach(function(s) {
+              return _this.addSchemaValueCompletions(s, separatorAfter, collector, types);
+            });
+          }
+          if (Array.isArray(schema.anyOf)) {
+            schema.anyOf.forEach(function(s) {
+              return _this.addSchemaValueCompletions(s, separatorAfter, collector, types);
+            });
+          }
+          if (Array.isArray(schema.oneOf)) {
+            schema.oneOf.forEach(function(s) {
+              return _this.addSchemaValueCompletions(s, separatorAfter, collector, types);
             });
           }
         }
-      }
-    };
-    JSONCompletion2.prototype.addSchemaValueCompletions = function(schema, separatorAfter, collector, types) {
-      var _this = this;
-      if (typeof schema === "object") {
-        this.addEnumValueCompletions(schema, separatorAfter, collector);
-        this.addDefaultValueCompletions(schema, separatorAfter, collector);
-        this.collectTypes(schema, types);
-        if (Array.isArray(schema.allOf)) {
-          schema.allOf.forEach(function(s) {
-            return _this.addSchemaValueCompletions(s, separatorAfter, collector, types);
-          });
+      };
+      JSONCompletion2.prototype.addDefaultValueCompletions = function(schema, separatorAfter, collector, arrayDepth) {
+        var _this = this;
+        if (arrayDepth === void 0) {
+          arrayDepth = 0;
         }
-        if (Array.isArray(schema.anyOf)) {
-          schema.anyOf.forEach(function(s) {
-            return _this.addSchemaValueCompletions(s, separatorAfter, collector, types);
-          });
-        }
-        if (Array.isArray(schema.oneOf)) {
-          schema.oneOf.forEach(function(s) {
-            return _this.addSchemaValueCompletions(s, separatorAfter, collector, types);
-          });
-        }
-      }
-    };
-    JSONCompletion2.prototype.addDefaultValueCompletions = function(schema, separatorAfter, collector, arrayDepth) {
-      var _this = this;
-      if (arrayDepth === void 0) {
-        arrayDepth = 0;
-      }
-      var hasProposals = false;
-      if (isDefined(schema.default)) {
-        var type = schema.type;
-        var value = schema.default;
-        for (var i = arrayDepth; i > 0; i--) {
-          value = [value];
-          type = "array";
-        }
-        collector.add({
-          kind: this.getSuggestionKind(type),
-          label: this.getLabelForValue(value),
-          insertText: this.getInsertTextForValue(value, separatorAfter),
-          insertTextFormat: InsertTextFormat.Snippet,
-          detail: localize3("json.suggest.default", "Default value")
-        });
-        hasProposals = true;
-      }
-      if (Array.isArray(schema.examples)) {
-        schema.examples.forEach(function(example) {
-          var type2 = schema.type;
-          var value2 = example;
-          for (var i2 = arrayDepth; i2 > 0; i2--) {
-            value2 = [value2];
-            type2 = "array";
+        var hasProposals = false;
+        if (isDefined(schema.default)) {
+          var type = schema.type;
+          var value = schema.default;
+          for (var i = arrayDepth; i > 0; i--) {
+            value = [value];
+            type = "array";
           }
           collector.add({
-            kind: _this.getSuggestionKind(type2),
-            label: _this.getLabelForValue(value2),
-            insertText: _this.getInsertTextForValue(value2, separatorAfter),
-            insertTextFormat: InsertTextFormat.Snippet
+            kind: this.getSuggestionKind(type),
+            label: this.getLabelForValue(value),
+            insertText: this.getInsertTextForValue(value, separatorAfter),
+            insertTextFormat: InsertTextFormat.Snippet,
+            detail: localize3("json.suggest.default", "Default value")
           });
           hasProposals = true;
-        });
-      }
-      if (Array.isArray(schema.defaultSnippets)) {
-        schema.defaultSnippets.forEach(function(s) {
-          var type2 = schema.type;
-          var value2 = s.body;
-          var label = s.label;
-          var insertText;
-          var filterText;
-          if (isDefined(value2)) {
-            var type_1 = schema.type;
+        }
+        if (Array.isArray(schema.examples)) {
+          schema.examples.forEach(function(example) {
+            var type2 = schema.type;
+            var value2 = example;
             for (var i2 = arrayDepth; i2 > 0; i2--) {
               value2 = [value2];
-              type_1 = "array";
-            }
-            insertText = _this.getInsertTextForSnippetValue(value2, separatorAfter);
-            filterText = _this.getFilterTextForSnippetValue(value2);
-            label = label || _this.getLabelForSnippetValue(value2);
-          } else if (typeof s.bodyText === "string") {
-            var prefix = "", suffix = "", indent = "";
-            for (var i2 = arrayDepth; i2 > 0; i2--) {
-              prefix = prefix + indent + "[\n";
-              suffix = suffix + "\n" + indent + "]";
-              indent += "	";
               type2 = "array";
             }
-            insertText = prefix + indent + s.bodyText.split("\n").join("\n" + indent) + suffix + separatorAfter;
-            label = label || insertText, filterText = insertText.replace(/[\n]/g, "");
-          } else {
-            return;
-          }
-          collector.add({
-            kind: _this.getSuggestionKind(type2),
-            label,
-            documentation: _this.fromMarkup(s.markdownDescription) || s.description,
-            insertText,
-            insertTextFormat: InsertTextFormat.Snippet,
-            filterText
+            collector.add({
+              kind: _this.getSuggestionKind(type2),
+              label: _this.getLabelForValue(value2),
+              insertText: _this.getInsertTextForValue(value2, separatorAfter),
+              insertTextFormat: InsertTextFormat.Snippet
+            });
+            hasProposals = true;
           });
-          hasProposals = true;
-        });
-      }
-      if (!hasProposals && typeof schema.items === "object" && !Array.isArray(schema.items) && arrayDepth < 5) {
-        this.addDefaultValueCompletions(schema.items, separatorAfter, collector, arrayDepth + 1);
-      }
-    };
-    JSONCompletion2.prototype.addEnumValueCompletions = function(schema, separatorAfter, collector) {
-      if (isDefined(schema.const)) {
-        collector.add({
-          kind: this.getSuggestionKind(schema.type),
-          label: this.getLabelForValue(schema.const),
-          insertText: this.getInsertTextForValue(schema.const, separatorAfter),
-          insertTextFormat: InsertTextFormat.Snippet,
-          documentation: this.fromMarkup(schema.markdownDescription) || schema.description
-        });
-      }
-      if (Array.isArray(schema.enum)) {
-        for (var i = 0, length = schema.enum.length; i < length; i++) {
-          var enm = schema.enum[i];
-          var documentation = this.fromMarkup(schema.markdownDescription) || schema.description;
-          if (schema.markdownEnumDescriptions && i < schema.markdownEnumDescriptions.length && this.doesSupportMarkdown()) {
-            documentation = this.fromMarkup(schema.markdownEnumDescriptions[i]);
-          } else if (schema.enumDescriptions && i < schema.enumDescriptions.length) {
-            documentation = schema.enumDescriptions[i];
-          }
+        }
+        if (Array.isArray(schema.defaultSnippets)) {
+          schema.defaultSnippets.forEach(function(s) {
+            var type2 = schema.type;
+            var value2 = s.body;
+            var label = s.label;
+            var insertText;
+            var filterText;
+            if (isDefined(value2)) {
+              var type_1 = schema.type;
+              for (var i2 = arrayDepth; i2 > 0; i2--) {
+                value2 = [value2];
+                type_1 = "array";
+              }
+              insertText = _this.getInsertTextForSnippetValue(value2, separatorAfter);
+              filterText = _this.getFilterTextForSnippetValue(value2);
+              label = label || _this.getLabelForSnippetValue(value2);
+            } else if (typeof s.bodyText === "string") {
+              var prefix = "", suffix = "", indent = "";
+              for (var i2 = arrayDepth; i2 > 0; i2--) {
+                prefix = prefix + indent + "[\n";
+                suffix = suffix + "\n" + indent + "]";
+                indent += "	";
+                type2 = "array";
+              }
+              insertText = prefix + indent + s.bodyText.split("\n").join("\n" + indent) + suffix + separatorAfter;
+              label = label || insertText, filterText = insertText.replace(/[\n]/g, "");
+            } else {
+              return;
+            }
+            collector.add({
+              kind: _this.getSuggestionKind(type2),
+              label,
+              documentation: _this.fromMarkup(s.markdownDescription) || s.description,
+              insertText,
+              insertTextFormat: InsertTextFormat.Snippet,
+              filterText
+            });
+            hasProposals = true;
+          });
+        }
+        if (!hasProposals && typeof schema.items === "object" && !Array.isArray(schema.items) && arrayDepth < 5) {
+          this.addDefaultValueCompletions(schema.items, separatorAfter, collector, arrayDepth + 1);
+        }
+      };
+      JSONCompletion2.prototype.addEnumValueCompletions = function(schema, separatorAfter, collector) {
+        if (isDefined(schema.const)) {
           collector.add({
             kind: this.getSuggestionKind(schema.type),
-            label: this.getLabelForValue(enm),
-            insertText: this.getInsertTextForValue(enm, separatorAfter),
+            label: this.getLabelForValue(schema.const),
+            insertText: this.getInsertTextForValue(schema.const, separatorAfter),
             insertTextFormat: InsertTextFormat.Snippet,
-            documentation
+            documentation: this.fromMarkup(schema.markdownDescription) || schema.description
           });
         }
-      }
-    };
-    JSONCompletion2.prototype.collectTypes = function(schema, types) {
-      if (Array.isArray(schema.enum) || isDefined(schema.const)) {
-        return;
-      }
-      var type = schema.type;
-      if (Array.isArray(type)) {
-        type.forEach(function(t) {
-          return types[t] = true;
-        });
-      } else if (type) {
-        types[type] = true;
-      }
-    };
-    JSONCompletion2.prototype.addFillerValueCompletions = function(types, separatorAfter, collector) {
-      if (types["object"]) {
-        collector.add({
-          kind: this.getSuggestionKind("object"),
-          label: "{}",
-          insertText: this.getInsertTextForGuessedValue({}, separatorAfter),
-          insertTextFormat: InsertTextFormat.Snippet,
-          detail: localize3("defaults.object", "New object"),
-          documentation: ""
-        });
-      }
-      if (types["array"]) {
-        collector.add({
-          kind: this.getSuggestionKind("array"),
-          label: "[]",
-          insertText: this.getInsertTextForGuessedValue([], separatorAfter),
-          insertTextFormat: InsertTextFormat.Snippet,
-          detail: localize3("defaults.array", "New array"),
-          documentation: ""
-        });
-      }
-    };
-    JSONCompletion2.prototype.addBooleanValueCompletion = function(value, separatorAfter, collector) {
-      collector.add({
-        kind: this.getSuggestionKind("boolean"),
-        label: value ? "true" : "false",
-        insertText: this.getInsertTextForValue(value, separatorAfter),
-        insertTextFormat: InsertTextFormat.Snippet,
-        documentation: ""
-      });
-    };
-    JSONCompletion2.prototype.addNullValueCompletion = function(separatorAfter, collector) {
-      collector.add({
-        kind: this.getSuggestionKind("null"),
-        label: "null",
-        insertText: "null" + separatorAfter,
-        insertTextFormat: InsertTextFormat.Snippet,
-        documentation: ""
-      });
-    };
-    JSONCompletion2.prototype.addDollarSchemaCompletions = function(separatorAfter, collector) {
-      var _this = this;
-      var schemaIds = this.schemaService.getRegisteredSchemaIds(function(schema) {
-        return schema === "http" || schema === "https";
-      });
-      schemaIds.forEach(function(schemaId) {
-        return collector.add({
-          kind: CompletionItemKind.Module,
-          label: _this.getLabelForValue(schemaId),
-          filterText: _this.getFilterTextForValue(schemaId),
-          insertText: _this.getInsertTextForValue(schemaId, separatorAfter),
-          insertTextFormat: InsertTextFormat.Snippet,
-          documentation: ""
-        });
-      });
-    };
-    JSONCompletion2.prototype.getLabelForValue = function(value) {
-      return JSON.stringify(value);
-    };
-    JSONCompletion2.prototype.getFilterTextForValue = function(value) {
-      return JSON.stringify(value);
-    };
-    JSONCompletion2.prototype.getFilterTextForSnippetValue = function(value) {
-      return JSON.stringify(value).replace(/\$\{\d+:([^}]+)\}|\$\d+/g, "$1");
-    };
-    JSONCompletion2.prototype.getLabelForSnippetValue = function(value) {
-      var label = JSON.stringify(value);
-      return label.replace(/\$\{\d+:([^}]+)\}|\$\d+/g, "$1");
-    };
-    JSONCompletion2.prototype.getInsertTextForPlainText = function(text) {
-      return text.replace(/[\\\$\}]/g, "\\$&");
-    };
-    JSONCompletion2.prototype.getInsertTextForValue = function(value, separatorAfter) {
-      var text = JSON.stringify(value, null, "	");
-      if (text === "{}") {
-        return "{$1}" + separatorAfter;
-      } else if (text === "[]") {
-        return "[$1]" + separatorAfter;
-      }
-      return this.getInsertTextForPlainText(text + separatorAfter);
-    };
-    JSONCompletion2.prototype.getInsertTextForSnippetValue = function(value, separatorAfter) {
-      var replacer = function(value2) {
-        if (typeof value2 === "string") {
-          if (value2[0] === "^") {
-            return value2.substr(1);
+        if (Array.isArray(schema.enum)) {
+          for (var i = 0, length = schema.enum.length; i < length; i++) {
+            var enm = schema.enum[i];
+            var documentation = this.fromMarkup(schema.markdownDescription) || schema.description;
+            if (schema.markdownEnumDescriptions && i < schema.markdownEnumDescriptions.length && this.doesSupportMarkdown()) {
+              documentation = this.fromMarkup(schema.markdownEnumDescriptions[i]);
+            } else if (schema.enumDescriptions && i < schema.enumDescriptions.length) {
+              documentation = schema.enumDescriptions[i];
+            }
+            collector.add({
+              kind: this.getSuggestionKind(schema.type),
+              label: this.getLabelForValue(enm),
+              insertText: this.getInsertTextForValue(enm, separatorAfter),
+              insertTextFormat: InsertTextFormat.Snippet,
+              documentation
+            });
           }
         }
-        return JSON.stringify(value2);
       };
-      return stringifyObject(value, "", replacer) + separatorAfter;
-    };
-    JSONCompletion2.prototype.getInsertTextForGuessedValue = function(value, separatorAfter) {
-      switch (typeof value) {
-        case "object":
-          if (value === null) {
-            return "${1:null}" + separatorAfter;
-          }
-          return this.getInsertTextForValue(value, separatorAfter);
-        case "string":
-          var snippetValue = JSON.stringify(value);
-          snippetValue = snippetValue.substr(1, snippetValue.length - 2);
-          snippetValue = this.getInsertTextForPlainText(snippetValue);
-          return '"${1:' + snippetValue + '}"' + separatorAfter;
-        case "number":
-        case "boolean":
-          return "${1:" + JSON.stringify(value) + "}" + separatorAfter;
-      }
-      return this.getInsertTextForValue(value, separatorAfter);
-    };
-    JSONCompletion2.prototype.getSuggestionKind = function(type) {
-      if (Array.isArray(type)) {
-        var array = type;
-        type = array.length > 0 ? array[0] : void 0;
-      }
-      if (!type) {
-        return CompletionItemKind.Value;
-      }
-      switch (type) {
-        case "string":
-          return CompletionItemKind.Value;
-        case "object":
-          return CompletionItemKind.Module;
-        case "property":
-          return CompletionItemKind.Property;
-        default:
-          return CompletionItemKind.Value;
-      }
-    };
-    JSONCompletion2.prototype.getLabelTextForMatchingNode = function(node, document) {
-      switch (node.type) {
-        case "array":
-          return "[]";
-        case "object":
-          return "{}";
-        default:
-          var content = document.getText().substr(node.offset, node.length);
-          return content;
-      }
-    };
-    JSONCompletion2.prototype.getInsertTextForMatchingNode = function(node, document, separatorAfter) {
-      switch (node.type) {
-        case "array":
-          return this.getInsertTextForValue([], separatorAfter);
-        case "object":
-          return this.getInsertTextForValue({}, separatorAfter);
-        default:
-          var content = document.getText().substr(node.offset, node.length) + separatorAfter;
-          return this.getInsertTextForPlainText(content);
-      }
-    };
-    JSONCompletion2.prototype.getInsertTextForProperty = function(key, propertySchema, addValue, separatorAfter) {
-      var propertyText = this.getInsertTextForValue(key, "");
-      if (!addValue) {
-        return propertyText;
-      }
-      var resultText = propertyText + ": ";
-      var value;
-      var nValueProposals = 0;
-      if (propertySchema) {
-        if (Array.isArray(propertySchema.defaultSnippets)) {
-          if (propertySchema.defaultSnippets.length === 1) {
-            var body = propertySchema.defaultSnippets[0].body;
-            if (isDefined(body)) {
-              value = this.getInsertTextForSnippetValue(body, "");
+      JSONCompletion2.prototype.collectTypes = function(schema, types) {
+        if (Array.isArray(schema.enum) || isDefined(schema.const)) {
+          return;
+        }
+        var type = schema.type;
+        if (Array.isArray(type)) {
+          type.forEach(function(t) {
+            return types[t] = true;
+          });
+        } else if (type) {
+          types[type] = true;
+        }
+      };
+      JSONCompletion2.prototype.addFillerValueCompletions = function(types, separatorAfter, collector) {
+        if (types["object"]) {
+          collector.add({
+            kind: this.getSuggestionKind("object"),
+            label: "{}",
+            insertText: this.getInsertTextForGuessedValue({}, separatorAfter),
+            insertTextFormat: InsertTextFormat.Snippet,
+            detail: localize3("defaults.object", "New object"),
+            documentation: ""
+          });
+        }
+        if (types["array"]) {
+          collector.add({
+            kind: this.getSuggestionKind("array"),
+            label: "[]",
+            insertText: this.getInsertTextForGuessedValue([], separatorAfter),
+            insertTextFormat: InsertTextFormat.Snippet,
+            detail: localize3("defaults.array", "New array"),
+            documentation: ""
+          });
+        }
+      };
+      JSONCompletion2.prototype.addBooleanValueCompletion = function(value, separatorAfter, collector) {
+        collector.add({
+          kind: this.getSuggestionKind("boolean"),
+          label: value ? "true" : "false",
+          insertText: this.getInsertTextForValue(value, separatorAfter),
+          insertTextFormat: InsertTextFormat.Snippet,
+          documentation: ""
+        });
+      };
+      JSONCompletion2.prototype.addNullValueCompletion = function(separatorAfter, collector) {
+        collector.add({
+          kind: this.getSuggestionKind("null"),
+          label: "null",
+          insertText: "null" + separatorAfter,
+          insertTextFormat: InsertTextFormat.Snippet,
+          documentation: ""
+        });
+      };
+      JSONCompletion2.prototype.addDollarSchemaCompletions = function(separatorAfter, collector) {
+        var _this = this;
+        var schemaIds = this.schemaService.getRegisteredSchemaIds(function(schema) {
+          return schema === "http" || schema === "https";
+        });
+        schemaIds.forEach(function(schemaId) {
+          return collector.add({
+            kind: CompletionItemKind.Module,
+            label: _this.getLabelForValue(schemaId),
+            filterText: _this.getFilterTextForValue(schemaId),
+            insertText: _this.getInsertTextForValue(schemaId, separatorAfter),
+            insertTextFormat: InsertTextFormat.Snippet,
+            documentation: ""
+          });
+        });
+      };
+      JSONCompletion2.prototype.getLabelForValue = function(value) {
+        return JSON.stringify(value);
+      };
+      JSONCompletion2.prototype.getFilterTextForValue = function(value) {
+        return JSON.stringify(value);
+      };
+      JSONCompletion2.prototype.getFilterTextForSnippetValue = function(value) {
+        return JSON.stringify(value).replace(/\$\{\d+:([^}]+)\}|\$\d+/g, "$1");
+      };
+      JSONCompletion2.prototype.getLabelForSnippetValue = function(value) {
+        var label = JSON.stringify(value);
+        return label.replace(/\$\{\d+:([^}]+)\}|\$\d+/g, "$1");
+      };
+      JSONCompletion2.prototype.getInsertTextForPlainText = function(text) {
+        return text.replace(/[\\\$\}]/g, "\\$&");
+      };
+      JSONCompletion2.prototype.getInsertTextForValue = function(value, separatorAfter) {
+        var text = JSON.stringify(value, null, "	");
+        if (text === "{}") {
+          return "{$1}" + separatorAfter;
+        } else if (text === "[]") {
+          return "[$1]" + separatorAfter;
+        }
+        return this.getInsertTextForPlainText(text + separatorAfter);
+      };
+      JSONCompletion2.prototype.getInsertTextForSnippetValue = function(value, separatorAfter) {
+        var replacer = function(value2) {
+          if (typeof value2 === "string") {
+            if (value2[0] === "^") {
+              return value2.substr(1);
             }
           }
-          nValueProposals += propertySchema.defaultSnippets.length;
-        }
-        if (propertySchema.enum) {
-          if (!value && propertySchema.enum.length === 1) {
-            value = this.getInsertTextForGuessedValue(propertySchema.enum[0], "");
-          }
-          nValueProposals += propertySchema.enum.length;
-        }
-        if (isDefined(propertySchema.default)) {
-          if (!value) {
-            value = this.getInsertTextForGuessedValue(propertySchema.default, "");
-          }
-          nValueProposals++;
-        }
-        if (Array.isArray(propertySchema.examples) && propertySchema.examples.length) {
-          if (!value) {
-            value = this.getInsertTextForGuessedValue(propertySchema.examples[0], "");
-          }
-          nValueProposals += propertySchema.examples.length;
-        }
-        if (nValueProposals === 0) {
-          var type = Array.isArray(propertySchema.type) ? propertySchema.type[0] : propertySchema.type;
-          if (!type) {
-            if (propertySchema.properties) {
-              type = "object";
-            } else if (propertySchema.items) {
-              type = "array";
-            }
-          }
-          switch (type) {
-            case "boolean":
-              value = "$1";
-              break;
-            case "string":
-              value = '"$1"';
-              break;
-            case "object":
-              value = "{$1}";
-              break;
-            case "array":
-              value = "[$1]";
-              break;
-            case "number":
-            case "integer":
-              value = "${1:0}";
-              break;
-            case "null":
-              value = "${1:null}";
-              break;
-            default:
-              return propertyText;
-          }
-        }
-      }
-      if (!value || nValueProposals > 1) {
-        value = "$1";
-      }
-      return resultText + value + separatorAfter;
-    };
-    JSONCompletion2.prototype.getCurrentWord = function(document, offset) {
-      var i = offset - 1;
-      var text = document.getText();
-      while (i >= 0 && ' 	\n\r\v":{[,]}'.indexOf(text.charAt(i)) === -1) {
-        i--;
-      }
-      return text.substring(i + 1, offset);
-    };
-    JSONCompletion2.prototype.evaluateSeparatorAfter = function(document, offset) {
-      var scanner = createScanner2(document.getText(), true);
-      scanner.setPosition(offset);
-      var token = scanner.scan();
-      switch (token) {
-        case 5:
-        case 2:
-        case 4:
-        case 17:
-          return "";
-        default:
-          return ",";
-      }
-    };
-    JSONCompletion2.prototype.findItemAtOffset = function(node, document, offset) {
-      var scanner = createScanner2(document.getText(), true);
-      var children = node.items;
-      for (var i = children.length - 1; i >= 0; i--) {
-        var child = children[i];
-        if (offset > child.offset + child.length) {
-          scanner.setPosition(child.offset + child.length);
-          var token = scanner.scan();
-          if (token === 5 && offset >= scanner.getTokenOffset() + scanner.getTokenLength()) {
-            return i + 1;
-          }
-          return i;
-        } else if (offset >= child.offset) {
-          return i;
-        }
-      }
-      return 0;
-    };
-    JSONCompletion2.prototype.isInComment = function(document, start, offset) {
-      var scanner = createScanner2(document.getText(), false);
-      scanner.setPosition(start);
-      var token = scanner.scan();
-      while (token !== 17 && scanner.getTokenOffset() + scanner.getTokenLength() < offset) {
-        token = scanner.scan();
-      }
-      return (token === 12 || token === 13) && scanner.getTokenOffset() <= offset;
-    };
-    JSONCompletion2.prototype.fromMarkup = function(markupString) {
-      if (markupString && this.doesSupportMarkdown()) {
-        return {
-          kind: MarkupKind.Markdown,
-          value: markupString
+          return JSON.stringify(value2);
         };
-      }
-      return void 0;
-    };
-    JSONCompletion2.prototype.doesSupportMarkdown = function() {
-      if (!isDefined(this.supportsMarkdown)) {
-        var completion = this.clientCapabilities.textDocument && this.clientCapabilities.textDocument.completion;
-        this.supportsMarkdown = completion && completion.completionItem && Array.isArray(completion.completionItem.documentationFormat) && completion.completionItem.documentationFormat.indexOf(MarkupKind.Markdown) !== -1;
-      }
-      return this.supportsMarkdown;
-    };
-    JSONCompletion2.prototype.doesSupportsCommitCharacters = function() {
-      if (!isDefined(this.supportsCommitCharacters)) {
-        var completion = this.clientCapabilities.textDocument && this.clientCapabilities.textDocument.completion;
-        this.supportsCommitCharacters = completion && completion.completionItem && !!completion.completionItem.commitCharactersSupport;
-      }
-      return this.supportsCommitCharacters;
-    };
-    return JSONCompletion2;
-  }();
+        return stringifyObject(value, "", replacer) + separatorAfter;
+      };
+      JSONCompletion2.prototype.getInsertTextForGuessedValue = function(value, separatorAfter) {
+        switch (typeof value) {
+          case "object":
+            if (value === null) {
+              return "${1:null}" + separatorAfter;
+            }
+            return this.getInsertTextForValue(value, separatorAfter);
+          case "string":
+            var snippetValue = JSON.stringify(value);
+            snippetValue = snippetValue.substr(1, snippetValue.length - 2);
+            snippetValue = this.getInsertTextForPlainText(snippetValue);
+            return '"${1:' + snippetValue + '}"' + separatorAfter;
+          case "number":
+          case "boolean":
+            return "${1:" + JSON.stringify(value) + "}" + separatorAfter;
+        }
+        return this.getInsertTextForValue(value, separatorAfter);
+      };
+      JSONCompletion2.prototype.getSuggestionKind = function(type) {
+        if (Array.isArray(type)) {
+          var array = type;
+          type = array.length > 0 ? array[0] : void 0;
+        }
+        if (!type) {
+          return CompletionItemKind.Value;
+        }
+        switch (type) {
+          case "string":
+            return CompletionItemKind.Value;
+          case "object":
+            return CompletionItemKind.Module;
+          case "property":
+            return CompletionItemKind.Property;
+          default:
+            return CompletionItemKind.Value;
+        }
+      };
+      JSONCompletion2.prototype.getLabelTextForMatchingNode = function(node, document) {
+        switch (node.type) {
+          case "array":
+            return "[]";
+          case "object":
+            return "{}";
+          default:
+            var content = document.getText().substr(node.offset, node.length);
+            return content;
+        }
+      };
+      JSONCompletion2.prototype.getInsertTextForMatchingNode = function(node, document, separatorAfter) {
+        switch (node.type) {
+          case "array":
+            return this.getInsertTextForValue([], separatorAfter);
+          case "object":
+            return this.getInsertTextForValue({}, separatorAfter);
+          default:
+            var content = document.getText().substr(node.offset, node.length) + separatorAfter;
+            return this.getInsertTextForPlainText(content);
+        }
+      };
+      JSONCompletion2.prototype.getInsertTextForProperty = function(key, propertySchema, addValue, separatorAfter) {
+        var propertyText = this.getInsertTextForValue(key, "");
+        if (!addValue) {
+          return propertyText;
+        }
+        var resultText = propertyText + ": ";
+        var value;
+        var nValueProposals = 0;
+        if (propertySchema) {
+          if (Array.isArray(propertySchema.defaultSnippets)) {
+            if (propertySchema.defaultSnippets.length === 1) {
+              var body = propertySchema.defaultSnippets[0].body;
+              if (isDefined(body)) {
+                value = this.getInsertTextForSnippetValue(body, "");
+              }
+            }
+            nValueProposals += propertySchema.defaultSnippets.length;
+          }
+          if (propertySchema.enum) {
+            if (!value && propertySchema.enum.length === 1) {
+              value = this.getInsertTextForGuessedValue(propertySchema.enum[0], "");
+            }
+            nValueProposals += propertySchema.enum.length;
+          }
+          if (isDefined(propertySchema.default)) {
+            if (!value) {
+              value = this.getInsertTextForGuessedValue(propertySchema.default, "");
+            }
+            nValueProposals++;
+          }
+          if (Array.isArray(propertySchema.examples) && propertySchema.examples.length) {
+            if (!value) {
+              value = this.getInsertTextForGuessedValue(propertySchema.examples[0], "");
+            }
+            nValueProposals += propertySchema.examples.length;
+          }
+          if (nValueProposals === 0) {
+            var type = Array.isArray(propertySchema.type) ? propertySchema.type[0] : propertySchema.type;
+            if (!type) {
+              if (propertySchema.properties) {
+                type = "object";
+              } else if (propertySchema.items) {
+                type = "array";
+              }
+            }
+            switch (type) {
+              case "boolean":
+                value = "$1";
+                break;
+              case "string":
+                value = '"$1"';
+                break;
+              case "object":
+                value = "{$1}";
+                break;
+              case "array":
+                value = "[$1]";
+                break;
+              case "number":
+              case "integer":
+                value = "${1:0}";
+                break;
+              case "null":
+                value = "${1:null}";
+                break;
+              default:
+                return propertyText;
+            }
+          }
+        }
+        if (!value || nValueProposals > 1) {
+          value = "$1";
+        }
+        return resultText + value + separatorAfter;
+      };
+      JSONCompletion2.prototype.getCurrentWord = function(document, offset) {
+        var i = offset - 1;
+        var text = document.getText();
+        while (i >= 0 && ' 	\n\r\v":{[,]}'.indexOf(text.charAt(i)) === -1) {
+          i--;
+        }
+        return text.substring(i + 1, offset);
+      };
+      JSONCompletion2.prototype.evaluateSeparatorAfter = function(document, offset) {
+        var scanner = createScanner2(document.getText(), true);
+        scanner.setPosition(offset);
+        var token = scanner.scan();
+        switch (token) {
+          case 5:
+          case 2:
+          case 4:
+          case 17:
+            return "";
+          default:
+            return ",";
+        }
+      };
+      JSONCompletion2.prototype.findItemAtOffset = function(node, document, offset) {
+        var scanner = createScanner2(document.getText(), true);
+        var children = node.items;
+        for (var i = children.length - 1; i >= 0; i--) {
+          var child = children[i];
+          if (offset > child.offset + child.length) {
+            scanner.setPosition(child.offset + child.length);
+            var token = scanner.scan();
+            if (token === 5 && offset >= scanner.getTokenOffset() + scanner.getTokenLength()) {
+              return i + 1;
+            }
+            return i;
+          } else if (offset >= child.offset) {
+            return i;
+          }
+        }
+        return 0;
+      };
+      JSONCompletion2.prototype.isInComment = function(document, start, offset) {
+        var scanner = createScanner2(document.getText(), false);
+        scanner.setPosition(start);
+        var token = scanner.scan();
+        while (token !== 17 && scanner.getTokenOffset() + scanner.getTokenLength() < offset) {
+          token = scanner.scan();
+        }
+        return (token === 12 || token === 13) && scanner.getTokenOffset() <= offset;
+      };
+      JSONCompletion2.prototype.fromMarkup = function(markupString) {
+        if (markupString && this.doesSupportMarkdown()) {
+          return {
+            kind: MarkupKind.Markdown,
+            value: markupString
+          };
+        }
+        return void 0;
+      };
+      JSONCompletion2.prototype.doesSupportMarkdown = function() {
+        if (!isDefined(this.supportsMarkdown)) {
+          var completion = this.clientCapabilities.textDocument && this.clientCapabilities.textDocument.completion;
+          this.supportsMarkdown = completion && completion.completionItem && Array.isArray(completion.completionItem.documentationFormat) && completion.completionItem.documentationFormat.indexOf(MarkupKind.Markdown) !== -1;
+        }
+        return this.supportsMarkdown;
+      };
+      JSONCompletion2.prototype.doesSupportsCommitCharacters = function() {
+        if (!isDefined(this.supportsCommitCharacters)) {
+          var completion = this.clientCapabilities.textDocument && this.clientCapabilities.textDocument.completion;
+          this.supportsCommitCharacters = completion && completion.completionItem && !!completion.completionItem.commitCharactersSupport;
+        }
+        return this.supportsCommitCharacters;
+      };
+      return JSONCompletion2;
+    }()
+  );
 
   // node_modules/vscode-json-languageservice/lib/esm/services/jsonHover.js
-  var JSONHover = function() {
-    function JSONHover2(schemaService, contributions, promiseConstructor) {
-      if (contributions === void 0) {
-        contributions = [];
+  var JSONHover = (
+    /** @class */
+    function() {
+      function JSONHover2(schemaService, contributions, promiseConstructor) {
+        if (contributions === void 0) {
+          contributions = [];
+        }
+        this.schemaService = schemaService;
+        this.contributions = contributions;
+        this.promise = promiseConstructor || Promise;
       }
-      this.schemaService = schemaService;
-      this.contributions = contributions;
-      this.promise = promiseConstructor || Promise;
-    }
-    JSONHover2.prototype.doHover = function(document, position, doc) {
-      var offset = document.offsetAt(position);
-      var node = doc.getNodeFromOffset(offset);
-      if (!node || (node.type === "object" || node.type === "array") && offset > node.offset + 1 && offset < node.offset + node.length - 1) {
-        return this.promise.resolve(null);
-      }
-      var hoverRangeNode = node;
-      if (node.type === "string") {
-        var parent = node.parent;
-        if (parent && parent.type === "property" && parent.keyNode === node) {
-          node = parent.valueNode;
-          if (!node) {
-            return this.promise.resolve(null);
+      JSONHover2.prototype.doHover = function(document, position, doc) {
+        var offset = document.offsetAt(position);
+        var node = doc.getNodeFromOffset(offset);
+        if (!node || (node.type === "object" || node.type === "array") && offset > node.offset + 1 && offset < node.offset + node.length - 1) {
+          return this.promise.resolve(null);
+        }
+        var hoverRangeNode = node;
+        if (node.type === "string") {
+          var parent = node.parent;
+          if (parent && parent.type === "property" && parent.keyNode === node) {
+            node = parent.valueNode;
+            if (!node) {
+              return this.promise.resolve(null);
+            }
           }
         }
-      }
-      var hoverRange = Range.create(document.positionAt(hoverRangeNode.offset), document.positionAt(hoverRangeNode.offset + hoverRangeNode.length));
-      var createHover = function(contents) {
-        var result = {
-          contents,
-          range: hoverRange
+        var hoverRange = Range.create(document.positionAt(hoverRangeNode.offset), document.positionAt(hoverRangeNode.offset + hoverRangeNode.length));
+        var createHover = function(contents) {
+          var result = {
+            contents,
+            range: hoverRange
+          };
+          return result;
         };
-        return result;
-      };
-      var location = getNodePath3(node);
-      for (var i = this.contributions.length - 1; i >= 0; i--) {
-        var contribution = this.contributions[i];
-        var promise = contribution.getInfoContribution(document.uri, location);
-        if (promise) {
-          return promise.then(function(htmlContent) {
-            return createHover(htmlContent);
-          });
+        var location = getNodePath3(node);
+        for (var i = this.contributions.length - 1; i >= 0; i--) {
+          var contribution = this.contributions[i];
+          var promise = contribution.getInfoContribution(document.uri, location);
+          if (promise) {
+            return promise.then(function(htmlContent) {
+              return createHover(htmlContent);
+            });
+          }
         }
-      }
-      return this.schemaService.getSchemaForResource(document.uri, doc).then(function(schema) {
-        if (schema && node) {
-          var matchingSchemas = doc.getMatchingSchemas(schema.schema, node.offset);
-          var title_1 = void 0;
-          var markdownDescription_1 = void 0;
-          var markdownEnumValueDescription_1 = void 0, enumValue_1 = void 0;
-          matchingSchemas.every(function(s) {
-            if (s.node === node && !s.inverted && s.schema) {
-              title_1 = title_1 || s.schema.title;
-              markdownDescription_1 = markdownDescription_1 || s.schema.markdownDescription || toMarkdown(s.schema.description);
-              if (s.schema.enum) {
-                var idx = s.schema.enum.indexOf(getNodeValue3(node));
-                if (s.schema.markdownEnumDescriptions) {
-                  markdownEnumValueDescription_1 = s.schema.markdownEnumDescriptions[idx];
-                } else if (s.schema.enumDescriptions) {
-                  markdownEnumValueDescription_1 = toMarkdown(s.schema.enumDescriptions[idx]);
-                }
-                if (markdownEnumValueDescription_1) {
-                  enumValue_1 = s.schema.enum[idx];
-                  if (typeof enumValue_1 !== "string") {
-                    enumValue_1 = JSON.stringify(enumValue_1);
+        return this.schemaService.getSchemaForResource(document.uri, doc).then(function(schema) {
+          if (schema && node) {
+            var matchingSchemas = doc.getMatchingSchemas(schema.schema, node.offset);
+            var title_1 = void 0;
+            var markdownDescription_1 = void 0;
+            var markdownEnumValueDescription_1 = void 0, enumValue_1 = void 0;
+            matchingSchemas.every(function(s) {
+              if (s.node === node && !s.inverted && s.schema) {
+                title_1 = title_1 || s.schema.title;
+                markdownDescription_1 = markdownDescription_1 || s.schema.markdownDescription || toMarkdown(s.schema.description);
+                if (s.schema.enum) {
+                  var idx = s.schema.enum.indexOf(getNodeValue3(node));
+                  if (s.schema.markdownEnumDescriptions) {
+                    markdownEnumValueDescription_1 = s.schema.markdownEnumDescriptions[idx];
+                  } else if (s.schema.enumDescriptions) {
+                    markdownEnumValueDescription_1 = toMarkdown(s.schema.enumDescriptions[idx]);
+                  }
+                  if (markdownEnumValueDescription_1) {
+                    enumValue_1 = s.schema.enum[idx];
+                    if (typeof enumValue_1 !== "string") {
+                      enumValue_1 = JSON.stringify(enumValue_1);
+                    }
                   }
                 }
               }
+              return true;
+            });
+            var result = "";
+            if (title_1) {
+              result = toMarkdown(title_1);
             }
-            return true;
-          });
-          var result = "";
-          if (title_1) {
-            result = toMarkdown(title_1);
-          }
-          if (markdownDescription_1) {
-            if (result.length > 0) {
-              result += "\n\n";
+            if (markdownDescription_1) {
+              if (result.length > 0) {
+                result += "\n\n";
+              }
+              result += markdownDescription_1;
             }
-            result += markdownDescription_1;
-          }
-          if (markdownEnumValueDescription_1) {
-            if (result.length > 0) {
-              result += "\n\n";
+            if (markdownEnumValueDescription_1) {
+              if (result.length > 0) {
+                result += "\n\n";
+              }
+              result += "`".concat(toMarkdownCodeBlock(enumValue_1), "`: ").concat(markdownEnumValueDescription_1);
             }
-            result += "`".concat(toMarkdownCodeBlock(enumValue_1), "`: ").concat(markdownEnumValueDescription_1);
+            return createHover([result]);
           }
-          return createHover([result]);
-        }
-        return null;
-      });
-    };
-    return JSONHover2;
-  }();
+          return null;
+        });
+      };
+      return JSONHover2;
+    }()
+  );
   function toMarkdown(plain) {
     if (plain) {
       var res = plain.replace(/([^\n\r])(\r?\n)([^\n\r])/gm, "$1\n\n$3");
@@ -4836,96 +4959,99 @@ var moduleExports = (() => {
 
   // node_modules/vscode-json-languageservice/lib/esm/services/jsonValidation.js
   var localize4 = loadMessageBundle();
-  var JSONValidation = function() {
-    function JSONValidation2(jsonSchemaService, promiseConstructor) {
-      this.jsonSchemaService = jsonSchemaService;
-      this.promise = promiseConstructor;
-      this.validationEnabled = true;
-    }
-    JSONValidation2.prototype.configure = function(raw) {
-      if (raw) {
-        this.validationEnabled = raw.validate !== false;
-        this.commentSeverity = raw.allowComments ? void 0 : DiagnosticSeverity.Error;
+  var JSONValidation = (
+    /** @class */
+    function() {
+      function JSONValidation2(jsonSchemaService, promiseConstructor) {
+        this.jsonSchemaService = jsonSchemaService;
+        this.promise = promiseConstructor;
+        this.validationEnabled = true;
       }
-    };
-    JSONValidation2.prototype.doValidation = function(textDocument, jsonDocument, documentSettings, schema) {
-      var _this = this;
-      if (!this.validationEnabled) {
-        return this.promise.resolve([]);
-      }
-      var diagnostics = [];
-      var added = {};
-      var addProblem = function(problem) {
-        var signature = problem.range.start.line + " " + problem.range.start.character + " " + problem.message;
-        if (!added[signature]) {
-          added[signature] = true;
-          diagnostics.push(problem);
+      JSONValidation2.prototype.configure = function(raw) {
+        if (raw) {
+          this.validationEnabled = raw.validate !== false;
+          this.commentSeverity = raw.allowComments ? void 0 : DiagnosticSeverity.Error;
         }
       };
-      var getDiagnostics = function(schema2) {
-        var trailingCommaSeverity = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.trailingCommas) ? toDiagnosticSeverity(documentSettings.trailingCommas) : DiagnosticSeverity.Error;
-        var commentSeverity = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.comments) ? toDiagnosticSeverity(documentSettings.comments) : _this.commentSeverity;
-        var schemaValidation = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.schemaValidation) ? toDiagnosticSeverity(documentSettings.schemaValidation) : DiagnosticSeverity.Warning;
-        var schemaRequest = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.schemaRequest) ? toDiagnosticSeverity(documentSettings.schemaRequest) : DiagnosticSeverity.Warning;
-        if (schema2) {
-          if (schema2.errors.length && jsonDocument.root && schemaRequest) {
-            var astRoot = jsonDocument.root;
-            var property = astRoot.type === "object" ? astRoot.properties[0] : void 0;
-            if (property && property.keyNode.value === "$schema") {
-              var node = property.valueNode || property;
-              var range = Range.create(textDocument.positionAt(node.offset), textDocument.positionAt(node.offset + node.length));
-              addProblem(Diagnostic.create(range, schema2.errors[0], schemaRequest, ErrorCode.SchemaResolveError));
-            } else {
-              var range = Range.create(textDocument.positionAt(astRoot.offset), textDocument.positionAt(astRoot.offset + 1));
-              addProblem(Diagnostic.create(range, schema2.errors[0], schemaRequest, ErrorCode.SchemaResolveError));
-            }
-          } else if (schemaValidation) {
-            var semanticErrors = jsonDocument.validate(textDocument, schema2.schema, schemaValidation);
-            if (semanticErrors) {
-              semanticErrors.forEach(addProblem);
-            }
-          }
-          if (schemaAllowsComments(schema2.schema)) {
-            commentSeverity = void 0;
-          }
-          if (schemaAllowsTrailingCommas(schema2.schema)) {
-            trailingCommaSeverity = void 0;
-          }
+      JSONValidation2.prototype.doValidation = function(textDocument, jsonDocument, documentSettings, schema) {
+        var _this = this;
+        if (!this.validationEnabled) {
+          return this.promise.resolve([]);
         }
-        for (var _i = 0, _a = jsonDocument.syntaxErrors; _i < _a.length; _i++) {
-          var p = _a[_i];
-          if (p.code === ErrorCode.TrailingComma) {
-            if (typeof trailingCommaSeverity !== "number") {
-              continue;
-            }
-            p.severity = trailingCommaSeverity;
+        var diagnostics = [];
+        var added = {};
+        var addProblem = function(problem) {
+          var signature = problem.range.start.line + " " + problem.range.start.character + " " + problem.message;
+          if (!added[signature]) {
+            added[signature] = true;
+            diagnostics.push(problem);
           }
-          addProblem(p);
-        }
-        if (typeof commentSeverity === "number") {
-          var message_1 = localize4("InvalidCommentToken", "Comments are not permitted in JSON.");
-          jsonDocument.comments.forEach(function(c) {
-            addProblem(Diagnostic.create(c, message_1, commentSeverity, ErrorCode.CommentNotPermitted));
+        };
+        var getDiagnostics = function(schema2) {
+          var trailingCommaSeverity = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.trailingCommas) ? toDiagnosticSeverity(documentSettings.trailingCommas) : DiagnosticSeverity.Error;
+          var commentSeverity = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.comments) ? toDiagnosticSeverity(documentSettings.comments) : _this.commentSeverity;
+          var schemaValidation = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.schemaValidation) ? toDiagnosticSeverity(documentSettings.schemaValidation) : DiagnosticSeverity.Warning;
+          var schemaRequest = (documentSettings === null || documentSettings === void 0 ? void 0 : documentSettings.schemaRequest) ? toDiagnosticSeverity(documentSettings.schemaRequest) : DiagnosticSeverity.Warning;
+          if (schema2) {
+            if (schema2.errors.length && jsonDocument.root && schemaRequest) {
+              var astRoot = jsonDocument.root;
+              var property = astRoot.type === "object" ? astRoot.properties[0] : void 0;
+              if (property && property.keyNode.value === "$schema") {
+                var node = property.valueNode || property;
+                var range = Range.create(textDocument.positionAt(node.offset), textDocument.positionAt(node.offset + node.length));
+                addProblem(Diagnostic.create(range, schema2.errors[0], schemaRequest, ErrorCode.SchemaResolveError));
+              } else {
+                var range = Range.create(textDocument.positionAt(astRoot.offset), textDocument.positionAt(astRoot.offset + 1));
+                addProblem(Diagnostic.create(range, schema2.errors[0], schemaRequest, ErrorCode.SchemaResolveError));
+              }
+            } else if (schemaValidation) {
+              var semanticErrors = jsonDocument.validate(textDocument, schema2.schema, schemaValidation);
+              if (semanticErrors) {
+                semanticErrors.forEach(addProblem);
+              }
+            }
+            if (schemaAllowsComments(schema2.schema)) {
+              commentSeverity = void 0;
+            }
+            if (schemaAllowsTrailingCommas(schema2.schema)) {
+              trailingCommaSeverity = void 0;
+            }
+          }
+          for (var _i = 0, _a = jsonDocument.syntaxErrors; _i < _a.length; _i++) {
+            var p = _a[_i];
+            if (p.code === ErrorCode.TrailingComma) {
+              if (typeof trailingCommaSeverity !== "number") {
+                continue;
+              }
+              p.severity = trailingCommaSeverity;
+            }
+            addProblem(p);
+          }
+          if (typeof commentSeverity === "number") {
+            var message_1 = localize4("InvalidCommentToken", "Comments are not permitted in JSON.");
+            jsonDocument.comments.forEach(function(c) {
+              addProblem(Diagnostic.create(c, message_1, commentSeverity, ErrorCode.CommentNotPermitted));
+            });
+          }
+          return diagnostics;
+        };
+        if (schema) {
+          var id = schema.id || "schemaservice://untitled/" + idCounter++;
+          var handle = this.jsonSchemaService.registerExternalSchema(id, [], schema);
+          return handle.getResolvedSchema().then(function(resolvedSchema) {
+            return getDiagnostics(resolvedSchema);
           });
         }
-        return diagnostics;
-      };
-      if (schema) {
-        var id = schema.id || "schemaservice://untitled/" + idCounter++;
-        var handle = this.jsonSchemaService.registerExternalSchema(id, [], schema);
-        return handle.getResolvedSchema().then(function(resolvedSchema) {
-          return getDiagnostics(resolvedSchema);
+        return this.jsonSchemaService.getSchemaForResource(textDocument.uri, jsonDocument).then(function(schema2) {
+          return getDiagnostics(schema2);
         });
-      }
-      return this.jsonSchemaService.getSchemaForResource(textDocument.uri, jsonDocument).then(function(schema2) {
-        return getDiagnostics(schema2);
-      });
-    };
-    JSONValidation2.prototype.getLanguageStatus = function(textDocument, jsonDocument) {
-      return { schemas: this.jsonSchemaService.getSchemaURIsForResource(textDocument.uri, jsonDocument) };
-    };
-    return JSONValidation2;
-  }();
+      };
+      JSONValidation2.prototype.getLanguageStatus = function(textDocument, jsonDocument) {
+        return { schemas: this.jsonSchemaService.getSchemaURIsForResource(textDocument.uri, jsonDocument) };
+      };
+      return JSONValidation2;
+    }()
+  );
   var idCounter = 0;
   function schemaAllowsComments(schemaRef) {
     if (schemaRef && typeof schemaRef === "object") {
@@ -5036,264 +5162,267 @@ var moduleExports = (() => {
   }
 
   // node_modules/vscode-json-languageservice/lib/esm/services/jsonDocumentSymbols.js
-  var JSONDocumentSymbols = function() {
-    function JSONDocumentSymbols2(schemaService) {
-      this.schemaService = schemaService;
-    }
-    JSONDocumentSymbols2.prototype.findDocumentSymbols = function(document, doc, context) {
-      var _this = this;
-      if (context === void 0) {
-        context = { resultLimit: Number.MAX_VALUE };
+  var JSONDocumentSymbols = (
+    /** @class */
+    function() {
+      function JSONDocumentSymbols2(schemaService) {
+        this.schemaService = schemaService;
       }
-      var root = doc.root;
-      if (!root) {
-        return [];
-      }
-      var limit = context.resultLimit || Number.MAX_VALUE;
-      var resourceString = document.uri;
-      if (resourceString === "vscode://defaultsettings/keybindings.json" || endsWith(resourceString.toLowerCase(), "/user/keybindings.json")) {
-        if (root.type === "array") {
-          var result_1 = [];
-          for (var _i = 0, _a = root.items; _i < _a.length; _i++) {
-            var item = _a[_i];
-            if (item.type === "object") {
-              for (var _b = 0, _c = item.properties; _b < _c.length; _b++) {
-                var property = _c[_b];
-                if (property.keyNode.value === "key" && property.valueNode) {
-                  var location = Location.create(document.uri, getRange(document, item));
-                  result_1.push({ name: getNodeValue3(property.valueNode), kind: SymbolKind.Function, location });
-                  limit--;
-                  if (limit <= 0) {
-                    if (context && context.onResultLimitExceeded) {
-                      context.onResultLimitExceeded(resourceString);
+      JSONDocumentSymbols2.prototype.findDocumentSymbols = function(document, doc, context) {
+        var _this = this;
+        if (context === void 0) {
+          context = { resultLimit: Number.MAX_VALUE };
+        }
+        var root = doc.root;
+        if (!root) {
+          return [];
+        }
+        var limit = context.resultLimit || Number.MAX_VALUE;
+        var resourceString = document.uri;
+        if (resourceString === "vscode://defaultsettings/keybindings.json" || endsWith(resourceString.toLowerCase(), "/user/keybindings.json")) {
+          if (root.type === "array") {
+            var result_1 = [];
+            for (var _i = 0, _a = root.items; _i < _a.length; _i++) {
+              var item = _a[_i];
+              if (item.type === "object") {
+                for (var _b = 0, _c = item.properties; _b < _c.length; _b++) {
+                  var property = _c[_b];
+                  if (property.keyNode.value === "key" && property.valueNode) {
+                    var location = Location.create(document.uri, getRange(document, item));
+                    result_1.push({ name: getNodeValue3(property.valueNode), kind: SymbolKind.Function, location });
+                    limit--;
+                    if (limit <= 0) {
+                      if (context && context.onResultLimitExceeded) {
+                        context.onResultLimitExceeded(resourceString);
+                      }
+                      return result_1;
                     }
-                    return result_1;
                   }
                 }
               }
             }
+            return result_1;
           }
-          return result_1;
         }
-      }
-      var toVisit = [
-        { node: root, containerName: "" }
-      ];
-      var nextToVisit = 0;
-      var limitExceeded = false;
-      var result = [];
-      var collectOutlineEntries = function(node, containerName) {
-        if (node.type === "array") {
-          node.items.forEach(function(node2) {
-            if (node2) {
-              toVisit.push({ node: node2, containerName });
-            }
-          });
-        } else if (node.type === "object") {
-          node.properties.forEach(function(property2) {
-            var valueNode = property2.valueNode;
-            if (valueNode) {
-              if (limit > 0) {
-                limit--;
-                var location2 = Location.create(document.uri, getRange(document, property2));
-                var childContainerName = containerName ? containerName + "." + property2.keyNode.value : property2.keyNode.value;
-                result.push({ name: _this.getKeyLabel(property2), kind: _this.getSymbolKind(valueNode.type), location: location2, containerName });
-                toVisit.push({ node: valueNode, containerName: childContainerName });
-              } else {
-                limitExceeded = true;
-              }
-            }
-          });
-        }
-      };
-      while (nextToVisit < toVisit.length) {
-        var next = toVisit[nextToVisit++];
-        collectOutlineEntries(next.node, next.containerName);
-      }
-      if (limitExceeded && context && context.onResultLimitExceeded) {
-        context.onResultLimitExceeded(resourceString);
-      }
-      return result;
-    };
-    JSONDocumentSymbols2.prototype.findDocumentSymbols2 = function(document, doc, context) {
-      var _this = this;
-      if (context === void 0) {
-        context = { resultLimit: Number.MAX_VALUE };
-      }
-      var root = doc.root;
-      if (!root) {
-        return [];
-      }
-      var limit = context.resultLimit || Number.MAX_VALUE;
-      var resourceString = document.uri;
-      if (resourceString === "vscode://defaultsettings/keybindings.json" || endsWith(resourceString.toLowerCase(), "/user/keybindings.json")) {
-        if (root.type === "array") {
-          var result_2 = [];
-          for (var _i = 0, _a = root.items; _i < _a.length; _i++) {
-            var item = _a[_i];
-            if (item.type === "object") {
-              for (var _b = 0, _c = item.properties; _b < _c.length; _b++) {
-                var property = _c[_b];
-                if (property.keyNode.value === "key" && property.valueNode) {
-                  var range = getRange(document, item);
-                  var selectionRange = getRange(document, property.keyNode);
-                  result_2.push({ name: getNodeValue3(property.valueNode), kind: SymbolKind.Function, range, selectionRange });
-                  limit--;
-                  if (limit <= 0) {
-                    if (context && context.onResultLimitExceeded) {
-                      context.onResultLimitExceeded(resourceString);
-                    }
-                    return result_2;
-                  }
-                }
-              }
-            }
-          }
-          return result_2;
-        }
-      }
-      var result = [];
-      var toVisit = [
-        { node: root, result }
-      ];
-      var nextToVisit = 0;
-      var limitExceeded = false;
-      var collectOutlineEntries = function(node, result2) {
-        if (node.type === "array") {
-          node.items.forEach(function(node2, index) {
-            if (node2) {
-              if (limit > 0) {
-                limit--;
-                var range2 = getRange(document, node2);
-                var selectionRange2 = range2;
-                var name = String(index);
-                var symbol = { name, kind: _this.getSymbolKind(node2.type), range: range2, selectionRange: selectionRange2, children: [] };
-                result2.push(symbol);
-                toVisit.push({ result: symbol.children, node: node2 });
-              } else {
-                limitExceeded = true;
-              }
-            }
-          });
-        } else if (node.type === "object") {
-          node.properties.forEach(function(property2) {
-            var valueNode = property2.valueNode;
-            if (valueNode) {
-              if (limit > 0) {
-                limit--;
-                var range2 = getRange(document, property2);
-                var selectionRange2 = getRange(document, property2.keyNode);
-                var children = [];
-                var symbol = { name: _this.getKeyLabel(property2), kind: _this.getSymbolKind(valueNode.type), range: range2, selectionRange: selectionRange2, children, detail: _this.getDetail(valueNode) };
-                result2.push(symbol);
-                toVisit.push({ result: children, node: valueNode });
-              } else {
-                limitExceeded = true;
-              }
-            }
-          });
-        }
-      };
-      while (nextToVisit < toVisit.length) {
-        var next = toVisit[nextToVisit++];
-        collectOutlineEntries(next.node, next.result);
-      }
-      if (limitExceeded && context && context.onResultLimitExceeded) {
-        context.onResultLimitExceeded(resourceString);
-      }
-      return result;
-    };
-    JSONDocumentSymbols2.prototype.getSymbolKind = function(nodeType) {
-      switch (nodeType) {
-        case "object":
-          return SymbolKind.Module;
-        case "string":
-          return SymbolKind.String;
-        case "number":
-          return SymbolKind.Number;
-        case "array":
-          return SymbolKind.Array;
-        case "boolean":
-          return SymbolKind.Boolean;
-        default:
-          return SymbolKind.Variable;
-      }
-    };
-    JSONDocumentSymbols2.prototype.getKeyLabel = function(property) {
-      var name = property.keyNode.value;
-      if (name) {
-        name = name.replace(/[\n]/g, "\u21B5");
-      }
-      if (name && name.trim()) {
-        return name;
-      }
-      return '"'.concat(name, '"');
-    };
-    JSONDocumentSymbols2.prototype.getDetail = function(node) {
-      if (!node) {
-        return void 0;
-      }
-      if (node.type === "boolean" || node.type === "number" || node.type === "null" || node.type === "string") {
-        return String(node.value);
-      } else {
-        if (node.type === "array") {
-          return node.children.length ? void 0 : "[]";
-        } else if (node.type === "object") {
-          return node.children.length ? void 0 : "{}";
-        }
-      }
-      return void 0;
-    };
-    JSONDocumentSymbols2.prototype.findDocumentColors = function(document, doc, context) {
-      return this.schemaService.getSchemaForResource(document.uri, doc).then(function(schema) {
+        var toVisit = [
+          { node: root, containerName: "" }
+        ];
+        var nextToVisit = 0;
+        var limitExceeded = false;
         var result = [];
-        if (schema) {
-          var limit = context && typeof context.resultLimit === "number" ? context.resultLimit : Number.MAX_VALUE;
-          var matchingSchemas = doc.getMatchingSchemas(schema.schema);
-          var visitedNode = {};
-          for (var _i = 0, matchingSchemas_1 = matchingSchemas; _i < matchingSchemas_1.length; _i++) {
-            var s = matchingSchemas_1[_i];
-            if (!s.inverted && s.schema && (s.schema.format === "color" || s.schema.format === "color-hex") && s.node && s.node.type === "string") {
-              var nodeId = String(s.node.offset);
-              if (!visitedNode[nodeId]) {
-                var color = colorFromHex(getNodeValue3(s.node));
-                if (color) {
-                  var range = getRange(document, s.node);
-                  result.push({ color, range });
-                }
-                visitedNode[nodeId] = true;
-                limit--;
-                if (limit <= 0) {
-                  if (context && context.onResultLimitExceeded) {
-                    context.onResultLimitExceeded(document.uri);
-                  }
-                  return result;
+        var collectOutlineEntries = function(node, containerName) {
+          if (node.type === "array") {
+            node.items.forEach(function(node2) {
+              if (node2) {
+                toVisit.push({ node: node2, containerName });
+              }
+            });
+          } else if (node.type === "object") {
+            node.properties.forEach(function(property2) {
+              var valueNode = property2.valueNode;
+              if (valueNode) {
+                if (limit > 0) {
+                  limit--;
+                  var location2 = Location.create(document.uri, getRange(document, property2));
+                  var childContainerName = containerName ? containerName + "." + property2.keyNode.value : property2.keyNode.value;
+                  result.push({ name: _this.getKeyLabel(property2), kind: _this.getSymbolKind(valueNode.type), location: location2, containerName });
+                  toVisit.push({ node: valueNode, containerName: childContainerName });
+                } else {
+                  limitExceeded = true;
                 }
               }
-            }
+            });
           }
+        };
+        while (nextToVisit < toVisit.length) {
+          var next = toVisit[nextToVisit++];
+          collectOutlineEntries(next.node, next.containerName);
+        }
+        if (limitExceeded && context && context.onResultLimitExceeded) {
+          context.onResultLimitExceeded(resourceString);
         }
         return result;
-      });
-    };
-    JSONDocumentSymbols2.prototype.getColorPresentations = function(document, doc, color, range) {
-      var result = [];
-      var red256 = Math.round(color.red * 255), green256 = Math.round(color.green * 255), blue256 = Math.round(color.blue * 255);
-      function toTwoDigitHex(n) {
-        var r = n.toString(16);
-        return r.length !== 2 ? "0" + r : r;
-      }
-      var label;
-      if (color.alpha === 1) {
-        label = "#".concat(toTwoDigitHex(red256)).concat(toTwoDigitHex(green256)).concat(toTwoDigitHex(blue256));
-      } else {
-        label = "#".concat(toTwoDigitHex(red256)).concat(toTwoDigitHex(green256)).concat(toTwoDigitHex(blue256)).concat(toTwoDigitHex(Math.round(color.alpha * 255)));
-      }
-      result.push({ label, textEdit: TextEdit.replace(range, JSON.stringify(label)) });
-      return result;
-    };
-    return JSONDocumentSymbols2;
-  }();
+      };
+      JSONDocumentSymbols2.prototype.findDocumentSymbols2 = function(document, doc, context) {
+        var _this = this;
+        if (context === void 0) {
+          context = { resultLimit: Number.MAX_VALUE };
+        }
+        var root = doc.root;
+        if (!root) {
+          return [];
+        }
+        var limit = context.resultLimit || Number.MAX_VALUE;
+        var resourceString = document.uri;
+        if (resourceString === "vscode://defaultsettings/keybindings.json" || endsWith(resourceString.toLowerCase(), "/user/keybindings.json")) {
+          if (root.type === "array") {
+            var result_2 = [];
+            for (var _i = 0, _a = root.items; _i < _a.length; _i++) {
+              var item = _a[_i];
+              if (item.type === "object") {
+                for (var _b = 0, _c = item.properties; _b < _c.length; _b++) {
+                  var property = _c[_b];
+                  if (property.keyNode.value === "key" && property.valueNode) {
+                    var range = getRange(document, item);
+                    var selectionRange = getRange(document, property.keyNode);
+                    result_2.push({ name: getNodeValue3(property.valueNode), kind: SymbolKind.Function, range, selectionRange });
+                    limit--;
+                    if (limit <= 0) {
+                      if (context && context.onResultLimitExceeded) {
+                        context.onResultLimitExceeded(resourceString);
+                      }
+                      return result_2;
+                    }
+                  }
+                }
+              }
+            }
+            return result_2;
+          }
+        }
+        var result = [];
+        var toVisit = [
+          { node: root, result }
+        ];
+        var nextToVisit = 0;
+        var limitExceeded = false;
+        var collectOutlineEntries = function(node, result2) {
+          if (node.type === "array") {
+            node.items.forEach(function(node2, index) {
+              if (node2) {
+                if (limit > 0) {
+                  limit--;
+                  var range2 = getRange(document, node2);
+                  var selectionRange2 = range2;
+                  var name = String(index);
+                  var symbol = { name, kind: _this.getSymbolKind(node2.type), range: range2, selectionRange: selectionRange2, children: [] };
+                  result2.push(symbol);
+                  toVisit.push({ result: symbol.children, node: node2 });
+                } else {
+                  limitExceeded = true;
+                }
+              }
+            });
+          } else if (node.type === "object") {
+            node.properties.forEach(function(property2) {
+              var valueNode = property2.valueNode;
+              if (valueNode) {
+                if (limit > 0) {
+                  limit--;
+                  var range2 = getRange(document, property2);
+                  var selectionRange2 = getRange(document, property2.keyNode);
+                  var children = [];
+                  var symbol = { name: _this.getKeyLabel(property2), kind: _this.getSymbolKind(valueNode.type), range: range2, selectionRange: selectionRange2, children, detail: _this.getDetail(valueNode) };
+                  result2.push(symbol);
+                  toVisit.push({ result: children, node: valueNode });
+                } else {
+                  limitExceeded = true;
+                }
+              }
+            });
+          }
+        };
+        while (nextToVisit < toVisit.length) {
+          var next = toVisit[nextToVisit++];
+          collectOutlineEntries(next.node, next.result);
+        }
+        if (limitExceeded && context && context.onResultLimitExceeded) {
+          context.onResultLimitExceeded(resourceString);
+        }
+        return result;
+      };
+      JSONDocumentSymbols2.prototype.getSymbolKind = function(nodeType) {
+        switch (nodeType) {
+          case "object":
+            return SymbolKind.Module;
+          case "string":
+            return SymbolKind.String;
+          case "number":
+            return SymbolKind.Number;
+          case "array":
+            return SymbolKind.Array;
+          case "boolean":
+            return SymbolKind.Boolean;
+          default:
+            return SymbolKind.Variable;
+        }
+      };
+      JSONDocumentSymbols2.prototype.getKeyLabel = function(property) {
+        var name = property.keyNode.value;
+        if (name) {
+          name = name.replace(/[\n]/g, "\u21B5");
+        }
+        if (name && name.trim()) {
+          return name;
+        }
+        return '"'.concat(name, '"');
+      };
+      JSONDocumentSymbols2.prototype.getDetail = function(node) {
+        if (!node) {
+          return void 0;
+        }
+        if (node.type === "boolean" || node.type === "number" || node.type === "null" || node.type === "string") {
+          return String(node.value);
+        } else {
+          if (node.type === "array") {
+            return node.children.length ? void 0 : "[]";
+          } else if (node.type === "object") {
+            return node.children.length ? void 0 : "{}";
+          }
+        }
+        return void 0;
+      };
+      JSONDocumentSymbols2.prototype.findDocumentColors = function(document, doc, context) {
+        return this.schemaService.getSchemaForResource(document.uri, doc).then(function(schema) {
+          var result = [];
+          if (schema) {
+            var limit = context && typeof context.resultLimit === "number" ? context.resultLimit : Number.MAX_VALUE;
+            var matchingSchemas = doc.getMatchingSchemas(schema.schema);
+            var visitedNode = {};
+            for (var _i = 0, matchingSchemas_1 = matchingSchemas; _i < matchingSchemas_1.length; _i++) {
+              var s = matchingSchemas_1[_i];
+              if (!s.inverted && s.schema && (s.schema.format === "color" || s.schema.format === "color-hex") && s.node && s.node.type === "string") {
+                var nodeId = String(s.node.offset);
+                if (!visitedNode[nodeId]) {
+                  var color = colorFromHex(getNodeValue3(s.node));
+                  if (color) {
+                    var range = getRange(document, s.node);
+                    result.push({ color, range });
+                  }
+                  visitedNode[nodeId] = true;
+                  limit--;
+                  if (limit <= 0) {
+                    if (context && context.onResultLimitExceeded) {
+                      context.onResultLimitExceeded(document.uri);
+                    }
+                    return result;
+                  }
+                }
+              }
+            }
+          }
+          return result;
+        });
+      };
+      JSONDocumentSymbols2.prototype.getColorPresentations = function(document, doc, color, range) {
+        var result = [];
+        var red256 = Math.round(color.red * 255), green256 = Math.round(color.green * 255), blue256 = Math.round(color.blue * 255);
+        function toTwoDigitHex(n) {
+          var r = n.toString(16);
+          return r.length !== 2 ? "0" + r : r;
+        }
+        var label;
+        if (color.alpha === 1) {
+          label = "#".concat(toTwoDigitHex(red256)).concat(toTwoDigitHex(green256)).concat(toTwoDigitHex(blue256));
+        } else {
+          label = "#".concat(toTwoDigitHex(red256)).concat(toTwoDigitHex(green256)).concat(toTwoDigitHex(blue256)).concat(toTwoDigitHex(Math.round(color.alpha * 255)));
+        }
+        result.push({ label, textEdit: TextEdit.replace(range, JSON.stringify(label)) });
+        return result;
+      };
+      return JSONDocumentSymbols2;
+    }()
+  );
   function getRange(document, node) {
     return Range.create(document.positionAt(node.offset), document.positionAt(node.offset + node.length));
   }
@@ -5303,9 +5432,11 @@ var moduleExports = (() => {
   var schemaContributions = {
     schemaAssociations: [],
     schemas: {
+      // refer to the latest schema
       "http://json-schema.org/schema#": {
         $ref: "http://json-schema.org/draft-07/schema#"
       },
+      // bundle the schema-schema to include (localized) descriptions
       "http://json-schema.org/draft-04/schema#": {
         "$schema": "http://json-schema.org/draft-04/schema#",
         "definitions": {
@@ -6036,7 +6167,7 @@ var moduleExports = (() => {
       }
       var l = "", p = "/", g = /^(([^:/?#]+?):)?(\/\/([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/, d = function() {
         function t3(t4, e3, r3, n2, o2, i2) {
-          void 0 === i2 && (i2 = false), "object" == typeof t4 ? (this.scheme = t4.scheme || l, this.authority = t4.authority || l, this.path = t4.path || l, this.query = t4.query || l, this.fragment = t4.fragment || l) : (this.scheme = function(t5, e4) {
+          void 0 === i2 && (i2 = false), "object" == typeof t4 ? (this.scheme = t4.scheme || l, this.authority = t4.authority || l, this.path = t4.path || l, this.query = t4.query || l, this.fragment = t4.fragment || l) : (this.scheme = /* @__PURE__ */ function(t5, e4) {
             return t5 || e4 ? t5 : "file";
           }(t4, i2), this.authority = e3 || l, this.path = function(t5, e4) {
             switch (t5) {
@@ -6292,554 +6423,569 @@ var moduleExports = (() => {
   var localize6 = loadMessageBundle();
   var BANG = "!";
   var PATH_SEP = "/";
-  var FilePatternAssociation = function() {
-    function FilePatternAssociation2(pattern, uris) {
-      this.globWrappers = [];
-      try {
-        for (var _i = 0, pattern_1 = pattern; _i < pattern_1.length; _i++) {
-          var patternString = pattern_1[_i];
-          var include = patternString[0] !== BANG;
-          if (!include) {
-            patternString = patternString.substring(1);
-          }
-          if (patternString.length > 0) {
-            if (patternString[0] === PATH_SEP) {
+  var FilePatternAssociation = (
+    /** @class */
+    function() {
+      function FilePatternAssociation2(pattern, uris) {
+        this.globWrappers = [];
+        try {
+          for (var _i = 0, pattern_1 = pattern; _i < pattern_1.length; _i++) {
+            var patternString = pattern_1[_i];
+            var include = patternString[0] !== BANG;
+            if (!include) {
               patternString = patternString.substring(1);
             }
-            this.globWrappers.push({
-              regexp: createRegex("**/" + patternString, { extended: true, globstar: true }),
-              include
+            if (patternString.length > 0) {
+              if (patternString[0] === PATH_SEP) {
+                patternString = patternString.substring(1);
+              }
+              this.globWrappers.push({
+                regexp: createRegex("**/" + patternString, { extended: true, globstar: true }),
+                include
+              });
+            }
+          }
+          ;
+          this.uris = uris;
+        } catch (e) {
+          this.globWrappers.length = 0;
+          this.uris = [];
+        }
+      }
+      FilePatternAssociation2.prototype.matchesPattern = function(fileName) {
+        var match = false;
+        for (var _i = 0, _a = this.globWrappers; _i < _a.length; _i++) {
+          var _b = _a[_i], regexp = _b.regexp, include = _b.include;
+          if (regexp.test(fileName)) {
+            match = include;
+          }
+        }
+        return match;
+      };
+      FilePatternAssociation2.prototype.getURIs = function() {
+        return this.uris;
+      };
+      return FilePatternAssociation2;
+    }()
+  );
+  var SchemaHandle = (
+    /** @class */
+    function() {
+      function SchemaHandle2(service, uri, unresolvedSchemaContent) {
+        this.service = service;
+        this.uri = uri;
+        this.dependencies = /* @__PURE__ */ new Set();
+        this.anchors = void 0;
+        if (unresolvedSchemaContent) {
+          this.unresolvedSchema = this.service.promise.resolve(new UnresolvedSchema(unresolvedSchemaContent));
+        }
+      }
+      SchemaHandle2.prototype.getUnresolvedSchema = function() {
+        if (!this.unresolvedSchema) {
+          this.unresolvedSchema = this.service.loadSchema(this.uri);
+        }
+        return this.unresolvedSchema;
+      };
+      SchemaHandle2.prototype.getResolvedSchema = function() {
+        var _this = this;
+        if (!this.resolvedSchema) {
+          this.resolvedSchema = this.getUnresolvedSchema().then(function(unresolved) {
+            return _this.service.resolveSchemaContent(unresolved, _this);
+          });
+        }
+        return this.resolvedSchema;
+      };
+      SchemaHandle2.prototype.clearSchema = function() {
+        var hasChanges = !!this.unresolvedSchema;
+        this.resolvedSchema = void 0;
+        this.unresolvedSchema = void 0;
+        this.dependencies.clear();
+        this.anchors = void 0;
+        return hasChanges;
+      };
+      return SchemaHandle2;
+    }()
+  );
+  var UnresolvedSchema = (
+    /** @class */
+    /* @__PURE__ */ function() {
+      function UnresolvedSchema2(schema, errors) {
+        if (errors === void 0) {
+          errors = [];
+        }
+        this.schema = schema;
+        this.errors = errors;
+      }
+      return UnresolvedSchema2;
+    }()
+  );
+  var ResolvedSchema = (
+    /** @class */
+    function() {
+      function ResolvedSchema2(schema, errors) {
+        if (errors === void 0) {
+          errors = [];
+        }
+        this.schema = schema;
+        this.errors = errors;
+      }
+      ResolvedSchema2.prototype.getSection = function(path) {
+        var schemaRef = this.getSectionRecursive(path, this.schema);
+        if (schemaRef) {
+          return asSchema(schemaRef);
+        }
+        return void 0;
+      };
+      ResolvedSchema2.prototype.getSectionRecursive = function(path, schema) {
+        if (!schema || typeof schema === "boolean" || path.length === 0) {
+          return schema;
+        }
+        var next = path.shift();
+        if (schema.properties && typeof schema.properties[next]) {
+          return this.getSectionRecursive(path, schema.properties[next]);
+        } else if (schema.patternProperties) {
+          for (var _i = 0, _a = Object.keys(schema.patternProperties); _i < _a.length; _i++) {
+            var pattern = _a[_i];
+            var regex = extendedRegExp(pattern);
+            if (regex === null || regex === void 0 ? void 0 : regex.test(next)) {
+              return this.getSectionRecursive(path, schema.patternProperties[pattern]);
+            }
+          }
+        } else if (typeof schema.additionalProperties === "object") {
+          return this.getSectionRecursive(path, schema.additionalProperties);
+        } else if (next.match("[0-9]+")) {
+          if (Array.isArray(schema.items)) {
+            var index = parseInt(next, 10);
+            if (!isNaN(index) && schema.items[index]) {
+              return this.getSectionRecursive(path, schema.items[index]);
+            }
+          } else if (schema.items) {
+            return this.getSectionRecursive(path, schema.items);
+          }
+        }
+        return void 0;
+      };
+      return ResolvedSchema2;
+    }()
+  );
+  var JSONSchemaService = (
+    /** @class */
+    function() {
+      function JSONSchemaService2(requestService, contextService, promiseConstructor) {
+        this.contextService = contextService;
+        this.requestService = requestService;
+        this.promiseConstructor = promiseConstructor || Promise;
+        this.callOnDispose = [];
+        this.contributionSchemas = {};
+        this.contributionAssociations = [];
+        this.schemasById = {};
+        this.filePatternAssociations = [];
+        this.registeredSchemasIds = {};
+      }
+      JSONSchemaService2.prototype.getRegisteredSchemaIds = function(filter) {
+        return Object.keys(this.registeredSchemasIds).filter(function(id) {
+          var scheme = URI.parse(id).scheme;
+          return scheme !== "schemaservice" && (!filter || filter(scheme));
+        });
+      };
+      Object.defineProperty(JSONSchemaService2.prototype, "promise", {
+        get: function() {
+          return this.promiseConstructor;
+        },
+        enumerable: false,
+        configurable: true
+      });
+      JSONSchemaService2.prototype.dispose = function() {
+        while (this.callOnDispose.length > 0) {
+          this.callOnDispose.pop()();
+        }
+      };
+      JSONSchemaService2.prototype.onResourceChange = function(uri) {
+        var _this = this;
+        this.cachedSchemaForResource = void 0;
+        var hasChanges = false;
+        uri = normalizeId(uri);
+        var toWalk = [uri];
+        var all = Object.keys(this.schemasById).map(function(key) {
+          return _this.schemasById[key];
+        });
+        while (toWalk.length) {
+          var curr = toWalk.pop();
+          for (var i = 0; i < all.length; i++) {
+            var handle = all[i];
+            if (handle && (handle.uri === curr || handle.dependencies.has(curr))) {
+              if (handle.uri !== curr) {
+                toWalk.push(handle.uri);
+              }
+              if (handle.clearSchema()) {
+                hasChanges = true;
+              }
+              all[i] = void 0;
+            }
+          }
+        }
+        return hasChanges;
+      };
+      JSONSchemaService2.prototype.setSchemaContributions = function(schemaContributions2) {
+        if (schemaContributions2.schemas) {
+          var schemas = schemaContributions2.schemas;
+          for (var id in schemas) {
+            var normalizedId = normalizeId(id);
+            this.contributionSchemas[normalizedId] = this.addSchemaHandle(normalizedId, schemas[id]);
+          }
+        }
+        if (Array.isArray(schemaContributions2.schemaAssociations)) {
+          var schemaAssociations = schemaContributions2.schemaAssociations;
+          for (var _i = 0, schemaAssociations_1 = schemaAssociations; _i < schemaAssociations_1.length; _i++) {
+            var schemaAssociation = schemaAssociations_1[_i];
+            var uris = schemaAssociation.uris.map(normalizeId);
+            var association = this.addFilePatternAssociation(schemaAssociation.pattern, uris);
+            this.contributionAssociations.push(association);
+          }
+        }
+      };
+      JSONSchemaService2.prototype.addSchemaHandle = function(id, unresolvedSchemaContent) {
+        var schemaHandle = new SchemaHandle(this, id, unresolvedSchemaContent);
+        this.schemasById[id] = schemaHandle;
+        return schemaHandle;
+      };
+      JSONSchemaService2.prototype.getOrAddSchemaHandle = function(id, unresolvedSchemaContent) {
+        return this.schemasById[id] || this.addSchemaHandle(id, unresolvedSchemaContent);
+      };
+      JSONSchemaService2.prototype.addFilePatternAssociation = function(pattern, uris) {
+        var fpa = new FilePatternAssociation(pattern, uris);
+        this.filePatternAssociations.push(fpa);
+        return fpa;
+      };
+      JSONSchemaService2.prototype.registerExternalSchema = function(uri, filePatterns, unresolvedSchemaContent) {
+        var id = normalizeId(uri);
+        this.registeredSchemasIds[id] = true;
+        this.cachedSchemaForResource = void 0;
+        if (filePatterns) {
+          this.addFilePatternAssociation(filePatterns, [id]);
+        }
+        return unresolvedSchemaContent ? this.addSchemaHandle(id, unresolvedSchemaContent) : this.getOrAddSchemaHandle(id);
+      };
+      JSONSchemaService2.prototype.clearExternalSchemas = function() {
+        this.schemasById = {};
+        this.filePatternAssociations = [];
+        this.registeredSchemasIds = {};
+        this.cachedSchemaForResource = void 0;
+        for (var id in this.contributionSchemas) {
+          this.schemasById[id] = this.contributionSchemas[id];
+          this.registeredSchemasIds[id] = true;
+        }
+        for (var _i = 0, _a = this.contributionAssociations; _i < _a.length; _i++) {
+          var contributionAssociation = _a[_i];
+          this.filePatternAssociations.push(contributionAssociation);
+        }
+      };
+      JSONSchemaService2.prototype.getResolvedSchema = function(schemaId) {
+        var id = normalizeId(schemaId);
+        var schemaHandle = this.schemasById[id];
+        if (schemaHandle) {
+          return schemaHandle.getResolvedSchema();
+        }
+        return this.promise.resolve(void 0);
+      };
+      JSONSchemaService2.prototype.loadSchema = function(url) {
+        if (!this.requestService) {
+          var errorMessage = localize6("json.schema.norequestservice", "Unable to load schema from '{0}'. No schema request service available", toDisplayString(url));
+          return this.promise.resolve(new UnresolvedSchema({}, [errorMessage]));
+        }
+        return this.requestService(url).then(function(content) {
+          if (!content) {
+            var errorMessage2 = localize6("json.schema.nocontent", "Unable to load schema from '{0}': No content.", toDisplayString(url));
+            return new UnresolvedSchema({}, [errorMessage2]);
+          }
+          var schemaContent = {};
+          var jsonErrors = [];
+          schemaContent = parse2(content, jsonErrors);
+          var errors = jsonErrors.length ? [localize6("json.schema.invalidFormat", "Unable to parse content from '{0}': Parse error at offset {1}.", toDisplayString(url), jsonErrors[0].offset)] : [];
+          return new UnresolvedSchema(schemaContent, errors);
+        }, function(error) {
+          var errorMessage2 = error.toString();
+          var errorSplit = error.toString().split("Error: ");
+          if (errorSplit.length > 1) {
+            errorMessage2 = errorSplit[1];
+          }
+          if (endsWith(errorMessage2, ".")) {
+            errorMessage2 = errorMessage2.substr(0, errorMessage2.length - 1);
+          }
+          return new UnresolvedSchema({}, [localize6("json.schema.nocontent", "Unable to load schema from '{0}': {1}.", toDisplayString(url), errorMessage2)]);
+        });
+      };
+      JSONSchemaService2.prototype.resolveSchemaContent = function(schemaToResolve, handle) {
+        var _this = this;
+        var resolveErrors = schemaToResolve.errors.slice(0);
+        var schema = schemaToResolve.schema;
+        if (schema.$schema) {
+          var id = normalizeId(schema.$schema);
+          if (id === "http://json-schema.org/draft-03/schema") {
+            return this.promise.resolve(new ResolvedSchema({}, [localize6("json.schema.draft03.notsupported", "Draft-03 schemas are not supported.")]));
+          } else if (id === "https://json-schema.org/draft/2019-09/schema") {
+            resolveErrors.push(localize6("json.schema.draft201909.notsupported", "Draft 2019-09 schemas are not yet fully supported."));
+          } else if (id === "https://json-schema.org/draft/2020-12/schema") {
+            resolveErrors.push(localize6("json.schema.draft202012.notsupported", "Draft 2020-12 schemas are not yet fully supported."));
+          }
+        }
+        var contextService = this.contextService;
+        var findSectionByJSONPointer = function(schema2, path) {
+          path = decodeURIComponent(path);
+          var current = schema2;
+          if (path[0] === "/") {
+            path = path.substring(1);
+          }
+          path.split("/").some(function(part) {
+            part = part.replace(/~1/g, "/").replace(/~0/g, "~");
+            current = current[part];
+            return !current;
+          });
+          return current;
+        };
+        var findSchemaById = function(schema2, handle2, id2) {
+          if (!handle2.anchors) {
+            handle2.anchors = collectAnchors(schema2);
+          }
+          return handle2.anchors.get(id2);
+        };
+        var merge = function(target, section) {
+          for (var key in section) {
+            if (section.hasOwnProperty(key) && !target.hasOwnProperty(key) && key !== "id" && key !== "$id") {
+              target[key] = section[key];
+            }
+          }
+        };
+        var mergeRef = function(target, sourceRoot, sourceHandle, refSegment) {
+          var section;
+          if (refSegment === void 0 || refSegment.length === 0) {
+            section = sourceRoot;
+          } else if (refSegment.charAt(0) === "/") {
+            section = findSectionByJSONPointer(sourceRoot, refSegment);
+          } else {
+            section = findSchemaById(sourceRoot, sourceHandle, refSegment);
+          }
+          if (section) {
+            merge(target, section);
+          } else {
+            resolveErrors.push(localize6("json.schema.invalidid", "$ref '{0}' in '{1}' can not be resolved.", refSegment, sourceHandle.uri));
+          }
+        };
+        var resolveExternalLink = function(node, uri, refSegment, parentHandle) {
+          if (contextService && !/^[A-Za-z][A-Za-z0-9+\-.+]*:\/\/.*/.test(uri)) {
+            uri = contextService.resolveRelativePath(uri, parentHandle.uri);
+          }
+          uri = normalizeId(uri);
+          var referencedHandle = _this.getOrAddSchemaHandle(uri);
+          return referencedHandle.getUnresolvedSchema().then(function(unresolvedSchema) {
+            parentHandle.dependencies.add(uri);
+            if (unresolvedSchema.errors.length) {
+              var loc = refSegment ? uri + "#" + refSegment : uri;
+              resolveErrors.push(localize6("json.schema.problemloadingref", "Problems loading reference '{0}': {1}", loc, unresolvedSchema.errors[0]));
+            }
+            mergeRef(node, unresolvedSchema.schema, referencedHandle, refSegment);
+            return resolveRefs(node, unresolvedSchema.schema, referencedHandle);
+          });
+        };
+        var resolveRefs = function(node, parentSchema, parentHandle) {
+          var openPromises = [];
+          _this.traverseNodes(node, function(next) {
+            var seenRefs = /* @__PURE__ */ new Set();
+            while (next.$ref) {
+              var ref = next.$ref;
+              var segments = ref.split("#", 2);
+              delete next.$ref;
+              if (segments[0].length > 0) {
+                openPromises.push(resolveExternalLink(next, segments[0], segments[1], parentHandle));
+                return;
+              } else {
+                if (!seenRefs.has(ref)) {
+                  var id2 = segments[1];
+                  mergeRef(next, parentSchema, parentHandle, id2);
+                  seenRefs.add(ref);
+                }
+              }
+            }
+          });
+          return _this.promise.all(openPromises);
+        };
+        var collectAnchors = function(root) {
+          var result = /* @__PURE__ */ new Map();
+          _this.traverseNodes(root, function(next) {
+            var id2 = next.$id || next.id;
+            if (typeof id2 === "string" && id2.charAt(0) === "#") {
+              var anchor = id2.substring(1);
+              if (result.has(anchor)) {
+                resolveErrors.push(localize6("json.schema.duplicateid", "Duplicate id declaration: '{0}'", id2));
+              } else {
+                result.set(anchor, next);
+              }
+            }
+          });
+          return result;
+        };
+        return resolveRefs(schema, schema, handle).then(function(_) {
+          return new ResolvedSchema(schema, resolveErrors);
+        });
+      };
+      JSONSchemaService2.prototype.traverseNodes = function(root, handle) {
+        if (!root || typeof root !== "object") {
+          return Promise.resolve(null);
+        }
+        var seen = /* @__PURE__ */ new Set();
+        var collectEntries = function() {
+          var entries = [];
+          for (var _i = 0; _i < arguments.length; _i++) {
+            entries[_i] = arguments[_i];
+          }
+          for (var _a = 0, entries_1 = entries; _a < entries_1.length; _a++) {
+            var entry = entries_1[_a];
+            if (typeof entry === "object") {
+              toWalk.push(entry);
+            }
+          }
+        };
+        var collectMapEntries = function() {
+          var maps = [];
+          for (var _i = 0; _i < arguments.length; _i++) {
+            maps[_i] = arguments[_i];
+          }
+          for (var _a = 0, maps_1 = maps; _a < maps_1.length; _a++) {
+            var map = maps_1[_a];
+            if (typeof map === "object") {
+              for (var k in map) {
+                var key = k;
+                var entry = map[key];
+                if (typeof entry === "object") {
+                  toWalk.push(entry);
+                }
+              }
+            }
+          }
+        };
+        var collectArrayEntries = function() {
+          var arrays = [];
+          for (var _i = 0; _i < arguments.length; _i++) {
+            arrays[_i] = arguments[_i];
+          }
+          for (var _a = 0, arrays_1 = arrays; _a < arrays_1.length; _a++) {
+            var array = arrays_1[_a];
+            if (Array.isArray(array)) {
+              for (var _b = 0, array_1 = array; _b < array_1.length; _b++) {
+                var entry = array_1[_b];
+                if (typeof entry === "object") {
+                  toWalk.push(entry);
+                }
+              }
+            }
+          }
+        };
+        var toWalk = [root];
+        var next = toWalk.pop();
+        while (next) {
+          if (!seen.has(next)) {
+            seen.add(next);
+            handle(next);
+            collectEntries(next.items, next.additionalItems, next.additionalProperties, next.not, next.contains, next.propertyNames, next.if, next.then, next.else);
+            collectMapEntries(next.definitions, next.properties, next.patternProperties, next.dependencies);
+            collectArrayEntries(next.anyOf, next.allOf, next.oneOf, next.items);
+          }
+          next = toWalk.pop();
+        }
+      };
+      ;
+      JSONSchemaService2.prototype.getSchemaFromProperty = function(resource, document) {
+        var _a, _b;
+        if (((_a = document.root) === null || _a === void 0 ? void 0 : _a.type) === "object") {
+          for (var _i = 0, _c = document.root.properties; _i < _c.length; _i++) {
+            var p = _c[_i];
+            if (p.keyNode.value === "$schema" && ((_b = p.valueNode) === null || _b === void 0 ? void 0 : _b.type) === "string") {
+              var schemaId = p.valueNode.value;
+              if (this.contextService && !/^\w[\w\d+.-]*:/.test(schemaId)) {
+                schemaId = this.contextService.resolveRelativePath(schemaId, resource);
+              }
+              return schemaId;
+            }
+          }
+        }
+        return void 0;
+      };
+      JSONSchemaService2.prototype.getAssociatedSchemas = function(resource) {
+        var seen = /* @__PURE__ */ Object.create(null);
+        var schemas = [];
+        var normalizedResource = normalizeResourceForMatching(resource);
+        for (var _i = 0, _a = this.filePatternAssociations; _i < _a.length; _i++) {
+          var entry = _a[_i];
+          if (entry.matchesPattern(normalizedResource)) {
+            for (var _b = 0, _c = entry.getURIs(); _b < _c.length; _b++) {
+              var schemaId = _c[_b];
+              if (!seen[schemaId]) {
+                schemas.push(schemaId);
+                seen[schemaId] = true;
+              }
+            }
+          }
+        }
+        return schemas;
+      };
+      JSONSchemaService2.prototype.getSchemaURIsForResource = function(resource, document) {
+        var schemeId = document && this.getSchemaFromProperty(resource, document);
+        if (schemeId) {
+          return [schemeId];
+        }
+        return this.getAssociatedSchemas(resource);
+      };
+      JSONSchemaService2.prototype.getSchemaForResource = function(resource, document) {
+        if (document) {
+          var schemeId = this.getSchemaFromProperty(resource, document);
+          if (schemeId) {
+            var id = normalizeId(schemeId);
+            return this.getOrAddSchemaHandle(id).getResolvedSchema();
+          }
+        }
+        if (this.cachedSchemaForResource && this.cachedSchemaForResource.resource === resource) {
+          return this.cachedSchemaForResource.resolvedSchema;
+        }
+        var schemas = this.getAssociatedSchemas(resource);
+        var resolvedSchema = schemas.length > 0 ? this.createCombinedSchema(resource, schemas).getResolvedSchema() : this.promise.resolve(void 0);
+        this.cachedSchemaForResource = { resource, resolvedSchema };
+        return resolvedSchema;
+      };
+      JSONSchemaService2.prototype.createCombinedSchema = function(resource, schemaIds) {
+        if (schemaIds.length === 1) {
+          return this.getOrAddSchemaHandle(schemaIds[0]);
+        } else {
+          var combinedSchemaId = "schemaservice://combinedSchema/" + encodeURIComponent(resource);
+          var combinedSchema = {
+            allOf: schemaIds.map(function(schemaId) {
+              return { $ref: schemaId };
+            })
+          };
+          return this.addSchemaHandle(combinedSchemaId, combinedSchema);
+        }
+      };
+      JSONSchemaService2.prototype.getMatchingSchemas = function(document, jsonDocument, schema) {
+        if (schema) {
+          var id = schema.id || "schemaservice://untitled/matchingSchemas/" + idCounter2++;
+          var handle = this.addSchemaHandle(id, schema);
+          return handle.getResolvedSchema().then(function(resolvedSchema) {
+            return jsonDocument.getMatchingSchemas(resolvedSchema.schema).filter(function(s) {
+              return !s.inverted;
+            });
+          });
+        }
+        return this.getSchemaForResource(document.uri, jsonDocument).then(function(schema2) {
+          if (schema2) {
+            return jsonDocument.getMatchingSchemas(schema2.schema).filter(function(s) {
+              return !s.inverted;
             });
           }
-        }
-        ;
-        this.uris = uris;
-      } catch (e) {
-        this.globWrappers.length = 0;
-        this.uris = [];
-      }
-    }
-    FilePatternAssociation2.prototype.matchesPattern = function(fileName) {
-      var match = false;
-      for (var _i = 0, _a = this.globWrappers; _i < _a.length; _i++) {
-        var _b = _a[_i], regexp = _b.regexp, include = _b.include;
-        if (regexp.test(fileName)) {
-          match = include;
-        }
-      }
-      return match;
-    };
-    FilePatternAssociation2.prototype.getURIs = function() {
-      return this.uris;
-    };
-    return FilePatternAssociation2;
-  }();
-  var SchemaHandle = function() {
-    function SchemaHandle2(service, uri, unresolvedSchemaContent) {
-      this.service = service;
-      this.uri = uri;
-      this.dependencies = /* @__PURE__ */ new Set();
-      this.anchors = void 0;
-      if (unresolvedSchemaContent) {
-        this.unresolvedSchema = this.service.promise.resolve(new UnresolvedSchema(unresolvedSchemaContent));
-      }
-    }
-    SchemaHandle2.prototype.getUnresolvedSchema = function() {
-      if (!this.unresolvedSchema) {
-        this.unresolvedSchema = this.service.loadSchema(this.uri);
-      }
-      return this.unresolvedSchema;
-    };
-    SchemaHandle2.prototype.getResolvedSchema = function() {
-      var _this = this;
-      if (!this.resolvedSchema) {
-        this.resolvedSchema = this.getUnresolvedSchema().then(function(unresolved) {
-          return _this.service.resolveSchemaContent(unresolved, _this);
-        });
-      }
-      return this.resolvedSchema;
-    };
-    SchemaHandle2.prototype.clearSchema = function() {
-      var hasChanges = !!this.unresolvedSchema;
-      this.resolvedSchema = void 0;
-      this.unresolvedSchema = void 0;
-      this.dependencies.clear();
-      this.anchors = void 0;
-      return hasChanges;
-    };
-    return SchemaHandle2;
-  }();
-  var UnresolvedSchema = function() {
-    function UnresolvedSchema2(schema, errors) {
-      if (errors === void 0) {
-        errors = [];
-      }
-      this.schema = schema;
-      this.errors = errors;
-    }
-    return UnresolvedSchema2;
-  }();
-  var ResolvedSchema = function() {
-    function ResolvedSchema2(schema, errors) {
-      if (errors === void 0) {
-        errors = [];
-      }
-      this.schema = schema;
-      this.errors = errors;
-    }
-    ResolvedSchema2.prototype.getSection = function(path) {
-      var schemaRef = this.getSectionRecursive(path, this.schema);
-      if (schemaRef) {
-        return asSchema(schemaRef);
-      }
-      return void 0;
-    };
-    ResolvedSchema2.prototype.getSectionRecursive = function(path, schema) {
-      if (!schema || typeof schema === "boolean" || path.length === 0) {
-        return schema;
-      }
-      var next = path.shift();
-      if (schema.properties && typeof schema.properties[next]) {
-        return this.getSectionRecursive(path, schema.properties[next]);
-      } else if (schema.patternProperties) {
-        for (var _i = 0, _a = Object.keys(schema.patternProperties); _i < _a.length; _i++) {
-          var pattern = _a[_i];
-          var regex = extendedRegExp(pattern);
-          if (regex === null || regex === void 0 ? void 0 : regex.test(next)) {
-            return this.getSectionRecursive(path, schema.patternProperties[pattern]);
-          }
-        }
-      } else if (typeof schema.additionalProperties === "object") {
-        return this.getSectionRecursive(path, schema.additionalProperties);
-      } else if (next.match("[0-9]+")) {
-        if (Array.isArray(schema.items)) {
-          var index = parseInt(next, 10);
-          if (!isNaN(index) && schema.items[index]) {
-            return this.getSectionRecursive(path, schema.items[index]);
-          }
-        } else if (schema.items) {
-          return this.getSectionRecursive(path, schema.items);
-        }
-      }
-      return void 0;
-    };
-    return ResolvedSchema2;
-  }();
-  var JSONSchemaService = function() {
-    function JSONSchemaService2(requestService, contextService, promiseConstructor) {
-      this.contextService = contextService;
-      this.requestService = requestService;
-      this.promiseConstructor = promiseConstructor || Promise;
-      this.callOnDispose = [];
-      this.contributionSchemas = {};
-      this.contributionAssociations = [];
-      this.schemasById = {};
-      this.filePatternAssociations = [];
-      this.registeredSchemasIds = {};
-    }
-    JSONSchemaService2.prototype.getRegisteredSchemaIds = function(filter) {
-      return Object.keys(this.registeredSchemasIds).filter(function(id) {
-        var scheme = URI.parse(id).scheme;
-        return scheme !== "schemaservice" && (!filter || filter(scheme));
-      });
-    };
-    Object.defineProperty(JSONSchemaService2.prototype, "promise", {
-      get: function() {
-        return this.promiseConstructor;
-      },
-      enumerable: false,
-      configurable: true
-    });
-    JSONSchemaService2.prototype.dispose = function() {
-      while (this.callOnDispose.length > 0) {
-        this.callOnDispose.pop()();
-      }
-    };
-    JSONSchemaService2.prototype.onResourceChange = function(uri) {
-      var _this = this;
-      this.cachedSchemaForResource = void 0;
-      var hasChanges = false;
-      uri = normalizeId(uri);
-      var toWalk = [uri];
-      var all = Object.keys(this.schemasById).map(function(key) {
-        return _this.schemasById[key];
-      });
-      while (toWalk.length) {
-        var curr = toWalk.pop();
-        for (var i = 0; i < all.length; i++) {
-          var handle = all[i];
-          if (handle && (handle.uri === curr || handle.dependencies.has(curr))) {
-            if (handle.uri !== curr) {
-              toWalk.push(handle.uri);
-            }
-            if (handle.clearSchema()) {
-              hasChanges = true;
-            }
-            all[i] = void 0;
-          }
-        }
-      }
-      return hasChanges;
-    };
-    JSONSchemaService2.prototype.setSchemaContributions = function(schemaContributions2) {
-      if (schemaContributions2.schemas) {
-        var schemas = schemaContributions2.schemas;
-        for (var id in schemas) {
-          var normalizedId = normalizeId(id);
-          this.contributionSchemas[normalizedId] = this.addSchemaHandle(normalizedId, schemas[id]);
-        }
-      }
-      if (Array.isArray(schemaContributions2.schemaAssociations)) {
-        var schemaAssociations = schemaContributions2.schemaAssociations;
-        for (var _i = 0, schemaAssociations_1 = schemaAssociations; _i < schemaAssociations_1.length; _i++) {
-          var schemaAssociation = schemaAssociations_1[_i];
-          var uris = schemaAssociation.uris.map(normalizeId);
-          var association = this.addFilePatternAssociation(schemaAssociation.pattern, uris);
-          this.contributionAssociations.push(association);
-        }
-      }
-    };
-    JSONSchemaService2.prototype.addSchemaHandle = function(id, unresolvedSchemaContent) {
-      var schemaHandle = new SchemaHandle(this, id, unresolvedSchemaContent);
-      this.schemasById[id] = schemaHandle;
-      return schemaHandle;
-    };
-    JSONSchemaService2.prototype.getOrAddSchemaHandle = function(id, unresolvedSchemaContent) {
-      return this.schemasById[id] || this.addSchemaHandle(id, unresolvedSchemaContent);
-    };
-    JSONSchemaService2.prototype.addFilePatternAssociation = function(pattern, uris) {
-      var fpa = new FilePatternAssociation(pattern, uris);
-      this.filePatternAssociations.push(fpa);
-      return fpa;
-    };
-    JSONSchemaService2.prototype.registerExternalSchema = function(uri, filePatterns, unresolvedSchemaContent) {
-      var id = normalizeId(uri);
-      this.registeredSchemasIds[id] = true;
-      this.cachedSchemaForResource = void 0;
-      if (filePatterns) {
-        this.addFilePatternAssociation(filePatterns, [id]);
-      }
-      return unresolvedSchemaContent ? this.addSchemaHandle(id, unresolvedSchemaContent) : this.getOrAddSchemaHandle(id);
-    };
-    JSONSchemaService2.prototype.clearExternalSchemas = function() {
-      this.schemasById = {};
-      this.filePatternAssociations = [];
-      this.registeredSchemasIds = {};
-      this.cachedSchemaForResource = void 0;
-      for (var id in this.contributionSchemas) {
-        this.schemasById[id] = this.contributionSchemas[id];
-        this.registeredSchemasIds[id] = true;
-      }
-      for (var _i = 0, _a = this.contributionAssociations; _i < _a.length; _i++) {
-        var contributionAssociation = _a[_i];
-        this.filePatternAssociations.push(contributionAssociation);
-      }
-    };
-    JSONSchemaService2.prototype.getResolvedSchema = function(schemaId) {
-      var id = normalizeId(schemaId);
-      var schemaHandle = this.schemasById[id];
-      if (schemaHandle) {
-        return schemaHandle.getResolvedSchema();
-      }
-      return this.promise.resolve(void 0);
-    };
-    JSONSchemaService2.prototype.loadSchema = function(url) {
-      if (!this.requestService) {
-        var errorMessage = localize6("json.schema.norequestservice", "Unable to load schema from '{0}'. No schema request service available", toDisplayString(url));
-        return this.promise.resolve(new UnresolvedSchema({}, [errorMessage]));
-      }
-      return this.requestService(url).then(function(content) {
-        if (!content) {
-          var errorMessage2 = localize6("json.schema.nocontent", "Unable to load schema from '{0}': No content.", toDisplayString(url));
-          return new UnresolvedSchema({}, [errorMessage2]);
-        }
-        var schemaContent = {};
-        var jsonErrors = [];
-        schemaContent = parse2(content, jsonErrors);
-        var errors = jsonErrors.length ? [localize6("json.schema.invalidFormat", "Unable to parse content from '{0}': Parse error at offset {1}.", toDisplayString(url), jsonErrors[0].offset)] : [];
-        return new UnresolvedSchema(schemaContent, errors);
-      }, function(error) {
-        var errorMessage2 = error.toString();
-        var errorSplit = error.toString().split("Error: ");
-        if (errorSplit.length > 1) {
-          errorMessage2 = errorSplit[1];
-        }
-        if (endsWith(errorMessage2, ".")) {
-          errorMessage2 = errorMessage2.substr(0, errorMessage2.length - 1);
-        }
-        return new UnresolvedSchema({}, [localize6("json.schema.nocontent", "Unable to load schema from '{0}': {1}.", toDisplayString(url), errorMessage2)]);
-      });
-    };
-    JSONSchemaService2.prototype.resolveSchemaContent = function(schemaToResolve, handle) {
-      var _this = this;
-      var resolveErrors = schemaToResolve.errors.slice(0);
-      var schema = schemaToResolve.schema;
-      if (schema.$schema) {
-        var id = normalizeId(schema.$schema);
-        if (id === "http://json-schema.org/draft-03/schema") {
-          return this.promise.resolve(new ResolvedSchema({}, [localize6("json.schema.draft03.notsupported", "Draft-03 schemas are not supported.")]));
-        } else if (id === "https://json-schema.org/draft/2019-09/schema") {
-          resolveErrors.push(localize6("json.schema.draft201909.notsupported", "Draft 2019-09 schemas are not yet fully supported."));
-        } else if (id === "https://json-schema.org/draft/2020-12/schema") {
-          resolveErrors.push(localize6("json.schema.draft202012.notsupported", "Draft 2020-12 schemas are not yet fully supported."));
-        }
-      }
-      var contextService = this.contextService;
-      var findSectionByJSONPointer = function(schema2, path) {
-        path = decodeURIComponent(path);
-        var current = schema2;
-        if (path[0] === "/") {
-          path = path.substring(1);
-        }
-        path.split("/").some(function(part) {
-          part = part.replace(/~1/g, "/").replace(/~0/g, "~");
-          current = current[part];
-          return !current;
-        });
-        return current;
-      };
-      var findSchemaById = function(schema2, handle2, id2) {
-        if (!handle2.anchors) {
-          handle2.anchors = collectAnchors(schema2);
-        }
-        return handle2.anchors.get(id2);
-      };
-      var merge = function(target, section) {
-        for (var key in section) {
-          if (section.hasOwnProperty(key) && !target.hasOwnProperty(key) && key !== "id" && key !== "$id") {
-            target[key] = section[key];
-          }
-        }
-      };
-      var mergeRef = function(target, sourceRoot, sourceHandle, refSegment) {
-        var section;
-        if (refSegment === void 0 || refSegment.length === 0) {
-          section = sourceRoot;
-        } else if (refSegment.charAt(0) === "/") {
-          section = findSectionByJSONPointer(sourceRoot, refSegment);
-        } else {
-          section = findSchemaById(sourceRoot, sourceHandle, refSegment);
-        }
-        if (section) {
-          merge(target, section);
-        } else {
-          resolveErrors.push(localize6("json.schema.invalidid", "$ref '{0}' in '{1}' can not be resolved.", refSegment, sourceHandle.uri));
-        }
-      };
-      var resolveExternalLink = function(node, uri, refSegment, parentHandle) {
-        if (contextService && !/^[A-Za-z][A-Za-z0-9+\-.+]*:\/\/.*/.test(uri)) {
-          uri = contextService.resolveRelativePath(uri, parentHandle.uri);
-        }
-        uri = normalizeId(uri);
-        var referencedHandle = _this.getOrAddSchemaHandle(uri);
-        return referencedHandle.getUnresolvedSchema().then(function(unresolvedSchema) {
-          parentHandle.dependencies.add(uri);
-          if (unresolvedSchema.errors.length) {
-            var loc = refSegment ? uri + "#" + refSegment : uri;
-            resolveErrors.push(localize6("json.schema.problemloadingref", "Problems loading reference '{0}': {1}", loc, unresolvedSchema.errors[0]));
-          }
-          mergeRef(node, unresolvedSchema.schema, referencedHandle, refSegment);
-          return resolveRefs(node, unresolvedSchema.schema, referencedHandle);
+          return [];
         });
       };
-      var resolveRefs = function(node, parentSchema, parentHandle) {
-        var openPromises = [];
-        _this.traverseNodes(node, function(next) {
-          var seenRefs = /* @__PURE__ */ new Set();
-          while (next.$ref) {
-            var ref = next.$ref;
-            var segments = ref.split("#", 2);
-            delete next.$ref;
-            if (segments[0].length > 0) {
-              openPromises.push(resolveExternalLink(next, segments[0], segments[1], parentHandle));
-              return;
-            } else {
-              if (!seenRefs.has(ref)) {
-                var id2 = segments[1];
-                mergeRef(next, parentSchema, parentHandle, id2);
-                seenRefs.add(ref);
-              }
-            }
-          }
-        });
-        return _this.promise.all(openPromises);
-      };
-      var collectAnchors = function(root) {
-        var result = /* @__PURE__ */ new Map();
-        _this.traverseNodes(root, function(next) {
-          var id2 = next.$id || next.id;
-          if (typeof id2 === "string" && id2.charAt(0) === "#") {
-            var anchor = id2.substring(1);
-            if (result.has(anchor)) {
-              resolveErrors.push(localize6("json.schema.duplicateid", "Duplicate id declaration: '{0}'", id2));
-            } else {
-              result.set(anchor, next);
-            }
-          }
-        });
-        return result;
-      };
-      return resolveRefs(schema, schema, handle).then(function(_) {
-        return new ResolvedSchema(schema, resolveErrors);
-      });
-    };
-    JSONSchemaService2.prototype.traverseNodes = function(root, handle) {
-      if (!root || typeof root !== "object") {
-        return Promise.resolve(null);
-      }
-      var seen = /* @__PURE__ */ new Set();
-      var collectEntries = function() {
-        var entries = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-          entries[_i] = arguments[_i];
-        }
-        for (var _a = 0, entries_1 = entries; _a < entries_1.length; _a++) {
-          var entry = entries_1[_a];
-          if (typeof entry === "object") {
-            toWalk.push(entry);
-          }
-        }
-      };
-      var collectMapEntries = function() {
-        var maps = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-          maps[_i] = arguments[_i];
-        }
-        for (var _a = 0, maps_1 = maps; _a < maps_1.length; _a++) {
-          var map = maps_1[_a];
-          if (typeof map === "object") {
-            for (var k in map) {
-              var key = k;
-              var entry = map[key];
-              if (typeof entry === "object") {
-                toWalk.push(entry);
-              }
-            }
-          }
-        }
-      };
-      var collectArrayEntries = function() {
-        var arrays = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-          arrays[_i] = arguments[_i];
-        }
-        for (var _a = 0, arrays_1 = arrays; _a < arrays_1.length; _a++) {
-          var array = arrays_1[_a];
-          if (Array.isArray(array)) {
-            for (var _b = 0, array_1 = array; _b < array_1.length; _b++) {
-              var entry = array_1[_b];
-              if (typeof entry === "object") {
-                toWalk.push(entry);
-              }
-            }
-          }
-        }
-      };
-      var toWalk = [root];
-      var next = toWalk.pop();
-      while (next) {
-        if (!seen.has(next)) {
-          seen.add(next);
-          handle(next);
-          collectEntries(next.items, next.additionalItems, next.additionalProperties, next.not, next.contains, next.propertyNames, next.if, next.then, next.else);
-          collectMapEntries(next.definitions, next.properties, next.patternProperties, next.dependencies);
-          collectArrayEntries(next.anyOf, next.allOf, next.oneOf, next.items);
-        }
-        next = toWalk.pop();
-      }
-    };
-    ;
-    JSONSchemaService2.prototype.getSchemaFromProperty = function(resource, document) {
-      var _a, _b;
-      if (((_a = document.root) === null || _a === void 0 ? void 0 : _a.type) === "object") {
-        for (var _i = 0, _c = document.root.properties; _i < _c.length; _i++) {
-          var p = _c[_i];
-          if (p.keyNode.value === "$schema" && ((_b = p.valueNode) === null || _b === void 0 ? void 0 : _b.type) === "string") {
-            var schemaId = p.valueNode.value;
-            if (this.contextService && !/^\w[\w\d+.-]*:/.test(schemaId)) {
-              schemaId = this.contextService.resolveRelativePath(schemaId, resource);
-            }
-            return schemaId;
-          }
-        }
-      }
-      return void 0;
-    };
-    JSONSchemaService2.prototype.getAssociatedSchemas = function(resource) {
-      var seen = /* @__PURE__ */ Object.create(null);
-      var schemas = [];
-      var normalizedResource = normalizeResourceForMatching(resource);
-      for (var _i = 0, _a = this.filePatternAssociations; _i < _a.length; _i++) {
-        var entry = _a[_i];
-        if (entry.matchesPattern(normalizedResource)) {
-          for (var _b = 0, _c = entry.getURIs(); _b < _c.length; _b++) {
-            var schemaId = _c[_b];
-            if (!seen[schemaId]) {
-              schemas.push(schemaId);
-              seen[schemaId] = true;
-            }
-          }
-        }
-      }
-      return schemas;
-    };
-    JSONSchemaService2.prototype.getSchemaURIsForResource = function(resource, document) {
-      var schemeId = document && this.getSchemaFromProperty(resource, document);
-      if (schemeId) {
-        return [schemeId];
-      }
-      return this.getAssociatedSchemas(resource);
-    };
-    JSONSchemaService2.prototype.getSchemaForResource = function(resource, document) {
-      if (document) {
-        var schemeId = this.getSchemaFromProperty(resource, document);
-        if (schemeId) {
-          var id = normalizeId(schemeId);
-          return this.getOrAddSchemaHandle(id).getResolvedSchema();
-        }
-      }
-      if (this.cachedSchemaForResource && this.cachedSchemaForResource.resource === resource) {
-        return this.cachedSchemaForResource.resolvedSchema;
-      }
-      var schemas = this.getAssociatedSchemas(resource);
-      var resolvedSchema = schemas.length > 0 ? this.createCombinedSchema(resource, schemas).getResolvedSchema() : this.promise.resolve(void 0);
-      this.cachedSchemaForResource = { resource, resolvedSchema };
-      return resolvedSchema;
-    };
-    JSONSchemaService2.prototype.createCombinedSchema = function(resource, schemaIds) {
-      if (schemaIds.length === 1) {
-        return this.getOrAddSchemaHandle(schemaIds[0]);
-      } else {
-        var combinedSchemaId = "schemaservice://combinedSchema/" + encodeURIComponent(resource);
-        var combinedSchema = {
-          allOf: schemaIds.map(function(schemaId) {
-            return { $ref: schemaId };
-          })
-        };
-        return this.addSchemaHandle(combinedSchemaId, combinedSchema);
-      }
-    };
-    JSONSchemaService2.prototype.getMatchingSchemas = function(document, jsonDocument, schema) {
-      if (schema) {
-        var id = schema.id || "schemaservice://untitled/matchingSchemas/" + idCounter2++;
-        var handle = this.addSchemaHandle(id, schema);
-        return handle.getResolvedSchema().then(function(resolvedSchema) {
-          return jsonDocument.getMatchingSchemas(resolvedSchema.schema).filter(function(s) {
-            return !s.inverted;
-          });
-        });
-      }
-      return this.getSchemaForResource(document.uri, jsonDocument).then(function(schema2) {
-        if (schema2) {
-          return jsonDocument.getMatchingSchemas(schema2.schema).filter(function(s) {
-            return !s.inverted;
-          });
-        }
-        return [];
-      });
-    };
-    return JSONSchemaService2;
-  }();
+      return JSONSchemaService2;
+    }()
+  );
   var idCounter2 = 0;
   function normalizeId(id) {
     try {
@@ -7006,7 +7152,11 @@ var moduleExports = (() => {
             break;
         }
         if (node.type === "property" || node.parent && node.parent.type === "array") {
-          var afterCommaOffset = getOffsetAfterNextToken(node.offset + node.length, 5);
+          var afterCommaOffset = getOffsetAfterNextToken(
+            node.offset + node.length,
+            5
+            /* CommaToken */
+          );
           if (afterCommaOffset !== -1) {
             result.push(newRange(node.offset, afterCommaOffset));
           }
@@ -7175,10 +7325,6 @@ var moduleExports = (() => {
     };
   }
   var JSONWorker = class {
-    _ctx;
-    _languageService;
-    _languageSettings;
-    _languageId;
     constructor(ctx, createData) {
       this._ctx = ctx;
       this._languageSettings = createData.languageSettings;
@@ -7190,7 +7336,8 @@ var moduleExports = (() => {
             return resolvePath(base, relativePath);
           }
         },
-        schemaRequestService: createData.enableSchemaRequest ? defaultSchemaRequestService : void 0
+        schemaRequestService: createData.enableSchemaRequest ? defaultSchemaRequestService : void 0,
+        clientCapabilities: ClientCapabilities.LATEST
       });
       this._languageService.configure(this._languageSettings);
     }
@@ -7238,7 +7385,7 @@ var moduleExports = (() => {
         return [];
       }
       let jsonDocument = this._languageService.parseJSONDocument(document);
-      let symbols = this._languageService.findDocumentSymbols(document, jsonDocument);
+      let symbols = this._languageService.findDocumentSymbols2(document, jsonDocument);
       return Promise.resolve(symbols);
     }
     async findDocumentColors(uri) {
@@ -7256,7 +7403,12 @@ var moduleExports = (() => {
         return [];
       }
       let jsonDocument = this._languageService.parseJSONDocument(document);
-      let colorPresentations = this._languageService.getColorPresentations(document, jsonDocument, color, range);
+      let colorPresentations = this._languageService.getColorPresentations(
+        document,
+        jsonDocument,
+        color,
+        range
+      );
       return Promise.resolve(colorPresentations);
     }
     async getFoldingRanges(uri, context) {
@@ -7276,11 +7428,32 @@ var moduleExports = (() => {
       let ranges = this._languageService.getSelectionRanges(document, positions, jsonDocument);
       return Promise.resolve(ranges);
     }
+    async parseJSONDocument(uri) {
+      let document = this._getTextDocument(uri);
+      if (!document) {
+        return null;
+      }
+      let jsonDocument = this._languageService.parseJSONDocument(document);
+      return Promise.resolve(jsonDocument);
+    }
+    async getMatchingSchemas(uri) {
+      let document = this._getTextDocument(uri);
+      if (!document) {
+        return [];
+      }
+      let jsonDocument = this._languageService.parseJSONDocument(document);
+      return Promise.resolve(this._languageService.getMatchingSchemas(document, jsonDocument));
+    }
     _getTextDocument(uri) {
       let models = this._ctx.getMirrorModels();
       for (let model of models) {
         if (model.uri.toString() === uri) {
-          return TextDocument2.create(uri, this._languageId, model.version, model.getValue());
+          return TextDocument2.create(
+            uri,
+            this._languageId,
+            model.version,
+            model.getValue()
+          );
         }
       }
       return null;

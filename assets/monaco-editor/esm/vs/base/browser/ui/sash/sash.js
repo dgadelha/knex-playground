@@ -8,7 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-import { $, append, createStyleSheet, EventHelper } from '../../dom.js';
+import { $, append, createStyleSheet, EventHelper, getWindow } from '../../dom.js';
 import { DomEmitter } from '../../event.js';
 import { EventType, Gesture } from '../../touch.js';
 import { Delayer } from '../../../common/async.js';
@@ -34,14 +34,15 @@ const onDidChangeGlobalSize = new Emitter();
 let globalHoverDelay = 300;
 const onDidChangeHoverDelay = new Emitter();
 class MouseEventFactory {
-    constructor() {
+    constructor(el) {
+        this.el = el;
         this.disposables = new DisposableStore();
     }
     get onPointerMove() {
-        return this.disposables.add(new DomEmitter(window, 'mousemove')).event;
+        return this.disposables.add(new DomEmitter(getWindow(this.el), 'mousemove')).event;
     }
     get onPointerUp() {
-        return this.disposables.add(new DomEmitter(window, 'mouseup')).event;
+        return this.disposables.add(new DomEmitter(getWindow(this.el), 'mouseup')).event;
     }
     dispose() {
         this.disposables.dispose();
@@ -230,7 +231,7 @@ export class Sash extends Disposable {
             this.el.classList.add('mac');
         }
         const onMouseDown = this._register(new DomEmitter(this.el, 'mousedown')).event;
-        this._register(onMouseDown(e => this.onPointerStart(e, new MouseEventFactory()), this));
+        this._register(onMouseDown(e => this.onPointerStart(e, new MouseEventFactory(container)), this));
         const onMouseDoubleClick = this._register(new DomEmitter(this.el, 'dblclick')).event;
         this._register(onMouseDoubleClick(this.onPointerDoublePress, this));
         const onMouseEnter = this._register(new DomEmitter(this.el, 'mouseenter')).event;
@@ -302,7 +303,7 @@ export class Sash extends Disposable {
         if (!this.state) {
             return;
         }
-        const iframes = document.getElementsByTagName('iframe');
+        const iframes = this.el.ownerDocument.getElementsByTagName('iframe');
         for (const iframe of iframes) {
             iframe.classList.add(PointerEventsDisabledCssClass); // disable mouse events on iframes as long as we drag the sash
         }

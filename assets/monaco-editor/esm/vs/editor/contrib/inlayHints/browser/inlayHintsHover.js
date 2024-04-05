@@ -11,22 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
 import { AsyncIterableObject } from '../../../../base/common/async.js';
 import { isEmptyMarkdownString, MarkdownString } from '../../../../base/common/htmlContent.js';
 import { Position } from '../../../common/core/position.js';
@@ -78,10 +62,9 @@ let InlayHintsHover = class InlayHintsHover extends MarkdownHoverParticipant {
         if (!(anchor instanceof InlayHintsHoverAnchor)) {
             return AsyncIterableObject.EMPTY;
         }
-        return new AsyncIterableObject((executor) => __awaiter(this, void 0, void 0, function* () {
-            var _a, e_1, _b, _c;
+        return new AsyncIterableObject(async (executor) => {
             const { part } = anchor;
-            yield part.item.resolve(token);
+            await part.item.resolve(token);
             if (token.isCancellationRequested) {
                 return;
             }
@@ -114,7 +97,7 @@ let InlayHintsHover = class InlayHintsHover extends MarkdownHoverParticipant {
             // (2.2) Inlay Label Part Help Hover
             if (part.part.location || part.part.command) {
                 let linkHint;
-                const useMetaKey = this._editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey';
+                const useMetaKey = this._editor.getOption(78 /* EditorOption.multiCursorModifier */) === 'altKey';
                 const kb = useMetaKey
                     ? platform.isMacintosh
                         ? localize('links.navigate.kb.meta.mac', "cmd + click")
@@ -136,44 +119,30 @@ let InlayHintsHover = class InlayHintsHover extends MarkdownHoverParticipant {
                 }
             }
             // (3) Inlay Label Part Location tooltip
-            const iterable = yield this._resolveInlayHintLabelPartHover(part, token);
-            try {
-                for (var _d = true, iterable_1 = __asyncValues(iterable), iterable_1_1; iterable_1_1 = yield iterable_1.next(), _a = iterable_1_1.done, !_a; _d = true) {
-                    _c = iterable_1_1.value;
-                    _d = false;
-                    const item = _c;
-                    executor.emitOne(item);
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_d && !_a && (_b = iterable_1.return)) yield _b.call(iterable_1);
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        }));
-    }
-    _resolveInlayHintLabelPartHover(part, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!part.part.location) {
-                return AsyncIterableObject.EMPTY;
-            }
-            const { uri, range } = part.part.location;
-            const ref = yield this._resolverService.createModelReference(uri);
-            try {
-                const model = ref.object.textEditorModel;
-                if (!this._languageFeaturesService.hoverProvider.has(model)) {
-                    return AsyncIterableObject.EMPTY;
-                }
-                return getHover(this._languageFeaturesService.hoverProvider, model, new Position(range.startLineNumber, range.startColumn), token)
-                    .filter(item => !isEmptyMarkdownString(item.hover.contents))
-                    .map(item => new MarkdownHover(this, part.item.anchor.range, item.hover.contents, false, 2 + item.ordinal));
-            }
-            finally {
-                ref.dispose();
+            const iterable = await this._resolveInlayHintLabelPartHover(part, token);
+            for await (const item of iterable) {
+                executor.emitOne(item);
             }
         });
+    }
+    async _resolveInlayHintLabelPartHover(part, token) {
+        if (!part.part.location) {
+            return AsyncIterableObject.EMPTY;
+        }
+        const { uri, range } = part.part.location;
+        const ref = await this._resolverService.createModelReference(uri);
+        try {
+            const model = ref.object.textEditorModel;
+            if (!this._languageFeaturesService.hoverProvider.has(model)) {
+                return AsyncIterableObject.EMPTY;
+            }
+            return getHover(this._languageFeaturesService.hoverProvider, model, new Position(range.startLineNumber, range.startColumn), token)
+                .filter(item => !isEmptyMarkdownString(item.hover.contents))
+                .map(item => new MarkdownHover(this, part.item.anchor.range, item.hover.contents, false, 2 + item.ordinal));
+        }
+        finally {
+            ref.dispose();
+        }
     }
 };
 InlayHintsHover = __decorate([

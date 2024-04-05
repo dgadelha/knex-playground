@@ -26,7 +26,7 @@ export class MarkdownString {
         }
     }
     appendText(value, newlineStyle = 0 /* MarkdownStringTextNewlineStyle.Paragraph */) {
-        this.value += escapeMarkdownSyntaxTokens(this.supportThemeIcons ? escapeIcons(value) : value)
+        this.value += escapeMarkdownSyntaxTokens(this.supportThemeIcons ? escapeIcons(value) : value) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
             .replace(/([ \t]+)/g, (_match, g1) => '&nbsp;'.repeat(g1.length)) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
             .replace(/\>/gm, '\\>') // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
             .replace(/\n/g, newlineStyle === 1 /* MarkdownStringTextNewlineStyle.Break */ ? '\\\n' : '\n\n'); // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
@@ -37,11 +37,7 @@ export class MarkdownString {
         return this;
     }
     appendCodeblock(langId, code) {
-        this.value += '\n```';
-        this.value += langId;
-        this.value += '\n';
-        this.value += code;
-        this.value += '\n```\n';
+        this.value += `\n${appendEscapedMarkdownCodeBlockFence(code, langId)}\n`;
         return this;
     }
     appendLink(target, label, title) {
@@ -107,6 +103,20 @@ export function markdownStringEqual(a, b) {
 export function escapeMarkdownSyntaxTokens(text) {
     // escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash
     return text.replace(/[\\`*_{}[\]()#+\-!~]/g, '\\$&'); // CodeQL [SM02383] Backslash is escaped in the character class
+}
+/**
+ * @see https://github.com/microsoft/vscode/issues/193746
+ */
+export function appendEscapedMarkdownCodeBlockFence(code, langId) {
+    var _a, _b;
+    const longestFenceLength = (_b = (_a = code.match(/^`+/gm)) === null || _a === void 0 ? void 0 : _a.reduce((a, b) => (a.length > b.length ? a : b)).length) !== null && _b !== void 0 ? _b : 0;
+    const desiredFenceLength = longestFenceLength >= 3 ? longestFenceLength + 1 : 3;
+    // the markdown result
+    return [
+        `${'`'.repeat(desiredFenceLength)}${langId}`,
+        code,
+        `${'`'.repeat(desiredFenceLength)}`,
+    ].join('\n');
 }
 export function escapeDoubleQuotes(input) {
     return input.replace(/"/g, '&quot;');

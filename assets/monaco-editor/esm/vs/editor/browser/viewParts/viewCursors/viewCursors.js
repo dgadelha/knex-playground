@@ -4,18 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 import './viewCursors.css';
 import { createFastDomNode } from '../../../../base/browser/fastDomNode.js';
-import { IntervalTimer, TimeoutTimer } from '../../../../base/common/async.js';
+import { TimeoutTimer } from '../../../../base/common/async.js';
 import { ViewPart } from '../../view/viewPart.js';
 import { ViewCursor } from './viewCursor.js';
 import { TextEditorCursorStyle } from '../../../common/config/editorOptions.js';
 import { editorCursorBackground, editorCursorForeground } from '../../../common/core/editorColorRegistry.js';
 import { registerThemingParticipant } from '../../../../platform/theme/common/themeService.js';
 import { isHighContrast } from '../../../../platform/theme/common/theme.js';
+import { WindowIntervalTimer, getWindow } from '../../../../base/browser/dom.js';
 export class ViewCursors extends ViewPart {
     constructor(context) {
         super(context);
         const options = this._context.configuration.options;
-        this._readOnly = options.get(90 /* EditorOption.readOnly */);
+        this._readOnly = options.get(91 /* EditorOption.readOnly */);
         this._cursorBlinking = options.get(26 /* EditorOption.cursorBlinking */);
         this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
         this._cursorSmoothCaretAnimation = options.get(27 /* EditorOption.cursorSmoothCaretAnimation */);
@@ -31,7 +32,7 @@ export class ViewCursors extends ViewPart {
         this._updateDomClassName();
         this._domNode.appendChild(this._primaryCursor.getDomNode());
         this._startCursorBlinkAnimation = new TimeoutTimer();
-        this._cursorFlatBlinkInterval = new IntervalTimer();
+        this._cursorFlatBlinkInterval = new WindowIntervalTimer();
         this._blinkingEnabled = false;
         this._editorHasFocus = false;
         this._updateBlinking();
@@ -57,7 +58,7 @@ export class ViewCursors extends ViewPart {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        this._readOnly = options.get(90 /* EditorOption.readOnly */);
+        this._readOnly = options.get(91 /* EditorOption.readOnly */);
         this._cursorBlinking = options.get(26 /* EditorOption.cursorBlinking */);
         this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
         this._cursorSmoothCaretAnimation = options.get(27 /* EditorOption.cursorSmoothCaretAnimation */);
@@ -194,7 +195,7 @@ export class ViewCursors extends ViewPart {
                     else {
                         this._show();
                     }
-                }, ViewCursors.BLINK_INTERVAL);
+                }, ViewCursors.BLINK_INTERVAL, getWindow(this._domNode.domNode));
             }
             else {
                 this._startCursorBlinkAnimation.setIfNotSet(() => {

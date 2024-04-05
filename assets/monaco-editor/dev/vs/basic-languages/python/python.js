@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/python/python", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -18,7 +18,7 @@ var moduleExports = (() => {
   }) : x)(function(x) {
     if (typeof require !== "undefined")
       return require.apply(this, arguments);
-    throw new Error('Dynamic require of "' + x + '" is not supported');
+    throw Error('Dynamic require of "' + x + '" is not supported');
   });
   var __commonJS = (cb, mod) => function __require2() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -36,7 +36,14 @@ var moduleExports = (() => {
     return to;
   };
   var __reExport = (target, mod, secondTarget) => (__copyProps(target, mod, "default"), secondTarget && __copyProps(secondTarget, mod, "default"));
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target, mod));
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
   // src/fillers/monaco-editor-core-amd.ts
@@ -85,7 +92,9 @@ var moduleExports = (() => {
     ],
     onEnterRules: [
       {
-        beforeText: new RegExp("^\\s*(?:def|class|for|if|elif|else|while|try|with|finally|except|async|match|case).*?:\\s*$"),
+        beforeText: new RegExp(
+          "^\\s*(?:def|class|for|if|elif|else|while|try|with|finally|except|async|match|case).*?:\\s*$"
+        ),
         action: { indentAction: monaco_editor_core_exports.languages.IndentAction.Indent }
       }
     ],
@@ -101,17 +110,29 @@ var moduleExports = (() => {
     defaultToken: "",
     tokenPostfix: ".python",
     keywords: [
+      // This section is the result of running
+      // `import keyword; for k in sorted(keyword.kwlist + keyword.softkwlist): print("  '" + k + "',")`
+      // in a Python REPL,
+      // though note that the output from Python 3 is not a strict superset of the
+      // output from Python 2.
       "False",
+      // promoted to keyword.kwlist in Python 3
       "None",
+      // promoted to keyword.kwlist in Python 3
       "True",
+      // promoted to keyword.kwlist in Python 3
       "_",
+      // new in Python 3.10
       "and",
       "as",
       "assert",
       "async",
+      // new in Python 3
       "await",
+      // new in Python 3
       "break",
       "case",
+      // new in Python 3.10
       "class",
       "continue",
       "def",
@@ -120,6 +141,7 @@ var moduleExports = (() => {
       "else",
       "except",
       "exec",
+      // Python 2, but not 3.
       "finally",
       "for",
       "from",
@@ -130,14 +152,19 @@ var moduleExports = (() => {
       "is",
       "lambda",
       "match",
+      // new in Python 3.10
       "nonlocal",
+      // new in Python 3
       "not",
       "or",
       "pass",
       "print",
+      // Python 2, but not 3.
       "raise",
       "return",
       "try",
+      "type",
+      // new in Python 3.12
       "while",
       "with",
       "yield",
@@ -257,6 +284,7 @@ var moduleExports = (() => {
           }
         ]
       ],
+      // Deal with white space, including single and multi-line comments
       whitespace: [
         [/\s+/, "white"],
         [/(^#.*$)/, "comment"],
@@ -275,10 +303,12 @@ var moduleExports = (() => {
         [/"""/, "string", "@popall"],
         [/"/, "string"]
       ],
+      // Recognize hex, negatives, decimals, imaginaries, longs, and scientific notation
       numbers: [
         [/-?0x([abcdef]|[ABCDEF]|\d)+[lL]?/, "number.hex"],
         [/-?(\d*\.)?\d+([eE][+\-]?\d+)?[jJ]?[lL]?/, "number"]
       ],
+      // Recognize strings, including those broken across lines with \ (but not without)
       strings: [
         [/'$/, "string.escape", "@popall"],
         [/'/, "string.escape", "@stringBody"],

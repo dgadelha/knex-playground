@@ -17,6 +17,7 @@ import { ContextKeyExpr, IContextKeyService, RawContextKey } from '../../context
 import { KeybindingsRegistry } from '../../keybinding/common/keybindingsRegistry.js';
 import { localize } from '../../../nls.js';
 import { DisposableStore, toDisposable } from '../../../base/common/lifecycle.js';
+import { isActiveElement } from '../../../base/browser/dom.js';
 export const historyNavigationVisible = new RawContextKey('suggestWidgetVisible', false, localize('suggestWidgetVisible', "Whether suggestion are visible"));
 const HistoryNavigationWidgetFocusContext = 'historyNavigationWidgetFocus';
 const HistoryNavigationForwardsEnablementContext = 'historyNavigationForwardsEnabled';
@@ -43,7 +44,7 @@ export function registerAndCreateHistoryNavigationContext(scopedContextKeyServic
         }
     };
     // Check for currently being focused
-    if (widget.element === document.activeElement) {
+    if (isActiveElement(widget.element)) {
         onDidFocus();
     }
     disposableStore.add(widget.onDidFocus(() => onDidFocus()));

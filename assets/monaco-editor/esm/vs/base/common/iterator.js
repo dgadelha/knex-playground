@@ -79,9 +79,7 @@ export var Iterable;
     Iterable.map = map;
     function* concat(...iterables) {
         for (const iterable of iterables) {
-            for (const element of iterable) {
-                yield element;
-            }
+            yield* iterable;
         }
     }
     Iterable.concat = concat;
@@ -131,4 +129,12 @@ export var Iterable;
         return [consumed, { [Symbol.iterator]() { return iterator; } }];
     }
     Iterable.consume = consume;
+    async function asyncToArray(iterable) {
+        const result = [];
+        for await (const item of iterable) {
+            result.push(item);
+        }
+        return Promise.resolve(result);
+    }
+    Iterable.asyncToArray = asyncToArray;
 })(Iterable || (Iterable = {}));

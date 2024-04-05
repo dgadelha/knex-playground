@@ -17,9 +17,9 @@ export class IndentGuidesOverlay extends DynamicViewOverlay {
         this._context = context;
         this._primaryPosition = null;
         const options = this._context.configuration.options;
-        const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
+        const wrappingInfo = options.get(145 /* EditorOption.wrappingInfo */);
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this._spaceWidth = fontInfo.spaceWidth;
         this._maxIndentLeft = wrappingInfo.wrappingColumn === -1 ? -1 : (wrappingInfo.wrappingColumn * fontInfo.typicalHalfwidthCharacterWidth);
         this._bracketPairGuideOptions = options.get(16 /* EditorOption.guides */);
@@ -34,9 +34,9 @@ export class IndentGuidesOverlay extends DynamicViewOverlay {
     // --- begin event handlers
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
+        const wrappingInfo = options.get(145 /* EditorOption.wrappingInfo */);
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this._spaceWidth = fontInfo.spaceWidth;
         this._maxIndentLeft = wrappingInfo.wrappingColumn === -1 ? -1 : (wrappingInfo.wrappingColumn * fontInfo.typicalHalfwidthCharacterWidth);
         this._bracketPairGuideOptions = options.get(16 /* EditorOption.guides */);

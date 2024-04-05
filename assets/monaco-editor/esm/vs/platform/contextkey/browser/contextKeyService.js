@@ -30,7 +30,7 @@ export class Context {
         this._value['_contextId'] = id;
     }
     get value() {
-        return Object.assign({}, this._value);
+        return { ...this._value };
     }
     setValue(key, value) {
         // console.log('SET ' + key + ' = ' + value + ' ON ' + this._id);
@@ -413,7 +413,7 @@ CommandsRegistry.registerCommand({
     handler() {
         return [...RawContextKey.all()].sort((a, b) => a.key.localeCompare(b.key));
     },
-    description: {
+    metadata: {
         description: localize('getContextKeyInfo', "A command that returns information about context keys"),
         args: []
     }

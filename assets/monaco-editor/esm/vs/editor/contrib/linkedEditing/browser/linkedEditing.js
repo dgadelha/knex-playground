@@ -11,19 +11,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var LinkedEditingContribution_1;
 import * as arrays from '../../../../base/common/arrays.js';
-import { createCancelablePromise, Delayer, first } from '../../../../base/common/async.js';
-import { CancellationToken } from '../../../../base/common/cancellation.js';
+import { Delayer, first } from '../../../../base/common/async.js';
+import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { Color } from '../../../../base/common/color.js';
 import { isCancellationError, onUnexpectedError, onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { Event } from '../../../../base/common/event.js';
@@ -67,12 +58,12 @@ let LinkedEditingContribution = LinkedEditingContribution_1 = class LinkedEditin
         this._localToDispose = this._register(new DisposableStore());
         this._rangeUpdateTriggerPromise = null;
         this._rangeSyncTriggerPromise = null;
-        this._currentRequest = null;
+        this._currentRequestCts = null;
         this._currentRequestPosition = null;
         this._currentRequestModelVersion = null;
         this._register(this._editor.onDidChangeModel(() => this.reinitialize(true)));
         this._register(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(69 /* EditorOption.linkedEditing */) || e.hasChanged(92 /* EditorOption.renameOnType */)) {
+            if (e.hasChanged(70 /* EditorOption.linkedEditing */) || e.hasChanged(93 /* EditorOption.renameOnType */)) {
                 this.reinitialize(false);
             }
         }));
@@ -82,7 +73,7 @@ let LinkedEditingContribution = LinkedEditingContribution_1 = class LinkedEditin
     }
     reinitialize(forceRefresh) {
         const model = this._editor.getModel();
-        const isEnabled = model !== null && (this._editor.getOption(69 /* EditorOption.linkedEditing */) || this._editor.getOption(92 /* EditorOption.renameOnType */)) && this._providers.has(model);
+        const isEnabled = model !== null && (this._editor.getOption(70 /* EditorOption.linkedEditing */) || this._editor.getOption(93 /* EditorOption.renameOnType */)) && this._providers.has(model);
         if (isEnabled === this._enabled && !forceRefresh) {
             return;
         }
@@ -200,93 +191,88 @@ let LinkedEditingContribution = LinkedEditingContribution_1 = class LinkedEditin
     clearRanges() {
         this._visibleContextKey.set(false);
         this._currentDecorations.clear();
-        if (this._currentRequest) {
-            this._currentRequest.cancel();
-            this._currentRequest = null;
+        if (this._currentRequestCts) {
+            this._currentRequestCts.cancel();
+            this._currentRequestCts = null;
             this._currentRequestPosition = null;
         }
     }
-    updateRanges(force = false) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this._editor.hasModel()) {
-                this.clearRanges();
-                return;
-            }
-            const position = this._editor.getPosition();
-            if (!this._enabled && !force || this._editor.getSelections().length > 1) {
-                // disabled or multicursor
-                this.clearRanges();
-                return;
-            }
-            const model = this._editor.getModel();
-            const modelVersionId = model.getVersionId();
-            if (this._currentRequestPosition && this._currentRequestModelVersion === modelVersionId) {
-                if (position.equals(this._currentRequestPosition)) {
-                    return; // same position
-                }
-                if (this._currentDecorations.length > 0) {
-                    const range = this._currentDecorations.getRange(0);
-                    if (range && range.containsPosition(position)) {
-                        return; // just moving inside the existing primary range
-                    }
-                }
-            }
-            // Clear existing decorations while we compute new ones
+    async updateRanges(force = false) {
+        if (!this._editor.hasModel()) {
             this.clearRanges();
-            this._currentRequestPosition = position;
-            this._currentRequestModelVersion = modelVersionId;
-            const request = createCancelablePromise((token) => __awaiter(this, void 0, void 0, function* () {
-                try {
-                    const sw = new StopWatch(false);
-                    const response = yield getLinkedEditingRanges(this._providers, model, position, token);
-                    this._debounceInformation.update(model, sw.elapsed());
-                    if (request !== this._currentRequest) {
-                        return;
-                    }
-                    this._currentRequest = null;
-                    if (modelVersionId !== model.getVersionId()) {
-                        return;
-                    }
-                    let ranges = [];
-                    if (response === null || response === void 0 ? void 0 : response.ranges) {
-                        ranges = response.ranges;
-                    }
-                    this._currentWordPattern = (response === null || response === void 0 ? void 0 : response.wordPattern) || this._languageWordPattern;
-                    let foundReferenceRange = false;
-                    for (let i = 0, len = ranges.length; i < len; i++) {
-                        if (Range.containsPosition(ranges[i], position)) {
-                            foundReferenceRange = true;
-                            if (i !== 0) {
-                                const referenceRange = ranges[i];
-                                ranges.splice(i, 1);
-                                ranges.unshift(referenceRange);
-                            }
-                            break;
-                        }
-                    }
-                    if (!foundReferenceRange) {
-                        // Cannot do linked editing if the ranges are not where the cursor is...
-                        this.clearRanges();
-                        return;
-                    }
-                    const decorations = ranges.map(range => ({ range: range, options: LinkedEditingContribution_1.DECORATION }));
-                    this._visibleContextKey.set(true);
-                    this._currentDecorations.set(decorations);
-                    this._syncRangesToken++; // cancel any pending syncRanges call
+            return;
+        }
+        const position = this._editor.getPosition();
+        if (!this._enabled && !force || this._editor.getSelections().length > 1) {
+            // disabled or multicursor
+            this.clearRanges();
+            return;
+        }
+        const model = this._editor.getModel();
+        const modelVersionId = model.getVersionId();
+        if (this._currentRequestPosition && this._currentRequestModelVersion === modelVersionId) {
+            if (position.equals(this._currentRequestPosition)) {
+                return; // same position
+            }
+            if (this._currentDecorations.length > 0) {
+                const range = this._currentDecorations.getRange(0);
+                if (range && range.containsPosition(position)) {
+                    return; // just moving inside the existing primary range
                 }
-                catch (err) {
-                    if (!isCancellationError(err)) {
-                        onUnexpectedError(err);
+            }
+        }
+        // Clear existing decorations while we compute new ones
+        this.clearRanges();
+        this._currentRequestPosition = position;
+        this._currentRequestModelVersion = modelVersionId;
+        const currentRequestCts = this._currentRequestCts = new CancellationTokenSource();
+        try {
+            const sw = new StopWatch(false);
+            const response = await getLinkedEditingRanges(this._providers, model, position, currentRequestCts.token);
+            this._debounceInformation.update(model, sw.elapsed());
+            if (currentRequestCts !== this._currentRequestCts) {
+                return;
+            }
+            this._currentRequestCts = null;
+            if (modelVersionId !== model.getVersionId()) {
+                return;
+            }
+            let ranges = [];
+            if (response === null || response === void 0 ? void 0 : response.ranges) {
+                ranges = response.ranges;
+            }
+            this._currentWordPattern = (response === null || response === void 0 ? void 0 : response.wordPattern) || this._languageWordPattern;
+            let foundReferenceRange = false;
+            for (let i = 0, len = ranges.length; i < len; i++) {
+                if (Range.containsPosition(ranges[i], position)) {
+                    foundReferenceRange = true;
+                    if (i !== 0) {
+                        const referenceRange = ranges[i];
+                        ranges.splice(i, 1);
+                        ranges.unshift(referenceRange);
                     }
-                    if (this._currentRequest === request || !this._currentRequest) {
-                        // stop if we are still the latest request
-                        this.clearRanges();
-                    }
+                    break;
                 }
-            }));
-            this._currentRequest = request;
-            return request;
-        });
+            }
+            if (!foundReferenceRange) {
+                // Cannot do linked editing if the ranges are not where the cursor is...
+                this.clearRanges();
+                return;
+            }
+            const decorations = ranges.map(range => ({ range: range, options: LinkedEditingContribution_1.DECORATION }));
+            this._visibleContextKey.set(true);
+            this._currentDecorations.set(decorations);
+            this._syncRangesToken++; // cancel any pending syncRanges call
+        }
+        catch (err) {
+            if (!isCancellationError(err)) {
+                onUnexpectedError(err);
+            }
+            if (this._currentRequestCts === currentRequestCts || !this._currentRequestCts) {
+                // stop if we are still the latest request
+                this.clearRanges();
+            }
+        }
     }
 };
 LinkedEditingContribution.ID = 'editor.contrib.linkedEditing';
@@ -358,15 +344,15 @@ function getLinkedEditingRanges(providers, model, position, token) {
     // in order of score ask the linked editing range provider
     // until someone response with a good result
     // (good = not null)
-    return first(orderedByScore.map(provider => () => __awaiter(this, void 0, void 0, function* () {
+    return first(orderedByScore.map(provider => async () => {
         try {
-            return yield provider.provideLinkedEditingRanges(model, position, token);
+            return await provider.provideLinkedEditingRanges(model, position, token);
         }
         catch (e) {
             onUnexpectedExternalError(e);
             return undefined;
         }
-    })), result => !!result && arrays.isNonEmptyArray(result === null || result === void 0 ? void 0 : result.ranges));
+    }), result => !!result && arrays.isNonEmptyArray(result === null || result === void 0 ? void 0 : result.ranges));
 }
 export const editorLinkedEditingBackground = registerColor('editor.linkedEditingBackground', { dark: Color.fromHex('#f00').transparent(0.3), light: Color.fromHex('#f00').transparent(0.3), hcDark: Color.fromHex('#f00').transparent(0.3), hcLight: Color.white }, nls.localize('editorLinkedEditingBackground', 'Background color when the editor auto renames on type.'));
 registerModelAndPositionCommand('_executeLinkedEditingProvider', (_accessor, model, position) => {

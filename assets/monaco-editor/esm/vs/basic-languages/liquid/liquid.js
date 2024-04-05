@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -68,14 +68,20 @@ var conf = {
   ],
   onEnterRules: [
     {
-      beforeText: new RegExp(`<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, "i"),
+      beforeText: new RegExp(
+        `<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`,
+        "i"
+      ),
       afterText: /^<\/(\w[\w\d]*)\s*>$/i,
       action: {
         indentAction: monaco_editor_core_exports.languages.IndentAction.IndentOutdent
       }
     },
     {
-      beforeText: new RegExp(`<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`, "i"),
+      beforeText: new RegExp(
+        `<(?!(?:${EMPTY_ELEMENTS.join("|")}))(\\w[\\w\\d]*)([^/>]*(?!/)>)[^<]*$`,
+        "i"
+      ),
       action: { indentAction: monaco_editor_core_exports.languages.IndentAction.Indent }
     }
   ]
@@ -176,6 +182,7 @@ var language = {
       [/</, "delimiter.html"],
       [/\{/, "delimiter.html"],
       [/[^<{]+/]
+      // text
     ],
     comment: [
       [/\{\%\s*endcomment\s*\%\}/, "comment.end.liquid", "@pop"],
@@ -202,6 +209,7 @@ var language = {
       [/[\w\-]+/, "attribute.name"],
       [/=/, "delimiter"],
       [/[ \t\r\n]+/]
+      // whitespace
     ],
     liquidState: [
       [/\{\{/, "delimiter.output.liquid"],

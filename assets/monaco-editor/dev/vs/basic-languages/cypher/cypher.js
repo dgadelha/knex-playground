@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/cypher/cypher", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -182,18 +182,21 @@ var moduleExports = (() => {
       "type"
     ],
     operators: [
+      // Math operators
       "+",
       "-",
       "*",
       "/",
       "%",
       "^",
+      // Comparison operators
       "=",
       "<>",
       "<",
       ">",
       "<=",
       ">=",
+      // Pattern operators
       "->",
       "<-",
       "-->",
@@ -209,6 +212,7 @@ var moduleExports = (() => {
         { include: "@whitespace" },
         { include: "@numbers" },
         { include: "@strings" },
+        // Cypher labels on nodes/relationships, e.g. (n:NodeLabel)-[e:RelationshipLabel]
         [/:[a-zA-Z_][\w]*/, "type.identifier"],
         [
           /[a-zA-Z_][\w]*(?=\()/,
@@ -229,6 +233,7 @@ var moduleExports = (() => {
           }
         ],
         [/`/, "identifier.escape", "@identifierBacktick"],
+        // delimiter and operator after number because of `.\d` floats and `:` in labels
         [/[;,.:|]/, "delimiter"],
         [
           /[<>=%+\-*/^]+/,
@@ -249,7 +254,9 @@ var moduleExports = (() => {
       ],
       strings: [
         [/"([^"\\]|\\.)*$/, "string.invalid"],
+        // non-teminated string
         [/'([^'\\]|\\.)*$/, "string.invalid"],
+        // non-teminated string
         [/"/, "string", "@stringDouble"],
         [/'/, "string", "@stringSingle"]
       ],

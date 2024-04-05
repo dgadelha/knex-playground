@@ -6,6 +6,7 @@ import './lineNumbers.css';
 import * as platform from '../../../../base/common/platform.js';
 import { DynamicViewOverlay } from '../../view/dynamicViewOverlay.js';
 import { Position } from '../../../common/core/position.js';
+import { Range } from '../../../common/core/range.js';
 import { registerThemingParticipant } from '../../../../platform/theme/common/themeService.js';
 import { editorDimmedLineNumber, editorLineNumbers } from '../../../common/core/editorColorRegistry.js';
 export class LineNumbersOverlay extends DynamicViewOverlay {
@@ -20,12 +21,12 @@ export class LineNumbersOverlay extends DynamicViewOverlay {
     }
     _readConfig() {
         const options = this._context.configuration.options;
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
-        const lineNumbers = options.get(67 /* EditorOption.lineNumbers */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
+        const lineNumbers = options.get(68 /* EditorOption.lineNumbers */);
         this._renderLineNumbers = lineNumbers.renderType;
         this._renderCustomLineNumbers = lineNumbers.renderFn;
-        this._renderFinalNewline = options.get(94 /* EditorOption.renderFinalNewline */);
-        const layoutInfo = options.get(143 /* EditorOption.layoutInfo */);
+        this._renderFinalNewline = options.get(95 /* EditorOption.renderFinalNewline */);
+        const layoutInfo = options.get(144 /* EditorOption.layoutInfo */);
         this._lineNumbersLeft = layoutInfo.lineNumbersLeft;
         this._lineNumbersWidth = layoutInfo.lineNumbersWidth;
     }
@@ -70,6 +71,9 @@ export class LineNumbersOverlay extends DynamicViewOverlay {
     onZonesChanged(e) {
         return true;
     }
+    onDecorationsChanged(e) {
+        return e.affectsLineNumber;
+    }
     // --- end event handlers
     _getLineRenderLineNumber(viewLineNumber) {
         const modelPosition = this._context.viewModel.coordinatesConverter.convertViewPositionToModelPosition(new Position(viewLineNumber, 1));
@@ -106,30 +110,42 @@ export class LineNumbersOverlay extends DynamicViewOverlay {
         const lineHeightClassName = (platform.isLinux ? (this._lineHeight % 2 === 0 ? ' lh-even' : ' lh-odd') : '');
         const visibleStartLineNumber = ctx.visibleRange.startLineNumber;
         const visibleEndLineNumber = ctx.visibleRange.endLineNumber;
+        const lineNoDecorations = this._context.viewModel.getDecorationsInViewport(ctx.visibleRange).filter(d => !!d.options.lineNumberClassName);
+        lineNoDecorations.sort((a, b) => Range.compareRangesUsingEnds(a.range, b.range));
+        let decorationStartIndex = 0;
         const lineCount = this._context.viewModel.getLineCount();
         const output = [];
         for (let lineNumber = visibleStartLineNumber; lineNumber <= visibleEndLineNumber; lineNumber++) {
             const lineIndex = lineNumber - visibleStartLineNumber;
-            const renderLineNumber = this._getLineRenderLineNumber(lineNumber);
-            if (!renderLineNumber) {
+            let renderLineNumber = this._getLineRenderLineNumber(lineNumber);
+            let extraClassNames = '';
+            // skip decorations whose end positions we've already passed
+            while (decorationStartIndex < lineNoDecorations.length && lineNoDecorations[decorationStartIndex].range.endLineNumber < lineNumber) {
+                decorationStartIndex++;
+            }
+            for (let i = decorationStartIndex; i < lineNoDecorations.length; i++) {
+                const { range, options } = lineNoDecorations[i];
+                if (range.startLineNumber <= lineNumber) {
+                    extraClassNames += ' ' + options.lineNumberClassName;
+                }
+            }
+            if (!renderLineNumber && !extraClassNames) {
                 output[lineIndex] = '';
                 continue;
             }
-            let extraClassName = '';
             if (lineNumber === lineCount && this._context.viewModel.getLineLength(lineNumber) === 0) {
                 // this is the last line
                 if (this._renderFinalNewline === 'off') {
-                    output[lineIndex] = '';
-                    continue;
+                    renderLineNumber = '';
                 }
                 if (this._renderFinalNewline === 'dimmed') {
-                    extraClassName = ' dimmed-line-number';
+                    extraClassNames += ' dimmed-line-number';
                 }
             }
             if (lineNumber === this._activeLineNumber) {
-                extraClassName = ' active-line-number';
+                extraClassNames += ' active-line-number';
             }
-            output[lineIndex] = (`<div class="${LineNumbersOverlay.CLASS_NAME}${lineHeightClassName}${extraClassName}" style="left:${this._lineNumbersLeft}px;width:${this._lineNumbersWidth}px;">${renderLineNumber}</div>`);
+            output[lineIndex] = (`<div class="${LineNumbersOverlay.CLASS_NAME}${lineHeightClassName}${extraClassNames}" style="left:${this._lineNumbersLeft}px;width:${this._lineNumbersWidth}px;">${renderLineNumber}</div>`);
         }
         this._renderResult = output;
     }

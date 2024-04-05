@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { getZoomFactor } from '../../browser.js';
+import { getZoomFactor, isChrome } from '../../browser.js';
 import * as dom from '../../dom.js';
 import { createFastDomNode } from '../../fastDomNode.js';
 import { StandardWheelEvent } from '../../mouseEvent.js';
@@ -56,11 +56,12 @@ export class MouseWheelClassifier {
         return (score <= 0.5);
     }
     acceptStandardWheelEvent(e) {
-        const osZoomFactor = window.devicePixelRatio / getZoomFactor();
-        if (platform.isWindows || platform.isLinux) {
-            // On Windows and Linux, the incoming delta events are multiplied with the OS zoom factor.
+        if (isChrome) {
+            const targetWindow = dom.getWindow(e.browserEvent);
+            const pageZoomFactor = getZoomFactor(targetWindow);
+            // On Chrome, the incoming delta events are multiplied with the OS zoom factor.
             // The OS zoom factor can be reverse engineered by using the device pixel ratio and the configured zoom factor into account.
-            this.accept(Date.now(), e.deltaX / osZoomFactor, e.deltaY / osZoomFactor);
+            this.accept(Date.now(), e.deltaX * pageZoomFactor, e.deltaY * pageZoomFactor);
         }
         else {
             this.accept(Date.now(), e.deltaX, e.deltaY);
@@ -443,7 +444,7 @@ export class ScrollableElement extends AbstractScrollableElement {
         const scrollable = new Scrollable({
             forceIntegerValues: true,
             smoothScrollDuration: 0,
-            scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(callback)
+            scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(dom.getWindow(element), callback)
         });
         super(element, options, scrollable);
         this._register(scrollable);
@@ -475,7 +476,7 @@ export class DomScrollableElement extends AbstractScrollableElement {
         const scrollable = new Scrollable({
             forceIntegerValues: false, // See https://github.com/microsoft/vscode/issues/139877
             smoothScrollDuration: 0,
-            scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(callback)
+            scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(dom.getWindow(element), callback)
         });
         super(element, options, scrollable);
         this._register(scrollable);

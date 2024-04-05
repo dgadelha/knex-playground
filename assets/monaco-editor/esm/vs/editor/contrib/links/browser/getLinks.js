@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { coalesce } from '../../../../base/common/arrays.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
@@ -42,23 +33,21 @@ export class Link {
     get tooltip() {
         return this._link.tooltip;
     }
-    resolve(token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._link.url) {
-                return this._link.url;
-            }
-            if (typeof this._provider.resolveLink === 'function') {
-                return Promise.resolve(this._provider.resolveLink(this._link, token)).then(value => {
-                    this._link = value || this._link;
-                    if (this._link.url) {
-                        // recurse
-                        return this.resolve(token);
-                    }
-                    return Promise.reject(new Error('missing'));
-                });
-            }
-            return Promise.reject(new Error('missing'));
-        });
+    async resolve(token) {
+        if (this._link.url) {
+            return this._link.url;
+        }
+        if (typeof this._provider.resolveLink === 'function') {
+            return Promise.resolve(this._provider.resolveLink(this._link, token)).then(value => {
+                this._link = value || this._link;
+                if (this._link.url) {
+                    // recurse
+                    return this.resolve(token);
+                }
+                return Promise.reject(new Error('missing'));
+            });
+        }
+        return Promise.reject(new Error('missing'));
     }
 }
 export class LinksList {
@@ -135,7 +124,7 @@ export function getLinks(providers, model, token) {
         return new LinksList([]);
     });
 }
-CommandsRegistry.registerCommand('_executeLinkProvider', (accessor, ...args) => __awaiter(void 0, void 0, void 0, function* () {
+CommandsRegistry.registerCommand('_executeLinkProvider', async (accessor, ...args) => {
     let [uri, resolveCount] = args;
     assertType(uri instanceof URI);
     if (typeof resolveCount !== 'number') {
@@ -146,15 +135,15 @@ CommandsRegistry.registerCommand('_executeLinkProvider', (accessor, ...args) => 
     if (!model) {
         return [];
     }
-    const list = yield getLinks(linkProvider, model, CancellationToken.None);
+    const list = await getLinks(linkProvider, model, CancellationToken.None);
     if (!list) {
         return [];
     }
     // resolve links
     for (let i = 0; i < Math.min(resolveCount, list.links.length); i++) {
-        yield list.links[i].resolve(CancellationToken.None);
+        await list.links[i].resolve(CancellationToken.None);
     }
     const result = list.links.slice(0);
     list.dispose();
     return result;
-}));
+});

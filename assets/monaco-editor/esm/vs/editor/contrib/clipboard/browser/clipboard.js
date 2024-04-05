@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import * as browser from '../../../../base/browser/browser.js';
 import { getActiveDocument } from '../../../../base/browser/dom.js';
 import * as platform from '../../../../base/common/platform.js';
@@ -18,6 +9,7 @@ import { CopyOptions, InMemoryClipboardMetadataManager } from '../../../browser/
 import { EditorAction, MultiCommand, registerEditorAction } from '../../../browser/editorExtensions.js';
 import { ICodeEditorService } from '../../../browser/services/codeEditorService.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
+import { CopyPasteController } from '../../dropOrPasteInto/browser/copyPasteController.js';
 import * as nls from '../../../../nls.js';
 import { MenuId, MenuRegistry } from '../../../../platform/actions/common/actions.js';
 import { IClipboardService } from '../../../../platform/clipboard/common/clipboardService.js';
@@ -101,11 +93,11 @@ export const CopyAction = supportsCopy ? registerCommand(new MultiCommand({
             order: 2,
         }]
 })) : undefined;
-MenuRegistry.appendMenuItem(MenuId.MenubarEditMenu, { submenu: MenuId.MenubarCopy, title: { value: nls.localize('copy as', "Copy As"), original: 'Copy As', }, group: '2_ccp', order: 3 });
-MenuRegistry.appendMenuItem(MenuId.EditorContext, { submenu: MenuId.EditorContextCopy, title: { value: nls.localize('copy as', "Copy As"), original: 'Copy As', }, group: CLIPBOARD_CONTEXT_MENU_GROUP, order: 3 });
-MenuRegistry.appendMenuItem(MenuId.EditorContext, { submenu: MenuId.EditorContextShare, title: { value: nls.localize('share', "Share"), original: 'Share', }, group: '11_share', order: -1, when: ContextKeyExpr.and(ContextKeyExpr.notEquals('resourceScheme', 'output'), EditorContextKeys.editorTextFocus) });
-MenuRegistry.appendMenuItem(MenuId.EditorTitleContext, { submenu: MenuId.EditorTitleContextShare, title: { value: nls.localize('share', "Share"), original: 'Share', }, group: '11_share', order: -1 });
-MenuRegistry.appendMenuItem(MenuId.ExplorerContext, { submenu: MenuId.ExplorerContextShare, title: { value: nls.localize('share', "Share"), original: 'Share', }, group: '11_share', order: -1 });
+MenuRegistry.appendMenuItem(MenuId.MenubarEditMenu, { submenu: MenuId.MenubarCopy, title: nls.localize2('copy as', "Copy As"), group: '2_ccp', order: 3 });
+MenuRegistry.appendMenuItem(MenuId.EditorContext, { submenu: MenuId.EditorContextCopy, title: nls.localize2('copy as', "Copy As"), group: CLIPBOARD_CONTEXT_MENU_GROUP, order: 3 });
+MenuRegistry.appendMenuItem(MenuId.EditorContext, { submenu: MenuId.EditorContextShare, title: nls.localize2('share', "Share"), group: '11_share', order: -1, when: ContextKeyExpr.and(ContextKeyExpr.notEquals('resourceScheme', 'output'), EditorContextKeys.editorTextFocus) });
+MenuRegistry.appendMenuItem(MenuId.EditorTitleContext, { submenu: MenuId.EditorTitleContextShare, title: nls.localize2('share', "Share"), group: '11_share', order: -1 });
+MenuRegistry.appendMenuItem(MenuId.ExplorerContext, { submenu: MenuId.ExplorerContextShare, title: nls.localize2('share', "Share"), group: '11_share', order: -1 });
 export const PasteAction = supportsPaste ? registerCommand(new MultiCommand({
     id: 'editor.action.clipboardPasteAction',
     precondition: undefined,
@@ -201,16 +193,20 @@ registerExecCommandImpl(CopyAction, 'copy');
 if (PasteAction) {
     // 1. Paste: handle case when focus is in editor.
     PasteAction.addImplementation(10000, 'code-editor', (accessor, args) => {
+        var _a, _b;
         const codeEditorService = accessor.get(ICodeEditorService);
         const clipboardService = accessor.get(IClipboardService);
         // Only if editor text focus (i.e. not if editor has widget focus).
         const focusedEditor = codeEditorService.getFocusedCodeEditor();
         if (focusedEditor && focusedEditor.hasTextFocus()) {
             const result = focusedEditor.getContainerDomNode().ownerDocument.execCommand('paste');
-            // Use the clipboard service if document.execCommand('paste') was not successful
-            if (!result && platform.isWeb) {
-                return (() => __awaiter(void 0, void 0, void 0, function* () {
-                    const clipboardText = yield clipboardService.readText();
+            if (result) {
+                return (_b = (_a = CopyPasteController.get(focusedEditor)) === null || _a === void 0 ? void 0 : _a.finishedPaste()) !== null && _b !== void 0 ? _b : Promise.resolve();
+            }
+            else if (platform.isWeb) {
+                // Use the clipboard service if document.execCommand('paste') was not successful
+                return (async () => {
+                    const clipboardText = await clipboardService.readText();
                     if (clipboardText !== '') {
                         const metadata = InMemoryClipboardMetadataManager.INSTANCE.get(clipboardText);
                         let pasteOnNewLine = false;
@@ -228,7 +224,7 @@ if (PasteAction) {
                             mode
                         });
                     }
-                }))();
+                })();
             }
             return true;
         }

@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { matchesSubString } from '../../../../base/common/filters.js';
 import { Disposable, MutableDisposable } from '../../../../base/common/lifecycle.js';
@@ -58,17 +49,17 @@ let InlineCompletionsSource = class InlineCompletionsSource extends Disposable {
         const updateOngoing = !!this._updateOperation.value;
         this._updateOperation.clear();
         const source = new CancellationTokenSource();
-        const promise = (() => __awaiter(this, void 0, void 0, function* () {
+        const promise = (async () => {
             const shouldDebounce = updateOngoing || context.triggerKind === InlineCompletionTriggerKind.Automatic;
             if (shouldDebounce) {
                 // This debounces the operation
-                yield wait(this._debounceValue.get(this.textModel));
+                await wait(this._debounceValue.get(this.textModel), source.token);
             }
             if (source.token.isCancellationRequested || this.textModel.getVersionId() !== request.versionId) {
                 return false;
             }
             const startTime = new Date();
-            const updatedCompletions = yield provideInlineCompletions(this.languageFeaturesService.inlineCompletionsProvider, position, this.textModel, context, source.token, this.languageConfigurationService);
+            const updatedCompletions = await provideInlineCompletions(this.languageFeaturesService.inlineCompletionsProvider, position, this.textModel, context, source.token, this.languageConfigurationService);
             if (source.token.isCancellationRequested || this.textModel.getVersionId() !== request.versionId) {
                 return false;
             }
@@ -87,7 +78,7 @@ let InlineCompletionsSource = class InlineCompletionsSource extends Disposable {
                 target.set(completions, tx);
             });
             return true;
-        }))();
+        })();
         const updateOperation = new UpdateOperation(request, source, promise);
         this._updateOperation.value = updateOperation;
         return promise;
@@ -256,8 +247,9 @@ export class InlineCompletionWithUpdatedRange {
             || cursorPosition.lineNumber !== minimizedReplacement.range.startLineNumber) {
             return false;
         }
-        const originalValue = model.getValueInRange(minimizedReplacement.range, 1 /* EndOfLinePreference.LF */).toLowerCase();
-        const filterText = minimizedReplacement.text.toLowerCase();
+        // We might consider comparing by .toLowerText, but this requires GhostTextReplacement
+        const originalValue = model.getValueInRange(minimizedReplacement.range, 1 /* EndOfLinePreference.LF */);
+        const filterText = minimizedReplacement.text;
         const cursorPosIndex = Math.max(0, cursorPosition.column - minimizedReplacement.range.startColumn);
         let filterTextBefore = filterText.substring(0, cursorPosIndex);
         let filterTextAfter = filterText.substring(cursorPosIndex);

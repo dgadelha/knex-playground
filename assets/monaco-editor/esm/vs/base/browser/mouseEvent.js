@@ -6,7 +6,7 @@ import * as browser from './browser.js';
 import { IframeUtils } from './iframe.js';
 import * as platform from '../common/platform.js';
 export class StandardMouseEvent {
-    constructor(e) {
+    constructor(targetWindow, e) {
         this.timestamp = Date.now();
         this.browserEvent = e;
         this.leftButton = e.button === 0;
@@ -32,7 +32,7 @@ export class StandardMouseEvent {
             this.posy = e.clientY + this.target.ownerDocument.body.scrollTop + this.target.ownerDocument.documentElement.scrollTop;
         }
         // Find the position of the iframe this code is executing in relative to the iframe where the event was captured.
-        const iframeOffsets = IframeUtils.getPositionOfChildWindowRelativeToAncestorWindow(window, e.view);
+        const iframeOffsets = IframeUtils.getPositionOfChildWindowRelativeToAncestorWindow(targetWindow, e.view);
         this.posx -= iframeOffsets.left;
         this.posy -= iframeOffsets.top;
     }
@@ -45,17 +45,33 @@ export class StandardMouseEvent {
 }
 export class StandardWheelEvent {
     constructor(e, deltaX = 0, deltaY = 0) {
+        var _a;
         this.browserEvent = e || null;
         this.target = e ? (e.target || e.targetNode || e.srcElement) : null;
         this.deltaY = deltaY;
         this.deltaX = deltaX;
+        let shouldFactorDPR = false;
+        if (browser.isChrome) {
+            // Chrome version >= 123 contains the fix to factor devicePixelRatio into the wheel event.
+            // See https://chromium.googlesource.com/chromium/src.git/+/be51b448441ff0c9d1f17e0f25c4bf1ab3f11f61
+            const chromeVersionMatch = navigator.userAgent.match(/Chrome\/(\d+)/);
+            const chromeMajorVersion = chromeVersionMatch ? parseInt(chromeVersionMatch[1]) : 123;
+            shouldFactorDPR = chromeMajorVersion <= 122;
+        }
         if (e) {
             // Old (deprecated) wheel events
             const e1 = e;
             const e2 = e;
+            const devicePixelRatio = ((_a = e.view) === null || _a === void 0 ? void 0 : _a.devicePixelRatio) || 1;
             // vertical delta scroll
             if (typeof e1.wheelDeltaY !== 'undefined') {
-                this.deltaY = e1.wheelDeltaY / 120;
+                if (shouldFactorDPR) {
+                    // Refs https://github.com/microsoft/vscode/issues/146403#issuecomment-1854538928
+                    this.deltaY = e1.wheelDeltaY / (120 * devicePixelRatio);
+                }
+                else {
+                    this.deltaY = e1.wheelDeltaY / 120;
+                }
             }
             else if (typeof e2.VERTICAL_AXIS !== 'undefined' && e2.axis === e2.VERTICAL_AXIS) {
                 this.deltaY = -e2.detail / 3;
@@ -81,6 +97,10 @@ export class StandardWheelEvent {
             if (typeof e1.wheelDeltaX !== 'undefined') {
                 if (browser.isSafari && platform.isWindows) {
                     this.deltaX = -(e1.wheelDeltaX / 120);
+                }
+                else if (shouldFactorDPR) {
+                    // Refs https://github.com/microsoft/vscode/issues/146403#issuecomment-1854538928
+                    this.deltaX = e1.wheelDeltaX / (120 * devicePixelRatio);
                 }
                 else {
                     this.deltaX = e1.wheelDeltaX / 120;
@@ -108,7 +128,13 @@ export class StandardWheelEvent {
             }
             // Assume a vertical scroll if nothing else worked
             if (this.deltaY === 0 && this.deltaX === 0 && e.wheelDelta) {
-                this.deltaY = e.wheelDelta / 120;
+                if (shouldFactorDPR) {
+                    // Refs https://github.com/microsoft/vscode/issues/146403#issuecomment-1854538928
+                    this.deltaY = e.wheelDelta / (120 * devicePixelRatio);
+                }
+                else {
+                    this.deltaY = e.wheelDelta / 120;
+                }
             }
         }
     }

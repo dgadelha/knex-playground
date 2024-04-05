@@ -19,11 +19,27 @@ export var QuickInputHideReason;
      */
     QuickInputHideReason[QuickInputHideReason["Other"] = 3] = "Other";
 })(QuickInputHideReason || (QuickInputHideReason = {}));
+/**
+ * Represents the activation behavior for items in a quick input. This means which item will be
+ * "active" (aka focused).
+ */
 export var ItemActivation;
 (function (ItemActivation) {
+    /**
+     * No item will be active.
+     */
     ItemActivation[ItemActivation["NONE"] = 0] = "NONE";
+    /**
+     * First item will be active.
+     */
     ItemActivation[ItemActivation["FIRST"] = 1] = "FIRST";
+    /**
+     * Second item will be active.
+     */
     ItemActivation[ItemActivation["SECOND"] = 2] = "SECOND";
+    /**
+     * Last item will be active.
+     */
     ItemActivation[ItemActivation["LAST"] = 3] = "LAST";
 })(ItemActivation || (ItemActivation = {}));
 export class QuickPickItemScorerAccessor {

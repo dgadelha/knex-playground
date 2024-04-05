@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { stringDiff } from '../../../base/common/diff/diff.js';
 import { URI } from '../../../base/common/uri.js';
 import { Position } from '../core/position.js';
@@ -246,25 +237,22 @@ export class EditorSimpleWorker {
         }
         delete this._models[strURL];
     }
-    computeUnicodeHighlights(url, options, range) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._getModel(url);
-            if (!model) {
-                return { ranges: [], hasMore: false, ambiguousCharacterCount: 0, invisibleCharacterCount: 0, nonBasicAsciiCharacterCount: 0 };
-            }
-            return UnicodeTextModelHighlighter.computeUnicodeHighlights(model, options, range);
-        });
+    async computeUnicodeHighlights(url, options, range) {
+        const model = this._getModel(url);
+        if (!model) {
+            return { ranges: [], hasMore: false, ambiguousCharacterCount: 0, invisibleCharacterCount: 0, nonBasicAsciiCharacterCount: 0 };
+        }
+        return UnicodeTextModelHighlighter.computeUnicodeHighlights(model, options, range);
     }
     // ---- BEGIN diff --------------------------------------------------------------------------
-    computeDiff(originalUrl, modifiedUrl, options, algorithm) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const original = this._getModel(originalUrl);
-            const modified = this._getModel(modifiedUrl);
-            if (!original || !modified) {
-                return null;
-            }
-            return EditorSimpleWorker.computeDiff(original, modified, options, algorithm);
-        });
+    async computeDiff(originalUrl, modifiedUrl, options, algorithm) {
+        const original = this._getModel(originalUrl);
+        const modified = this._getModel(modifiedUrl);
+        if (!original || !modified) {
+            return null;
+        }
+        const result = EditorSimpleWorker.computeDiff(original, modified, options, algorithm);
+        return result;
     }
     static computeDiff(originalTextModel, modifiedTextModel, options, algorithm) {
         const diffAlgorithm = algorithm === 'advanced' ? linesDiffComputers.getDefault() : linesDiffComputers.getLegacy();
@@ -315,176 +303,164 @@ export class EditorSimpleWorker {
         }
         return true;
     }
-    computeMoreMinimalEdits(modelUrl, edits, pretty) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return edits;
+    async computeMoreMinimalEdits(modelUrl, edits, pretty) {
+        const model = this._getModel(modelUrl);
+        if (!model) {
+            return edits;
+        }
+        const result = [];
+        let lastEol = undefined;
+        edits = edits.slice(0).sort((a, b) => {
+            if (a.range && b.range) {
+                return Range.compareRangesUsingStarts(a.range, b.range);
             }
-            const result = [];
-            let lastEol = undefined;
-            edits = edits.slice(0).sort((a, b) => {
-                if (a.range && b.range) {
-                    return Range.compareRangesUsingStarts(a.range, b.range);
-                }
-                // eol only changes should go to the end
-                const aRng = a.range ? 0 : 1;
-                const bRng = b.range ? 0 : 1;
-                return aRng - bRng;
-            });
-            // merge adjacent edits
-            let writeIndex = 0;
-            for (let readIndex = 1; readIndex < edits.length; readIndex++) {
-                if (Range.getEndPosition(edits[writeIndex].range).equals(Range.getStartPosition(edits[readIndex].range))) {
-                    edits[writeIndex].range = Range.fromPositions(Range.getStartPosition(edits[writeIndex].range), Range.getEndPosition(edits[readIndex].range));
-                    edits[writeIndex].text += edits[readIndex].text;
-                }
-                else {
-                    writeIndex++;
-                    edits[writeIndex] = edits[readIndex];
-                }
-            }
-            edits.length = writeIndex + 1;
-            for (let { range, text, eol } of edits) {
-                if (typeof eol === 'number') {
-                    lastEol = eol;
-                }
-                if (Range.isEmpty(range) && !text) {
-                    // empty change
-                    continue;
-                }
-                const original = model.getValueInRange(range);
-                text = text.replace(/\r\n|\n|\r/g, model.eol);
-                if (original === text) {
-                    // noop
-                    continue;
-                }
-                // make sure diff won't take too long
-                if (Math.max(text.length, original.length) > EditorSimpleWorker._diffLimit) {
-                    result.push({ range, text });
-                    continue;
-                }
-                // compute diff between original and edit.text
-                const changes = stringDiff(original, text, pretty);
-                const editOffset = model.offsetAt(Range.lift(range).getStartPosition());
-                for (const change of changes) {
-                    const start = model.positionAt(editOffset + change.originalStart);
-                    const end = model.positionAt(editOffset + change.originalStart + change.originalLength);
-                    const newEdit = {
-                        text: text.substr(change.modifiedStart, change.modifiedLength),
-                        range: { startLineNumber: start.lineNumber, startColumn: start.column, endLineNumber: end.lineNumber, endColumn: end.column }
-                    };
-                    if (model.getValueInRange(newEdit.range) !== newEdit.text) {
-                        result.push(newEdit);
-                    }
-                }
-            }
-            if (typeof lastEol === 'number') {
-                result.push({ eol: lastEol, text: '', range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 } });
-            }
-            return result;
+            // eol only changes should go to the end
+            const aRng = a.range ? 0 : 1;
+            const bRng = b.range ? 0 : 1;
+            return aRng - bRng;
         });
+        // merge adjacent edits
+        let writeIndex = 0;
+        for (let readIndex = 1; readIndex < edits.length; readIndex++) {
+            if (Range.getEndPosition(edits[writeIndex].range).equals(Range.getStartPosition(edits[readIndex].range))) {
+                edits[writeIndex].range = Range.fromPositions(Range.getStartPosition(edits[writeIndex].range), Range.getEndPosition(edits[readIndex].range));
+                edits[writeIndex].text += edits[readIndex].text;
+            }
+            else {
+                writeIndex++;
+                edits[writeIndex] = edits[readIndex];
+            }
+        }
+        edits.length = writeIndex + 1;
+        for (let { range, text, eol } of edits) {
+            if (typeof eol === 'number') {
+                lastEol = eol;
+            }
+            if (Range.isEmpty(range) && !text) {
+                // empty change
+                continue;
+            }
+            const original = model.getValueInRange(range);
+            text = text.replace(/\r\n|\n|\r/g, model.eol);
+            if (original === text) {
+                // noop
+                continue;
+            }
+            // make sure diff won't take too long
+            if (Math.max(text.length, original.length) > EditorSimpleWorker._diffLimit) {
+                result.push({ range, text });
+                continue;
+            }
+            // compute diff between original and edit.text
+            const changes = stringDiff(original, text, pretty);
+            const editOffset = model.offsetAt(Range.lift(range).getStartPosition());
+            for (const change of changes) {
+                const start = model.positionAt(editOffset + change.originalStart);
+                const end = model.positionAt(editOffset + change.originalStart + change.originalLength);
+                const newEdit = {
+                    text: text.substr(change.modifiedStart, change.modifiedLength),
+                    range: { startLineNumber: start.lineNumber, startColumn: start.column, endLineNumber: end.lineNumber, endColumn: end.column }
+                };
+                if (model.getValueInRange(newEdit.range) !== newEdit.text) {
+                    result.push(newEdit);
+                }
+            }
+        }
+        if (typeof lastEol === 'number') {
+            result.push({ eol: lastEol, text: '', range: { startLineNumber: 0, startColumn: 0, endLineNumber: 0, endColumn: 0 } });
+        }
+        return result;
     }
     // ---- END minimal edits ---------------------------------------------------------------
-    computeLinks(modelUrl) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return null;
-            }
-            return computeLinks(model);
-        });
+    async computeLinks(modelUrl) {
+        const model = this._getModel(modelUrl);
+        if (!model) {
+            return null;
+        }
+        return computeLinks(model);
     }
     // --- BEGIN default document colors -----------------------------------------------------------
-    computeDefaultDocumentColors(modelUrl) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return null;
-            }
-            return computeDefaultDocumentColors(model);
-        });
+    async computeDefaultDocumentColors(modelUrl) {
+        const model = this._getModel(modelUrl);
+        if (!model) {
+            return null;
+        }
+        return computeDefaultDocumentColors(model);
     }
-    textualSuggest(modelUrls, leadingWord, wordDef, wordDefFlags) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const sw = new StopWatch();
-            const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
-            const seen = new Set();
-            outer: for (const url of modelUrls) {
-                const model = this._getModel(url);
-                if (!model) {
+    async textualSuggest(modelUrls, leadingWord, wordDef, wordDefFlags) {
+        const sw = new StopWatch();
+        const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
+        const seen = new Set();
+        outer: for (const url of modelUrls) {
+            const model = this._getModel(url);
+            if (!model) {
+                continue;
+            }
+            for (const word of model.words(wordDefRegExp)) {
+                if (word === leadingWord || !isNaN(Number(word))) {
                     continue;
                 }
-                for (const word of model.words(wordDefRegExp)) {
-                    if (word === leadingWord || !isNaN(Number(word))) {
-                        continue;
-                    }
-                    seen.add(word);
-                    if (seen.size > EditorSimpleWorker._suggestionsLimit) {
-                        break outer;
-                    }
+                seen.add(word);
+                if (seen.size > EditorSimpleWorker._suggestionsLimit) {
+                    break outer;
                 }
             }
-            return { words: Array.from(seen), duration: sw.elapsed() };
-        });
+        }
+        return { words: Array.from(seen), duration: sw.elapsed() };
     }
     // ---- END suggest --------------------------------------------------------------------------
     //#region -- word ranges --
-    computeWordRanges(modelUrl, range, wordDef, wordDefFlags) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return Object.create(null);
-            }
-            const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
-            const result = Object.create(null);
-            for (let line = range.startLineNumber; line < range.endLineNumber; line++) {
-                const words = model.getLineWords(line, wordDefRegExp);
-                for (const word of words) {
-                    if (!isNaN(Number(word.word))) {
-                        continue;
-                    }
-                    let array = result[word.word];
-                    if (!array) {
-                        array = [];
-                        result[word.word] = array;
-                    }
-                    array.push({
-                        startLineNumber: line,
-                        startColumn: word.startColumn,
-                        endLineNumber: line,
-                        endColumn: word.endColumn
-                    });
+    async computeWordRanges(modelUrl, range, wordDef, wordDefFlags) {
+        const model = this._getModel(modelUrl);
+        if (!model) {
+            return Object.create(null);
+        }
+        const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
+        const result = Object.create(null);
+        for (let line = range.startLineNumber; line < range.endLineNumber; line++) {
+            const words = model.getLineWords(line, wordDefRegExp);
+            for (const word of words) {
+                if (!isNaN(Number(word.word))) {
+                    continue;
                 }
+                let array = result[word.word];
+                if (!array) {
+                    array = [];
+                    result[word.word] = array;
+                }
+                array.push({
+                    startLineNumber: line,
+                    startColumn: word.startColumn,
+                    endLineNumber: line,
+                    endColumn: word.endColumn
+                });
             }
-            return result;
-        });
+        }
+        return result;
     }
     //#endregion
-    navigateValueSet(modelUrl, range, up, wordDef, wordDefFlags) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._getModel(modelUrl);
-            if (!model) {
-                return null;
-            }
-            const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
-            if (range.startColumn === range.endColumn) {
-                range = {
-                    startLineNumber: range.startLineNumber,
-                    startColumn: range.startColumn,
-                    endLineNumber: range.endLineNumber,
-                    endColumn: range.endColumn + 1
-                };
-            }
-            const selectionText = model.getValueInRange(range);
-            const wordRange = model.getWordAtPosition({ lineNumber: range.startLineNumber, column: range.startColumn }, wordDefRegExp);
-            if (!wordRange) {
-                return null;
-            }
-            const word = model.getValueInRange(wordRange);
-            const result = BasicInplaceReplace.INSTANCE.navigateValueSet(range, selectionText, wordRange, word, up);
-            return result;
-        });
+    async navigateValueSet(modelUrl, range, up, wordDef, wordDefFlags) {
+        const model = this._getModel(modelUrl);
+        if (!model) {
+            return null;
+        }
+        const wordDefRegExp = new RegExp(wordDef, wordDefFlags);
+        if (range.startColumn === range.endColumn) {
+            range = {
+                startLineNumber: range.startLineNumber,
+                startColumn: range.startColumn,
+                endLineNumber: range.endLineNumber,
+                endColumn: range.endColumn + 1
+            };
+        }
+        const selectionText = model.getValueInRange(range);
+        const wordRange = model.getWordAtPosition({ lineNumber: range.startLineNumber, column: range.startColumn }, wordDefRegExp);
+        if (!wordRange) {
+            return null;
+        }
+        const word = model.getValueInRange(wordRange);
+        const result = BasicInplaceReplace.INSTANCE.navigateValueSet(range, selectionText, wordRange, word, up);
+        return result;
     }
     // ---- BEGIN foreign module support --------------------------------------------------------------------------
     loadForeignModule(moduleId, createData, foreignHostMethods) {

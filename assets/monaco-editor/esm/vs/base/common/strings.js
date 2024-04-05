@@ -30,6 +30,24 @@ export function format(value, ...args) {
     });
 }
 /**
+ * Encodes the given value so that it can be used as literal value in html attributes.
+ *
+ * In other words, computes `$val`, such that `attr` in `<div attr="$val" />` has the runtime value `value`.
+ * This prevents XSS injection.
+ */
+export function htmlAttributeEncodeValue(value) {
+    return value.replace(/[<>"'&]/g, ch => {
+        switch (ch) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case '\'': return '&apos;';
+            case '&': return '&amp;';
+        }
+        return ch;
+    });
+}
+/**
  * Converts HTML characters inside the string to use entities instead. Makes the string safe from
  * being used e.g. in HTMLElement.innerHTML.
  */
@@ -152,6 +170,15 @@ export function regExpLeadsToEndlessLoop(regexp) {
 }
 export function splitLines(str) {
     return str.split(/\r\n|\r|\n/);
+}
+export function splitLinesIncludeSeparators(str) {
+    var _b;
+    const linesWithSeparators = [];
+    const splitLinesAndSeparators = str.split(/(\r\n|\r|\n)/);
+    for (let i = 0; i < Math.ceil(splitLinesAndSeparators.length / 2); i++) {
+        linesWithSeparators.push(splitLinesAndSeparators[2 * i] + ((_b = splitLinesAndSeparators[2 * i + 1]) !== null && _b !== void 0 ? _b : ''));
+    }
+    return linesWithSeparators;
 }
 /**
  * Returns first index of the string that is not whitespace.

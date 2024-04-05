@@ -16,7 +16,7 @@ import { asArray } from '../../../../base/common/arrays.js';
 import { AsyncIterableObject } from '../../../../base/common/async.js';
 import { isEmptyMarkdownString, MarkdownString } from '../../../../base/common/htmlContent.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import { Position } from '../../../common/core/position.js';
 import { Range } from '../../../common/core/range.js';
 import { ILanguageService } from '../../../common/languages/language.js';
@@ -63,7 +63,7 @@ let MarkdownHoverParticipant = class MarkdownHoverParticipant {
         let index = 1000;
         const lineLength = model.getLineLength(lineNumber);
         const languageId = model.getLanguageIdAtPosition(anchor.range.startLineNumber, anchor.range.startColumn);
-        const stopRenderingLineAfter = this._editor.getOption(116 /* EditorOption.stopRenderingLineAfter */);
+        const stopRenderingLineAfter = this._editor.getOption(117 /* EditorOption.stopRenderingLineAfter */);
         const maxTokenizationLineLength = this._configurationService.getValue('editor.maxTokenizationLineLength', {
             overrideIdentifier: languageId
         });

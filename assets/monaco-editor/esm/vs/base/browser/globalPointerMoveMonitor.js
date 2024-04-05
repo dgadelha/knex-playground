@@ -64,7 +64,7 @@ export class GlobalPointerMoveMonitor {
             //     DOMException: Failed to execute 'setPointerCapture' on 'Element':
             //     No active pointer with the given id is found.
             // In case of failure, we bind the listeners on the window
-            eventSource = window;
+            eventSource = dom.getWindow(initialElement);
         }
         this._hooks.add(dom.addDisposableListener(eventSource, dom.EventType.POINTER_MOVE, (e) => {
             if (e.buttons !== initialButtons) {

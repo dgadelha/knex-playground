@@ -2,23 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { $, append, clearNode, createStyleSheet, h, hasParentWithClass } from '../../dom.js';
+import { $, append, clearNode, createStyleSheet, getWindow, h, hasParentWithClass, asCssValueWithDefault, isKeyboardEvent } from '../../dom.js';
 import { DomEmitter } from '../../event.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { ActionBar } from '../actionbar/actionbar.js';
 import { FindInput } from '../findinput/findInput.js';
 import { unthemedInboxStyles } from '../inputbox/inputBox.js';
 import { ElementsDragAndDropData } from '../list/listView.js';
-import { isButton, isInputElement, isMonacoEditor, List, MouseController } from '../list/listWidget.js';
+import { isActionItem, isButton, isInputElement, isMonacoCustomToggle, isMonacoEditor, isStickyScrollContainer, isStickyScrollElement, List, MouseController } from '../list/listWidget.js';
 import { Toggle, unthemedToggleStyles } from '../toggle/toggle.js';
 import { getVisibleState, isFilterResult } from './indexTreeModel.js';
 import { TreeMouseEventTarget } from './tree.js';
@@ -67,8 +58,8 @@ class TreeNodeListDragAndDrop {
         var _a, _b;
         (_b = (_a = this.dnd).onDragStart) === null || _b === void 0 ? void 0 : _b.call(_a, asTreeDragAndDropData(data), originalEvent);
     }
-    onDragOver(data, targetNode, targetIndex, originalEvent, raw = true) {
-        const result = this.dnd.onDragOver(asTreeDragAndDropData(data), targetNode && targetNode.element, targetIndex, originalEvent);
+    onDragOver(data, targetNode, targetIndex, targetSector, originalEvent, raw = true) {
+        const result = this.dnd.onDragOver(asTreeDragAndDropData(data), targetNode && targetNode.element, targetIndex, targetSector, originalEvent);
         const didChangeAutoExpandNode = this.autoExpandNode !== targetNode;
         if (didChangeAutoExpandNode) {
             this.autoExpandDisposable.dispose();
@@ -101,18 +92,18 @@ class TreeNodeListDragAndDrop {
             const parentRef = model.getParentNodeLocation(ref);
             const parentNode = model.getNode(parentRef);
             const parentIndex = parentRef && model.getListIndex(parentRef);
-            return this.onDragOver(data, parentNode, parentIndex, originalEvent, false);
+            return this.onDragOver(data, parentNode, parentIndex, targetSector, originalEvent, false);
         }
         const model = this.modelProvider();
         const ref = model.getNodeLocation(targetNode);
         const start = model.getListIndex(ref);
         const length = model.getListRenderCount(ref);
-        return Object.assign(Object.assign({}, result), { feedback: range(start, start + length) });
+        return { ...result, feedback: range(start, start + length) };
     }
-    drop(data, targetNode, targetIndex, originalEvent) {
+    drop(data, targetNode, targetIndex, targetSector, originalEvent) {
         this.autoExpandDisposable.dispose();
         this.autoExpandNode = undefined;
-        this.dnd.drop(asTreeDragAndDropData(data), targetNode && targetNode.element, targetIndex, originalEvent);
+        this.dnd.drop(asTreeDragAndDropData(data), targetNode && targetNode.element, targetIndex, targetSector, originalEvent);
     }
     onDragEnd(originalEvent) {
         var _a, _b;
@@ -124,18 +115,25 @@ class TreeNodeListDragAndDrop {
     }
 }
 function asListOptions(modelProvider, options) {
-    return options && Object.assign(Object.assign({}, options), { identityProvider: options.identityProvider && {
+    return options && {
+        ...options,
+        identityProvider: options.identityProvider && {
             getId(el) {
                 return options.identityProvider.getId(el.element);
             }
-        }, dnd: options.dnd && new TreeNodeListDragAndDrop(modelProvider, options.dnd), multipleSelectionController: options.multipleSelectionController && {
+        },
+        dnd: options.dnd && new TreeNodeListDragAndDrop(modelProvider, options.dnd),
+        multipleSelectionController: options.multipleSelectionController && {
             isSelectionSingleChangeEvent(e) {
-                return options.multipleSelectionController.isSelectionSingleChangeEvent(Object.assign(Object.assign({}, e), { element: e.element }));
+                return options.multipleSelectionController.isSelectionSingleChangeEvent({ ...e, element: e.element });
             },
             isSelectionRangeChangeEvent(e) {
-                return options.multipleSelectionController.isSelectionRangeChangeEvent(Object.assign(Object.assign({}, e), { element: e.element }));
+                return options.multipleSelectionController.isSelectionRangeChangeEvent({ ...e, element: e.element });
             }
-        }, accessibilityProvider: options.accessibilityProvider && Object.assign(Object.assign({}, options.accessibilityProvider), { getSetSize(node) {
+        },
+        accessibilityProvider: options.accessibilityProvider && {
+            ...options.accessibilityProvider,
+            getSetSize(node) {
                 const model = modelProvider();
                 const ref = model.getNodeLocation(node);
                 const parentRef = model.getParentNodeLocation(ref);
@@ -144,22 +142,34 @@ function asListOptions(modelProvider, options) {
             },
             getPosInSet(node) {
                 return node.visibleChildIndex + 1;
-            }, isChecked: options.accessibilityProvider && options.accessibilityProvider.isChecked ? (node) => {
+            },
+            isChecked: options.accessibilityProvider && options.accessibilityProvider.isChecked ? (node) => {
                 return options.accessibilityProvider.isChecked(node.element);
-            } : undefined, getRole: options.accessibilityProvider && options.accessibilityProvider.getRole ? (node) => {
+            } : undefined,
+            getRole: options.accessibilityProvider && options.accessibilityProvider.getRole ? (node) => {
                 return options.accessibilityProvider.getRole(node.element);
-            } : () => 'treeitem', getAriaLabel(e) {
+            } : () => 'treeitem',
+            getAriaLabel(e) {
                 return options.accessibilityProvider.getAriaLabel(e.element);
             },
             getWidgetAriaLabel() {
                 return options.accessibilityProvider.getWidgetAriaLabel();
-            }, getWidgetRole: options.accessibilityProvider && options.accessibilityProvider.getWidgetRole ? () => options.accessibilityProvider.getWidgetRole() : () => 'tree', getAriaLevel: options.accessibilityProvider && options.accessibilityProvider.getAriaLevel ? (node) => options.accessibilityProvider.getAriaLevel(node.element) : (node) => {
+            },
+            getWidgetRole: options.accessibilityProvider && options.accessibilityProvider.getWidgetRole ? () => options.accessibilityProvider.getWidgetRole() : () => 'tree',
+            getAriaLevel: options.accessibilityProvider && options.accessibilityProvider.getAriaLevel ? (node) => options.accessibilityProvider.getAriaLevel(node.element) : (node) => {
                 return node.depth;
-            }, getActiveDescendantId: options.accessibilityProvider.getActiveDescendantId && (node => {
+            },
+            getActiveDescendantId: options.accessibilityProvider.getActiveDescendantId && (node => {
                 return options.accessibilityProvider.getActiveDescendantId(node.element);
-            }) }), keyboardNavigationLabelProvider: options.keyboardNavigationLabelProvider && Object.assign(Object.assign({}, options.keyboardNavigationLabelProvider), { getKeyboardNavigationLabel(node) {
+            })
+        },
+        keyboardNavigationLabelProvider: options.keyboardNavigationLabelProvider && {
+            ...options.keyboardNavigationLabelProvider,
+            getKeyboardNavigationLabel(node) {
                 return options.keyboardNavigationLabelProvider.getKeyboardNavigationLabel(node.element);
-            } }) });
+            }
+        }
+    };
 }
 export class ComposedTreeDelegate {
     constructor(delegate) {
@@ -198,7 +208,7 @@ class EventCollection {
         this.disposables.dispose();
     }
 }
-class TreeRenderer {
+export class TreeRenderer {
     constructor(renderer, modelProvider, onDidChangeCollapseState, activeNodes, renderedIndentGuides, options = {}) {
         var _a;
         this.renderer = renderer;
@@ -548,8 +558,8 @@ class FindWidget extends Disposable {
         if (styles.listFilterWidgetShadow) {
             this.elements.root.style.boxShadow = `0 0 8px 2px ${styles.listFilterWidgetShadow}`;
         }
-        this.modeToggle = this._register(new ModeToggle(Object.assign(Object.assign({}, styles.toggleStyles), { isChecked: mode === TreeFindMode.Filter })));
-        this.matchTypeToggle = this._register(new FuzzyToggle(Object.assign(Object.assign({}, styles.toggleStyles), { isChecked: matchType === TreeFindMatchType.Fuzzy })));
+        this.modeToggle = this._register(new ModeToggle({ ...styles.toggleStyles, isChecked: mode === TreeFindMode.Filter }));
+        this.matchTypeToggle = this._register(new FuzzyToggle({ ...styles.toggleStyles, isChecked: matchType === TreeFindMatchType.Fuzzy }));
         this.onDidChangeMode = Event.map(this.modeToggle.onChange, () => this.modeToggle.checked ? TreeFindMode.Filter : TreeFindMode.Highlight, this._store);
         this.onDidChangeMatchType = Event.map(this.matchTypeToggle.onChange, () => this.matchTypeToggle.checked ? TreeFindMatchType.Fuzzy : TreeFindMatchType.Contiguous, this._store);
         this.findInput = this._register(new FindInput(this.elements.findInput, contextViewProvider, {
@@ -601,8 +611,8 @@ class FindWidget extends Disposable {
         const onGrabMouseDown = this._register(new DomEmitter(this.elements.grab, 'mousedown'));
         this._register(onGrabMouseDown.event(e => {
             const disposables = new DisposableStore();
-            const onWindowMouseMove = disposables.add(new DomEmitter(window, 'mousemove'));
-            const onWindowMouseUp = disposables.add(new DomEmitter(window, 'mouseup'));
+            const onWindowMouseMove = disposables.add(new DomEmitter(getWindow(e), 'mousemove'));
+            const onWindowMouseUp = disposables.add(new DomEmitter(getWindow(e), 'mouseup'));
             const startRight = this.right;
             const startX = e.pageX;
             const startTop = this.top;
@@ -677,16 +687,11 @@ class FindWidget extends Disposable {
     clearMessage() {
         this.findInput.clearMessage();
     }
-    dispose() {
-        const _super = Object.create(null, {
-            dispose: { get: () => super.dispose }
-        });
-        return __awaiter(this, void 0, void 0, function* () {
-            this._onDidDisable.fire();
-            this.elements.root.classList.add('disabled');
-            yield timeout(300);
-            _super.dispose.call(this);
-        });
+    async dispose() {
+        this._onDidDisable.fire();
+        this.elements.root.classList.add('disabled');
+        await timeout(300);
+        super.dispose();
     }
 }
 class FindController {
@@ -770,7 +775,7 @@ class FindController {
         }
     }
     shouldAllowFocus(node) {
-        if (!this.widget || !this.pattern || this._mode === TreeFindMode.Filter) {
+        if (!this.widget || !this.pattern) {
             return true;
         }
         if (this.filter.totalCount > 0 && this.filter.matchCount <= 1) {
@@ -788,6 +793,605 @@ class FindController {
         this._onDidChangePattern.dispose();
         this.enabledDisposables.dispose();
         this.disposables.dispose();
+    }
+}
+function stickyScrollNodeStateEquals(node1, node2) {
+    return node1.position === node2.position && stickyScrollNodeEquals(node1, node2);
+}
+function stickyScrollNodeEquals(node1, node2) {
+    return node1.node.element === node2.node.element &&
+        node1.startIndex === node2.startIndex &&
+        node1.height === node2.height &&
+        node1.endIndex === node2.endIndex;
+}
+class StickyScrollState {
+    constructor(stickyNodes = []) {
+        this.stickyNodes = stickyNodes;
+    }
+    get count() { return this.stickyNodes.length; }
+    equal(state) {
+        return equals(this.stickyNodes, state.stickyNodes, stickyScrollNodeStateEquals);
+    }
+    lastNodePartiallyVisible() {
+        if (this.count === 0) {
+            return false;
+        }
+        const lastStickyNode = this.stickyNodes[this.count - 1];
+        if (this.count === 1) {
+            return lastStickyNode.position !== 0;
+        }
+        const secondLastStickyNode = this.stickyNodes[this.count - 2];
+        return secondLastStickyNode.position + secondLastStickyNode.height !== lastStickyNode.position;
+    }
+    animationStateChanged(previousState) {
+        if (!equals(this.stickyNodes, previousState.stickyNodes, stickyScrollNodeEquals)) {
+            return false;
+        }
+        if (this.count === 0) {
+            return false;
+        }
+        const lastStickyNode = this.stickyNodes[this.count - 1];
+        const previousLastStickyNode = previousState.stickyNodes[previousState.count - 1];
+        return lastStickyNode.position !== previousLastStickyNode.position;
+    }
+}
+class DefaultStickyScrollDelegate {
+    constrainStickyScrollNodes(stickyNodes, stickyScrollMaxItemCount, maxWidgetHeight) {
+        for (let i = 0; i < stickyNodes.length; i++) {
+            const stickyNode = stickyNodes[i];
+            const stickyNodeBottom = stickyNode.position + stickyNode.height;
+            if (stickyNodeBottom > maxWidgetHeight || i >= stickyScrollMaxItemCount) {
+                return stickyNodes.slice(0, i);
+            }
+        }
+        return stickyNodes;
+    }
+}
+class StickyScrollController extends Disposable {
+    constructor(tree, model, view, renderers, treeDelegate, options = {}) {
+        var _a;
+        super();
+        this.tree = tree;
+        this.model = model;
+        this.view = view;
+        this.treeDelegate = treeDelegate;
+        this.maxWidgetViewRatio = 0.4;
+        const stickyScrollOptions = this.validateStickySettings(options);
+        this.stickyScrollMaxItemCount = stickyScrollOptions.stickyScrollMaxItemCount;
+        this.stickyScrollDelegate = (_a = options.stickyScrollDelegate) !== null && _a !== void 0 ? _a : new DefaultStickyScrollDelegate();
+        this._widget = this._register(new StickyScrollWidget(view.getScrollableElement(), view, tree, renderers, treeDelegate, options.accessibilityProvider));
+        this.onDidChangeHasFocus = this._widget.onDidChangeHasFocus;
+        this.onContextMenu = this._widget.onContextMenu;
+        this._register(view.onDidScroll(() => this.update()));
+        this._register(view.onDidChangeContentHeight(() => this.update()));
+        this._register(tree.onDidChangeCollapseState(() => this.update()));
+        this.update();
+    }
+    getNodeAtHeight(height) {
+        let index;
+        if (height === 0) {
+            index = this.view.firstVisibleIndex;
+        }
+        else {
+            index = this.view.indexAt(height + this.view.scrollTop);
+        }
+        if (index < 0 || index >= this.view.length) {
+            return undefined;
+        }
+        return this.view.element(index);
+    }
+    update() {
+        const firstVisibleNode = this.getNodeAtHeight(0);
+        // Don't render anything if there are no elements
+        if (!firstVisibleNode || this.tree.scrollTop === 0) {
+            this._widget.setState(undefined);
+            return;
+        }
+        const stickyState = this.findStickyState(firstVisibleNode);
+        this._widget.setState(stickyState);
+    }
+    findStickyState(firstVisibleNode) {
+        const stickyNodes = [];
+        let firstVisibleNodeUnderWidget = firstVisibleNode;
+        let stickyNodesHeight = 0;
+        let nextStickyNode = this.getNextStickyNode(firstVisibleNodeUnderWidget, undefined, stickyNodesHeight);
+        while (nextStickyNode) {
+            stickyNodes.push(nextStickyNode);
+            stickyNodesHeight += nextStickyNode.height;
+            if (stickyNodes.length <= this.stickyScrollMaxItemCount) {
+                firstVisibleNodeUnderWidget = this.getNextVisibleNode(nextStickyNode);
+                if (!firstVisibleNodeUnderWidget) {
+                    break;
+                }
+            }
+            nextStickyNode = this.getNextStickyNode(firstVisibleNodeUnderWidget, nextStickyNode.node, stickyNodesHeight);
+        }
+        const contrainedStickyNodes = this.constrainStickyNodes(stickyNodes);
+        return contrainedStickyNodes.length ? new StickyScrollState(contrainedStickyNodes) : undefined;
+    }
+    getNextVisibleNode(previousStickyNode) {
+        return this.getNodeAtHeight(previousStickyNode.position + previousStickyNode.height);
+    }
+    getNextStickyNode(firstVisibleNodeUnderWidget, previousStickyNode, stickyNodesHeight) {
+        const nextStickyNode = this.getAncestorUnderPrevious(firstVisibleNodeUnderWidget, previousStickyNode);
+        if (!nextStickyNode) {
+            return undefined;
+        }
+        if (nextStickyNode === firstVisibleNodeUnderWidget) {
+            if (!this.nodeIsUncollapsedParent(firstVisibleNodeUnderWidget)) {
+                return undefined;
+            }
+            if (this.nodeTopAlignsWithStickyNodesBottom(firstVisibleNodeUnderWidget, stickyNodesHeight)) {
+                return undefined;
+            }
+        }
+        return this.createStickyScrollNode(nextStickyNode, stickyNodesHeight);
+    }
+    nodeTopAlignsWithStickyNodesBottom(node, stickyNodesHeight) {
+        const nodeIndex = this.getNodeIndex(node);
+        const elementTop = this.view.getElementTop(nodeIndex);
+        const stickyPosition = stickyNodesHeight;
+        return this.view.scrollTop === elementTop - stickyPosition;
+    }
+    createStickyScrollNode(node, currentStickyNodesHeight) {
+        const height = this.treeDelegate.getHeight(node);
+        const { startIndex, endIndex } = this.getNodeRange(node);
+        const position = this.calculateStickyNodePosition(endIndex, currentStickyNodesHeight, height);
+        return { node, position, height, startIndex, endIndex };
+    }
+    getAncestorUnderPrevious(node, previousAncestor = undefined) {
+        let currentAncestor = node;
+        let parentOfcurrentAncestor = this.getParentNode(currentAncestor);
+        while (parentOfcurrentAncestor) {
+            if (parentOfcurrentAncestor === previousAncestor) {
+                return currentAncestor;
+            }
+            currentAncestor = parentOfcurrentAncestor;
+            parentOfcurrentAncestor = this.getParentNode(currentAncestor);
+        }
+        if (previousAncestor === undefined) {
+            return currentAncestor;
+        }
+        return undefined;
+    }
+    calculateStickyNodePosition(lastDescendantIndex, stickyRowPositionTop, stickyNodeHeight) {
+        let lastChildRelativeTop = this.view.getRelativeTop(lastDescendantIndex);
+        // If the last descendant is only partially visible at the top of the view, getRelativeTop() returns null
+        // In that case, utilize the next node's relative top to calculate the sticky node's position
+        if (lastChildRelativeTop === null && this.view.firstVisibleIndex === lastDescendantIndex && lastDescendantIndex + 1 < this.view.length) {
+            const nodeHeight = this.treeDelegate.getHeight(this.view.element(lastDescendantIndex));
+            const nextNodeRelativeTop = this.view.getRelativeTop(lastDescendantIndex + 1);
+            lastChildRelativeTop = nextNodeRelativeTop ? nextNodeRelativeTop - nodeHeight / this.view.renderHeight : null;
+        }
+        if (lastChildRelativeTop === null) {
+            return stickyRowPositionTop;
+        }
+        const lastChildNode = this.view.element(lastDescendantIndex);
+        const lastChildHeight = this.treeDelegate.getHeight(lastChildNode);
+        const topOfLastChild = lastChildRelativeTop * this.view.renderHeight;
+        const bottomOfLastChild = topOfLastChild + lastChildHeight;
+        if (stickyRowPositionTop + stickyNodeHeight > bottomOfLastChild && stickyRowPositionTop <= bottomOfLastChild) {
+            return bottomOfLastChild - stickyNodeHeight;
+        }
+        return stickyRowPositionTop;
+    }
+    constrainStickyNodes(stickyNodes) {
+        if (stickyNodes.length === 0) {
+            return [];
+        }
+        // Check if sticky nodes need to be constrained
+        const maximumStickyWidgetHeight = this.view.renderHeight * this.maxWidgetViewRatio;
+        const lastStickyNode = stickyNodes[stickyNodes.length - 1];
+        if (stickyNodes.length <= this.stickyScrollMaxItemCount && lastStickyNode.position + lastStickyNode.height <= maximumStickyWidgetHeight) {
+            return stickyNodes;
+        }
+        // constrain sticky nodes
+        const constrainedStickyNodes = this.stickyScrollDelegate.constrainStickyScrollNodes(stickyNodes, this.stickyScrollMaxItemCount, maximumStickyWidgetHeight);
+        if (!constrainedStickyNodes.length) {
+            return [];
+        }
+        // Validate constraints
+        const lastConstrainedStickyNode = constrainedStickyNodes[constrainedStickyNodes.length - 1];
+        if (constrainedStickyNodes.length > this.stickyScrollMaxItemCount || lastConstrainedStickyNode.position + lastConstrainedStickyNode.height > maximumStickyWidgetHeight) {
+            throw new Error('stickyScrollDelegate violates constraints');
+        }
+        return constrainedStickyNodes;
+    }
+    getParentNode(node) {
+        const nodeLocation = this.model.getNodeLocation(node);
+        const parentLocation = this.model.getParentNodeLocation(nodeLocation);
+        return parentLocation ? this.model.getNode(parentLocation) : undefined;
+    }
+    nodeIsUncollapsedParent(node) {
+        const nodeLocation = this.model.getNodeLocation(node);
+        return this.model.getListRenderCount(nodeLocation) > 1;
+    }
+    getNodeIndex(node) {
+        const nodeLocation = this.model.getNodeLocation(node);
+        const nodeIndex = this.model.getListIndex(nodeLocation);
+        return nodeIndex;
+    }
+    getNodeRange(node) {
+        const nodeLocation = this.model.getNodeLocation(node);
+        const startIndex = this.model.getListIndex(nodeLocation);
+        if (startIndex < 0) {
+            throw new Error('Node not found in tree');
+        }
+        const renderCount = this.model.getListRenderCount(nodeLocation);
+        const endIndex = startIndex + renderCount - 1;
+        return { startIndex, endIndex };
+    }
+    nodePositionTopBelowWidget(node) {
+        const ancestors = [];
+        let currentAncestor = this.getParentNode(node);
+        while (currentAncestor) {
+            ancestors.push(currentAncestor);
+            currentAncestor = this.getParentNode(currentAncestor);
+        }
+        let widgetHeight = 0;
+        for (let i = 0; i < ancestors.length && i < this.stickyScrollMaxItemCount; i++) {
+            widgetHeight += this.treeDelegate.getHeight(ancestors[i]);
+        }
+        return widgetHeight;
+    }
+    domFocus() {
+        this._widget.domFocus();
+    }
+    // Whether sticky scroll was the last focused part in the tree or not
+    focusedLast() {
+        return this._widget.focusedLast();
+    }
+    updateOptions(optionsUpdate = {}) {
+        if (!optionsUpdate.stickyScrollMaxItemCount) {
+            return;
+        }
+        const validatedOptions = this.validateStickySettings(optionsUpdate);
+        if (this.stickyScrollMaxItemCount !== validatedOptions.stickyScrollMaxItemCount) {
+            this.stickyScrollMaxItemCount = validatedOptions.stickyScrollMaxItemCount;
+            this.update();
+        }
+    }
+    validateStickySettings(options) {
+        let stickyScrollMaxItemCount = 7;
+        if (typeof options.stickyScrollMaxItemCount === 'number') {
+            stickyScrollMaxItemCount = Math.max(options.stickyScrollMaxItemCount, 1);
+        }
+        return { stickyScrollMaxItemCount };
+    }
+}
+class StickyScrollWidget {
+    constructor(container, view, tree, treeRenderers, treeDelegate, accessibilityProvider) {
+        this.view = view;
+        this.tree = tree;
+        this.treeRenderers = treeRenderers;
+        this.treeDelegate = treeDelegate;
+        this.accessibilityProvider = accessibilityProvider;
+        this._previousElements = [];
+        this._previousStateDisposables = new DisposableStore();
+        this._rootDomNode = $('.monaco-tree-sticky-container.empty');
+        container.appendChild(this._rootDomNode);
+        const shadow = $('.monaco-tree-sticky-container-shadow');
+        this._rootDomNode.appendChild(shadow);
+        this.stickyScrollFocus = new StickyScrollFocus(this._rootDomNode, view);
+        this.onDidChangeHasFocus = this.stickyScrollFocus.onDidChangeHasFocus;
+        this.onContextMenu = this.stickyScrollFocus.onContextMenu;
+    }
+    setState(state) {
+        const wasVisible = !!this._previousState && this._previousState.count > 0;
+        const isVisible = !!state && state.count > 0;
+        // If state has not changed, do nothing
+        if ((!wasVisible && !isVisible) || (wasVisible && isVisible && this._previousState.equal(state))) {
+            return;
+        }
+        // Update visibility of the widget if changed
+        if (wasVisible !== isVisible) {
+            this.setVisible(isVisible);
+        }
+        if (!isVisible) {
+            this._previousState = undefined;
+            this._previousElements = [];
+            this._previousStateDisposables.clear();
+            return;
+        }
+        const lastStickyNode = state.stickyNodes[state.count - 1];
+        // If the new state is only a change in the last node's position, update the position of the last element
+        if (this._previousState && state.animationStateChanged(this._previousState)) {
+            this._previousElements[this._previousState.count - 1].style.top = `${lastStickyNode.position}px`;
+        }
+        // create new dom elements
+        else {
+            this._previousStateDisposables.clear();
+            const elements = Array(state.count);
+            for (let stickyIndex = state.count - 1; stickyIndex >= 0; stickyIndex--) {
+                const stickyNode = state.stickyNodes[stickyIndex];
+                const { element, disposable } = this.createElement(stickyNode, stickyIndex, state.count);
+                elements[stickyIndex] = element;
+                this._rootDomNode.appendChild(element);
+                this._previousStateDisposables.add(disposable);
+            }
+            this.stickyScrollFocus.updateElements(elements, state);
+            this._previousElements = elements;
+        }
+        this._previousState = state;
+        // Set the height of the widget to the bottom of the last sticky node
+        this._rootDomNode.style.height = `${lastStickyNode.position + lastStickyNode.height}px`;
+    }
+    createElement(stickyNode, stickyIndex, stickyNodesTotal) {
+        const nodeIndex = stickyNode.startIndex;
+        // Sticky element container
+        const stickyElement = document.createElement('div');
+        stickyElement.style.top = `${stickyNode.position}px`;
+        stickyElement.style.height = `${stickyNode.height}px`;
+        stickyElement.style.lineHeight = `${stickyNode.height}px`;
+        stickyElement.classList.add('monaco-tree-sticky-row');
+        stickyElement.classList.add('monaco-list-row');
+        stickyElement.setAttribute('data-index', `${nodeIndex}`);
+        stickyElement.setAttribute('data-parity', nodeIndex % 2 === 0 ? 'even' : 'odd');
+        stickyElement.setAttribute('id', this.view.getElementID(nodeIndex));
+        this.setAccessibilityAttributes(stickyElement, stickyNode.node.element, stickyIndex, stickyNodesTotal);
+        // Get the renderer for the node
+        const nodeTemplateId = this.treeDelegate.getTemplateId(stickyNode.node);
+        const renderer = this.treeRenderers.find((renderer) => renderer.templateId === nodeTemplateId);
+        if (!renderer) {
+            throw new Error(`No renderer found for template id ${nodeTemplateId}`);
+        }
+        // To make sure we do not influence the original node, we create a copy of the node
+        // We need to check if it is already a unique instance of the node by the delegate
+        let nodeCopy = stickyNode.node;
+        if (nodeCopy === this.tree.getNode(this.tree.getNodeLocation(stickyNode.node))) {
+            nodeCopy = new Proxy(stickyNode.node, {});
+        }
+        // Render the element
+        const templateData = renderer.renderTemplate(stickyElement);
+        renderer.renderElement(nodeCopy, stickyNode.startIndex, templateData, stickyNode.height);
+        // Remove the element from the DOM when state is disposed
+        const disposable = toDisposable(() => {
+            renderer.disposeElement(nodeCopy, stickyNode.startIndex, templateData, stickyNode.height);
+            renderer.disposeTemplate(templateData);
+            stickyElement.remove();
+        });
+        return { element: stickyElement, disposable };
+    }
+    setAccessibilityAttributes(container, element, stickyIndex, stickyNodesTotal) {
+        var _a;
+        if (!this.accessibilityProvider) {
+            return;
+        }
+        if (this.accessibilityProvider.getSetSize) {
+            container.setAttribute('aria-setsize', String(this.accessibilityProvider.getSetSize(element, stickyIndex, stickyNodesTotal)));
+        }
+        if (this.accessibilityProvider.getPosInSet) {
+            container.setAttribute('aria-posinset', String(this.accessibilityProvider.getPosInSet(element, stickyIndex)));
+        }
+        if (this.accessibilityProvider.getRole) {
+            container.setAttribute('role', (_a = this.accessibilityProvider.getRole(element)) !== null && _a !== void 0 ? _a : 'treeitem');
+        }
+        const ariaLabel = this.accessibilityProvider.getAriaLabel(element);
+        if (ariaLabel) {
+            container.setAttribute('aria-label', ariaLabel);
+        }
+        const ariaLevel = this.accessibilityProvider.getAriaLevel && this.accessibilityProvider.getAriaLevel(element);
+        if (typeof ariaLevel === 'number') {
+            container.setAttribute('aria-level', `${ariaLevel}`);
+        }
+        // Sticky Scroll elements can not be selected
+        container.setAttribute('aria-selected', String(false));
+    }
+    setVisible(visible) {
+        this._rootDomNode.classList.toggle('empty', !visible);
+        if (!visible) {
+            this.stickyScrollFocus.updateElements([], undefined);
+        }
+    }
+    domFocus() {
+        this.stickyScrollFocus.domFocus();
+    }
+    focusedLast() {
+        return this.stickyScrollFocus.focusedLast();
+    }
+    dispose() {
+        this.stickyScrollFocus.dispose();
+        this._previousStateDisposables.dispose();
+        this._rootDomNode.remove();
+    }
+}
+class StickyScrollFocus extends Disposable {
+    get domHasFocus() { return this._domHasFocus; }
+    set domHasFocus(hasFocus) {
+        if (hasFocus !== this._domHasFocus) {
+            this._onDidChangeHasFocus.fire(hasFocus);
+            this._domHasFocus = hasFocus;
+        }
+    }
+    constructor(container, view) {
+        super();
+        this.container = container;
+        this.view = view;
+        this.focusedIndex = -1;
+        this.elements = [];
+        this._onDidChangeHasFocus = new Emitter();
+        this.onDidChangeHasFocus = this._onDidChangeHasFocus.event;
+        this._onContextMenu = new Emitter();
+        this.onContextMenu = this._onContextMenu.event;
+        this._domHasFocus = false;
+        this.container.addEventListener('focus', () => this.onFocus());
+        this.container.addEventListener('blur', () => this.onBlur());
+        this._register(this.view.onDidFocus(() => this.toggleStickyScrollFocused(false)));
+        this._register(this.view.onKeyDown((e) => this.onKeyDown(e)));
+        this._register(this.view.onMouseDown((e) => this.onMouseDown(e)));
+        this._register(this.view.onContextMenu((e) => this.handleContextMenu(e)));
+    }
+    handleContextMenu(e) {
+        const target = e.browserEvent.target;
+        if (!isStickyScrollContainer(target) && !isStickyScrollElement(target)) {
+            if (this.focusedLast()) {
+                this.view.domFocus();
+            }
+            return;
+        }
+        // The list handles the context menu triggered by a mouse event
+        // In that case only set the focus of the element clicked and leave the rest to the list to handle
+        if (!isKeyboardEvent(e.browserEvent)) {
+            if (!this.state) {
+                throw new Error('Context menu should not be triggered when state is undefined');
+            }
+            const stickyIndex = this.state.stickyNodes.findIndex(stickyNode => { var _a; return stickyNode.node.element === ((_a = e.element) === null || _a === void 0 ? void 0 : _a.element); });
+            if (stickyIndex === -1) {
+                throw new Error('Context menu should not be triggered when element is not in sticky scroll widget');
+            }
+            this.container.focus();
+            this.setFocus(stickyIndex);
+            return;
+        }
+        if (!this.state || this.focusedIndex < 0) {
+            throw new Error('Context menu key should not be triggered when focus is not in sticky scroll widget');
+        }
+        const stickyNode = this.state.stickyNodes[this.focusedIndex];
+        const element = stickyNode.node.element;
+        const anchor = this.elements[this.focusedIndex];
+        this._onContextMenu.fire({ element, anchor, browserEvent: e.browserEvent, isStickyScroll: true });
+    }
+    onKeyDown(e) {
+        // Sticky Scroll Navigation
+        if (this.domHasFocus && this.state) {
+            // Move up
+            if (e.key === 'ArrowUp') {
+                this.setFocusedElement(Math.max(0, this.focusedIndex - 1));
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            // Move down, if last sticky node is focused, move focus into first child of last sticky node
+            else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                if (this.focusedIndex >= this.state.count - 1) {
+                    const nodeIndexToFocus = this.state.stickyNodes[this.state.count - 1].startIndex + 1;
+                    this.view.domFocus();
+                    this.view.setFocus([nodeIndexToFocus]);
+                    this.scrollNodeUnderWidget(nodeIndexToFocus, this.state);
+                }
+                else {
+                    this.setFocusedElement(this.focusedIndex + 1);
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+    }
+    onMouseDown(e) {
+        const target = e.browserEvent.target;
+        if (!isStickyScrollContainer(target) && !isStickyScrollElement(target)) {
+            return;
+        }
+        e.browserEvent.preventDefault();
+        e.browserEvent.stopPropagation();
+    }
+    updateElements(elements, state) {
+        if (state && state.count === 0) {
+            throw new Error('Sticky scroll state must be undefined when there are no sticky nodes');
+        }
+        if (state && state.count !== elements.length) {
+            throw new Error('Sticky scroll focus received illigel state');
+        }
+        const previousIndex = this.focusedIndex;
+        this.removeFocus();
+        this.elements = elements;
+        this.state = state;
+        if (state) {
+            const newFocusedIndex = clamp(previousIndex, 0, state.count - 1);
+            this.setFocus(newFocusedIndex);
+        }
+        else {
+            if (this.domHasFocus) {
+                this.view.domFocus();
+            }
+        }
+        // must come last as it calls blur()
+        this.container.tabIndex = state ? 0 : -1;
+    }
+    setFocusedElement(stickyIndex) {
+        // doesn't imply that the widget has (or will have) focus
+        const state = this.state;
+        if (!state) {
+            throw new Error('Cannot set focus when state is undefined');
+        }
+        this.setFocus(stickyIndex);
+        if (stickyIndex < state.count - 1) {
+            return;
+        }
+        // If the last sticky node is not fully visible, scroll it into view
+        if (state.lastNodePartiallyVisible()) {
+            const lastStickyNode = state.stickyNodes[stickyIndex];
+            this.scrollNodeUnderWidget(lastStickyNode.endIndex + 1, state);
+        }
+    }
+    scrollNodeUnderWidget(nodeIndex, state) {
+        const lastStickyNode = state.stickyNodes[state.count - 1];
+        const secondLastStickyNode = state.count > 1 ? state.stickyNodes[state.count - 2] : undefined;
+        const elementScrollTop = this.view.getElementTop(nodeIndex);
+        const elementTargetViewTop = secondLastStickyNode ? secondLastStickyNode.position + secondLastStickyNode.height + lastStickyNode.height : lastStickyNode.height;
+        this.view.scrollTop = elementScrollTop - elementTargetViewTop;
+    }
+    domFocus() {
+        if (!this.state) {
+            throw new Error('Cannot focus when state is undefined');
+        }
+        this.container.focus();
+    }
+    focusedLast() {
+        if (!this.state) {
+            return false;
+        }
+        return this.view.getHTMLElement().classList.contains('sticky-scroll-focused');
+    }
+    removeFocus() {
+        if (this.focusedIndex === -1) {
+            return;
+        }
+        this.toggleElementFocus(this.elements[this.focusedIndex], false);
+        this.focusedIndex = -1;
+    }
+    setFocus(newFocusIndex) {
+        if (0 > newFocusIndex) {
+            throw new Error('addFocus() can not remove focus');
+        }
+        if (!this.state && newFocusIndex >= 0) {
+            throw new Error('Cannot set focus index when state is undefined');
+        }
+        if (this.state && newFocusIndex >= this.state.count) {
+            throw new Error('Cannot set focus index to an index that does not exist');
+        }
+        const oldIndex = this.focusedIndex;
+        if (oldIndex >= 0) {
+            this.toggleElementFocus(this.elements[oldIndex], false);
+        }
+        if (newFocusIndex >= 0) {
+            this.toggleElementFocus(this.elements[newFocusIndex], true);
+        }
+        this.focusedIndex = newFocusIndex;
+    }
+    toggleElementFocus(element, focused) {
+        element.classList.toggle('focused', focused);
+    }
+    toggleStickyScrollFocused(focused) {
+        // Weather the last focus in the view was sticky scroll and not the list
+        this.view.getHTMLElement().classList.toggle('sticky-scroll-focused', focused);
+    }
+    onFocus() {
+        if (!this.state || this.elements.length === 0) {
+            throw new Error('Cannot focus when state is undefined or elements are empty');
+        }
+        this.domHasFocus = true;
+        this.toggleStickyScrollFocused(true);
+        if (this.focusedIndex === -1) {
+            this.setFocus(0);
+        }
+    }
+    onBlur() {
+        this.domHasFocus = false;
+    }
+    dispose() {
+        this.toggleStickyScrollFocused(false);
+        this._onDidChangeHasFocus.fire(false);
+        super.dispose();
     }
 }
 function asTreeMouseEvent(event) {
@@ -901,9 +1505,10 @@ class Trait {
     }
 }
 class TreeNodeListMouseController extends MouseController {
-    constructor(list, tree) {
+    constructor(list, tree, stickyScrollProvider) {
         super(list);
         this.tree = tree;
+        this.stickyScrollProvider = stickyScrollProvider;
     }
     onViewPointer(e) {
         if (isButton(e.browserEvent.target) ||
@@ -924,20 +1529,29 @@ class TreeNodeListMouseController extends MouseController {
         const target = e.browserEvent.target;
         const onTwistie = target.classList.contains('monaco-tl-twistie')
             || (target.classList.contains('monaco-icon-label') && target.classList.contains('folder-icon') && e.browserEvent.offsetX < 16);
+        const isStickyElement = isStickyScrollElement(e.browserEvent.target);
         let expandOnlyOnTwistieClick = false;
-        if (typeof this.tree.expandOnlyOnTwistieClick === 'function') {
+        if (isStickyElement) {
+            expandOnlyOnTwistieClick = true;
+        }
+        else if (typeof this.tree.expandOnlyOnTwistieClick === 'function') {
             expandOnlyOnTwistieClick = this.tree.expandOnlyOnTwistieClick(node.element);
         }
         else {
             expandOnlyOnTwistieClick = !!this.tree.expandOnlyOnTwistieClick;
         }
-        if (expandOnlyOnTwistieClick && !onTwistie && e.browserEvent.detail !== 2) {
-            return super.onViewPointer(e);
+        if (!isStickyElement) {
+            if (expandOnlyOnTwistieClick && !onTwistie && e.browserEvent.detail !== 2) {
+                return super.onViewPointer(e);
+            }
+            if (!this.tree.expandOnDoubleClick && e.browserEvent.detail === 2) {
+                return super.onViewPointer(e);
+            }
         }
-        if (!this.tree.expandOnDoubleClick && e.browserEvent.detail === 2) {
-            return super.onViewPointer(e);
+        else {
+            this.handleStickyScrollMouseEvent(e, node);
         }
-        if (node.collapsible) {
+        if (node.collapsible && (!isStickyElement || onTwistie)) {
             const location = this.tree.getNodeLocation(node);
             const recursive = e.browserEvent.altKey;
             this.tree.setFocus([location]);
@@ -948,7 +1562,25 @@ class TreeNodeListMouseController extends MouseController {
                 return;
             }
         }
-        super.onViewPointer(e);
+        if (!isStickyElement) {
+            super.onViewPointer(e);
+        }
+    }
+    handleStickyScrollMouseEvent(e, node) {
+        if (isMonacoCustomToggle(e.browserEvent.target) || isActionItem(e.browserEvent.target)) {
+            return;
+        }
+        const stickyScrollController = this.stickyScrollProvider();
+        if (!stickyScrollController) {
+            throw new Error('Sticky scroll controller not found');
+        }
+        const nodeIndex = this.list.indexOf(node);
+        const elementScrollTop = this.list.getElementTop(nodeIndex);
+        const elementTargetViewTop = stickyScrollController.nodePositionTopBelowWidget(node);
+        this.tree.scrollTop = elementScrollTop - elementTargetViewTop;
+        this.list.domFocus();
+        this.list.setFocus([nodeIndex]);
+        this.list.setSelection([nodeIndex]);
     }
     onDoubleClick(e) {
         const onTwistie = e.browserEvent.target.classList.contains('monaco-tl-twistie');
@@ -959,6 +1591,21 @@ class TreeNodeListMouseController extends MouseController {
             return;
         }
         super.onDoubleClick(e);
+    }
+    // to make sure dom focus is not stolen (for example with context menu)
+    onMouseDown(e) {
+        const target = e.browserEvent.target;
+        if (!isStickyScrollContainer(target) && !isStickyScrollElement(target)) {
+            super.onMouseDown(e);
+            return;
+        }
+    }
+    onContextMenu(e) {
+        const target = e.browserEvent.target;
+        if (!isStickyScrollContainer(target) && !isStickyScrollElement(target)) {
+            super.onContextMenu(e);
+            return;
+        }
     }
 }
 /**
@@ -973,7 +1620,7 @@ class TreeNodeList extends List {
         this.anchorTrait = anchorTrait;
     }
     createMouseController(options) {
-        return new TreeNodeListMouseController(this, options.tree);
+        return new TreeNodeListMouseController(this, options.tree, options.stickyScrollProvider);
     }
     splice(start, deleteCount, elements = []) {
         super.splice(start, deleteCount, elements);
@@ -1054,11 +1701,12 @@ export class AbstractTree {
         this._options = _options;
         this.eventBufferer = new EventBufferer();
         this.onDidChangeFindOpenState = Event.None;
+        this.onDidChangeStickyScrollFocused = Event.None;
         this.disposables = new DisposableStore();
         this._onWillRefilter = new Emitter();
         this.onWillRefilter = this._onWillRefilter.event;
         this._onDidUpdateOptions = new Emitter();
-        const treeDelegate = new ComposedTreeDelegate(delegate);
+        this.treeDelegate = new ComposedTreeDelegate(delegate);
         const onDidChangeCollapseStateRelay = new Relay();
         const onDidChangeActiveNodes = new Relay();
         const activeNodes = this.disposables.add(new EventCollection(onDidChangeActiveNodes.event));
@@ -1070,13 +1718,13 @@ export class AbstractTree {
         let filter;
         if (_options.keyboardNavigationLabelProvider) {
             filter = new FindFilter(this, _options.keyboardNavigationLabelProvider, _options.filter);
-            _options = Object.assign(Object.assign({}, _options), { filter: filter }); // TODO need typescript help here
+            _options = { ..._options, filter: filter }; // TODO need typescript help here
             this.disposables.add(filter);
         }
         this.focus = new Trait(() => this.view.getFocusedElements()[0], _options.identityProvider);
         this.selection = new Trait(() => this.view.getSelectedElements()[0], _options.identityProvider);
         this.anchor = new Trait(() => this.view.getAnchorElement(), _options.identityProvider);
-        this.view = new TreeNodeList(_user, container, treeDelegate, this.renderers, this.focus, this.selection, this.anchor, Object.assign(Object.assign({}, asListOptions(() => this.model, _options)), { tree: this }));
+        this.view = new TreeNodeList(_user, container, this.treeDelegate, this.renderers, this.focus, this.selection, this.anchor, { ...asListOptions(() => this.model, _options), tree: this, stickyScrollProvider: () => this.stickyScrollController });
         this.model = this.createModel(_user, this.view, _options);
         onDidChangeCollapseStateRelay.input = this.model.onDidChangeCollapseState;
         const onDidModelSplice = Event.forEach(this.model.onDidSplice, e => {
@@ -1126,22 +1774,40 @@ export class AbstractTree {
             this.onDidChangeFindMode = Event.None;
             this.onDidChangeFindMatchType = Event.None;
         }
+        if (_options.enableStickyScroll) {
+            this.stickyScrollController = new StickyScrollController(this, this.model, this.view, this.renderers, this.treeDelegate, _options);
+            this.onDidChangeStickyScrollFocused = this.stickyScrollController.onDidChangeHasFocus;
+        }
         this.styleElement = createStyleSheet(this.view.getHTMLElement());
         this.getHTMLElement().classList.toggle('always', this._options.renderIndentGuides === RenderIndentGuides.Always);
     }
     updateOptions(optionsUpdate = {}) {
         var _a;
-        this._options = Object.assign(Object.assign({}, this._options), optionsUpdate);
+        this._options = { ...this._options, ...optionsUpdate };
         for (const renderer of this.renderers) {
             renderer.updateOptions(optionsUpdate);
         }
         this.view.updateOptions(this._options);
         (_a = this.findController) === null || _a === void 0 ? void 0 : _a.updateOptions(optionsUpdate);
+        this.updateStickyScroll(optionsUpdate);
         this._onDidUpdateOptions.fire(this._options);
         this.getHTMLElement().classList.toggle('always', this._options.renderIndentGuides === RenderIndentGuides.Always);
     }
     get options() {
         return this._options;
+    }
+    updateStickyScroll(optionsUpdate) {
+        var _a;
+        if (!this.stickyScrollController && this._options.enableStickyScroll) {
+            this.stickyScrollController = new StickyScrollController(this, this.model, this.view, this.renderers, this.treeDelegate, this._options);
+            this.onDidChangeStickyScrollFocused = this.stickyScrollController.onDidChangeHasFocus;
+        }
+        else if (this.stickyScrollController && !this._options.enableStickyScroll) {
+            this.onDidChangeStickyScrollFocused = Event.None;
+            this.stickyScrollController.dispose();
+            this.stickyScrollController = undefined;
+        }
+        (_a = this.stickyScrollController) === null || _a === void 0 ? void 0 : _a.updateOptions(optionsUpdate);
     }
     // Widget
     getHTMLElement() {
@@ -1160,7 +1826,13 @@ export class AbstractTree {
         return this.view.renderHeight;
     }
     domFocus() {
-        this.view.domFocus();
+        var _a;
+        if ((_a = this.stickyScrollController) === null || _a === void 0 ? void 0 : _a.focusedLast()) {
+            this.stickyScrollController.domFocus();
+        }
+        else {
+            this.view.domFocus();
+        }
     }
     layout(height, width) {
         var _a;
@@ -1170,11 +1842,34 @@ export class AbstractTree {
         }
     }
     style(styles) {
+        var _a;
         const suffix = `.${this.view.domId}`;
         const content = [];
         if (styles.treeIndentGuidesStroke) {
             content.push(`.monaco-list${suffix}:hover .monaco-tl-indent > .indent-guide, .monaco-list${suffix}.always .monaco-tl-indent > .indent-guide  { border-color: ${styles.treeInactiveIndentGuidesStroke}; }`);
             content.push(`.monaco-list${suffix} .monaco-tl-indent > .indent-guide.active { border-color: ${styles.treeIndentGuidesStroke}; }`);
+        }
+        // Sticky Scroll Background
+        if (styles.listBackground) {
+            content.push(`.monaco-list${suffix} .monaco-scrollable-element .monaco-tree-sticky-container { background-color: ${styles.listBackground}; }`);
+            content.push(`.monaco-list${suffix} .monaco-scrollable-element .monaco-tree-sticky-container .monaco-tree-sticky-row { background-color: ${styles.listBackground}; }`);
+        }
+        // Sticky Scroll Focus
+        if (styles.listFocusForeground) {
+            content.push(`.monaco-list${suffix}.sticky-scroll-focused .monaco-scrollable-element .monaco-tree-sticky-container:focus .monaco-list-row.focused { color: ${styles.listFocusForeground}; }`);
+            content.push(`.monaco-list${suffix}:not(.sticky-scroll-focused) .monaco-scrollable-element .monaco-tree-sticky-container .monaco-list-row.focused { color: inherit; }`);
+        }
+        // Sticky Scroll Focus Outlines
+        const focusAndSelectionOutline = asCssValueWithDefault(styles.listFocusAndSelectionOutline, asCssValueWithDefault(styles.listSelectionOutline, (_a = styles.listFocusOutline) !== null && _a !== void 0 ? _a : ''));
+        if (focusAndSelectionOutline) { // default: listFocusOutline
+            content.push(`.monaco-list${suffix}.sticky-scroll-focused .monaco-scrollable-element .monaco-tree-sticky-container:focus .monaco-list-row.focused.selected { outline: 1px solid ${focusAndSelectionOutline}; outline-offset: -1px;}`);
+            content.push(`.monaco-list${suffix}:not(.sticky-scroll-focused) .monaco-scrollable-element .monaco-tree-sticky-container .monaco-list-row.focused.selected { outline: inherit;}`);
+        }
+        if (styles.listFocusOutline) { // default: set
+            content.push(`.monaco-list${suffix}.sticky-scroll-focused .monaco-scrollable-element .monaco-tree-sticky-container:focus .monaco-list-row.focused { outline: 1px solid ${styles.listFocusOutline}; outline-offset: -1px; }`);
+            content.push(`.monaco-list${suffix}:not(.sticky-scroll-focused) .monaco-scrollable-element .monaco-tree-sticky-container .monaco-list-row.focused { outline: inherit; }`);
+            content.push(`.monaco-workbench.context-menu-visible .monaco-list${suffix}.last-focused.sticky-scroll-focused .monaco-list-rows .monaco-list-row.focused { outline: inherit; }`);
+            content.push(`.monaco-workbench.context-menu-visible .monaco-list${suffix}.last-focused:not(.sticky-scroll-focused) .monaco-tree-sticky-container .monaco-list-rows .monaco-list-row.focused { outline: inherit; }`);
         }
         this.styleElement.textContent = content.join('\n');
         this.view.style(styles);
@@ -1218,19 +1913,23 @@ export class AbstractTree {
         this.model.refilter();
     }
     setSelection(elements, browserEvent) {
-        const nodes = elements.map(e => this.model.getNode(e));
-        this.selection.set(nodes, browserEvent);
-        const indexes = elements.map(e => this.model.getListIndex(e)).filter(i => i > -1);
-        this.view.setSelection(indexes, browserEvent, true);
+        this.eventBufferer.bufferEvents(() => {
+            const nodes = elements.map(e => this.model.getNode(e));
+            this.selection.set(nodes, browserEvent);
+            const indexes = elements.map(e => this.model.getListIndex(e)).filter(i => i > -1);
+            this.view.setSelection(indexes, browserEvent, true);
+        });
     }
     getSelection() {
         return this.selection.get();
     }
     setFocus(elements, browserEvent) {
-        const nodes = elements.map(e => this.model.getNode(e));
-        this.focus.set(nodes, browserEvent);
-        const indexes = elements.map(e => this.model.getListIndex(e)).filter(i => i > -1);
-        this.view.setFocus(indexes, browserEvent, true);
+        this.eventBufferer.bufferEvents(() => {
+            const nodes = elements.map(e => this.model.getNode(e));
+            this.focus.set(nodes, browserEvent);
+            const indexes = elements.map(e => this.model.getListIndex(e)).filter(i => i > -1);
+            this.view.setFocus(indexes, browserEvent, true);
+        });
     }
     getFocus() {
         return this.focus.get();
@@ -1241,7 +1940,13 @@ export class AbstractTree {
         if (index === -1) {
             return;
         }
-        this.view.reveal(index, relativeTop);
+        if (!this.stickyScrollController) {
+            this.view.reveal(index, relativeTop);
+        }
+        else {
+            const paddingTop = this.stickyScrollController.nodePositionTopBelowWidget(this.getNode(location));
+            this.view.reveal(index, relativeTop, paddingTop);
+        }
     }
     // List
     onLeftArrow(e) {
@@ -1297,7 +2002,9 @@ export class AbstractTree {
         this.model.setCollapsed(location, undefined, recursive);
     }
     dispose() {
+        var _a;
         dispose(this.disposables);
+        (_a = this.stickyScrollController) === null || _a === void 0 ? void 0 : _a.dispose();
         this.view.dispose();
     }
 }

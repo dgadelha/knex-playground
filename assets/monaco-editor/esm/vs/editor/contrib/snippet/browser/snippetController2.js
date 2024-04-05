@@ -61,7 +61,7 @@ let SnippetController2 = SnippetController2_1 = class SnippetController2 {
         // error that sometimes happens when we fail to inserted a nested
         // snippet
         try {
-            this._doInsert(template, typeof opts === 'undefined' ? _defaultOptions : Object.assign(Object.assign({}, _defaultOptions), opts));
+            this._doInsert(template, typeof opts === 'undefined' ? _defaultOptions : { ..._defaultOptions, ...opts });
         }
         catch (e) {
             this.cancel();

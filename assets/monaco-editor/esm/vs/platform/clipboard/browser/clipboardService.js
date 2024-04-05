@@ -11,22 +11,17 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+var BrowserClipboardService_1;
 import { isSafari, isWebkitWebView } from '../../../base/browser/browser.js';
-import { $, addDisposableListener } from '../../../base/browser/dom.js';
+import { $, addDisposableListener, getActiveDocument, onDidRegisterWindow } from '../../../base/browser/dom.js';
+import { mainWindow } from '../../../base/browser/window.js';
 import { DeferredPromise } from '../../../base/common/async.js';
+import { Event } from '../../../base/common/event.js';
+import { hash } from '../../../base/common/hash.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { ILayoutService } from '../../layout/browser/layoutService.js';
 import { ILogService } from '../../log/common/log.js';
-let BrowserClipboardService = class BrowserClipboardService extends Disposable {
+let BrowserClipboardService = BrowserClipboardService_1 = class BrowserClipboardService extends Disposable {
     constructor(layoutService, logService) {
         super();
         this.layoutService = layoutService;
@@ -34,9 +29,17 @@ let BrowserClipboardService = class BrowserClipboardService extends Disposable {
         this.mapTextToType = new Map(); // unsupported in web (only in-memory)
         this.findText = ''; // unsupported in web (only in-memory)
         this.resources = []; // unsupported in web (only in-memory)
+        this.resourcesStateHash = undefined;
         if (isSafari || isWebkitWebView) {
             this.installWebKitWriteTextWorkaround();
         }
+        // Keep track of copy operations to reset our set of
+        // copied resources: since we keep resources in memory
+        // and not in the clipboard, we have to invalidate
+        // that state when the user copies other data.
+        this._register(Event.runAndSubscribe(onDidRegisterWindow, ({ window, disposables }) => {
+            disposables.add(addDisposableListener(window.document, 'copy', () => this.clearResources()));
+        }, { window: mainWindow, disposables: this._store }));
     }
     // In Safari, it has the following note:
     //
@@ -64,96 +67,115 @@ let BrowserClipboardService = class BrowserClipboardService extends Disposable {
             // see https://developer.mozilla.org/en-US/docs/Web/API/ClipboardItem/ClipboardItem#parameters
             navigator.clipboard.write([new ClipboardItem({
                     'text/plain': currentWritePromise.p,
-                })]).catch((err) => __awaiter(this, void 0, void 0, function* () {
+                })]).catch(async (err) => {
                 if (!(err instanceof Error) || err.name !== 'NotAllowedError' || !currentWritePromise.isRejected) {
                     this.logService.error(err);
                 }
-            }));
+            });
         };
-        if (this.layoutService.hasContainer) {
-            this._register(addDisposableListener(this.layoutService.container, 'click', handler));
-            this._register(addDisposableListener(this.layoutService.container, 'keydown', handler));
+        this._register(Event.runAndSubscribe(this.layoutService.onDidAddContainer, ({ container, disposables }) => {
+            disposables.add(addDisposableListener(container, 'click', handler));
+            disposables.add(addDisposableListener(container, 'keydown', handler));
+        }, { container: this.layoutService.mainContainer, disposables: this._store }));
+    }
+    async writeText(text, type) {
+        // Clear resources given we are writing text
+        this.writeResources([]);
+        // With type: only in-memory is supported
+        if (type) {
+            this.mapTextToType.set(type, text);
+            return;
+        }
+        if (this.webKitPendingClipboardWritePromise) {
+            // For Safari, we complete this Promise which allows the call to `navigator.clipboard.write()`
+            // above to resolve and successfully copy to the clipboard. If we let this continue, Safari
+            // would throw an error because this call stack doesn't appear to originate from a user gesture.
+            return this.webKitPendingClipboardWritePromise.complete(text);
+        }
+        // Guard access to navigator.clipboard with try/catch
+        // as we have seen DOMExceptions in certain browsers
+        // due to security policies.
+        try {
+            return await navigator.clipboard.writeText(text);
+        }
+        catch (error) {
+            console.error(error);
+        }
+        // Fallback to textarea and execCommand solution
+        this.fallbackWriteText(text);
+    }
+    fallbackWriteText(text) {
+        const activeDocument = getActiveDocument();
+        const activeElement = activeDocument.activeElement;
+        const textArea = activeDocument.body.appendChild($('textarea', { 'aria-hidden': true }));
+        textArea.style.height = '1px';
+        textArea.style.width = '1px';
+        textArea.style.position = 'absolute';
+        textArea.value = text;
+        textArea.focus();
+        textArea.select();
+        activeDocument.execCommand('copy');
+        if (activeElement instanceof HTMLElement) {
+            activeElement.focus();
+        }
+        activeDocument.body.removeChild(textArea);
+    }
+    async readText(type) {
+        // With type: only in-memory is supported
+        if (type) {
+            return this.mapTextToType.get(type) || '';
+        }
+        // Guard access to navigator.clipboard with try/catch
+        // as we have seen DOMExceptions in certain browsers
+        // due to security policies.
+        try {
+            return await navigator.clipboard.readText();
+        }
+        catch (error) {
+            console.error(error);
+        }
+        return '';
+    }
+    async readFindText() {
+        return this.findText;
+    }
+    async writeFindText(text) {
+        this.findText = text;
+    }
+    async writeResources(resources) {
+        if (resources.length === 0) {
+            this.clearResources();
+        }
+        else {
+            this.resources = resources;
+            this.resourcesStateHash = await this.computeResourcesStateHash();
         }
     }
-    writeText(text, type) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // With type: only in-memory is supported
-            if (type) {
-                this.mapTextToType.set(type, text);
-                return;
-            }
-            if (this.webKitPendingClipboardWritePromise) {
-                // For Safari, we complete this Promise which allows the call to `navigator.clipboard.write()`
-                // above to resolve and successfully copy to the clipboard. If we let this continue, Safari
-                // would throw an error because this call stack doesn't appear to originate from a user gesture.
-                return this.webKitPendingClipboardWritePromise.complete(text);
-            }
-            // Guard access to navigator.clipboard with try/catch
-            // as we have seen DOMExceptions in certain browsers
-            // due to security policies.
-            try {
-                return yield navigator.clipboard.writeText(text);
-            }
-            catch (error) {
-                console.error(error);
-            }
-            // Fallback to textarea and execCommand solution
-            const activeElement = document.activeElement;
-            const textArea = document.body.appendChild($('textarea', { 'aria-hidden': true }));
-            textArea.style.height = '1px';
-            textArea.style.width = '1px';
-            textArea.style.position = 'absolute';
-            textArea.value = text;
-            textArea.focus();
-            textArea.select();
-            document.execCommand('copy');
-            if (activeElement instanceof HTMLElement) {
-                activeElement.focus();
-            }
-            document.body.removeChild(textArea);
-            return;
-        });
+    async readResources() {
+        const resourcesStateHash = await this.computeResourcesStateHash();
+        if (this.resourcesStateHash !== resourcesStateHash) {
+            this.clearResources(); // state mismatch, resources no longer valid
+        }
+        return this.resources;
     }
-    readText(type) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // With type: only in-memory is supported
-            if (type) {
-                return this.mapTextToType.get(type) || '';
-            }
-            // Guard access to navigator.clipboard with try/catch
-            // as we have seen DOMExceptions in certain browsers
-            // due to security policies.
-            try {
-                return yield navigator.clipboard.readText();
-            }
-            catch (error) {
-                console.error(error);
-                return '';
-            }
-        });
+    async computeResourcesStateHash() {
+        if (this.resources.length === 0) {
+            return undefined; // no resources, no hash needed
+        }
+        // Resources clipboard is managed in-memory only and thus
+        // fails to invalidate when clipboard data is changing.
+        // As such, we compute the hash of the current clipboard
+        // and use that to later validate the resources clipboard.
+        const clipboardText = await this.readText();
+        return hash(clipboardText.substring(0, BrowserClipboardService_1.MAX_RESOURCE_STATE_SOURCE_LENGTH));
     }
-    readFindText() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.findText;
-        });
-    }
-    writeFindText(text) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.findText = text;
-        });
-    }
-    writeResources(resources) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.resources = resources;
-        });
-    }
-    readResources() {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.resources;
-        });
+    clearResources() {
+        this.resources = [];
+        this.resourcesStateHash = undefined;
     }
 };
-BrowserClipboardService = __decorate([
+BrowserClipboardService.MAX_RESOURCE_STATE_SOURCE_LENGTH = 1000;
+BrowserClipboardService = BrowserClipboardService_1 = __decorate([
     __param(0, ILayoutService),
     __param(1, ILogService)
 ], BrowserClipboardService);

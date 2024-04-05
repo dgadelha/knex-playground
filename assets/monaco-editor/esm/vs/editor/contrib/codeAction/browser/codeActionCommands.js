@@ -69,7 +69,7 @@ export class CodeActionCommand extends EditorCommand {
         super({
             id: codeActionCommandId,
             precondition: ContextKeyExpr.and(EditorContextKeys.writable, EditorContextKeys.hasCodeActionsProvider),
-            description: {
+            metadata: {
                 description: 'Trigger a code action',
                 args: [{ name: 'args', schema: argsSchema, }]
             }
@@ -113,7 +113,7 @@ export class RefactorAction extends EditorAction {
                 order: 2,
                 when: ContextKeyExpr.and(EditorContextKeys.writable, contextKeyForSupportedActions(CodeActionKind.Refactor)),
             },
-            description: {
+            metadata: {
                 description: 'Refactor...',
                 args: [{ name: 'args', schema: argsSchema }]
             }
@@ -148,7 +148,7 @@ export class SourceAction extends EditorAction {
                 order: 2.1,
                 when: ContextKeyExpr.and(EditorContextKeys.writable, contextKeyForSupportedActions(CodeActionKind.Source)),
             },
-            description: {
+            metadata: {
                 description: 'Source Action...',
                 args: [{ name: 'args', schema: argsSchema }]
             }

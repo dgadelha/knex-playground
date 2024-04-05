@@ -26,9 +26,9 @@ export const CommandsRegistry = new class {
             return this.registerCommand({ id: idOrCommand, handler });
         }
         // add argument validation if rich command metadata is provided
-        if (idOrCommand.description) {
+        if (idOrCommand.metadata && Array.isArray(idOrCommand.metadata.args)) {
             const constraints = [];
-            for (const arg of idOrCommand.description.args) {
+            for (const arg of idOrCommand.metadata.args) {
                 constraints.push(arg.constraint);
             }
             const actualHandler = idOrCommand.handler;

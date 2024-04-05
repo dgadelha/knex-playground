@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { illegalArgument, onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
@@ -37,50 +28,48 @@ export class CodeLensModel {
         }
     }
 }
-export function getCodeLensModel(registry, model, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const provider = registry.ordered(model);
-        const providerRanks = new Map();
-        const result = new CodeLensModel();
-        const promises = provider.map((provider, i) => __awaiter(this, void 0, void 0, function* () {
-            providerRanks.set(provider, i);
-            try {
-                const list = yield Promise.resolve(provider.provideCodeLenses(model, token));
-                if (list) {
-                    result.add(list, provider);
-                }
+export async function getCodeLensModel(registry, model, token) {
+    const provider = registry.ordered(model);
+    const providerRanks = new Map();
+    const result = new CodeLensModel();
+    const promises = provider.map(async (provider, i) => {
+        providerRanks.set(provider, i);
+        try {
+            const list = await Promise.resolve(provider.provideCodeLenses(model, token));
+            if (list) {
+                result.add(list, provider);
             }
-            catch (err) {
-                onUnexpectedExternalError(err);
-            }
-        }));
-        yield Promise.all(promises);
-        result.lenses = result.lenses.sort((a, b) => {
-            // sort by lineNumber, provider-rank, and column
-            if (a.symbol.range.startLineNumber < b.symbol.range.startLineNumber) {
-                return -1;
-            }
-            else if (a.symbol.range.startLineNumber > b.symbol.range.startLineNumber) {
-                return 1;
-            }
-            else if ((providerRanks.get(a.provider)) < (providerRanks.get(b.provider))) {
-                return -1;
-            }
-            else if ((providerRanks.get(a.provider)) > (providerRanks.get(b.provider))) {
-                return 1;
-            }
-            else if (a.symbol.range.startColumn < b.symbol.range.startColumn) {
-                return -1;
-            }
-            else if (a.symbol.range.startColumn > b.symbol.range.startColumn) {
-                return 1;
-            }
-            else {
-                return 0;
-            }
-        });
-        return result;
+        }
+        catch (err) {
+            onUnexpectedExternalError(err);
+        }
     });
+    await Promise.all(promises);
+    result.lenses = result.lenses.sort((a, b) => {
+        // sort by lineNumber, provider-rank, and column
+        if (a.symbol.range.startLineNumber < b.symbol.range.startLineNumber) {
+            return -1;
+        }
+        else if (a.symbol.range.startLineNumber > b.symbol.range.startLineNumber) {
+            return 1;
+        }
+        else if ((providerRanks.get(a.provider)) < (providerRanks.get(b.provider))) {
+            return -1;
+        }
+        else if ((providerRanks.get(a.provider)) > (providerRanks.get(b.provider))) {
+            return 1;
+        }
+        else if (a.symbol.range.startColumn < b.symbol.range.startColumn) {
+            return -1;
+        }
+        else if (a.symbol.range.startColumn > b.symbol.range.startColumn) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    });
+    return result;
 }
 CommandsRegistry.registerCommand('_executeCodeLensProvider', function (accessor, ...args) {
     let [uri, itemResolveCount] = args;

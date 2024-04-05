@@ -11,17 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 var MenuItemAction_1;
 import { SubmenuAction } from '../../../base/common/actions.js';
 import { ThemeIcon } from '../../../base/common/themables.js';
@@ -58,6 +47,8 @@ MenuId.DebugBreakpointsContext = new MenuId('DebugBreakpointsContext');
 MenuId.DebugCallStackContext = new MenuId('DebugCallStackContext');
 MenuId.DebugConsoleContext = new MenuId('DebugConsoleContext');
 MenuId.DebugVariablesContext = new MenuId('DebugVariablesContext');
+MenuId.NotebookVariablesContext = new MenuId('NotebookVariablesContext');
+MenuId.DebugHoverContext = new MenuId('DebugHoverContext');
 MenuId.DebugWatchContext = new MenuId('DebugWatchContext');
 MenuId.DebugToolBar = new MenuId('DebugToolBar');
 MenuId.DebugToolBarStop = new MenuId('DebugToolBarStop');
@@ -75,6 +66,9 @@ MenuId.EditorTitleContextShare = new MenuId('EditorTitleContextShare');
 MenuId.EmptyEditorGroup = new MenuId('EmptyEditorGroup');
 MenuId.EmptyEditorGroupContext = new MenuId('EmptyEditorGroupContext');
 MenuId.EditorTabsBarContext = new MenuId('EditorTabsBarContext');
+MenuId.EditorTabsBarShowTabsSubmenu = new MenuId('EditorTabsBarShowTabsSubmenu');
+MenuId.EditorTabsBarShowTabsZenModeSubmenu = new MenuId('EditorTabsBarShowTabsZenModeSubmenu');
+MenuId.EditorActionsPositionSubmenu = new MenuId('EditorActionsPositionSubmenu');
 MenuId.ExplorerContext = new MenuId('ExplorerContext');
 MenuId.ExplorerContextShare = new MenuId('ExplorerContextShare');
 MenuId.ExtensionContext = new MenuId('ExtensionContext');
@@ -95,6 +89,7 @@ MenuId.MenubarLayoutMenu = new MenuId('MenubarLayoutMenu');
 MenuId.MenubarNewBreakpointMenu = new MenuId('MenubarNewBreakpointMenu');
 MenuId.PanelAlignmentMenu = new MenuId('PanelAlignmentMenu');
 MenuId.PanelPositionMenu = new MenuId('PanelPositionMenu');
+MenuId.ActivityBarPositionMenu = new MenuId('ActivityBarPositionMenu');
 MenuId.MenubarPreferencesMenu = new MenuId('MenubarPreferencesMenu');
 MenuId.MenubarRecentMenu = new MenuId('MenubarRecentMenu');
 MenuId.MenubarSelectionMenu = new MenuId('MenubarSelectionMenu');
@@ -107,12 +102,26 @@ MenuId.MenubarHomeMenu = new MenuId('MenubarHomeMenu');
 MenuId.OpenEditorsContext = new MenuId('OpenEditorsContext');
 MenuId.OpenEditorsContextShare = new MenuId('OpenEditorsContextShare');
 MenuId.ProblemsPanelContext = new MenuId('ProblemsPanelContext');
+MenuId.SCMInputBox = new MenuId('SCMInputBox');
+MenuId.SCMChangesSeparator = new MenuId('SCMChangesSeparator');
+MenuId.SCMIncomingChanges = new MenuId('SCMIncomingChanges');
+MenuId.SCMIncomingChangesContext = new MenuId('SCMIncomingChangesContext');
+MenuId.SCMIncomingChangesSetting = new MenuId('SCMIncomingChangesSetting');
+MenuId.SCMOutgoingChanges = new MenuId('SCMOutgoingChanges');
+MenuId.SCMOutgoingChangesContext = new MenuId('SCMOutgoingChangesContext');
+MenuId.SCMOutgoingChangesSetting = new MenuId('SCMOutgoingChangesSetting');
+MenuId.SCMIncomingChangesAllChangesContext = new MenuId('SCMIncomingChangesAllChangesContext');
+MenuId.SCMIncomingChangesHistoryItemContext = new MenuId('SCMIncomingChangesHistoryItemContext');
+MenuId.SCMOutgoingChangesAllChangesContext = new MenuId('SCMOutgoingChangesAllChangesContext');
+MenuId.SCMOutgoingChangesHistoryItemContext = new MenuId('SCMOutgoingChangesHistoryItemContext');
 MenuId.SCMChangeContext = new MenuId('SCMChangeContext');
 MenuId.SCMResourceContext = new MenuId('SCMResourceContext');
 MenuId.SCMResourceContextShare = new MenuId('SCMResourceContextShare');
 MenuId.SCMResourceFolderContext = new MenuId('SCMResourceFolderContext');
 MenuId.SCMResourceGroupContext = new MenuId('SCMResourceGroupContext');
 MenuId.SCMSourceControl = new MenuId('SCMSourceControl');
+MenuId.SCMSourceControlInline = new MenuId('SCMSourceControlInline');
+MenuId.SCMSourceControlTitle = new MenuId('SCMSourceControlTitle');
 MenuId.SCMTitle = new MenuId('SCMTitle');
 MenuId.SearchContext = new MenuId('SearchContext');
 MenuId.SearchActionMenu = new MenuId('SearchActionContext');
@@ -153,6 +162,7 @@ MenuId.InteractiveCellTitle = new MenuId('InteractiveCellTitle');
 MenuId.InteractiveCellDelete = new MenuId('InteractiveCellDelete');
 MenuId.InteractiveCellExecute = new MenuId('InteractiveCellExecute');
 MenuId.InteractiveInputExecute = new MenuId('InteractiveInputExecute');
+MenuId.IssueReporter = new MenuId('IssueReporter');
 MenuId.NotebookToolbar = new MenuId('NotebookToolbar');
 MenuId.NotebookStickyScrollContext = new MenuId('NotebookStickyScrollContext');
 MenuId.NotebookCellTitle = new MenuId('NotebookCellTitle');
@@ -161,6 +171,7 @@ MenuId.NotebookCellInsert = new MenuId('NotebookCellInsert');
 MenuId.NotebookCellBetween = new MenuId('NotebookCellBetween');
 MenuId.NotebookCellListTop = new MenuId('NotebookCellTop');
 MenuId.NotebookCellExecute = new MenuId('NotebookCellExecute');
+MenuId.NotebookCellExecuteGoTo = new MenuId('NotebookCellExecuteGoTo');
 MenuId.NotebookCellExecutePrimary = new MenuId('NotebookCellExecutePrimary');
 MenuId.NotebookDiffCellInputTitle = new MenuId('NotebookDiffCellInputTitle');
 MenuId.NotebookDiffCellMetadataTitle = new MenuId('NotebookDiffCellMetadataTitle');
@@ -175,6 +186,7 @@ MenuId.TimelineTitle = new MenuId('TimelineTitle');
 MenuId.TimelineTitleContext = new MenuId('TimelineTitleContext');
 MenuId.TimelineFilterSubMenu = new MenuId('TimelineFilterSubMenu');
 MenuId.AccountsContext = new MenuId('AccountsContext');
+MenuId.SidebarTitle = new MenuId('SidebarTitle');
 MenuId.PanelTitle = new MenuId('PanelTitle');
 MenuId.AuxiliaryBarTitle = new MenuId('AuxiliaryBarTitle');
 MenuId.TerminalInstanceContext = new MenuId('TerminalInstanceContext');
@@ -182,20 +194,24 @@ MenuId.TerminalEditorInstanceContext = new MenuId('TerminalEditorInstanceContext
 MenuId.TerminalNewDropdownContext = new MenuId('TerminalNewDropdownContext');
 MenuId.TerminalTabContext = new MenuId('TerminalTabContext');
 MenuId.TerminalTabEmptyAreaContext = new MenuId('TerminalTabEmptyAreaContext');
+MenuId.TerminalStickyScrollContext = new MenuId('TerminalStickyScrollContext');
 MenuId.WebviewContext = new MenuId('WebviewContext');
 MenuId.InlineCompletionsActions = new MenuId('InlineCompletionsActions');
+MenuId.InlineEditActions = new MenuId('InlineEditActions');
 MenuId.NewFile = new MenuId('NewFile');
 MenuId.MergeInput1Toolbar = new MenuId('MergeToolbar1Toolbar');
 MenuId.MergeInput2Toolbar = new MenuId('MergeToolbar2Toolbar');
 MenuId.MergeBaseToolbar = new MenuId('MergeBaseToolbar');
 MenuId.MergeInputResultToolbar = new MenuId('MergeToolbarResultToolbar');
 MenuId.InlineSuggestionToolbar = new MenuId('InlineSuggestionToolbar');
+MenuId.InlineEditToolbar = new MenuId('InlineEditToolbar');
 MenuId.ChatContext = new MenuId('ChatContext');
 MenuId.ChatCodeBlock = new MenuId('ChatCodeblock');
 MenuId.ChatMessageTitle = new MenuId('ChatMessageTitle');
 MenuId.ChatExecute = new MenuId('ChatExecute');
 MenuId.ChatInputSide = new MenuId('ChatInputSide');
 MenuId.AccessibleView = new MenuId('AccessibleView');
+MenuId.MultiDiffEditorFileToolbar = new MenuId('MultiDiffEditorFileToolbar');
 export const IMenuService = createDecorator('menuService');
 class MenuRegistryChangeEvent {
     static for(id) {
@@ -370,21 +386,24 @@ export class Action2 {
 export function registerAction2(ctor) {
     const disposables = new DisposableStore();
     const action = new ctor();
-    const _a = action.desc, { f1, menu, keybinding, description } = _a, command = __rest(_a, ["f1", "menu", "keybinding", "description"]);
+    const { f1, menu, keybinding, ...command } = action.desc;
+    if (CommandsRegistry.getCommand(command.id)) {
+        throw new Error(`Cannot register two commands with the same id: ${command.id}`);
+    }
     // command
     disposables.add(CommandsRegistry.registerCommand({
         id: command.id,
         handler: (accessor, ...args) => action.run(accessor, ...args),
-        description: description,
+        metadata: command.metadata,
     }));
     // menu
     if (Array.isArray(menu)) {
         for (const item of menu) {
-            disposables.add(MenuRegistry.appendMenuItem(item.id, Object.assign({ command: Object.assign(Object.assign({}, command), { precondition: item.precondition === null ? undefined : command.precondition }) }, item)));
+            disposables.add(MenuRegistry.appendMenuItem(item.id, { command: { ...command, precondition: item.precondition === null ? undefined : command.precondition }, ...item }));
         }
     }
     else if (menu) {
-        disposables.add(MenuRegistry.appendMenuItem(menu.id, Object.assign({ command: Object.assign(Object.assign({}, command), { precondition: menu.precondition === null ? undefined : command.precondition }) }, menu)));
+        disposables.add(MenuRegistry.appendMenuItem(menu.id, { command: { ...command, precondition: menu.precondition === null ? undefined : command.precondition }, ...menu }));
     }
     if (f1) {
         disposables.add(MenuRegistry.appendMenuItem(MenuId.CommandPalette, { command, when: command.precondition }));
@@ -393,11 +412,19 @@ export function registerAction2(ctor) {
     // keybinding
     if (Array.isArray(keybinding)) {
         for (const item of keybinding) {
-            disposables.add(KeybindingsRegistry.registerKeybindingRule(Object.assign(Object.assign({}, item), { id: command.id, when: command.precondition ? ContextKeyExpr.and(command.precondition, item.when) : item.when })));
+            disposables.add(KeybindingsRegistry.registerKeybindingRule({
+                ...item,
+                id: command.id,
+                when: command.precondition ? ContextKeyExpr.and(command.precondition, item.when) : item.when
+            }));
         }
     }
     else if (keybinding) {
-        disposables.add(KeybindingsRegistry.registerKeybindingRule(Object.assign(Object.assign({}, keybinding), { id: command.id, when: command.precondition ? ContextKeyExpr.and(command.precondition, keybinding.when) : keybinding.when })));
+        disposables.add(KeybindingsRegistry.registerKeybindingRule({
+            ...keybinding,
+            id: command.id,
+            when: command.precondition ? ContextKeyExpr.and(command.precondition, keybinding.when) : keybinding.when
+        }));
     }
     return disposables;
 }

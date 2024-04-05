@@ -19,19 +19,25 @@ registerEditorAction(OrganizeImportsAction);
 registerEditorAction(AutoFixAction);
 registerEditorAction(FixAllAction);
 registerEditorCommand(new CodeActionCommand());
-Registry.as(Extensions.Configuration).registerConfiguration(Object.assign(Object.assign({}, editorConfigurationBaseNode), { properties: {
+Registry.as(Extensions.Configuration).registerConfiguration({
+    ...editorConfigurationBaseNode,
+    properties: {
         'editor.codeActionWidget.showHeaders': {
             type: 'boolean',
             scope: 5 /* ConfigurationScope.LANGUAGE_OVERRIDABLE */,
             description: nls.localize('showCodeActionHeaders', "Enable/disable showing group headers in the Code Action menu."),
             default: true,
         },
-    } }));
-Registry.as(Extensions.Configuration).registerConfiguration(Object.assign(Object.assign({}, editorConfigurationBaseNode), { properties: {
-        'editor.codeActionWidget.includeNearbyQuickfixes': {
+    }
+});
+Registry.as(Extensions.Configuration).registerConfiguration({
+    ...editorConfigurationBaseNode,
+    properties: {
+        'editor.codeActionWidget.includeNearbyQuickFixes': {
             type: 'boolean',
             scope: 5 /* ConfigurationScope.LANGUAGE_OVERRIDABLE */,
-            description: nls.localize('includeNearbyQuickfixes', "Enable/disable showing nearest quickfix within a line when not currently on a diagnostic."),
-            default: false,
+            description: nls.localize('includeNearbyQuickFixes', "Enable/disable showing nearest Quick Fix within a line when not currently on a diagnostic."),
+            default: true,
         },
-    } }));
+    }
+});

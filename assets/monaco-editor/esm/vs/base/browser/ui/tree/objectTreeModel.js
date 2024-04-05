@@ -63,7 +63,7 @@ export class ObjectTreeModel {
             }
             (_a = options.onDidDeleteNode) === null || _a === void 0 ? void 0 : _a.call(options, tnode);
         };
-        this.model.splice([...location, 0], Number.MAX_VALUE, children, Object.assign(Object.assign({}, options), { onDidCreateNode, onDidDeleteNode }));
+        this.model.splice([...location, 0], Number.MAX_VALUE, children, { ...options, onDidCreateNode, onDidDeleteNode });
     }
     preserveCollapseState(elements = Iterable.empty()) {
         if (this.sorter) {
@@ -89,7 +89,11 @@ export class ObjectTreeModel {
                 else {
                     collapsed = Boolean(treeElement.collapsed);
                 }
-                return Object.assign(Object.assign({}, treeElement), { children: this.preserveCollapseState(treeElement.children), collapsed });
+                return {
+                    ...treeElement,
+                    children: this.preserveCollapseState(treeElement.children),
+                    collapsed
+                };
             }
             const collapsible = typeof treeElement.collapsible === 'boolean' ? treeElement.collapsible : node.collapsible;
             let collapsed;
@@ -105,8 +109,12 @@ export class ObjectTreeModel {
             else {
                 collapsed = Boolean(treeElement.collapsed);
             }
-            return Object.assign(Object.assign({}, treeElement), { collapsible,
-                collapsed, children: this.preserveCollapseState(treeElement.children) });
+            return {
+                ...treeElement,
+                collapsible,
+                collapsed,
+                children: this.preserveCollapseState(treeElement.children)
+            };
         });
     }
     rerender(element) {

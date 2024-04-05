@@ -6,7 +6,7 @@ import * as dom from '../../base/browser/dom.js';
 import { GlobalPointerMoveMonitor } from '../../base/browser/globalPointerMoveMonitor.js';
 import { StandardMouseEvent } from '../../base/browser/mouseEvent.js';
 import { RunOnceScheduler } from '../../base/common/async.js';
-import { Disposable } from '../../base/common/lifecycle.js';
+import { Disposable, DisposableStore } from '../../base/common/lifecycle.js';
 import { asCssVariable } from '../../platform/theme/common/colorRegistry.js';
 /**
  * Coordinates relative to the whole document (e.g. mouse event's pageX and pageY)
@@ -17,8 +17,8 @@ export class PageCoordinates {
         this.y = y;
         this._pageCoordinatesBrand = undefined;
     }
-    toClientCoordinates() {
-        return new ClientCoordinates(this.x - window.scrollX, this.y - window.scrollY);
+    toClientCoordinates(targetWindow) {
+        return new ClientCoordinates(this.x - targetWindow.scrollX, this.y - targetWindow.scrollY);
     }
 }
 /**
@@ -34,8 +34,8 @@ export class ClientCoordinates {
         this.clientY = clientY;
         this._clientCoordinatesBrand = undefined;
     }
-    toPageCoordinates() {
-        return new PageCoordinates(this.clientX + window.scrollX, this.clientY + window.scrollY);
+    toPageCoordinates(targetWindow) {
+        return new PageCoordinates(this.clientX + targetWindow.scrollX, this.clientY + targetWindow.scrollY);
     }
 }
 /**
@@ -86,7 +86,7 @@ export function createCoordinatesRelativeToEditor(editorViewDomNode, editorPageP
 }
 export class EditorMouseEvent extends StandardMouseEvent {
     constructor(e, isFromPointerCapture, editorViewDomNode) {
-        super(e);
+        super(dom.getWindow(editorViewDomNode), e);
         this._editorMouseEventBrand = undefined;
         this.isFromPointerCapture = isFromPointerCapture;
         this.pos = new PageCoordinates(this.posx, this.posy);
@@ -241,7 +241,8 @@ class RefCountedCssRule {
         this.className = className;
         this.properties = properties;
         this._referenceCount = 0;
-        this._styleElement = dom.createStyleSheet(_containerElement);
+        this._styleElementDisposables = new DisposableStore();
+        this._styleElement = dom.createStyleSheet(_containerElement, undefined, this._styleElementDisposables);
         this._styleElement.textContent = this.getCssText(this.className, this.properties);
     }
     getCssText(className, properties) {
@@ -262,7 +263,8 @@ class RefCountedCssRule {
         return str;
     }
     dispose() {
-        this._styleElement.remove();
+        this._styleElementDisposables.dispose();
+        this._styleElement = undefined;
     }
     increaseRefCount() {
         this._referenceCount++;

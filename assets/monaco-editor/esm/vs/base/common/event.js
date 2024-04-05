@@ -490,39 +490,11 @@ export var Event;
         return result.event;
     }
     Event.fromPromise = fromPromise;
-    /**
-     * Adds a listener to an event and calls the listener immediately with undefined as the event object.
-     *
-     * @example
-     * ```
-     * // Initialize the UI and update it when dataChangeEvent fires
-     * runAndSubscribe(dataChangeEvent, () => this._updateUI());
-     * ```
-     */
-    function runAndSubscribe(event, handler) {
-        handler(undefined);
+    function runAndSubscribe(event, handler, initial) {
+        handler(initial);
         return event(e => handler(e));
     }
     Event.runAndSubscribe = runAndSubscribe;
-    /**
-     * Adds a listener to an event and calls the listener immediately with undefined as the event object. A new
-     * {@link DisposableStore} is passed to the listener which is disposed when the returned disposable is disposed.
-     */
-    function runAndSubscribeWithStore(event, handler) {
-        let store = null;
-        function run(e) {
-            store === null || store === void 0 ? void 0 : store.dispose();
-            store = new DisposableStore();
-            handler(e, store);
-        }
-        run(undefined);
-        const disposable = event(e => run(e));
-        return toDisposable(() => {
-            disposable.dispose();
-            store === null || store === void 0 ? void 0 : store.dispose();
-        });
-    }
-    Event.runAndSubscribeWithStore = runAndSubscribeWithStore;
     class EmitterObserver {
         constructor(_observable, store) {
             this._observable = _observable;
@@ -580,7 +552,7 @@ export var Event;
      * Each listener is attached to the observable directly.
      */
     function fromObservableLight(observable) {
-        return (listener) => {
+        return (listener, thisArgs, disposables) => {
             let count = 0;
             let didChange = false;
             const observer = {
@@ -593,7 +565,7 @@ export var Event;
                         observable.reportChanges();
                         if (didChange) {
                             didChange = false;
-                            listener();
+                            listener.call(thisArgs);
                         }
                     }
                 },
@@ -606,11 +578,18 @@ export var Event;
             };
             observable.addObserver(observer);
             observable.reportChanges();
-            return {
+            const disposable = {
                 dispose() {
                     observable.removeObserver(observer);
                 }
             };
+            if (disposables instanceof DisposableStore) {
+                disposables.add(disposable);
+            }
+            else if (Array.isArray(disposables)) {
+                disposables.push(disposable);
+            }
+            return disposable;
         };
     }
     Event.fromObservableLight = fromObservableLight;
@@ -1095,13 +1074,17 @@ export class EventMultiplexer {
         e.listener = e.event(r => this.emitter.fire(r));
     }
     unhook(e) {
-        if (e.listener) {
-            e.listener.dispose();
-        }
+        var _a;
+        (_a = e.listener) === null || _a === void 0 ? void 0 : _a.dispose();
         e.listener = null;
     }
     dispose() {
+        var _a;
         this.emitter.dispose();
+        for (const e of this.events) {
+            (_a = e.listener) === null || _a === void 0 ? void 0 : _a.dispose();
+        }
+        this.events = [];
     }
 }
 /**

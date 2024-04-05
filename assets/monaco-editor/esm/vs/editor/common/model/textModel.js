@@ -1345,8 +1345,9 @@ let TextModel = TextModel_1 = class TextModel extends Disposable {
             const nodeRange = this._decorationsTree.getNodeRange(this, node);
             this._onDidChangeDecorations.recordLineAffectedByInjectedText(nodeRange.startLineNumber);
         }
-        if (nodeWasInOverviewRuler !== nodeIsInOverviewRuler) {
-            // Delete + Insert due to an overview ruler status change
+        const movedInOverviewRuler = nodeWasInOverviewRuler !== nodeIsInOverviewRuler;
+        const changedWhetherInjectedText = isOptionsInjectedText(options) !== isNodeInjectedText(node);
+        if (movedInOverviewRuler || changedWhetherInjectedText) {
             this._decorationsTree.delete(node);
             node.setOptions(options);
             this._decorationsTree.insert(node);
@@ -1507,6 +1508,9 @@ function indentOfLine(line) {
 //#region Decorations
 function isNodeInOverviewRuler(node) {
     return (node.options.overviewRuler && node.options.overviewRuler.color ? true : false);
+}
+function isOptionsInjectedText(options) {
+    return !!options.after || !!options.before;
 }
 function isNodeInjectedText(node) {
     return !!node.options.after || !!node.options.before;
@@ -1669,7 +1673,8 @@ export class ModelDecorationOverviewRulerOptions extends DecorationOptions {
 export class ModelDecorationGlyphMarginOptions {
     constructor(options) {
         var _a;
-        this.position = (_a = options === null || options === void 0 ? void 0 : options.position) !== null && _a !== void 0 ? _a : model.GlyphMarginLane.Left;
+        this.position = (_a = options === null || options === void 0 ? void 0 : options.position) !== null && _a !== void 0 ? _a : model.GlyphMarginLane.Center;
+        this.persistLane = options === null || options === void 0 ? void 0 : options.persistLane;
     }
 }
 export class ModelDecorationMinimapOptions extends DecorationOptions {
@@ -1733,6 +1738,7 @@ export class ModelDecorationOptions {
         this.shouldFillLineOnLineBreak = (_d = options.shouldFillLineOnLineBreak) !== null && _d !== void 0 ? _d : null;
         this.hoverMessage = options.hoverMessage || null;
         this.glyphMarginHoverMessage = options.glyphMarginHoverMessage || null;
+        this.lineNumberHoverMessage = options.lineNumberHoverMessage || null;
         this.isWholeLine = options.isWholeLine || false;
         this.showIfCollapsed = options.showIfCollapsed || false;
         this.collapseOnReplaceEdit = options.collapseOnReplaceEdit || false;
@@ -1741,6 +1747,8 @@ export class ModelDecorationOptions {
         this.glyphMargin = options.glyphMarginClassName ? new ModelDecorationGlyphMarginOptions(options.glyphMargin) : null;
         this.glyphMarginClassName = options.glyphMarginClassName ? cleanClassName(options.glyphMarginClassName) : null;
         this.linesDecorationsClassName = options.linesDecorationsClassName ? cleanClassName(options.linesDecorationsClassName) : null;
+        this.lineNumberClassName = options.lineNumberClassName ? cleanClassName(options.lineNumberClassName) : null;
+        this.linesDecorationsTooltip = options.linesDecorationsTooltip ? strings.htmlAttributeEncodeValue(options.linesDecorationsTooltip) : null;
         this.firstLineDecorationClassName = options.firstLineDecorationClassName ? cleanClassName(options.firstLineDecorationClassName) : null;
         this.marginClassName = options.marginClassName ? cleanClassName(options.marginClassName) : null;
         this.inlineClassName = options.inlineClassName ? cleanClassName(options.inlineClassName) : null;
@@ -1781,6 +1789,7 @@ class DidChangeDecorationsEmitter extends Disposable {
         this._affectsMinimap = false;
         this._affectsOverviewRuler = false;
         this._affectsGlyphMargin = false;
+        this._affectsLineNumber = false;
     }
     beginDeferredEmit() {
         this._deferredCnt++;
@@ -1803,15 +1812,11 @@ class DidChangeDecorationsEmitter extends Disposable {
         this._affectedInjectedTextLines.add(lineNumber);
     }
     checkAffectedAndFire(options) {
-        if (!this._affectsMinimap) {
-            this._affectsMinimap = options.minimap && options.minimap.position ? true : false;
-        }
-        if (!this._affectsOverviewRuler) {
-            this._affectsOverviewRuler = options.overviewRuler && options.overviewRuler.color ? true : false;
-        }
-        if (!this._affectsGlyphMargin) {
-            this._affectsGlyphMargin = options.glyphMarginClassName ? true : false;
-        }
+        var _a, _b;
+        this._affectsMinimap || (this._affectsMinimap = !!((_a = options.minimap) === null || _a === void 0 ? void 0 : _a.position));
+        this._affectsOverviewRuler || (this._affectsOverviewRuler = !!((_b = options.overviewRuler) === null || _b === void 0 ? void 0 : _b.color));
+        this._affectsGlyphMargin || (this._affectsGlyphMargin = !!options.glyphMarginClassName);
+        this._affectsLineNumber || (this._affectsLineNumber = !!options.lineNumberClassName);
         this.tryFire();
     }
     fire() {
@@ -1833,7 +1838,8 @@ class DidChangeDecorationsEmitter extends Disposable {
         const event = {
             affectsMinimap: this._affectsMinimap,
             affectsOverviewRuler: this._affectsOverviewRuler,
-            affectsGlyphMargin: this._affectsGlyphMargin
+            affectsGlyphMargin: this._affectsGlyphMargin,
+            affectsLineNumber: this._affectsLineNumber,
         };
         this._shouldFireDeferred = false;
         this._affectsMinimap = false;

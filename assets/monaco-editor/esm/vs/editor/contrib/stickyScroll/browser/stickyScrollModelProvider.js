@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 import { OutlineElement, OutlineGroup, OutlineModel } from '../../documentSymbols/browser/outlineModel.js';
@@ -77,37 +68,35 @@ let StickyModelProvider = class StickyModelProvider extends Disposable {
             this._modelPromise = null;
         }
     }
-    update(textModel, textModelVersionId, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this._updateOperation.clear();
-            this._updateOperation.add({
-                dispose: () => {
-                    this._cancelModelPromise();
-                    this._updateScheduler.cancel();
+    async update(textModel, textModelVersionId, token) {
+        this._updateOperation.clear();
+        this._updateOperation.add({
+            dispose: () => {
+                this._cancelModelPromise();
+                this._updateScheduler.cancel();
+            }
+        });
+        this._cancelModelPromise();
+        return await this._updateScheduler.trigger(async () => {
+            for (const modelProvider of this._modelProviders) {
+                const { statusPromise, modelPromise } = modelProvider.computeStickyModel(textModel, textModelVersionId, token);
+                this._modelPromise = modelPromise;
+                const status = await statusPromise;
+                if (this._modelPromise !== modelPromise) {
+                    return null;
                 }
-            });
-            this._cancelModelPromise();
-            return yield this._updateScheduler.trigger(() => __awaiter(this, void 0, void 0, function* () {
-                for (const modelProvider of this._modelProviders) {
-                    const { statusPromise, modelPromise } = modelProvider.computeStickyModel(textModel, textModelVersionId, token);
-                    this._modelPromise = modelPromise;
-                    const status = yield statusPromise;
-                    if (this._modelPromise !== modelPromise) {
+                switch (status) {
+                    case Status.CANCELED:
+                        this._updateOperation.clear();
                         return null;
-                    }
-                    switch (status) {
-                        case Status.CANCELED:
-                            this._updateOperation.clear();
-                            return null;
-                        case Status.VALID:
-                            return modelProvider.stickyModel;
-                    }
+                    case Status.VALID:
+                        return modelProvider.stickyModel;
                 }
-                return null;
-            })).catch((error) => {
-                onUnexpectedError(error);
-                return null;
-            });
+            }
+            return null;
+        }).catch((error) => {
+            onUnexpectedError(error);
+            return null;
         });
     }
 };

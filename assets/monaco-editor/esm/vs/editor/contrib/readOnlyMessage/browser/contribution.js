@@ -16,7 +16,7 @@ export class ReadOnlyMessageController extends Disposable {
     _onDidAttemptReadOnlyEdit() {
         const messageController = MessageController.get(this.editor);
         if (messageController && this.editor.hasModel()) {
-            let message = this.editor.getOptions().get(91 /* EditorOption.readOnlyMessage */);
+            let message = this.editor.getOptions().get(92 /* EditorOption.readOnlyMessage */);
             if (!message) {
                 if (this.editor.isSimpleWidget) {
                     message = new MarkdownString(nls.localize('editor.simple.readonly', "Cannot edit in read-only input"));

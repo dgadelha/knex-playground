@@ -24,6 +24,7 @@ import { MinimapLinesRenderingData, OverviewRulerDecorationsGroup, ViewLineRende
 import { ViewModelDecorations } from './viewModelDecorations.js';
 import { FocusChangedEvent, HiddenAreasChangedEvent, ModelContentChangedEvent, ModelDecorationsChangedEvent, ModelLanguageChangedEvent, ModelLanguageConfigurationChangedEvent, ModelOptionsChangedEvent, ModelTokensChangedEvent, ReadOnlyEditAttemptEvent, ScrollChangedEvent, ViewModelEventDispatcher, ViewZonesChangedEvent } from '../viewModelEventDispatcher.js';
 import { ViewModelLinesFromModelAsIs, ViewModelLinesFromProjectedModel } from './viewModelLines.js';
+import { GlyphMarginLanesModel } from './glyphLanesModel.js';
 const USE_IDENTITY_LINES_COLLECTION = true;
 export class ViewModel extends Disposable {
     constructor(editorId, configuration, model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, scheduleAtNextAnimationFrame, languageConfigurationService, _themeService, _attachedView) {
@@ -42,16 +43,17 @@ export class ViewModel extends Disposable {
         this._updateConfigurationViewLineCount = this._register(new RunOnceScheduler(() => this._updateConfigurationViewLineCountNow(), 0));
         this._hasFocus = false;
         this._viewportStart = ViewportStart.create(this.model);
+        this.glyphLanes = new GlyphMarginLanesModel(0);
         if (USE_IDENTITY_LINES_COLLECTION && this.model.isTooLargeForTokenization()) {
             this._lines = new ViewModelLinesFromModelAsIs(this.model);
         }
         else {
             const options = this._configuration.options;
             const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-            const wrappingStrategy = options.get(137 /* EditorOption.wrappingStrategy */);
-            const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
-            const wrappingIndent = options.get(136 /* EditorOption.wrappingIndent */);
-            const wordBreak = options.get(128 /* EditorOption.wordBreak */);
+            const wrappingStrategy = options.get(138 /* EditorOption.wrappingStrategy */);
+            const wrappingInfo = options.get(145 /* EditorOption.wrappingInfo */);
+            const wrappingIndent = options.get(137 /* EditorOption.wrappingIndent */);
+            const wordBreak = options.get(129 /* EditorOption.wordBreak */);
             this._lines = new ViewModelLinesFromProjectedModel(this._editorId, this.model, domLineBreaksComputerFactory, monospaceLineBreaksComputerFactory, fontInfo, this.model.getOptions().tabSize, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent, wordBreak);
         }
         this.coordinatesConverter = this._lines.createCoordinatesConverter();
@@ -151,10 +153,10 @@ export class ViewModel extends Disposable {
         const stableViewport = this._captureStableViewport();
         const options = this._configuration.options;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        const wrappingStrategy = options.get(137 /* EditorOption.wrappingStrategy */);
-        const wrappingInfo = options.get(144 /* EditorOption.wrappingInfo */);
-        const wrappingIndent = options.get(136 /* EditorOption.wrappingIndent */);
-        const wordBreak = options.get(128 /* EditorOption.wordBreak */);
+        const wrappingStrategy = options.get(138 /* EditorOption.wrappingStrategy */);
+        const wrappingInfo = options.get(145 /* EditorOption.wrappingInfo */);
+        const wrappingIndent = options.get(137 /* EditorOption.wrappingIndent */);
+        const wordBreak = options.get(129 /* EditorOption.wordBreak */);
         if (this._lines.setWrappingSettings(fontInfo, wrappingStrategy, wrappingInfo.wrappingColumn, wrappingIndent, wordBreak)) {
             eventsCollector.emitViewEvent(new viewEvents.ViewFlushedEvent());
             eventsCollector.emitViewEvent(new viewEvents.ViewLineMappingChangedEvent());
@@ -164,8 +166,12 @@ export class ViewModel extends Disposable {
             this.viewLayout.onFlushed(this.getLineCount());
             this._updateConfigurationViewLineCount.schedule();
         }
-        if (e.hasChanged(90 /* EditorOption.readOnly */)) {
+        if (e.hasChanged(91 /* EditorOption.readOnly */)) {
             // Must read again all decorations due to readOnly filtering
+            this._decorations.reset();
+            eventsCollector.emitViewEvent(new viewEvents.ViewDecorationsChangedEvent(null));
+        }
+        if (e.hasChanged(98 /* EditorOption.renderValidationDecorations */)) {
             this._decorations.reset();
             eventsCollector.emitViewEvent(new viewEvents.ViewDecorationsChangedEvent(null));
         }
@@ -357,6 +363,7 @@ export class ViewModel extends Disposable {
         }));
     }
     setHiddenAreas(ranges, source) {
+        var _a;
         this.hiddenAreasModel.setHiddenAreas(source, ranges);
         const mergedRanges = this.hiddenAreasModel.getMergedRanges();
         if (mergedRanges === this.previousHiddenAreas) {
@@ -377,7 +384,11 @@ export class ViewModel extends Disposable {
                 this.viewLayout.onFlushed(this.getLineCount());
                 this.viewLayout.onHeightMaybeChanged();
             }
-            stableViewport.recoverViewportStart(this.coordinatesConverter, this.viewLayout);
+            const firstModelLineInViewPort = (_a = stableViewport.viewportStartModelPosition) === null || _a === void 0 ? void 0 : _a.lineNumber;
+            const firstModelLineIsHidden = firstModelLineInViewPort && mergedRanges.some(range => range.startLineNumber <= firstModelLineInViewPort && firstModelLineInViewPort <= range.endLineNumber);
+            if (!firstModelLineIsHidden) {
+                stableViewport.recoverViewportStart(this.coordinatesConverter, this.viewLayout);
+            }
         }
         finally {
             this._eventDispatcher.endEmitViewEvents();
@@ -388,8 +399,8 @@ export class ViewModel extends Disposable {
         }
     }
     getVisibleRangesPlusViewportAboveBelow() {
-        const layoutInfo = this._configuration.options.get(143 /* EditorOption.layoutInfo */);
-        const lineHeight = this._configuration.options.get(66 /* EditorOption.lineHeight */);
+        const layoutInfo = this._configuration.options.get(144 /* EditorOption.layoutInfo */);
+        const lineHeight = this._configuration.options.get(67 /* EditorOption.lineHeight */);
         const linesAround = Math.max(20, Math.round(layoutInfo.height / lineHeight));
         const partialData = this.viewLayout.getLinesViewportData();
         const startViewLineNumber = Math.max(1, partialData.completelyVisibleStartLineNumber - linesAround);
@@ -602,7 +613,8 @@ export class ViewModel extends Disposable {
     }
     modifyPosition(position, offset) {
         const modelPosition = this.coordinatesConverter.convertViewPositionToModelPosition(position);
-        return this.model.modifyPosition(modelPosition, offset);
+        const resultModelPosition = this.model.modifyPosition(modelPosition, offset);
+        return this.coordinatesConverter.convertModelPositionToViewPosition(resultModelPosition);
     }
     deduceModelPositionRelativeToViewPosition(viewAnchorPosition, deltaOffset, lineFeedCnt) {
         const modelAnchor = this.coordinatesConverter.convertViewPositionToModelPosition(viewAnchorPosition);

@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { $, addDisposableListener, append, EventHelper, EventType } from '../../dom.js';
+import { $, addDisposableListener, append, EventHelper, EventType, isMouseEvent } from '../../dom.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { EventType as GestureEventType, Gesture } from '../../touch.js';
 import { ActionRunner } from '../../../common/actions.js';
@@ -27,7 +27,7 @@ class BaseDropdown extends ActionRunner {
         }
         for (const event of [EventType.MOUSE_DOWN, GestureEventType.Tap]) {
             this._register(addDisposableListener(this._label, event, e => {
-                if (e instanceof MouseEvent && (e.detail > 1 || e.button !== 0)) {
+                if (isMouseEvent(e) && (e.detail > 1 || e.button !== 0)) {
                     // prevent right click trigger to allow separate context menu (https://github.com/microsoft/vscode/issues/151064)
                     // prevent multiple clicks to open multiple context menus (https://github.com/microsoft/vscode/issues/41363)
                     return;

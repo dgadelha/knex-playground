@@ -25,14 +25,11 @@ export class OffsetRange {
             sortedRanges.splice(i, j - i, new OffsetRange(start, end));
         }
     }
-    static tryCreate(start, endExclusive) {
-        if (start > endExclusive) {
-            return undefined;
-        }
-        return new OffsetRange(start, endExclusive);
-    }
     static ofLength(length) {
         return new OffsetRange(0, length);
+    }
+    static ofStartAndLength(start, length) {
+        return new OffsetRange(start, start + length);
     }
     constructor(start, endExclusive) {
         this.start = start;
@@ -59,12 +56,6 @@ export class OffsetRange {
     toString() {
         return `[${this.start}, ${this.endExclusive})`;
     }
-    equals(other) {
-        return this.start === other.start && this.endExclusive === other.endExclusive;
-    }
-    containsRange(other) {
-        return this.start <= other.start && other.endExclusive <= this.endExclusive;
-    }
     contains(offset) {
         return this.start <= offset && offset < this.endExclusive;
     }
@@ -88,6 +79,17 @@ export class OffsetRange {
             return new OffsetRange(start, end);
         }
         return undefined;
+    }
+    intersects(other) {
+        const start = Math.max(this.start, other.start);
+        const end = Math.min(this.endExclusive, other.endExclusive);
+        return start < end;
+    }
+    isBefore(other) {
+        return this.endExclusive <= other.start;
+    }
+    isAfter(other) {
+        return this.start >= other.endExclusive;
     }
     slice(arr) {
         return arr.slice(this.start, this.endExclusive);

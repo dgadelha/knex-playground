@@ -9,6 +9,7 @@ export class LanguageFeaturesService {
     constructor() {
         this.referenceProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.renameProvider = new LanguageFeatureRegistry(this._score.bind(this));
+        this.newSymbolNamesProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.codeActionProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.definitionProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.typeDefinitionProvider = new LanguageFeatureRegistry(this._score.bind(this));
@@ -24,10 +25,12 @@ export class LanguageFeaturesService {
         this.signatureHelpProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.hoverProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.documentHighlightProvider = new LanguageFeatureRegistry(this._score.bind(this));
+        this.multiDocumentHighlightProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.selectionRangeProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.foldingRangeProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.linkProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.inlineCompletionsProvider = new LanguageFeatureRegistry(this._score.bind(this));
+        this.inlineEditProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.completionProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.linkedEditingRangeProvider = new LanguageFeatureRegistry(this._score.bind(this));
         this.documentRangeSemanticTokensProvider = new LanguageFeatureRegistry(this._score.bind(this));

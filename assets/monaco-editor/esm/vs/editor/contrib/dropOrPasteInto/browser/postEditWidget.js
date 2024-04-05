@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var PostEditWidget_1;
 import * as dom from '../../../../base/browser/dom.js';
 import { Button } from '../../../../base/browser/ui/button/button.js';
@@ -27,7 +18,8 @@ import { toAction } from '../../../../base/common/actions.js';
 import { Event } from '../../../../base/common/event.js';
 import { Disposable, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
 import './postEditWidget.css';
-import { IBulkEditService, ResourceTextEdit } from '../../../browser/services/bulkEditService.js';
+import { IBulkEditService } from '../../../browser/services/bulkEditService.js';
+import { createCombinedWorkspaceEdit } from './edit.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -125,59 +117,41 @@ let PostEditWidgetManager = class PostEditWidgetManager extends Disposable {
         this._currentWidget = this._register(new MutableDisposable());
         this._register(Event.any(_editor.onDidChangeModel, _editor.onDidChangeModelContent)(() => this.clear()));
     }
-    applyEditAndShowIfNeeded(ranges, edits, canShowWidget, token) {
-        var _a, _b;
-        return __awaiter(this, void 0, void 0, function* () {
-            const model = this._editor.getModel();
-            if (!model || !ranges.length) {
-                return;
-            }
-            const edit = edits.allEdits[edits.activeEditIndex];
-            if (!edit) {
-                return;
-            }
-            let insertTextEdit = [];
-            if (typeof edit.insertText === 'string' ? edit.insertText === '' : edit.insertText.snippet === '') {
-                insertTextEdit = [];
-            }
-            else {
-                insertTextEdit = ranges.map(range => new ResourceTextEdit(model.uri, typeof edit.insertText === 'string'
-                    ? { range, text: edit.insertText, insertAsSnippet: false }
-                    : { range, text: edit.insertText.snippet, insertAsSnippet: true }));
-            }
-            const allEdits = [
-                ...insertTextEdit,
-                ...((_b = (_a = edit.additionalEdit) === null || _a === void 0 ? void 0 : _a.edits) !== null && _b !== void 0 ? _b : [])
-            ];
-            const combinedWorkspaceEdit = {
-                edits: allEdits
-            };
-            // Use a decoration to track edits around the trigger range
-            const primaryRange = ranges[0];
-            const editTrackingDecoration = model.deltaDecorations([], [{
-                    range: primaryRange,
-                    options: { description: 'paste-line-suffix', stickiness: 0 /* TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges */ }
-                }]);
-            let editResult;
-            let editRange;
-            try {
-                editResult = yield this._bulkEditService.apply(combinedWorkspaceEdit, { editor: this._editor, token });
-                editRange = model.getDecorationRange(editTrackingDecoration[0]);
-            }
-            finally {
-                model.deltaDecorations(editTrackingDecoration, []);
-            }
-            if (canShowWidget && editResult.isApplied && edits.allEdits.length > 1) {
-                this.show(editRange !== null && editRange !== void 0 ? editRange : primaryRange, edits, (newEditIndex) => __awaiter(this, void 0, void 0, function* () {
-                    const model = this._editor.getModel();
-                    if (!model) {
-                        return;
-                    }
-                    yield model.undo();
-                    this.applyEditAndShowIfNeeded(ranges, { activeEditIndex: newEditIndex, allEdits: edits.allEdits }, canShowWidget, token);
-                }));
-            }
-        });
+    async applyEditAndShowIfNeeded(ranges, edits, canShowWidget, token) {
+        const model = this._editor.getModel();
+        if (!model || !ranges.length) {
+            return;
+        }
+        const edit = edits.allEdits[edits.activeEditIndex];
+        if (!edit) {
+            return;
+        }
+        const combinedWorkspaceEdit = createCombinedWorkspaceEdit(model.uri, ranges, edit);
+        // Use a decoration to track edits around the trigger range
+        const primaryRange = ranges[0];
+        const editTrackingDecoration = model.deltaDecorations([], [{
+                range: primaryRange,
+                options: { description: 'paste-line-suffix', stickiness: 0 /* TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges */ }
+            }]);
+        let editResult;
+        let editRange;
+        try {
+            editResult = await this._bulkEditService.apply(combinedWorkspaceEdit, { editor: this._editor, token });
+            editRange = model.getDecorationRange(editTrackingDecoration[0]);
+        }
+        finally {
+            model.deltaDecorations(editTrackingDecoration, []);
+        }
+        if (canShowWidget && editResult.isApplied && edits.allEdits.length > 1) {
+            this.show(editRange !== null && editRange !== void 0 ? editRange : primaryRange, edits, async (newEditIndex) => {
+                const model = this._editor.getModel();
+                if (!model) {
+                    return;
+                }
+                await model.undo();
+                this.applyEditAndShowIfNeeded(ranges, { activeEditIndex: newEditIndex, allEdits: edits.allEdits }, canShowWidget, token);
+            });
+        }
     }
     show(range, edits, onDidSelectEdit) {
         this.clear();

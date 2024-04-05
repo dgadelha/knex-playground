@@ -51,7 +51,7 @@ export var EditorScroll_;
         }
         return true;
     };
-    EditorScroll_.description = {
+    EditorScroll_.metadata = {
         description: 'Scroll editor in the given direction',
         args: [
             {
@@ -182,7 +182,7 @@ export var RevealLine_;
         }
         return true;
     };
-    RevealLine_.description = {
+    RevealLine_.metadata = {
         description: 'Reveal the given line at the given logical position',
         args: [
             {
@@ -434,7 +434,7 @@ export var CoreNavigationCommands;
             super({
                 id: 'cursorMove',
                 precondition: undefined,
-                description: CursorMove_.description
+                metadata: CursorMove_.metadata
             });
         }
         runCoreEditorCommand(viewModel, args) {
@@ -849,7 +849,7 @@ export var CoreNavigationCommands;
             primary: 13 /* KeyCode.End */,
             mac: { primary: 13 /* KeyCode.End */, secondary: [2048 /* KeyMod.CtrlCmd */ | 17 /* KeyCode.RightArrow */] }
         },
-        description: {
+        metadata: {
             description: `Go to End`,
             args: [{
                     name: 'args',
@@ -877,7 +877,7 @@ export var CoreNavigationCommands;
             primary: 1024 /* KeyMod.Shift */ | 13 /* KeyCode.End */,
             mac: { primary: 1024 /* KeyMod.Shift */ | 13 /* KeyCode.End */, secondary: [2048 /* KeyMod.CtrlCmd */ | 1024 /* KeyMod.Shift */ | 17 /* KeyCode.RightArrow */] }
         },
-        description: {
+        metadata: {
             description: `Select to End`,
             args: [{
                     name: 'args',
@@ -1008,7 +1008,7 @@ export var CoreNavigationCommands;
             super({
                 id: 'editorScroll',
                 precondition: undefined,
-                description: EditorScroll_.description
+                metadata: EditorScroll_.metadata
             });
         }
         determineScrollMethod(args) {
@@ -1441,7 +1441,7 @@ export var CoreNavigationCommands;
             super({
                 id: 'revealLine',
                 precondition: undefined,
-                description: RevealLine_.description
+                metadata: RevealLine_.metadata
             });
         }
         runCoreEditorCommand(viewModel, args) {
@@ -1659,7 +1659,7 @@ export var CoreEditingCommands;
             activeElement.ownerDocument.execCommand('undo');
         }
         runEditorCommand(accessor, editor, args) {
-            if (!editor.hasModel() || editor.getOption(90 /* EditorOption.readOnly */) === true) {
+            if (!editor.hasModel() || editor.getOption(91 /* EditorOption.readOnly */) === true) {
                 return;
             }
             return editor.getModel().undo();
@@ -1673,7 +1673,7 @@ export var CoreEditingCommands;
             activeElement.ownerDocument.execCommand('redo');
         }
         runEditorCommand(accessor, editor, args) {
-            if (!editor.hasModel() || editor.getOption(90 /* EditorOption.readOnly */) === true) {
+            if (!editor.hasModel() || editor.getOption(91 /* EditorOption.readOnly */) === true) {
                 return;
             }
             return editor.getModel().redo();
@@ -1684,11 +1684,11 @@ export var CoreEditingCommands;
  * A command that will invoke a command on the focused editor.
  */
 class EditorHandlerCommand extends Command {
-    constructor(id, handlerId, description) {
+    constructor(id, handlerId, metadata) {
         super({
             id: id,
             precondition: undefined,
-            description: description
+            metadata
         });
         this._handlerId = handlerId;
     }
@@ -1700,9 +1700,9 @@ class EditorHandlerCommand extends Command {
         editor.trigger('keyboard', this._handlerId, args);
     }
 }
-function registerOverwritableCommand(handlerId, description) {
+function registerOverwritableCommand(handlerId, metadata) {
     registerCommand(new EditorHandlerCommand('default:' + handlerId, handlerId));
-    registerCommand(new EditorHandlerCommand(handlerId, handlerId, description));
+    registerCommand(new EditorHandlerCommand(handlerId, handlerId, metadata));
 }
 registerOverwritableCommand("type" /* Handler.Type */, {
     description: `Type`,

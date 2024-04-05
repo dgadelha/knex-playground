@@ -12,6 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { addDisposableListener } from '../../../base/browser/dom.js';
+import { mainWindow } from '../../../base/browser/window.js';
 import { Emitter } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import { CONTEXT_ACCESSIBILITY_MODE_ENABLED } from '../common/accessibility.js';
@@ -41,17 +42,12 @@ let AccessibilityService = class AccessibilityService extends Disposable {
         }));
         updateContextKey();
         this._register(this.onDidChangeScreenReaderOptimized(() => updateContextKey()));
-        const reduceMotionMatcher = window.matchMedia(`(prefers-reduced-motion: reduce)`);
+        const reduceMotionMatcher = mainWindow.matchMedia(`(prefers-reduced-motion: reduce)`);
         this._systemMotionReduced = reduceMotionMatcher.matches;
         this._configMotionReduced = this._configurationService.getValue('workbench.reduceMotion');
         this.initReducedMotionListeners(reduceMotionMatcher);
     }
     initReducedMotionListeners(reduceMotionMatcher) {
-        if (!this._layoutService.hasContainer) {
-            // we can't use `ILayoutService.container` because the application
-            // doesn't have a single container
-            return;
-        }
         this._register(addDisposableListener(reduceMotionMatcher, 'change', () => {
             this._systemMotionReduced = reduceMotionMatcher.matches;
             if (this._configMotionReduced === 'auto') {
@@ -60,8 +56,8 @@ let AccessibilityService = class AccessibilityService extends Disposable {
         }));
         const updateRootClasses = () => {
             const reduce = this.isMotionReduced();
-            this._layoutService.container.classList.toggle('reduce-motion', reduce);
-            this._layoutService.container.classList.toggle('enable-motion', !reduce);
+            this._layoutService.mainContainer.classList.toggle('reduce-motion', reduce);
+            this._layoutService.mainContainer.classList.toggle('enable-motion', !reduce);
         };
         updateRootClasses();
         this._register(this.onDidChangeReducedMotion(() => updateRootClasses()));

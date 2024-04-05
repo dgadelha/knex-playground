@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { onUnexpectedError } from '../../../base/common/errors.js';
 import { Disposable, isDisposable } from '../../../base/common/lifecycle.js';
 import { Schemas } from '../../../base/common/network.js';
@@ -615,17 +606,15 @@ let UndoRedoService = class UndoRedoService {
             return continuation();
         }
     }
-    _invokeWorkspacePrepare(element) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (typeof element.actual.prepareUndoRedo === 'undefined') {
-                return Disposable.None;
-            }
-            const result = element.actual.prepareUndoRedo();
-            if (typeof result === 'undefined') {
-                return Disposable.None;
-            }
-            return result;
-        });
+    async _invokeWorkspacePrepare(element) {
+        if (typeof element.actual.prepareUndoRedo === 'undefined') {
+            return Disposable.None;
+        }
+        const result = element.actual.prepareUndoRedo();
+        if (typeof result === 'undefined') {
+            return Disposable.None;
+        }
+        return result;
     }
     _invokeResourcePrepare(element, callback) {
         if (element.actual.type !== 1 /* UndoRedoElementType.Workspace */ || typeof element.actual.prepareUndoRedo === 'undefined') {
@@ -730,69 +719,67 @@ let UndoRedoService = class UndoRedoService {
         }
         return false;
     }
-    _confirmAndExecuteWorkspaceUndo(strResource, element, editStackSnapshot, undoConfirmed) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (element.canSplit() && !this._isPartOfUndoGroup(element)) {
-                // this element can be split
-                let UndoChoice;
-                (function (UndoChoice) {
-                    UndoChoice[UndoChoice["All"] = 0] = "All";
-                    UndoChoice[UndoChoice["This"] = 1] = "This";
-                    UndoChoice[UndoChoice["Cancel"] = 2] = "Cancel";
-                })(UndoChoice || (UndoChoice = {}));
-                const { result } = yield this._dialogService.prompt({
-                    type: Severity.Info,
-                    message: nls.localize('confirmWorkspace', "Would you like to undo '{0}' across all files?", element.label),
-                    buttons: [
-                        {
-                            label: nls.localize({ key: 'ok', comment: ['{0} denotes a number that is > 1, && denotes a mnemonic'] }, "&&Undo in {0} Files", editStackSnapshot.editStacks.length),
-                            run: () => UndoChoice.All
-                        },
-                        {
-                            label: nls.localize({ key: 'nok', comment: ['&& denotes a mnemonic'] }, "Undo this &&File"),
-                            run: () => UndoChoice.This
-                        }
-                    ],
-                    cancelButton: {
-                        run: () => UndoChoice.Cancel
+    async _confirmAndExecuteWorkspaceUndo(strResource, element, editStackSnapshot, undoConfirmed) {
+        if (element.canSplit() && !this._isPartOfUndoGroup(element)) {
+            // this element can be split
+            let UndoChoice;
+            (function (UndoChoice) {
+                UndoChoice[UndoChoice["All"] = 0] = "All";
+                UndoChoice[UndoChoice["This"] = 1] = "This";
+                UndoChoice[UndoChoice["Cancel"] = 2] = "Cancel";
+            })(UndoChoice || (UndoChoice = {}));
+            const { result } = await this._dialogService.prompt({
+                type: Severity.Info,
+                message: nls.localize('confirmWorkspace', "Would you like to undo '{0}' across all files?", element.label),
+                buttons: [
+                    {
+                        label: nls.localize({ key: 'ok', comment: ['{0} denotes a number that is > 1, && denotes a mnemonic'] }, "&&Undo in {0} Files", editStackSnapshot.editStacks.length),
+                        run: () => UndoChoice.All
+                    },
+                    {
+                        label: nls.localize({ key: 'nok', comment: ['&& denotes a mnemonic'] }, "Undo this &&File"),
+                        run: () => UndoChoice.This
                     }
-                });
-                if (result === UndoChoice.Cancel) {
-                    // choice: cancel
-                    return;
+                ],
+                cancelButton: {
+                    run: () => UndoChoice.Cancel
                 }
-                if (result === UndoChoice.This) {
-                    // choice: undo this file
-                    this._splitPastWorkspaceElement(element, null);
-                    return this._undo(strResource, 0, true);
-                }
-                // choice: undo in all files
-                // At this point, it is possible that the element has been made invalid in the meantime (due to the confirmation await)
-                const verificationError1 = this._checkWorkspaceUndo(strResource, element, editStackSnapshot, /*invalidated resources will be checked after the prepare call*/ false);
-                if (verificationError1) {
-                    return verificationError1.returnValue;
-                }
-                undoConfirmed = true;
+            });
+            if (result === UndoChoice.Cancel) {
+                // choice: cancel
+                return;
             }
-            // prepare
-            let cleanup;
-            try {
-                cleanup = yield this._invokeWorkspacePrepare(element);
+            if (result === UndoChoice.This) {
+                // choice: undo this file
+                this._splitPastWorkspaceElement(element, null);
+                return this._undo(strResource, 0, true);
             }
-            catch (err) {
-                return this._onError(err, element);
+            // choice: undo in all files
+            // At this point, it is possible that the element has been made invalid in the meantime (due to the confirmation await)
+            const verificationError1 = this._checkWorkspaceUndo(strResource, element, editStackSnapshot, /*invalidated resources will be checked after the prepare call*/ false);
+            if (verificationError1) {
+                return verificationError1.returnValue;
             }
-            // At this point, it is possible that the element has been made invalid in the meantime (due to the prepare await)
-            const verificationError2 = this._checkWorkspaceUndo(strResource, element, editStackSnapshot, /*now also check that there are no more invalidated resources*/ true);
-            if (verificationError2) {
-                cleanup.dispose();
-                return verificationError2.returnValue;
-            }
-            for (const editStack of editStackSnapshot.editStacks) {
-                editStack.moveBackward(element);
-            }
-            return this._safeInvokeWithLocks(element, () => element.actual.undo(), editStackSnapshot, cleanup, () => this._continueUndoInGroup(element.groupId, undoConfirmed));
-        });
+            undoConfirmed = true;
+        }
+        // prepare
+        let cleanup;
+        try {
+            cleanup = await this._invokeWorkspacePrepare(element);
+        }
+        catch (err) {
+            return this._onError(err, element);
+        }
+        // At this point, it is possible that the element has been made invalid in the meantime (due to the prepare await)
+        const verificationError2 = this._checkWorkspaceUndo(strResource, element, editStackSnapshot, /*now also check that there are no more invalidated resources*/ true);
+        if (verificationError2) {
+            cleanup.dispose();
+            return verificationError2.returnValue;
+        }
+        for (const editStack of editStackSnapshot.editStacks) {
+            editStack.moveBackward(element);
+        }
+        return this._safeInvokeWithLocks(element, () => element.actual.undo(), editStackSnapshot, cleanup, () => this._continueUndoInGroup(element.groupId, undoConfirmed));
     }
     _resourceUndo(editStack, element, undoConfirmed) {
         if (!element.isValid) {
@@ -886,18 +873,16 @@ let UndoRedoService = class UndoRedoService {
             }
         }
     }
-    _confirmAndContinueUndo(strResource, sourceId, element) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const result = yield this._dialogService.confirm({
-                message: nls.localize('confirmDifferentSource', "Would you like to undo '{0}'?", element.label),
-                primaryButton: nls.localize({ key: 'confirmDifferentSource.yes', comment: ['&& denotes a mnemonic'] }, "&&Yes"),
-                cancelButton: nls.localize('confirmDifferentSource.no', "No")
-            });
-            if (!result.confirmed) {
-                return;
-            }
-            return this._undo(strResource, sourceId, true);
+    async _confirmAndContinueUndo(strResource, sourceId, element) {
+        const result = await this._dialogService.confirm({
+            message: nls.localize('confirmDifferentSource', "Would you like to undo '{0}'?", element.label),
+            primaryButton: nls.localize({ key: 'confirmDifferentSource.yes', comment: ['&& denotes a mnemonic'] }, "&&Yes"),
+            cancelButton: nls.localize('confirmDifferentSource.no', "No")
         });
+        if (!result.confirmed) {
+            return;
+        }
+        return this._undo(strResource, sourceId, true);
     }
     _findClosestRedoElementWithSource(sourceId) {
         if (!sourceId) {
@@ -987,27 +972,25 @@ let UndoRedoService = class UndoRedoService {
         }
         return this._executeWorkspaceRedo(strResource, element, affectedEditStacks);
     }
-    _executeWorkspaceRedo(strResource, element, editStackSnapshot) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // prepare
-            let cleanup;
-            try {
-                cleanup = yield this._invokeWorkspacePrepare(element);
-            }
-            catch (err) {
-                return this._onError(err, element);
-            }
-            // At this point, it is possible that the element has been made invalid in the meantime (due to the prepare await)
-            const verificationError = this._checkWorkspaceRedo(strResource, element, editStackSnapshot, /*now also check that there are no more invalidated resources*/ true);
-            if (verificationError) {
-                cleanup.dispose();
-                return verificationError.returnValue;
-            }
-            for (const editStack of editStackSnapshot.editStacks) {
-                editStack.moveForward(element);
-            }
-            return this._safeInvokeWithLocks(element, () => element.actual.redo(), editStackSnapshot, cleanup, () => this._continueRedoInGroup(element.groupId));
-        });
+    async _executeWorkspaceRedo(strResource, element, editStackSnapshot) {
+        // prepare
+        let cleanup;
+        try {
+            cleanup = await this._invokeWorkspacePrepare(element);
+        }
+        catch (err) {
+            return this._onError(err, element);
+        }
+        // At this point, it is possible that the element has been made invalid in the meantime (due to the prepare await)
+        const verificationError = this._checkWorkspaceRedo(strResource, element, editStackSnapshot, /*now also check that there are no more invalidated resources*/ true);
+        if (verificationError) {
+            cleanup.dispose();
+            return verificationError.returnValue;
+        }
+        for (const editStack of editStackSnapshot.editStacks) {
+            editStack.moveForward(element);
+        }
+        return this._safeInvokeWithLocks(element, () => element.actual.redo(), editStackSnapshot, cleanup, () => this._continueRedoInGroup(element.groupId));
     }
     _resourceRedo(editStack, element) {
         if (!element.isValid) {

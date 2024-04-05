@@ -4,16 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 import { createTrustedTypesPolicy } from '../../../base/browser/trustedTypes.js';
 import * as strings from '../../../base/common/strings.js';
+import { assertIsDefined } from '../../../base/common/types.js';
 import { applyFontInfo } from '../config/domFontInfo.js';
 import { StringBuilder } from '../../common/core/stringBuilder.js';
 import { ModelLineProjectionData } from '../../common/modelLineProjectionData.js';
 import { LineInjectedText } from '../../common/textModelEvents.js';
 const ttPolicy = createTrustedTypesPolicy('domLineBreaksComputer', { createHTML: value => value });
 export class DOMLineBreaksComputerFactory {
-    static create() {
-        return new DOMLineBreaksComputerFactory();
+    static create(targetWindow) {
+        return new DOMLineBreaksComputerFactory(new WeakRef(targetWindow));
     }
-    constructor() {
+    constructor(targetWindow) {
+        this.targetWindow = targetWindow;
     }
     createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak) {
         const requests = [];
@@ -24,12 +26,12 @@ export class DOMLineBreaksComputerFactory {
                 injectedTexts.push(injectedText);
             },
             finalize: () => {
-                return createLineBreaks(requests, fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak, injectedTexts);
+                return createLineBreaks(assertIsDefined(this.targetWindow.deref()), requests, fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak, injectedTexts);
             }
         };
     }
 }
-function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, wordBreak, injectedTextsPerLine) {
+function createLineBreaks(targetWindow, requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, wordBreak, injectedTextsPerLine) {
     var _a;
     function createEmptyLineBreakWithPossiblyInjectedText(requestIdx) {
         const injectedTexts = injectedTextsPerLine[requestIdx];
@@ -117,7 +119,7 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
         containerDomNode.style.wordBreak = 'inherit';
         containerDomNode.style.overflowWrap = 'break-word';
     }
-    document.body.appendChild(containerDomNode);
+    targetWindow.document.body.appendChild(containerDomNode);
     const range = document.createRange();
     const lineDomNodes = Array.prototype.slice.call(containerDomNode.children, 0);
     const result = [];
@@ -154,7 +156,7 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
         }
         result[i] = new ModelLineProjectionData(injectionOffsets, injectionOptions, breakOffsets, breakOffsetsVisibleColumn, wrappedTextIndentLength);
     }
-    document.body.removeChild(containerDomNode);
+    targetWindow.document.body.removeChild(containerDomNode);
     return result;
 }
 function renderLine(lineContent, initialVisibleColumn, tabSize, width, sb, wrappingIndentLength) {

@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/dart/dart.ts
 var conf = {
@@ -150,6 +151,7 @@ var language = {
     ":",
     "|="
   ],
+  // we include these common regular expressions
   symbols: /[=><!~?:&|+\-*\/\^%]+/,
   escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
   digits: /\d+(_+\d+)*/,
@@ -158,9 +160,11 @@ var language = {
   hexdigits: /[[0-9a-fA-F]+(_+[0-9a-fA-F]+)*/,
   regexpctl: /[(){}\[\]\$\^|\-*+?\.]/,
   regexpesc: /\\(?:[bBdDfnrstvwWn0\\\/]|@regexpctl|c[A-Z]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4})/,
+  // The main tokenizer for our languages
   tokenizer: {
     root: [[/[{}]/, "delimiter.bracket"], { include: "common" }],
     common: [
+      // identifiers and keywords
       [
         /[a-z_$][\w$]*/,
         {
@@ -172,12 +176,19 @@ var language = {
         }
       ],
       [/[A-Z_$][\w\$]*/, "type.identifier"],
+      // show class names
+      // [/[A-Z][\w\$]*/, 'identifier'],
+      // whitespace
       { include: "@whitespace" },
+      // regular expression: ensure it is terminated before beginning (otherwise it is an opeator)
       [
         /\/(?=([^\\\/]|\\.)+\/([gimsuy]*)(\s*)(\.|;|,|\)|\]|\}|$))/,
         { token: "regexp", bracket: "@open", next: "@regexp" }
       ],
+      // @ annotations.
       [/@[a-zA-Z]+/, "annotation"],
+      // variable
+      // delimiters and operators
       [/[()\[\]]/, "@brackets"],
       [/[<>](?!@symbols)/, "@brackets"],
       [/!(?=([^=]|$))/, "delimiter"],
@@ -190,17 +201,23 @@ var language = {
           }
         }
       ],
+      // numbers
       [/(@digits)[eE]([\-+]?(@digits))?/, "number.float"],
       [/(@digits)\.(@digits)([eE][\-+]?(@digits))?/, "number.float"],
       [/0[xX](@hexdigits)n?/, "number.hex"],
       [/0[oO]?(@octaldigits)n?/, "number.octal"],
       [/0[bB](@binarydigits)n?/, "number.binary"],
       [/(@digits)n?/, "number"],
+      // delimiter: after number because of .\d floats
       [/[;,.]/, "delimiter"],
+      // strings
       [/"([^"\\]|\\.)*$/, "string.invalid"],
+      // non-teminated string
       [/'([^'\\]|\\.)*$/, "string.invalid"],
+      // non-teminated string
       [/"/, "string", "@string_double"],
       [/'/, "string", "@string_single"]
+      //   [/[a-zA-Z]+/, "variable"]
     ],
     whitespace: [
       [/[ \t\r\n]+/, ""],
@@ -219,6 +236,7 @@ var language = {
       [/\*\//, "comment.doc", "@pop"],
       [/[\/*]/, "comment.doc"]
     ],
+    // We match regular expression quite precisely
     regexp: [
       [
         /(\{)(\d+(?:,\d*)?)(\})/,

@@ -3,6 +3,8 @@ import { BaseActionViewItem } from '../actionbar/actionViewItems.js';
 import { DropdownMenu } from './dropdown.js';
 import { Emitter } from '../../../common/event.js';
 import './dropdown.css';
+import { setupCustomHover } from '../iconLabel/iconLabelHover.js';
+import { getDefaultHoverDelegate } from '../hover/hoverDelegate.js';
 export class DropdownMenuActionViewItem extends BaseActionViewItem {
     constructor(action, menuActionsOrProvider, contextMenuProvider, options = Object.create(null)) {
         super(null, action, options);
@@ -35,7 +37,9 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
             this.element.setAttribute('role', 'button');
             this.element.setAttribute('aria-haspopup', 'true');
             this.element.setAttribute('aria-expanded', 'false');
-            this.element.title = this._action.label || '';
+            if (this._action.label) {
+                this._register(setupCustomHover(getDefaultHoverDelegate('mouse'), this.element, this._action.label));
+            }
             this.element.ariaLabel = this._action.label || '';
             return null;
         };
@@ -62,9 +66,12 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
         };
         if (this.options.anchorAlignmentProvider) {
             const that = this;
-            this.dropdownMenu.menuOptions = Object.assign(Object.assign({}, this.dropdownMenu.menuOptions), { get anchorAlignment() {
+            this.dropdownMenu.menuOptions = {
+                ...this.dropdownMenu.menuOptions,
+                get anchorAlignment() {
                     return that.options.anchorAlignmentProvider();
-                } });
+                }
+            };
         }
         this.updateTooltip();
         this.updateEnabled();

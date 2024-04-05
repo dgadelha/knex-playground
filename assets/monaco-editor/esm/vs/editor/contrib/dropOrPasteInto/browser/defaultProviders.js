@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { coalesce } from '../../../../base/common/arrays.js';
 import { UriList } from '../../../../base/common/dataTransfer.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
@@ -32,17 +23,13 @@ import { localize } from '../../../../nls.js';
 import { IWorkspaceContextService } from '../../../../platform/workspace/common/workspace.js';
 const builtInLabel = localize('builtIn', 'Built-in');
 class SimplePasteAndDropProvider {
-    provideDocumentPasteEdits(_model, _ranges, dataTransfer, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const edit = yield this.getEdit(dataTransfer, token);
-            return edit ? { insertText: edit.insertText, label: edit.label, detail: edit.detail, handledMimeType: edit.handledMimeType, yieldTo: edit.yieldTo } : undefined;
-        });
+    async provideDocumentPasteEdits(_model, _ranges, dataTransfer, context, token) {
+        const edit = await this.getEdit(dataTransfer, token);
+        return edit ? { insertText: edit.insertText, label: edit.label, detail: edit.detail, handledMimeType: edit.handledMimeType, yieldTo: edit.yieldTo } : undefined;
     }
-    provideDocumentOnDropEdits(_model, _position, dataTransfer, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const edit = yield this.getEdit(dataTransfer, token);
-            return edit ? { insertText: edit.insertText, label: edit.label, handledMimeType: edit.handledMimeType, yieldTo: edit.yieldTo } : undefined;
-        });
+    async provideDocumentOnDropEdits(_model, _position, dataTransfer, token) {
+        const edit = await this.getEdit(dataTransfer, token);
+        return edit ? { insertText: edit.insertText, label: edit.label, handledMimeType: edit.handledMimeType, yieldTo: edit.yieldTo } : undefined;
     }
 }
 class DefaultTextProvider extends SimplePasteAndDropProvider {
@@ -52,25 +39,23 @@ class DefaultTextProvider extends SimplePasteAndDropProvider {
         this.dropMimeTypes = [Mimes.text];
         this.pasteMimeTypes = [Mimes.text];
     }
-    getEdit(dataTransfer, _token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const textEntry = dataTransfer.get(Mimes.text);
-            if (!textEntry) {
-                return;
-            }
-            // Suppress if there's also a uriList entry.
-            // Typically the uri-list contains the same text as the text entry so showing both is confusing.
-            if (dataTransfer.has(Mimes.uriList)) {
-                return;
-            }
-            const insertText = yield textEntry.asString();
-            return {
-                handledMimeType: Mimes.text,
-                label: localize('text.label', "Insert Plain Text"),
-                detail: builtInLabel,
-                insertText
-            };
-        });
+    async getEdit(dataTransfer, _token) {
+        const textEntry = dataTransfer.get(Mimes.text);
+        if (!textEntry) {
+            return;
+        }
+        // Suppress if there's also a uriList entry.
+        // Typically the uri-list contains the same text as the text entry so showing both is confusing.
+        if (dataTransfer.has(Mimes.uriList)) {
+            return;
+        }
+        const insertText = await textEntry.asString();
+        return {
+            handledMimeType: Mimes.text,
+            label: localize('text.label', "Insert Plain Text"),
+            detail: builtInLabel,
+            insertText
+        };
     }
 }
 class PathProvider extends SimplePasteAndDropProvider {
@@ -80,44 +65,42 @@ class PathProvider extends SimplePasteAndDropProvider {
         this.dropMimeTypes = [Mimes.uriList];
         this.pasteMimeTypes = [Mimes.uriList];
     }
-    getEdit(dataTransfer, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const entries = yield extractUriList(dataTransfer);
-            if (!entries.length || token.isCancellationRequested) {
-                return;
-            }
-            let uriCount = 0;
-            const insertText = entries
-                .map(({ uri, originalText }) => {
-                if (uri.scheme === Schemas.file) {
-                    return uri.fsPath;
-                }
-                else {
-                    uriCount++;
-                    return originalText;
-                }
-            })
-                .join(' ');
-            let label;
-            if (uriCount > 0) {
-                // Dropping at least one generic uri (such as https) so use most generic label
-                label = entries.length > 1
-                    ? localize('defaultDropProvider.uriList.uris', "Insert Uris")
-                    : localize('defaultDropProvider.uriList.uri', "Insert Uri");
+    async getEdit(dataTransfer, token) {
+        const entries = await extractUriList(dataTransfer);
+        if (!entries.length || token.isCancellationRequested) {
+            return;
+        }
+        let uriCount = 0;
+        const insertText = entries
+            .map(({ uri, originalText }) => {
+            if (uri.scheme === Schemas.file) {
+                return uri.fsPath;
             }
             else {
-                // All the paths are file paths
-                label = entries.length > 1
-                    ? localize('defaultDropProvider.uriList.paths', "Insert Paths")
-                    : localize('defaultDropProvider.uriList.path', "Insert Path");
+                uriCount++;
+                return originalText;
             }
-            return {
-                handledMimeType: Mimes.uriList,
-                insertText,
-                label,
-                detail: builtInLabel,
-            };
-        });
+        })
+            .join(' ');
+        let label;
+        if (uriCount > 0) {
+            // Dropping at least one generic uri (such as https) so use most generic label
+            label = entries.length > 1
+                ? localize('defaultDropProvider.uriList.uris', "Insert Uris")
+                : localize('defaultDropProvider.uriList.uri', "Insert Uri");
+        }
+        else {
+            // All the paths are file paths
+            label = entries.length > 1
+                ? localize('defaultDropProvider.uriList.paths', "Insert Paths")
+                : localize('defaultDropProvider.uriList.path', "Insert Path");
+        }
+        return {
+            handledMimeType: Mimes.uriList,
+            insertText,
+            label,
+            detail: builtInLabel,
+        };
     }
 }
 let RelativePathProvider = class RelativePathProvider extends SimplePasteAndDropProvider {
@@ -128,51 +111,70 @@ let RelativePathProvider = class RelativePathProvider extends SimplePasteAndDrop
         this.dropMimeTypes = [Mimes.uriList];
         this.pasteMimeTypes = [Mimes.uriList];
     }
-    getEdit(dataTransfer, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const entries = yield extractUriList(dataTransfer);
-            if (!entries.length || token.isCancellationRequested) {
-                return;
-            }
-            const relativeUris = coalesce(entries.map(({ uri }) => {
-                const root = this._workspaceContextService.getWorkspaceFolder(uri);
-                return root ? relativePath(root.uri, uri) : undefined;
-            }));
-            if (!relativeUris.length) {
-                return;
-            }
-            return {
-                handledMimeType: Mimes.uriList,
-                insertText: relativeUris.join(' '),
-                label: entries.length > 1
-                    ? localize('defaultDropProvider.uriList.relativePaths', "Insert Relative Paths")
-                    : localize('defaultDropProvider.uriList.relativePath', "Insert Relative Path"),
-                detail: builtInLabel,
-            };
-        });
+    async getEdit(dataTransfer, token) {
+        const entries = await extractUriList(dataTransfer);
+        if (!entries.length || token.isCancellationRequested) {
+            return;
+        }
+        const relativeUris = coalesce(entries.map(({ uri }) => {
+            const root = this._workspaceContextService.getWorkspaceFolder(uri);
+            return root ? relativePath(root.uri, uri) : undefined;
+        }));
+        if (!relativeUris.length) {
+            return;
+        }
+        return {
+            handledMimeType: Mimes.uriList,
+            insertText: relativeUris.join(' '),
+            label: entries.length > 1
+                ? localize('defaultDropProvider.uriList.relativePaths', "Insert Relative Paths")
+                : localize('defaultDropProvider.uriList.relativePath', "Insert Relative Path"),
+            detail: builtInLabel,
+        };
     }
 };
 RelativePathProvider = __decorate([
     __param(0, IWorkspaceContextService)
 ], RelativePathProvider);
-function extractUriList(dataTransfer) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const urlListEntry = dataTransfer.get(Mimes.uriList);
-        if (!urlListEntry) {
-            return [];
+class PasteHtmlProvider {
+    constructor() {
+        this.id = 'html';
+        this.pasteMimeTypes = ['text/html'];
+        this._yieldTo = [{ mimeType: Mimes.text }];
+    }
+    async provideDocumentPasteEdits(_model, _ranges, dataTransfer, context, token) {
+        if (context.trigger !== 'explicit' && context.only !== this.id) {
+            return;
         }
-        const strUriList = yield urlListEntry.asString();
-        const entries = [];
-        for (const entry of UriList.parse(strUriList)) {
-            try {
-                entries.push({ uri: URI.parse(entry), originalText: entry });
-            }
-            catch (_a) {
-                // noop
-            }
+        const entry = dataTransfer.get('text/html');
+        const htmlText = await (entry === null || entry === void 0 ? void 0 : entry.asString());
+        if (!htmlText || token.isCancellationRequested) {
+            return;
         }
-        return entries;
-    });
+        return {
+            insertText: htmlText,
+            yieldTo: this._yieldTo,
+            label: localize('pasteHtmlLabel', 'Insert HTML'),
+            detail: builtInLabel,
+        };
+    }
+}
+async function extractUriList(dataTransfer) {
+    const urlListEntry = dataTransfer.get(Mimes.uriList);
+    if (!urlListEntry) {
+        return [];
+    }
+    const strUriList = await urlListEntry.asString();
+    const entries = [];
+    for (const entry of UriList.parse(strUriList)) {
+        try {
+            entries.push({ uri: URI.parse(entry), originalText: entry });
+        }
+        catch (_a) {
+            // noop
+        }
+    }
+    return entries;
 }
 let DefaultDropProvidersFeature = class DefaultDropProvidersFeature extends Disposable {
     constructor(languageFeaturesService, workspaceContextService) {
@@ -193,6 +195,7 @@ let DefaultPasteProvidersFeature = class DefaultPasteProvidersFeature extends Di
         this._register(languageFeaturesService.documentPasteEditProvider.register('*', new DefaultTextProvider()));
         this._register(languageFeaturesService.documentPasteEditProvider.register('*', new PathProvider()));
         this._register(languageFeaturesService.documentPasteEditProvider.register('*', new RelativePathProvider(workspaceContextService)));
+        this._register(languageFeaturesService.documentPasteEditProvider.register('*', new PasteHtmlProvider()));
     }
 };
 DefaultPasteProvidersFeature = __decorate([

@@ -71,9 +71,13 @@ export class LinesSliceCharSequence {
         // 11  0   0   12  15  6   13  0   0   11
         const prevCategory = getCategory(length > 0 ? this.elements[length - 1] : -1);
         const nextCategory = getCategory(length < this.elements.length ? this.elements[length] : -1);
-        if (prevCategory === 6 /* CharBoundaryCategory.LineBreakCR */ && nextCategory === 7 /* CharBoundaryCategory.LineBreakLF */) {
+        if (prevCategory === 7 /* CharBoundaryCategory.LineBreakCR */ && nextCategory === 8 /* CharBoundaryCategory.LineBreakLF */) {
             // don't break between \r and \n
             return 0;
+        }
+        if (prevCategory === 8 /* CharBoundaryCategory.LineBreakLF */) {
+            // prefer the linebreak before the change
+            return 150;
         }
         let score = 0;
         if (prevCategory !== nextCategory) {
@@ -143,22 +147,23 @@ const score = {
     [2 /* CharBoundaryCategory.WordNumber */]: 0,
     [3 /* CharBoundaryCategory.End */]: 10,
     [4 /* CharBoundaryCategory.Other */]: 2,
-    [5 /* CharBoundaryCategory.Space */]: 3,
-    [6 /* CharBoundaryCategory.LineBreakCR */]: 10,
-    [7 /* CharBoundaryCategory.LineBreakLF */]: 10,
+    [5 /* CharBoundaryCategory.Separator */]: 30,
+    [6 /* CharBoundaryCategory.Space */]: 3,
+    [7 /* CharBoundaryCategory.LineBreakCR */]: 10,
+    [8 /* CharBoundaryCategory.LineBreakLF */]: 10,
 };
 function getCategoryBoundaryScore(category) {
     return score[category];
 }
 function getCategory(charCode) {
     if (charCode === 10 /* CharCode.LineFeed */) {
-        return 7 /* CharBoundaryCategory.LineBreakLF */;
+        return 8 /* CharBoundaryCategory.LineBreakLF */;
     }
     else if (charCode === 13 /* CharCode.CarriageReturn */) {
-        return 6 /* CharBoundaryCategory.LineBreakCR */;
+        return 7 /* CharBoundaryCategory.LineBreakCR */;
     }
     else if (isSpace(charCode)) {
-        return 5 /* CharBoundaryCategory.Space */;
+        return 6 /* CharBoundaryCategory.Space */;
     }
     else if (charCode >= 97 /* CharCode.a */ && charCode <= 122 /* CharCode.z */) {
         return 0 /* CharBoundaryCategory.WordLower */;
@@ -171,6 +176,9 @@ function getCategory(charCode) {
     }
     else if (charCode === -1) {
         return 3 /* CharBoundaryCategory.End */;
+    }
+    else if (charCode === 44 /* CharCode.Comma */ || charCode === 59 /* CharCode.Semicolon */) {
+        return 5 /* CharBoundaryCategory.Separator */;
     }
     else {
         return 4 /* CharBoundaryCategory.Other */;

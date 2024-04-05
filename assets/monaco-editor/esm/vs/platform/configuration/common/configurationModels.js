@@ -58,10 +58,28 @@ export class ConfigurationModel {
         return section ? getConfigurationValue(this.contents, section) : this.contents;
     }
     inspect(section, overrideIdentifier) {
-        const value = this.rawConfiguration.getValue(section);
-        const override = overrideIdentifier ? this.rawConfiguration.getOverrideValue(section, overrideIdentifier) : undefined;
-        const merged = overrideIdentifier ? this.rawConfiguration.override(overrideIdentifier).getValue(section) : value;
-        return { value, override, merged };
+        const that = this;
+        return {
+            get value() {
+                return freeze(that.rawConfiguration.getValue(section));
+            },
+            get override() {
+                return overrideIdentifier ? freeze(that.rawConfiguration.getOverrideValue(section, overrideIdentifier)) : undefined;
+            },
+            get merged() {
+                return freeze(overrideIdentifier ? that.rawConfiguration.override(overrideIdentifier).getValue(section) : that.rawConfiguration.getValue(section));
+            },
+            get overrides() {
+                const overrides = [];
+                for (const { contents, identifiers, keys } of that.rawConfiguration.overrides) {
+                    const value = new ConfigurationModel(contents, keys).getValue(section);
+                    if (value !== undefined) {
+                        overrides.push({ identifiers, value });
+                    }
+                }
+                return overrides.length ? freeze(overrides) : undefined;
+            }
+        };
     }
     getOverrideValue(section, overrideIdentifier) {
         const overrideContents = this.getContentsForOverrideIdentifer(overrideIdentifier);
@@ -302,22 +320,17 @@ class ConfigurationInspectValue {
         this.folderConfigurationModel = folderConfigurationModel;
         this.memoryConfigurationModel = memoryConfigurationModel;
     }
-    inspect(model, section, overrideIdentifier) {
-        const inspectValue = model.inspect(section, overrideIdentifier);
-        return {
-            get value() { return freeze(inspectValue.value); },
-            get override() { return freeze(inspectValue.override); },
-            get merged() { return freeze(inspectValue.merged); }
-        };
+    toInspectValue(inspectValue) {
+        return (inspectValue === null || inspectValue === void 0 ? void 0 : inspectValue.value) !== undefined || (inspectValue === null || inspectValue === void 0 ? void 0 : inspectValue.override) !== undefined || (inspectValue === null || inspectValue === void 0 ? void 0 : inspectValue.overrides) !== undefined ? inspectValue : undefined;
     }
     get userInspectValue() {
         if (!this._userInspectValue) {
-            this._userInspectValue = this.inspect(this.userConfiguration, this.key, this.overrides.overrideIdentifier);
+            this._userInspectValue = this.userConfiguration.inspect(this.key, this.overrides.overrideIdentifier);
         }
         return this._userInspectValue;
     }
     get user() {
-        return this.userInspectValue.value !== undefined || this.userInspectValue.override !== undefined ? { value: this.userInspectValue.value, override: this.userInspectValue.override } : undefined;
+        return this.toInspectValue(this.userInspectValue);
     }
 }
 export class Configuration {

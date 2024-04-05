@@ -75,7 +75,7 @@ class ConfigurationRegistry {
                             valuesSources.set(configuration, source);
                         }
                     }
-                    const defaultValue = Object.assign(Object.assign({}, ((configurationDefaultOverride === null || configurationDefaultOverride === void 0 ? void 0 : configurationDefaultOverride.value) || {})), overrides[key]);
+                    const defaultValue = { ...((configurationDefaultOverride === null || configurationDefaultOverride === void 0 ? void 0 : configurationDefaultOverride.value) || {}), ...overrides[key] };
                     this.configurationDefaultsOverrides.set(key, { source, value: defaultValue, valuesSources });
                     const plainKey = getLanguageTagSettingPlainKey(key);
                     const property = {

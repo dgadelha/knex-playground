@@ -25,6 +25,8 @@ import { ComputeOptionsMemory, ConfigurationChangedEvent, editorOptionsRegistry 
 import { EditorZoom } from '../../common/config/editorZoom.js';
 import { BareFontInfo } from '../../common/config/fontInfo.js';
 import { IAccessibilityService } from '../../../platform/accessibility/common/accessibility.js';
+import { getWindow, getWindowById } from '../../../base/browser/dom.js';
+import { PixelRatio } from '../../../base/browser/pixelRatio.js';
 let EditorConfiguration = class EditorConfiguration extends Disposable {
     constructor(isSimpleWidget, options, container, _accessibilityService) {
         super();
@@ -41,6 +43,7 @@ let EditorConfiguration = class EditorConfiguration extends Disposable {
         this._computeOptionsMemory = new ComputeOptionsMemory();
         this.isSimpleWidget = isSimpleWidget;
         this._containerObserver = this._register(new ElementSizeObserver(container, options.dimension));
+        this._targetWindowId = getWindow(container).vscodeWindowId;
         this._rawOptions = deepCloneAndMigrateOptions(options);
         this._validatedOptions = EditorOptionsUtil.validateOptions(this._rawOptions);
         this.options = this._computeOptions();
@@ -51,7 +54,7 @@ let EditorConfiguration = class EditorConfiguration extends Disposable {
         this._register(TabFocus.onDidChangeTabFocus(() => this._recomputeOptions()));
         this._register(this._containerObserver.onDidChange(() => this._recomputeOptions()));
         this._register(FontMeasurements.onDidChange(() => this._recomputeOptions()));
-        this._register(browser.PixelRatio.onDidChange(() => this._recomputeOptions()));
+        this._register(PixelRatio.getInstance(getWindow(container)).onDidChange(() => this._recomputeOptions()));
         this._register(this._accessibilityService.onDidChangeScreenReaderOptimized(() => this._recomputeOptions()));
     }
     _recomputeOptions() {
@@ -92,14 +95,14 @@ let EditorConfiguration = class EditorConfiguration extends Disposable {
             outerWidth: this._containerObserver.getWidth(),
             outerHeight: this._containerObserver.getHeight(),
             emptySelectionClipboard: browser.isWebKit || browser.isFirefox,
-            pixelRatio: browser.PixelRatio.value,
+            pixelRatio: PixelRatio.getInstance(getWindowById(this._targetWindowId, true).window).value,
             accessibilitySupport: (this._accessibilityService.isScreenReaderOptimized()
                 ? 2 /* AccessibilitySupport.Enabled */
                 : this._accessibilityService.getAccessibilitySupport())
         };
     }
     _readFontInfo(bareFontInfo) {
-        return FontMeasurements.readFontInfo(bareFontInfo);
+        return FontMeasurements.readFontInfo(getWindowById(this._targetWindowId, true).window, bareFontInfo);
     }
     getRawOptions() {
         return this._rawOptions;

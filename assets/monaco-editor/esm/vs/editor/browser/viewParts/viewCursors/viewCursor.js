@@ -27,7 +27,7 @@ export class ViewCursor {
         const options = this._context.configuration.options;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
         this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
         this._lineCursorWidth = Math.min(options.get(31 /* EditorOption.cursorWidth */), this._typicalHalfwidthCharacterWidth);
         this._isVisible = true;
@@ -65,7 +65,7 @@ export class ViewCursor {
         const options = this._context.configuration.options;
         const fontInfo = options.get(50 /* EditorOption.fontInfo */);
         this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        this._lineHeight = options.get(67 /* EditorOption.lineHeight */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
         this._lineCursorWidth = Math.min(options.get(31 /* EditorOption.cursorWidth */), this._typicalHalfwidthCharacterWidth);
         applyFontInfo(this._domNode, fontInfo);
@@ -101,16 +101,17 @@ export class ViewCursor {
                 // Outside viewport
                 return null;
             }
+            const window = dom.getWindow(this._domNode.domNode);
             let width;
             if (this._cursorStyle === TextEditorCursorStyle.Line) {
-                width = dom.computeScreenAwareSize(this._lineCursorWidth > 0 ? this._lineCursorWidth : 2);
+                width = dom.computeScreenAwareSize(window, this._lineCursorWidth > 0 ? this._lineCursorWidth : 2);
                 if (width > 2) {
                     textContent = nextGrapheme;
                     textContentClassName = this._getTokenClassName(position);
                 }
             }
             else {
-                width = dom.computeScreenAwareSize(1);
+                width = dom.computeScreenAwareSize(window, 1);
             }
             let left = visibleRange.left;
             let paddingLeft = 0;

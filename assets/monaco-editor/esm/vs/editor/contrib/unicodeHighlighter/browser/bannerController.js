@@ -16,7 +16,7 @@ import { $, append, clearNode } from '../../../../base/browser/dom.js';
 import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { Action } from '../../../../base/common/actions.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
-import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { Link } from '../../../../platform/opener/browser/link.js';
 import { widgetClose } from '../../../../platform/theme/common/iconRegistry.js';
@@ -34,11 +34,14 @@ let BannerController = class BannerController extends Disposable {
         this.banner.clear();
     }
     show(item) {
-        this.banner.show(Object.assign(Object.assign({}, item), { onClose: () => {
+        this.banner.show({
+            ...item,
+            onClose: () => {
                 var _a;
                 this.hide();
                 (_a = item.onClose) === null || _a === void 0 ? void 0 : _a.call(item);
-            } }));
+            }
+        });
         this._editor.setBanner(this.banner.element, BANNER_ELEMENT_HEIGHT);
     }
 };
@@ -97,7 +100,7 @@ let Banner = class Banner extends Disposable {
         this.messageActionsContainer = append(this.element, $('div.message-actions-container'));
         if (item.actions) {
             for (const action of item.actions) {
-                this._register(this.instantiationService.createInstance(Link, this.messageActionsContainer, Object.assign(Object.assign({}, action), { tabIndex: -1 }), {}));
+                this._register(this.instantiationService.createInstance(Link, this.messageActionsContainer, { ...action, tabIndex: -1 }, {}));
             }
         }
         // Action

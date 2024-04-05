@@ -11,7 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { runWhenIdle } from '../../../../base/common/async.js';
 import { Event } from '../../../../base/common/event.js';
 import { LRUCache } from '../../../../base/common/map.js';
 import { Range } from '../../../common/core/range.js';
@@ -19,6 +18,8 @@ import { CodeLensModel } from './codelens.js';
 import { registerSingleton } from '../../../../platform/instantiation/common/extensions.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
 import { IStorageService, WillSaveStateReason } from '../../../../platform/storage/common/storage.js';
+import { mainWindow } from '../../../../base/browser/window.js';
+import { runWhenWindowIdle } from '../../../../base/browser/dom.js';
 export const ICodeLensCache = createDecorator('ICodeLensCache');
 class CacheItem {
     constructor(lineCount, data) {
@@ -36,7 +37,7 @@ let CodeLensCache = class CodeLensCache {
         this._cache = new LRUCache(20, 0.75);
         // remove old data
         const oldkey = 'codelens/cache';
-        runWhenIdle(() => storageService.remove(oldkey, 1 /* StorageScope.WORKSPACE */));
+        runWhenWindowIdle(mainWindow, () => storageService.remove(oldkey, 1 /* StorageScope.WORKSPACE */));
         // restore lens data on start
         const key = 'codelens/cache2';
         const raw = storageService.get(key, 1 /* StorageScope.WORKSPACE */, '{}');

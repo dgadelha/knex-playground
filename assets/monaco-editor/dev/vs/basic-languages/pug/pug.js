@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/pug/pug", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -196,10 +196,12 @@ var moduleExports = (() => {
       "video",
       "wbr"
     ],
+    // we include these common regular expressions
     symbols: /[\+\-\*\%\&\|\!\=\/\.\,\:]+/,
     escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
     tokenizer: {
       root: [
+        // Tag or a keyword at start
         [
           /^(\s*)([a-zA-Z_-][\w-]*)/,
           {
@@ -215,6 +217,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // id
         [
           /^(\s*)(#[a-zA-Z_-][\w-]*)/,
           {
@@ -224,6 +227,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // class
         [
           /^(\s*)(\.[a-zA-Z_-][\w-]*)/,
           {
@@ -233,8 +237,10 @@ var moduleExports = (() => {
             }
           }
         ],
+        // plain text with pipe
         [/^(\s*)(\|.*)$/, ""],
         { include: "@whitespace" },
+        // keywords
         [
           /[a-zA-Z_$][\w$]*/,
           {
@@ -244,16 +250,20 @@ var moduleExports = (() => {
             }
           }
         ],
+        // delimiters and operators
         [/[{}()\[\]]/, "@brackets"],
         [/@symbols/, "delimiter"],
+        // numbers
         [/\d+\.\d+([eE][\-+]?\d+)?/, "number.float"],
         [/\d+/, "number"],
+        // strings:
         [/"/, "string", '@string."'],
         [/'/, "string", "@string.'"]
       ],
       tag: [
         [/(\.)(\s*$)/, [{ token: "delimiter", next: "@blockText.$S2." }, ""]],
         [/\s+/, { token: "", next: "@simpleText" }],
+        // id
         [
           /#[a-zA-Z_-][\w-]*/,
           {
@@ -263,6 +273,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // class
         [
           /\.[a-zA-Z_-][\w-]*/,
           {
@@ -272,11 +283,13 @@ var moduleExports = (() => {
             }
           }
         ],
+        // attributes
         [/\(/, { token: "delimiter.parenthesis", next: "@attributeList" }]
       ],
       simpleText: [
         [/[^#]+$/, { token: "", next: "@popall" }],
         [/[^#]+/, { token: "" }],
+        // interpolation
         [
           /(#{)([^}]*)(})/,
           {
@@ -372,6 +385,7 @@ var moduleExports = (() => {
             }
           }
         ],
+        // interpolation
         [/(#{)([^}]*)(})/, ["interpolation.delimiter", "interpolation", "interpolation.delimiter"]],
         [/#/, "string"],
         [
@@ -384,6 +398,7 @@ var moduleExports = (() => {
           }
         ]
       ],
+      // Almost identical to above, except for escapes and the output token
       value: [
         [
           /[^\\"']+/,

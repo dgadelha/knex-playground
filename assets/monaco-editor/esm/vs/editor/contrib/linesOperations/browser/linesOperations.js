@@ -850,7 +850,7 @@ export class AbstractCaseAction extends EditorAction {
         if (model === null) {
             return;
         }
-        const wordSeparators = editor.getOption(129 /* EditorOption.wordSeparators */);
+        const wordSeparators = editor.getOption(130 /* EditorOption.wordSeparators */);
         const textEdits = [];
         for (const selection of selections) {
             if (selection.isEmpty()) {

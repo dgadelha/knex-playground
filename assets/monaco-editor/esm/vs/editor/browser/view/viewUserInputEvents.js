@@ -75,7 +75,7 @@ export class ViewUserInputEvents {
         return ViewUserInputEvents.convertViewToModelMouseTarget(target, this._coordinatesConverter);
     }
     static convertViewToModelMouseTarget(target, coordinatesConverter) {
-        const result = Object.assign({}, target);
+        const result = { ...target };
         if (result.position) {
             result.position = coordinatesConverter.convertViewPositionToModelPosition(result.position);
         }

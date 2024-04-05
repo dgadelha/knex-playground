@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/julia/julia.ts
 var conf = {
@@ -330,19 +331,24 @@ var language = {
     { open: "[", close: "]", token: "delimiter.square" }
   ],
   ident: /π|ℯ|\b(?!\d)\w+\b/,
+  // escape sequences
   escape: /(?:[abefnrstv\\"'\n\r]|[0-7]{1,3}|x[0-9A-Fa-f]{1,2}|u[0-9A-Fa-f]{4})/,
   escapes: /\\(?:C\-(@escape|.)|c(@escape|.)|@escape)/,
+  // The main tokenizer for our languages
   tokenizer: {
     root: [
       [/(::)\s*|\b(isa)\s+/, "keyword", "@typeanno"],
       [/\b(isa)(\s*\(@ident\s*,\s*)/, ["keyword", { token: "", next: "@typeanno" }]],
       [/\b(type|struct)[ \t]+/, "keyword", "@typeanno"],
+      // symbols
       [/^\s*:@ident[!?]?/, "metatag"],
       [/(return)(\s*:@ident[!?]?)/, ["keyword", "metatag"]],
       [/(\(|\[|\{|@allops)(\s*:@ident[!?]?)/, ["", "metatag"]],
       [/:\(/, "metatag", "@quote"],
+      // regular expressions
       [/r"""/, "regexp.delim", "@tregexp"],
       [/r"/, "regexp.delim", "@sregexp"],
+      // strings
       [/raw"""/, "string.delim", "@rtstring"],
       [/[bv]?"""/, "string.delim", "@dtstring"],
       [/raw"/, "string.delim", "@rsstring"],
@@ -381,8 +387,11 @@ var language = {
       [/\$\w+/, "key"],
       [/\$\(/, "key", "@paste"],
       [/@@@ident/, "annotation"],
+      // whitespace
       { include: "@whitespace" },
+      // characters
       [/'(?:@escapes|.)'/, "string.character"],
+      // delimiters and operators
       [/[()\[\]{}]/, "@brackets"],
       [
         /@allops/,
@@ -394,17 +403,20 @@ var language = {
         }
       ],
       [/[;,]/, "delimiter"],
+      // numbers
       [/0[xX][0-9a-fA-F](_?[0-9a-fA-F])*/, "number.hex"],
       [/0[_oO][0-7](_?[0-7])*/, "number.octal"],
       [/0[bB][01](_?[01])*/, "number.binary"],
       [/[+\-]?\d+(\.\d+)?(im?|[eE][+\-]?\d+(\.\d+)?)?/, "number"]
     ],
+    // type
     typeanno: [
       [/[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*\{/, "type", "@gen"],
       [/([a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*)(\s*<:\s*)/, ["type", "keyword"]],
       [/[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*/, "type", "@pop"],
       ["", "", "@pop"]
     ],
+    // generic type
     gen: [
       [/[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*\{/, "type", "@push"],
       [/[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*/, "type"],
@@ -413,18 +425,21 @@ var language = {
       [/\}/, "type", "@pop"],
       { include: "@root" }
     ],
+    // $(...)
     quote: [
       [/\$\(/, "key", "@paste"],
       [/\(/, "@brackets", "@paren"],
       [/\)/, "metatag", "@pop"],
       { include: "@root" }
     ],
+    // :(...)
     paste: [
       [/:\(/, "metatag", "@quote"],
       [/\(/, "@brackets", "@paren"],
       [/\)/, "key", "@pop"],
       { include: "@root" }
     ],
+    // (...)
     paren: [
       [/\$\(/, "key", "@paste"],
       [/:\(/, "metatag", "@quote"],
@@ -432,6 +447,7 @@ var language = {
       [/\)/, "@brackets", "@pop"],
       { include: "@root" }
     ],
+    // r"egex string"
     sregexp: [
       [/^.*/, "invalid"],
       [/[^\\"()\[\]{}]/, "regexp"],
@@ -446,6 +462,7 @@ var language = {
       [/"(?!"")/, "string"],
       [/"""[imsx]*/, "regexp.delim", "@pop"]
     ],
+    // raw"string"
     rsstring: [
       [/^.*/, "invalid"],
       [/[^\\"]/, "string"],
@@ -458,6 +475,7 @@ var language = {
       [/"(?!"")/, "string"],
       [/"""/, "string.delim", "@pop"]
     ],
+    // "string".
     dsstring: [
       [/^.*/, "invalid"],
       [/[^\\"\$]/, "string"],
@@ -474,12 +492,16 @@ var language = {
       [/"(?!"")/, "string"],
       [/"""/, "string.delim", "@pop"]
     ],
+    // interpolated sequence
     interpolated: [
       [/\(/, { token: "", switchTo: "@interpolated_compound" }],
       [/[a-zA-Z_]\w*/, "identifier"],
       ["", "", "@pop"]
+      // just a $ is interpreted as a $
     ],
+    // any code
     interpolated_compound: [[/\)/, "", "@pop"], { include: "@root" }],
+    // whitespace & comments
     whitespace: [
       [/[ \t\r\n]+/, ""],
       [/#=/, "comment", "@multi_comment"],

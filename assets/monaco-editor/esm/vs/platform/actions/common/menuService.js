@@ -28,7 +28,7 @@ let MenuService = class MenuService {
         this._hiddenStates = new PersistedMenuHideState(storageService);
     }
     createMenu(id, contextKeyService, options) {
-        return new MenuImpl(id, this._hiddenStates, Object.assign({ emitEventsForSubmenuChanges: false, eventDebounceDelay: 50 }, options), this._commandService, contextKeyService);
+        return new MenuImpl(id, this._hiddenStates, { emitEventsForSubmenuChanges: false, eventDebounceDelay: 50, ...options }, this._commandService, contextKeyService);
     }
     resetHiddenStates(ids) {
         this._hiddenStates.reset(ids);

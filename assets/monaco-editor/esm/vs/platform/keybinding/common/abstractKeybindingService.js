@@ -31,6 +31,7 @@ export class AbstractKeybindingService extends Disposable {
         this._ignoreSingleModifiers = KeybindingModifierSet.EMPTY;
         this._currentSingleModifier = null;
         this._currentSingleModifierClearTimeout = new TimeoutTimer();
+        this._currentlyDispatchingCommandId = null;
         this._logging = false;
     }
     dispose() {
@@ -230,11 +231,17 @@ export class AbstractKeybindingService extends Disposable {
                         shouldPreventDefault = true;
                     }
                     this._log(`+ Invoking command ${resolveResult.commandId}.`);
-                    if (typeof resolveResult.commandArgs === 'undefined') {
-                        this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
+                    this._currentlyDispatchingCommandId = resolveResult.commandId;
+                    try {
+                        if (typeof resolveResult.commandArgs === 'undefined') {
+                            this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
+                        }
+                        else {
+                            this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
+                        }
                     }
-                    else {
-                        this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
+                    finally {
+                        this._currentlyDispatchingCommandId = null;
                     }
                     if (!HIGH_FREQ_COMMANDS.test(resolveResult.commandId)) {
                         this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding', detail: (_a = userKeypress.getUserSettingsLabel()) !== null && _a !== void 0 ? _a : undefined });

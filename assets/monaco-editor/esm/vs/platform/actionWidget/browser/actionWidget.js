@@ -15,7 +15,7 @@ import * as dom from '../../../base/browser/dom.js';
 import { ActionBar } from '../../../base/browser/ui/actionbar/actionbar.js';
 import { Disposable, DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
 import './actionWidget.css';
-import { localize } from '../../../nls.js';
+import { localize, localize2 } from '../../../nls.js';
 import { acceptSelectedActionCommand, ActionList, previewSelectedActionCommand } from './actionList.js';
 import { Action2, registerAction2 } from '../../actions/common/actions.js';
 import { IContextKeyService, RawContextKey } from '../../contextkey/common/contextkey.js';
@@ -137,10 +137,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: 'hideCodeActionWidget',
-            title: {
-                value: localize('hideCodeActionWidget.title', "Hide action widget"),
-                original: 'Hide action widget'
-            },
+            title: localize2('hideCodeActionWidget.title', "Hide action widget"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -157,10 +154,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: 'selectPrevCodeAction',
-            title: {
-                value: localize('selectPrevCodeAction.title', "Select previous action"),
-                original: 'Select previous action'
-            },
+            title: localize2('selectPrevCodeAction.title', "Select previous action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -181,10 +175,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: 'selectNextCodeAction',
-            title: {
-                value: localize('selectNextCodeAction.title', "Select next action"),
-                original: 'Select next action'
-            },
+            title: localize2('selectNextCodeAction.title', "Select next action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -205,10 +196,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: acceptSelectedActionCommand,
-            title: {
-                value: localize('acceptSelected.title', "Accept selected action"),
-                original: 'Accept selected action'
-            },
+            title: localize2('acceptSelected.title', "Accept selected action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,
@@ -228,10 +216,7 @@ registerAction2(class extends Action2 {
     constructor() {
         super({
             id: previewSelectedActionCommand,
-            title: {
-                value: localize('previewSelected.title', "Preview selected action"),
-                original: 'Preview selected action'
-            },
+            title: localize2('previewSelected.title', "Preview selected action"),
             precondition: ActionWidgetContextKeys.Visible,
             keybinding: {
                 weight,

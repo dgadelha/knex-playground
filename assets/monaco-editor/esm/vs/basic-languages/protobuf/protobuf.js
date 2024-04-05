@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/protobuf/protobuf.ts
 var namedLiterals = ["true", "false"];
@@ -124,11 +125,13 @@ var language = {
         ["string.quote", "string", { token: "string.quote", switchTo: "@topLevel.proto2" }]
       ],
       [
+        // If no `syntax` provided, regarded as proto2
         /.*?/,
         { token: "", switchTo: "@topLevel.proto2" }
       ]
     ],
     topLevel: [
+      // whitespace
       { include: "@whitespace" },
       { include: "@constant" },
       [/=/, "operators"],
@@ -378,6 +381,7 @@ var language = {
     comment: [
       [/[^\/*]+/, "comment"],
       [/\/\*/, "comment", "@push"],
+      // nested comment
       ["\\*/", "comment", "@pop"],
       [/[\/*]/, "comment"]
     ],
@@ -400,6 +404,7 @@ var language = {
       ["@decimalLit", "number"],
       ["@floatLit", "number.float"],
       [/("([^"\\]|\\.)*|'([^'\\]|\\.)*)$/, "string.invalid"],
+      // non-terminated string
       [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
       [/'/, { token: "string.quote", bracket: "@open", next: "@stringSingle" }],
       [/{/, { token: "@brackets", bracket: "@open", next: "@prototext" }],

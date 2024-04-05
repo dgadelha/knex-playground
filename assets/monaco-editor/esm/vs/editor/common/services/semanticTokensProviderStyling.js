@@ -101,19 +101,19 @@ let SemanticTokensProviderStyling = class SemanticTokensProviderStyling {
     warnOverlappingSemanticTokens(lineNumber, startColumn) {
         if (!this._hasWarnedOverlappingTokens) {
             this._hasWarnedOverlappingTokens = true;
-            console.warn(`Overlapping semantic tokens detected at lineNumber ${lineNumber}, column ${startColumn}`);
+            this._logService.warn(`Overlapping semantic tokens detected at lineNumber ${lineNumber}, column ${startColumn}`);
         }
     }
     warnInvalidLengthSemanticTokens(lineNumber, startColumn) {
         if (!this._hasWarnedInvalidLengthTokens) {
             this._hasWarnedInvalidLengthTokens = true;
-            console.warn(`Semantic token with invalid length detected at lineNumber ${lineNumber}, column ${startColumn}`);
+            this._logService.warn(`Semantic token with invalid length detected at lineNumber ${lineNumber}, column ${startColumn}`);
         }
     }
     warnInvalidEditStart(previousResultId, resultId, editIndex, editStart, maxExpectedStart) {
         if (!this._hasWarnedInvalidEditStart) {
             this._hasWarnedInvalidEditStart = true;
-            console.warn(`Invalid semantic tokens edit detected (previousResultId: ${previousResultId}, resultId: ${resultId}) at edit #${editIndex}: The provided start offset ${editStart} is outside the previous data (length ${maxExpectedStart}).`);
+            this._logService.warn(`Invalid semantic tokens edit detected (previousResultId: ${previousResultId}, resultId: ${resultId}) at edit #${editIndex}: The provided start offset ${editStart} is outside the previous data (length ${maxExpectedStart}).`);
         }
     }
 };

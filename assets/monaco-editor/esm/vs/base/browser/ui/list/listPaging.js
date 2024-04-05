@@ -62,7 +62,10 @@ class PagedAccessibilityProvider {
     }
 }
 function fromPagedListOptions(modelProvider, options) {
-    return Object.assign(Object.assign({}, options), { accessibilityProvider: options.accessibilityProvider && new PagedAccessibilityProvider(modelProvider, options.accessibilityProvider) });
+    return {
+        ...options,
+        accessibilityProvider: options.accessibilityProvider && new PagedAccessibilityProvider(modelProvider, options.accessibilityProvider)
+    };
 }
 export class PagedList {
     constructor(user, container, virtualDelegate, renderers, options = {}) {

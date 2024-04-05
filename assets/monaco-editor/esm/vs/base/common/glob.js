@@ -1,12 +1,3 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { isThenable } from './async.js';
 import { isEqualOrParent } from './extpath.js';
 import { LRUCache } from './map.js';
@@ -422,15 +413,15 @@ function parsedExpression(expression, options) {
             // With result promises, we have to loop over each and
             // await the result before we can return any result.
             if (resultPromises) {
-                return (() => __awaiter(this, void 0, void 0, function* () {
+                return (async () => {
                     for (const resultPromise of resultPromises) {
-                        const result = yield resultPromise;
+                        const result = await resultPromise;
                         if (typeof result === 'string') {
                             return result;
                         }
                     }
                     return null;
-                }))();
+                })();
             }
             return null;
         };
@@ -474,15 +465,15 @@ function parsedExpression(expression, options) {
         // With result promises, we have to loop over each and
         // await the result before we can return any result.
         if (resultPromises) {
-            return (() => __awaiter(this, void 0, void 0, function* () {
+            return (async () => {
                 for (const resultPromise of resultPromises) {
-                    const result = yield resultPromise;
+                    const result = await resultPromise;
                     if (typeof result === 'string') {
                         return result;
                     }
                 }
                 return null;
-            }))();
+            })();
         }
         return null;
     };

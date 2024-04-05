@@ -34,10 +34,13 @@ let CodeActionKeybindingResolver = CodeActionKeybindingResolver_1 = class CodeAc
             else if (item.command === fixAllCommandId) {
                 commandArgs = { kind: CodeActionKind.SourceFixAll.value };
             }
-            return Object.assign({ resolvedKeybinding: item.resolvedKeybinding }, CodeActionCommandArgs.fromUser(commandArgs, {
-                kind: CodeActionKind.None,
-                apply: "never" /* CodeActionAutoApply.Never */
-            }));
+            return {
+                resolvedKeybinding: item.resolvedKeybinding,
+                ...CodeActionCommandArgs.fromUser(commandArgs, {
+                    kind: CodeActionKind.None,
+                    apply: "never" /* CodeActionAutoApply.Never */
+                })
+            };
         }));
         return (action) => {
             if (action.kind) {

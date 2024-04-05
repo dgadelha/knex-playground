@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { AsyncIterableObject } from '../../../../base/common/async.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
@@ -23,19 +14,17 @@ export class HoverProviderResult {
         this.ordinal = ordinal;
     }
 }
-function executeProvider(provider, ordinal, model, position, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const result = yield Promise.resolve(provider.provideHover(model, position, token));
-            if (result && isValid(result)) {
-                return new HoverProviderResult(provider, result, ordinal);
-            }
+async function executeProvider(provider, ordinal, model, position, token) {
+    try {
+        const result = await Promise.resolve(provider.provideHover(model, position, token));
+        if (result && isValid(result)) {
+            return new HoverProviderResult(provider, result, ordinal);
         }
-        catch (err) {
-            onUnexpectedExternalError(err);
-        }
-        return undefined;
-    });
+    }
+    catch (err) {
+        onUnexpectedExternalError(err);
+    }
+    return undefined;
 }
 export function getHover(registry, model, position, token) {
     const providers = registry.ordered(model);

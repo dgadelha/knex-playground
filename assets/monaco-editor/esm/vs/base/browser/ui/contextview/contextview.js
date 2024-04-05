@@ -48,20 +48,26 @@ export class ContextView extends Disposable {
     constructor(container, domPosition) {
         super();
         this.container = null;
+        this.useFixedPosition = false;
+        this.useShadowDOM = false;
         this.delegate = null;
         this.toDisposeOnClean = Disposable.None;
         this.toDisposeOnSetContainer = Disposable.None;
         this.shadowRoot = null;
         this.shadowRootHostElement = null;
         this.view = DOM.$('.context-view');
-        this.useFixedPosition = false;
-        this.useShadowDOM = false;
         DOM.hide(this.view);
         this.setContainer(container, domPosition);
         this._register(toDisposable(() => this.setContainer(null, 1 /* ContextViewDOMPosition.ABSOLUTE */)));
     }
     setContainer(container, domPosition) {
         var _a;
+        this.useFixedPosition = domPosition !== 1 /* ContextViewDOMPosition.ABSOLUTE */;
+        const usedShadowDOM = this.useShadowDOM;
+        this.useShadowDOM = domPosition === 3 /* ContextViewDOMPosition.FIXED_SHADOW */;
+        if (container === this.container && usedShadowDOM === this.useShadowDOM) {
+            return; // container is the same and no shadow DOM usage has changed
+        }
         if (this.container) {
             this.toDisposeOnSetContainer.dispose();
             if (this.shadowRoot) {
@@ -77,8 +83,6 @@ export class ContextView extends Disposable {
         }
         if (container) {
             this.container = container;
-            this.useFixedPosition = domPosition !== 1 /* ContextViewDOMPosition.ABSOLUTE */;
-            this.useShadowDOM = domPosition === 3 /* ContextViewDOMPosition.FIXED_SHADOW */;
             if (this.useShadowDOM) {
                 this.shadowRootHostElement = DOM.$('.shadow-root-host');
                 this.container.appendChild(this.shadowRootHostElement);
@@ -94,12 +98,12 @@ export class ContextView extends Disposable {
             }
             const toDisposeOnSetContainer = new DisposableStore();
             ContextView.BUBBLE_UP_EVENTS.forEach(event => {
-                toDisposeOnSetContainer.add(DOM.addStandardDisposableListener(this.container, event, (e) => {
+                toDisposeOnSetContainer.add(DOM.addStandardDisposableListener(this.container, event, e => {
                     this.onDOMEvent(e, false);
                 }));
             });
             ContextView.BUBBLE_DOWN_EVENTS.forEach(event => {
-                toDisposeOnSetContainer.add(DOM.addStandardDisposableListener(this.container, event, (e) => {
+                toDisposeOnSetContainer.add(DOM.addStandardDisposableListener(this.container, event, e => {
                     this.onDOMEvent(e, true);
                 }, true));
             });
@@ -132,6 +136,7 @@ export class ContextView extends Disposable {
         return this.view;
     }
     layout() {
+        var _a, _b;
         if (!this.isVisible()) {
             return;
         }
@@ -139,9 +144,7 @@ export class ContextView extends Disposable {
             this.hide();
             return;
         }
-        if (this.delegate.layout) {
-            this.delegate.layout();
-        }
+        (_b = (_a = this.delegate) === null || _a === void 0 ? void 0 : _a.layout) === null || _b === void 0 ? void 0 : _b.call(_a);
         this.doLayout();
     }
     doLayout() {
@@ -154,7 +157,7 @@ export class ContextView extends Disposable {
         // Compute around
         let around;
         // Get the element's position and size (to anchor the view)
-        if (DOM.isHTMLElement(anchor)) {
+        if (anchor instanceof HTMLElement) {
             const elementPosition = DOM.getDomNodePagePosition(anchor);
             // In areas where zoom is applied to the element or its ancestors, we need to adjust the size of the element
             // e.g. The title bar has counter zoom behavior meaning it applies the inverse of zoom level.
@@ -194,25 +197,26 @@ export class ContextView extends Disposable {
         const anchorAxisAlignment = this.delegate.anchorAxisAlignment || 0 /* AnchorAxisAlignment.VERTICAL */;
         let top;
         let left;
+        const activeWindow = DOM.getActiveWindow();
         if (anchorAxisAlignment === 0 /* AnchorAxisAlignment.VERTICAL */) {
-            const verticalAnchor = { offset: around.top - window.pageYOffset, size: around.height, position: anchorPosition === 0 /* AnchorPosition.BELOW */ ? 0 /* LayoutAnchorPosition.Before */ : 1 /* LayoutAnchorPosition.After */ };
+            const verticalAnchor = { offset: around.top - activeWindow.pageYOffset, size: around.height, position: anchorPosition === 0 /* AnchorPosition.BELOW */ ? 0 /* LayoutAnchorPosition.Before */ : 1 /* LayoutAnchorPosition.After */ };
             const horizontalAnchor = { offset: around.left, size: around.width, position: anchorAlignment === 0 /* AnchorAlignment.LEFT */ ? 0 /* LayoutAnchorPosition.Before */ : 1 /* LayoutAnchorPosition.After */, mode: LayoutAnchorMode.ALIGN };
-            top = layout(window.innerHeight, viewSizeHeight, verticalAnchor) + window.pageYOffset;
+            top = layout(activeWindow.innerHeight, viewSizeHeight, verticalAnchor) + activeWindow.pageYOffset;
             // if view intersects vertically with anchor,  we must avoid the anchor
             if (Range.intersects({ start: top, end: top + viewSizeHeight }, { start: verticalAnchor.offset, end: verticalAnchor.offset + verticalAnchor.size })) {
                 horizontalAnchor.mode = LayoutAnchorMode.AVOID;
             }
-            left = layout(window.innerWidth, viewSizeWidth, horizontalAnchor);
+            left = layout(activeWindow.innerWidth, viewSizeWidth, horizontalAnchor);
         }
         else {
             const horizontalAnchor = { offset: around.left, size: around.width, position: anchorAlignment === 0 /* AnchorAlignment.LEFT */ ? 0 /* LayoutAnchorPosition.Before */ : 1 /* LayoutAnchorPosition.After */ };
             const verticalAnchor = { offset: around.top, size: around.height, position: anchorPosition === 0 /* AnchorPosition.BELOW */ ? 0 /* LayoutAnchorPosition.Before */ : 1 /* LayoutAnchorPosition.After */, mode: LayoutAnchorMode.ALIGN };
-            left = layout(window.innerWidth, viewSizeWidth, horizontalAnchor);
+            left = layout(activeWindow.innerWidth, viewSizeWidth, horizontalAnchor);
             // if view intersects horizontally with anchor, we must avoid the anchor
             if (Range.intersects({ start: left, end: left + viewSizeWidth }, { start: horizontalAnchor.offset, end: horizontalAnchor.offset + horizontalAnchor.size })) {
                 verticalAnchor.mode = LayoutAnchorMode.AVOID;
             }
-            top = layout(window.innerHeight, viewSizeHeight, verticalAnchor) + window.pageYOffset;
+            top = layout(activeWindow.innerHeight, viewSizeHeight, verticalAnchor) + activeWindow.pageYOffset;
         }
         this.view.classList.remove('top', 'bottom', 'left', 'right');
         this.view.classList.add(anchorPosition === 0 /* AnchorPosition.BELOW */ ? 'bottom' : 'top');
@@ -238,7 +242,7 @@ export class ContextView extends Disposable {
     onDOMEvent(e, onCapture) {
         if (this.delegate) {
             if (this.delegate.onDOMEvent) {
-                this.delegate.onDOMEvent(e, document.activeElement);
+                this.delegate.onDOMEvent(e, DOM.getWindow(e).document.activeElement);
             }
             else if (onCapture && !DOM.isAncestor(e.target, this.container)) {
                 this.hide();

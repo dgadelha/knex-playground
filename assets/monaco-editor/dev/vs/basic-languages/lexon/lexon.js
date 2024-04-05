@@ -1,11 +1,11 @@
-"use strict";
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.47.0(69991d66135e4a1fc1cf0b1ac4ad25d429866a0d)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
 define("vs/basic-languages/lexon/lexon", ["require"],(require)=>{
+"use strict";
 var moduleExports = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -34,6 +34,7 @@ var moduleExports = (() => {
   var conf = {
     comments: {
       lineComment: "COMMENT"
+      // blockComment: ['COMMENT', '.'],
     },
     brackets: [["(", ")"]],
     autoClosingPairs: [
@@ -60,6 +61,8 @@ var moduleExports = (() => {
     }
   };
   var language = {
+    // Set defaultToken to invalid to see what you do not tokenize yet
+    // defaultToken: 'invalid',
     tokenPostfix: ".lexon",
     ignoreCase: true,
     keywords: [
@@ -97,10 +100,14 @@ var moduleExports = (() => {
       "be",
       "certified"
     ],
+    // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
+    // The main tokenizer for our languages
     tokenizer: {
       root: [
+        // comment
         [/^(\s*)(comment:?(?:\s.*|))$/, ["", "comment"]],
+        // special identifier cases
         [
           /"/,
           {
@@ -126,6 +133,7 @@ var moduleExports = (() => {
             next: "@identifier_until_period"
           }
         ],
+        // identifiers and keywords
         [
           /[a-z_$][\w$]*/,
           {
@@ -137,14 +145,18 @@ var moduleExports = (() => {
             }
           }
         ],
+        // whitespace
         { include: "@whitespace" },
+        // delimiters and operators
         [/[{}()\[\]]/, "@brackets"],
         [/[<>](?!@symbols)/, "@brackets"],
         [/@symbols/, "delimiter"],
+        // numbers
         [/\d*\.\d*\.\d*/, "number.semver"],
         [/\d*\.\d+([eE][\-+]?\d+)?/, "number.float"],
         [/0[xX][0-9a-fA-F]+/, "number.hex"],
         [/\d+/, "number"],
+        // delimiter: after number because of .\d floats
         [/[;,.]/, "delimiter"]
       ],
       quoted_identifier: [

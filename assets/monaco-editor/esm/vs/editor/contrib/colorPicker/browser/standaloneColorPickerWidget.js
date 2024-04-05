@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var StandaloneColorPickerController_1, StandaloneColorPickerWidget_1;
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { StandaloneColorPickerParticipant } from './colorHoverParticipant.js';
@@ -184,30 +175,26 @@ let StandaloneColorPickerWidget = StandaloneColorPickerWidget_1 = class Standalo
         this._standaloneColorPickerFocused.set(true);
         this._body.focus();
     }
-    _start(selection) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const computeAsyncResult = yield this._computeAsync(selection);
-            if (!computeAsyncResult) {
-                return;
-            }
-            this._onResult.fire(new StandaloneColorPickerResult(computeAsyncResult.result, computeAsyncResult.foundInEditor));
-        });
+    async _start(selection) {
+        const computeAsyncResult = await this._computeAsync(selection);
+        if (!computeAsyncResult) {
+            return;
+        }
+        this._onResult.fire(new StandaloneColorPickerResult(computeAsyncResult.result, computeAsyncResult.foundInEditor));
     }
-    _computeAsync(range) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this._editor.hasModel()) {
-                return null;
-            }
-            const colorInfo = {
-                range: range,
-                color: { red: 0, green: 0, blue: 0, alpha: 1 }
-            };
-            const colorHoverResult = yield this._standaloneColorPickerParticipant.createColorHover(colorInfo, new DefaultDocumentColorProvider(this._modelService, this._languageConfigurationService), this._languageFeaturesService.colorProvider);
-            if (!colorHoverResult) {
-                return null;
-            }
-            return { result: colorHoverResult.colorHover, foundInEditor: colorHoverResult.foundInEditor };
-        });
+    async _computeAsync(range) {
+        if (!this._editor.hasModel()) {
+            return null;
+        }
+        const colorInfo = {
+            range: range,
+            color: { red: 0, green: 0, blue: 0, alpha: 1 }
+        };
+        const colorHoverResult = await this._standaloneColorPickerParticipant.createColorHover(colorInfo, new DefaultDocumentColorProvider(this._modelService, this._languageConfigurationService), this._languageFeaturesService.colorProvider);
+        if (!colorHoverResult) {
+            return null;
+        }
+        return { result: colorHoverResult.colorHover, foundInEditor: colorHoverResult.foundInEditor };
     }
     _render(colorHover, foundInEditor) {
         const fragment = document.createDocumentFragment();

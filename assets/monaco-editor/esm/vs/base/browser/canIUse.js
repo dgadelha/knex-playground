@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as browser from './browser.js';
+import { mainWindow } from './window.js';
 import * as platform from '../common/platform.js';
 /**
  * Browser feature we can support in current platform, browser and environment.
@@ -26,6 +27,6 @@ export const BrowserFeatures = {
     })(),
     // 'ontouchstart' in window always evaluates to true with typescript's modern typings. This causes `window` to be
     // `never` later in `window.navigator`. That's why we need the explicit `window as Window` cast
-    touch: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
-    pointerEvents: window.PointerEvent && ('ontouchstart' in window || window.navigator.maxTouchPoints > 0 || navigator.maxTouchPoints > 0)
+    touch: 'ontouchstart' in mainWindow || navigator.maxTouchPoints > 0,
+    pointerEvents: mainWindow.PointerEvent && ('ontouchstart' in mainWindow || navigator.maxTouchPoints > 0)
 };

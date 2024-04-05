@@ -366,7 +366,7 @@ export class CursorMoveCommands {
         for (let i = 0, len = cursors.length; i < len; i++) {
             const cursor = cursors[i];
             const viewLineNumber = cursor.viewState.position.lineNumber;
-            const halfLine = Math.round(viewModel.getLineContent(viewLineNumber).length / 2);
+            const halfLine = Math.round(viewModel.getLineLength(viewLineNumber) / 2);
             result[i] = CursorState.fromViewState(MoveOperations.moveLeft(viewModel.cursorConfig, viewModel, cursor.viewState, inSelectionMode, halfLine));
         }
         return result;
@@ -379,7 +379,7 @@ export class CursorMoveCommands {
         for (let i = 0, len = cursors.length; i < len; i++) {
             const cursor = cursors[i];
             const viewLineNumber = cursor.viewState.position.lineNumber;
-            const halfLine = Math.round(viewModel.getLineContent(viewLineNumber).length / 2);
+            const halfLine = Math.round(viewModel.getLineLength(viewLineNumber) / 2);
             result[i] = CursorState.fromViewState(MoveOperations.moveRight(viewModel.cursorConfig, viewModel, cursor.viewState, inSelectionMode, halfLine));
         }
         return result;
@@ -494,7 +494,7 @@ export var CursorMove;
         }
         return true;
     };
-    CursorMove.description = {
+    CursorMove.metadata = {
         description: 'Move cursor to a logical position in the view',
         args: [
             {

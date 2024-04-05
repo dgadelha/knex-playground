@@ -55,6 +55,10 @@ exports.features = [
     "entry": "vs/editor/browser/widget/diffEditor/diffEditor.contribution"
   },
   {
+    "label": "diffEditorBreadcrumbs",
+    "entry": "vs/editor/contrib/diffEditorBreadcrumbs/browser/contribution"
+  },
+  {
     "label": "dnd",
     "entry": "vs/editor/contrib/dnd/browser/dnd"
   },
@@ -123,6 +127,10 @@ exports.features = [
   {
     "label": "inlineCompletions",
     "entry": "vs/editor/contrib/inlineCompletions/browser/inlineCompletions.contribution"
+  },
+  {
+    "label": "inlineEdit",
+    "entry": "vs/editor/contrib/inlineEdit/browser/inlineEdit.contribution"
   },
   {
     "label": "inlineProgress",

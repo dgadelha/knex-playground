@@ -55,6 +55,8 @@ _defaultConfig.unshift({
     timeBudget: 150
 });
 export function getWordAtText(column, wordDefinition, text, textOffset, config) {
+    // Ensure the regex has the 'g' flag, otherwise this will loop forever
+    wordDefinition = ensureValidWordDefinition(wordDefinition);
     if (!config) {
         config = Iterable.first(_defaultConfig);
     }

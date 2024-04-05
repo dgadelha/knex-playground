@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { $, addDisposableListener, EventType, getActiveElement, isAncestor, isHTMLElement } from '../../../base/browser/dom.js';
+import { $, addDisposableListener, EventType, getActiveElement, getWindow, isAncestor } from '../../../base/browser/dom.js';
 import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
 import { Menu } from '../../../base/browser/ui/menu/menu.js';
 import { ActionRunner } from '../../../base/common/actions.js';
@@ -29,9 +29,9 @@ export class ContextMenuHandler {
         if (!actions.length) {
             return; // Don't render an empty context menu
         }
-        this.focusToReturn = document.activeElement;
+        this.focusToReturn = getActiveElement();
         let menu;
-        const shadowRootElement = isHTMLElement(delegate.domForShadowRoot) ? delegate.domForShadowRoot : undefined;
+        const shadowRootElement = delegate.domForShadowRoot instanceof HTMLElement ? delegate.domForShadowRoot : undefined;
         this.contextViewService.showContextView({
             getAnchor: () => delegate.getAnchor(),
             canRelayout: false,
@@ -69,12 +69,13 @@ export class ContextMenuHandler {
                 }, defaultMenuStyles);
                 menu.onDidCancel(() => this.contextViewService.hideContextView(true), null, menuDisposables);
                 menu.onDidBlur(() => this.contextViewService.hideContextView(true), null, menuDisposables);
-                menuDisposables.add(addDisposableListener(window, EventType.BLUR, () => this.contextViewService.hideContextView(true)));
-                menuDisposables.add(addDisposableListener(window, EventType.MOUSE_DOWN, (e) => {
+                const targetWindow = getWindow(container);
+                menuDisposables.add(addDisposableListener(targetWindow, EventType.BLUR, () => this.contextViewService.hideContextView(true)));
+                menuDisposables.add(addDisposableListener(targetWindow, EventType.MOUSE_DOWN, (e) => {
                     if (e.defaultPrevented) {
                         return;
                     }
-                    const event = new StandardMouseEvent(e);
+                    const event = new StandardMouseEvent(targetWindow, e);
                     let element = event.target;
                     // Don't do anything as we are likely creating a context menu
                     if (event.rightButton) {

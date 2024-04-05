@@ -15,7 +15,9 @@ export const editorConfigurationBaseNode = Object.freeze({
     title: nls.localize('editorConfigurationTitle', "Editor"),
     scope: 5 /* ConfigurationScope.LANGUAGE_OVERRIDABLE */,
 });
-const editorConfiguration = Object.assign(Object.assign({}, editorConfigurationBaseNode), { properties: {
+const editorConfiguration = {
+    ...editorConfigurationBaseNode,
+    properties: {
         'editor.tabSize': {
             type: 'number',
             default: EDITOR_MODEL_DEFAULTS.tabSize,
@@ -57,19 +59,15 @@ const editorConfiguration = Object.assign(Object.assign({}, editorConfigurationB
             description: nls.localize('largeFileOptimizations', "Special handling for large files to disable certain memory intensive features.")
         },
         'editor.wordBasedSuggestions': {
-            type: 'boolean',
-            default: true,
-            description: nls.localize('wordBasedSuggestions', "Controls whether completions should be computed based on words in the document.")
-        },
-        'editor.wordBasedSuggestionsMode': {
-            enum: ['currentDocument', 'matchingDocuments', 'allDocuments'],
+            enum: ['off', 'currentDocument', 'matchingDocuments', 'allDocuments'],
             default: 'matchingDocuments',
             enumDescriptions: [
-                nls.localize('wordBasedSuggestionsMode.currentDocument', 'Only suggest words from the active document.'),
-                nls.localize('wordBasedSuggestionsMode.matchingDocuments', 'Suggest words from all open documents of the same language.'),
-                nls.localize('wordBasedSuggestionsMode.allDocuments', 'Suggest words from all open documents.')
+                nls.localize('wordBasedSuggestions.off', 'Turn off Word Based Suggestions.'),
+                nls.localize('wordBasedSuggestions.currentDocument', 'Only suggest words from the active document.'),
+                nls.localize('wordBasedSuggestions.matchingDocuments', 'Suggest words from all open documents of the same language.'),
+                nls.localize('wordBasedSuggestions.allDocuments', 'Suggest words from all open documents.')
             ],
-            description: nls.localize('wordBasedSuggestionsMode', "Controls from which documents word based completions are computed.")
+            description: nls.localize('wordBasedSuggestions', "Controls whether completions should be computed based on words in the document and from which documents they are computed.")
         },
         'editor.semanticHighlighting.enabled': {
             enum: [true, false, 'configuredByTheme'],
@@ -242,7 +240,8 @@ const editorConfiguration = Object.assign(Object.assign({}, editorConfigurationB
             default: diffEditorDefaultOptions.experimental.showEmptyDecorations,
             description: nls.localize('showEmptyDecorations', "Controls whether the diff editor shows empty decorations to see where characters got inserted or deleted."),
         }
-    } });
+    }
+};
 function isConfigurationPropertySchema(x) {
     return (typeof x.type !== 'undefined' || typeof x.anyOf !== 'undefined');
 }
