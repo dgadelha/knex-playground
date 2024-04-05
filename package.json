@@ -23,7 +23,7 @@
     "fs-browser-stub": "^1.0.1",
     "js-beautify": "^1.15.1",
     "knex": "^3.1.0",
-    "monaco-editor": "^0.44.0",
+    "monaco-editor": "^0.47.0",
     "mssql": "^10.0.2",
     "rxjs": "~7.8.1",
     "sql-formatter": "^15.3.0",
