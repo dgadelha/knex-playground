@@ -33,8 +33,8 @@
     "zone.js": "^0.14.4"
   },
   "devDependencies": {
-    "@angular-devkit/build-angular": "^17.3.3",
-    "@angular/cli": "^17.3.3",
+    "@angular-devkit/build-angular": "^20.0.0",
+    "@angular/cli": "^20.0.0",
     "@angular/compiler-cli": "^17.3.3",
     "@types/js-beautify": "^1.14.3",
     "@types/node": "^20.12.4",
