@@ -37,7 +37,7 @@
     "@angular/cli": "^17.3.3",
     "@angular/compiler-cli": "^17.3.3",
     "@types/js-beautify": "^1.14.3",
-    "@types/node": "^20.12.4",
+    "@types/node": "^22.0.0",
     "prettier": "^3.2.5",
     "ts-node": "~10.9.2",
     "tslint": "^6.1.3",
