@@ -13,7 +13,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { IMarkerService, MarkerSeverity } from '../../../platform/markers/common/markers.js';
 import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
-import { OverviewRulerLane, MinimapPosition } from '../model.js';
+import { OverviewRulerLane } from '../model.js';
 import { themeColorFromId } from '../../../platform/theme/common/themeService.js';
 import { overviewRulerWarning, overviewRulerInfo, overviewRulerError } from '../core/editorColorRegistry.js';
 import { IModelService } from './model.js';
@@ -23,11 +23,13 @@ import { Emitter } from '../../../base/common/event.js';
 import { minimapInfo, minimapWarning, minimapError } from '../../../platform/theme/common/colorRegistry.js';
 import { BidirectionalMap, ResourceMap } from '../../../base/common/map.js';
 import { diffSets } from '../../../base/common/collections.js';
+import { Iterable } from '../../../base/common/iterator.js';
 let MarkerDecorationsService = class MarkerDecorationsService extends Disposable {
     constructor(modelService, _markerService) {
         super();
         this._markerService = _markerService;
         this._onDidChangeMarker = this._register(new Emitter());
+        this._suppressedRanges = new ResourceMap();
         this._markerDecorations = new ResourceMap();
         modelService.getModels().forEach(model => this._onModelAdded(model));
         this._register(modelService.onModelAdded(this._onModelAdded, this));
@@ -57,7 +59,6 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
         this._updateDecorations(markerDecorations);
     }
     _onModelRemoved(model) {
-        var _a;
         const markerDecorations = this._markerDecorations.get(model.uri);
         if (markerDecorations) {
             markerDecorations.dispose();
@@ -67,12 +68,19 @@ let MarkerDecorationsService = class MarkerDecorationsService extends Disposable
         if (model.uri.scheme === Schemas.inMemory
             || model.uri.scheme === Schemas.internal
             || model.uri.scheme === Schemas.vscode) {
-            (_a = this._markerService) === null || _a === void 0 ? void 0 : _a.read({ resource: model.uri }).map(marker => marker.owner).forEach(owner => this._markerService.remove(owner, [model.uri]));
+            this._markerService?.read({ resource: model.uri }).map(marker => marker.owner).forEach(owner => this._markerService.remove(owner, [model.uri]));
         }
     }
     _updateDecorations(markerDecorations) {
         // Limit to the first 500 errors/warnings
-        const markers = this._markerService.read({ resource: markerDecorations.model.uri, take: 500 });
+        let markers = this._markerService.read({ resource: markerDecorations.model.uri, take: 500 });
+        // filter markers from suppressed ranges
+        const suppressedRanges = this._suppressedRanges.get(markerDecorations.model.uri);
+        if (suppressedRanges) {
+            markers = markers.filter(marker => {
+                return !Iterable.some(suppressedRanges, candidate => Range.areIntersectingOrTouching(candidate, marker));
+            });
+        }
         if (markerDecorations.update(markers)) {
             this._onDidChangeMarker.fire(markerDecorations.model);
         }
@@ -174,7 +182,7 @@ class MarkerDecorations extends Disposable {
                 zIndex = 10;
                 minimap = {
                     color: themeColorFromId(minimapInfo),
-                    position: MinimapPosition.Inline
+                    position: 1 /* MinimapPosition.Inline */
                 };
                 break;
             case MarkerSeverity.Warning:
@@ -183,7 +191,7 @@ class MarkerDecorations extends Disposable {
                 zIndex = 20;
                 minimap = {
                     color: themeColorFromId(minimapWarning),
-                    position: MinimapPosition.Inline
+                    position: 1 /* MinimapPosition.Inline */
                 };
                 break;
             case MarkerSeverity.Error:
@@ -193,7 +201,7 @@ class MarkerDecorations extends Disposable {
                 zIndex = 30;
                 minimap = {
                     color: themeColorFromId(minimapError),
-                    position: MinimapPosition.Inline
+                    position: 1 /* MinimapPosition.Inline */
                 };
                 break;
         }
@@ -226,3 +234,4 @@ class MarkerDecorations extends Disposable {
         return false;
     }
 }
+//# sourceMappingURL=markerDecorationsService.js.map

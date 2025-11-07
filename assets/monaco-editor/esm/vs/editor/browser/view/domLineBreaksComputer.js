@@ -4,18 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 import { createTrustedTypesPolicy } from '../../../base/browser/trustedTypes.js';
 import * as strings from '../../../base/common/strings.js';
+import { assertReturnsDefined } from '../../../base/common/types.js';
 import { applyFontInfo } from '../config/domFontInfo.js';
 import { StringBuilder } from '../../common/core/stringBuilder.js';
 import { ModelLineProjectionData } from '../../common/modelLineProjectionData.js';
 import { LineInjectedText } from '../../common/textModelEvents.js';
 const ttPolicy = createTrustedTypesPolicy('domLineBreaksComputer', { createHTML: value => value });
 export class DOMLineBreaksComputerFactory {
-    static create() {
-        return new DOMLineBreaksComputerFactory();
+    static create(targetWindow) {
+        return new DOMLineBreaksComputerFactory(new WeakRef(targetWindow));
     }
-    constructor() {
+    constructor(targetWindow) {
+        this.targetWindow = targetWindow;
     }
-    createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak) {
+    createLineBreaksComputer(fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak, wrapOnEscapedLineFeeds) {
         const requests = [];
         const injectedTexts = [];
         return {
@@ -24,13 +26,12 @@ export class DOMLineBreaksComputerFactory {
                 injectedTexts.push(injectedText);
             },
             finalize: () => {
-                return createLineBreaks(requests, fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak, injectedTexts);
+                return createLineBreaks(assertReturnsDefined(this.targetWindow.deref()), requests, fontInfo, tabSize, wrappingColumn, wrappingIndent, wordBreak, injectedTexts);
             }
         };
     }
 }
-function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, wordBreak, injectedTextsPerLine) {
-    var _a;
+function createLineBreaks(targetWindow, requests, fontInfo, tabSize, firstLineBreakColumn, wrappingIndent, wordBreak, injectedTextsPerLine) {
     function createEmptyLineBreakWithPossiblyInjectedText(requestIdx) {
         const injectedTexts = injectedTextsPerLine[requestIdx];
         if (injectedTexts) {
@@ -103,7 +104,7 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
         allVisibleColumns[i] = tmp[1];
     }
     const html = sb.build();
-    const trustedhtml = (_a = ttPolicy === null || ttPolicy === void 0 ? void 0 : ttPolicy.createHTML(html)) !== null && _a !== void 0 ? _a : html;
+    const trustedhtml = ttPolicy?.createHTML(html) ?? html;
     containerDomNode.innerHTML = trustedhtml;
     containerDomNode.style.position = 'absolute';
     containerDomNode.style.top = '10000';
@@ -117,7 +118,7 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
         containerDomNode.style.wordBreak = 'inherit';
         containerDomNode.style.overflowWrap = 'break-word';
     }
-    document.body.appendChild(containerDomNode);
+    targetWindow.document.body.appendChild(containerDomNode);
     const range = document.createRange();
     const lineDomNodes = Array.prototype.slice.call(containerDomNode.children, 0);
     const result = [];
@@ -154,7 +155,7 @@ function createLineBreaks(requests, fontInfo, tabSize, firstLineBreakColumn, wra
         }
         result[i] = new ModelLineProjectionData(injectionOffsets, injectionOptions, breakOffsets, breakOffsetsVisibleColumn, wrappedTextIndentLength);
     }
-    document.body.removeChild(containerDomNode);
+    containerDomNode.remove();
     return result;
 }
 function renderLine(lineContent, initialVisibleColumn, tabSize, width, sb, wrappingIndentLength) {
@@ -295,3 +296,4 @@ function readClientRect(range, spans, startOffset, endOffset) {
     range.setEnd(spans[(endOffset / 16384 /* Constants.SPAN_MODULO_LIMIT */) | 0].firstChild, endOffset % 16384 /* Constants.SPAN_MODULO_LIMIT */);
     return range.getClientRects();
 }
+//# sourceMappingURL=domLineBreaksComputer.js.map

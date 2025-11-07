@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -51,7 +51,9 @@ var conf = {
   ],
   onEnterRules: [
     {
-      beforeText: new RegExp("^\\s*(?:def|class|for|if|elif|else|while|try|with|finally|except|async|match|case).*?:\\s*$"),
+      beforeText: new RegExp(
+        "^\\s*(?:def|class|for|if|elif|else|while|try|with|finally|except|async|match|case).*?:\\s*$"
+      ),
       action: { indentAction: monaco_editor_core_exports.languages.IndentAction.Indent }
     }
   ],
@@ -67,17 +69,29 @@ var language = {
   defaultToken: "",
   tokenPostfix: ".python",
   keywords: [
+    // This section is the result of running
+    // `import keyword; for k in sorted(keyword.kwlist + keyword.softkwlist): print("  '" + k + "',")`
+    // in a Python REPL,
+    // though note that the output from Python 3 is not a strict superset of the
+    // output from Python 2.
     "False",
+    // promoted to keyword.kwlist in Python 3
     "None",
+    // promoted to keyword.kwlist in Python 3
     "True",
+    // promoted to keyword.kwlist in Python 3
     "_",
+    // new in Python 3.10
     "and",
     "as",
     "assert",
     "async",
+    // new in Python 3
     "await",
+    // new in Python 3
     "break",
     "case",
+    // new in Python 3.10
     "class",
     "continue",
     "def",
@@ -86,6 +100,7 @@ var language = {
     "else",
     "except",
     "exec",
+    // Python 2, but not 3.
     "finally",
     "for",
     "from",
@@ -96,14 +111,19 @@ var language = {
     "is",
     "lambda",
     "match",
+    // new in Python 3.10
     "nonlocal",
+    // new in Python 3
     "not",
     "or",
     "pass",
     "print",
+    // Python 2, but not 3.
     "raise",
     "return",
     "try",
+    "type",
+    // new in Python 3.12
     "while",
     "with",
     "yield",
@@ -223,6 +243,7 @@ var language = {
         }
       ]
     ],
+    // Deal with white space, including single and multi-line comments
     whitespace: [
       [/\s+/, "white"],
       [/(^#.*$)/, "comment"],
@@ -241,15 +262,27 @@ var language = {
       [/"""/, "string", "@popall"],
       [/"/, "string"]
     ],
+    // Recognize hex, negatives, decimals, imaginaries, longs, and scientific notation
     numbers: [
       [/-?0x([abcdef]|[ABCDEF]|\d)+[lL]?/, "number.hex"],
       [/-?(\d*\.)?\d+([eE][+\-]?\d+)?[jJ]?[lL]?/, "number"]
     ],
+    // Recognize strings, including those broken across lines with \ (but not without)
     strings: [
       [/'$/, "string.escape", "@popall"],
+      [/f'{1,3}/, "string.escape", "@fStringBody"],
       [/'/, "string.escape", "@stringBody"],
       [/"$/, "string.escape", "@popall"],
+      [/f"{1,3}/, "string.escape", "@fDblStringBody"],
       [/"/, "string.escape", "@dblStringBody"]
+    ],
+    fStringBody: [
+      [/[^\\'\{\}]+$/, "string", "@popall"],
+      [/[^\\'\{\}]+/, "string"],
+      [/\{[^\}':!=]+/, "identifier", "@fStringDetail"],
+      [/\\./, "string"],
+      [/'/, "string.escape", "@popall"],
+      [/\\$/, "string"]
     ],
     stringBody: [
       [/[^\\']+$/, "string", "@popall"],
@@ -258,12 +291,27 @@ var language = {
       [/'/, "string.escape", "@popall"],
       [/\\$/, "string"]
     ],
+    fDblStringBody: [
+      [/[^\\"\{\}]+$/, "string", "@popall"],
+      [/[^\\"\{\}]+/, "string"],
+      [/\{[^\}':!=]+/, "identifier", "@fStringDetail"],
+      [/\\./, "string"],
+      [/"/, "string.escape", "@popall"],
+      [/\\$/, "string"]
+    ],
     dblStringBody: [
       [/[^\\"]+$/, "string", "@popall"],
       [/[^\\"]+/, "string"],
       [/\\./, "string"],
       [/"/, "string.escape", "@popall"],
       [/\\$/, "string"]
+    ],
+    fStringDetail: [
+      [/[:][^}]+/, "string"],
+      [/[!][ars]/, "string"],
+      // only !a, !r, !s are supported by f-strings: https://docs.python.org/3/tutorial/inputoutput.html#formatted-string-literals
+      [/=/, "string"],
+      [/\}/, "identifier", "@pop"]
     ]
   }
 };

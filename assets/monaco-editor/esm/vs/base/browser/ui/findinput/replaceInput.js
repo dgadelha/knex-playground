@@ -10,8 +10,9 @@ import { Codicon } from '../../../common/codicons.js';
 import { Emitter } from '../../../common/event.js';
 import './findInput.css';
 import * as nls from '../../../../nls.js';
-const NLS_DEFAULT_LABEL = nls.localize('defaultLabel', "input");
-const NLS_PRESERVE_CASE_LABEL = nls.localize('label.preserveCaseToggle', "Preserve Case");
+import { getDefaultHoverDelegate } from '../hover/hoverDelegateFactory.js';
+const NLS_DEFAULT_LABEL = nls.localize(5, "input");
+const NLS_PRESERVE_CASE_LABEL = nls.localize(6, "Preserve Case");
 class PreserveCaseToggle extends Toggle {
     constructor(opts) {
         super({
@@ -19,33 +20,34 @@ class PreserveCaseToggle extends Toggle {
             icon: Codicon.preserveCase,
             title: NLS_PRESERVE_CASE_LABEL + opts.appendTitle,
             isChecked: opts.isChecked,
+            hoverDelegate: opts.hoverDelegate ?? getDefaultHoverDelegate('element'),
             inputActiveOptionBorder: opts.inputActiveOptionBorder,
             inputActiveOptionForeground: opts.inputActiveOptionForeground,
-            inputActiveOptionBackground: opts.inputActiveOptionBackground
+            inputActiveOptionBackground: opts.inputActiveOptionBackground,
         });
     }
 }
 export class ReplaceInput extends Widget {
+    get onDidOptionChange() { return this._onDidOptionChange.event; }
+    get onKeyDown() { return this._onKeyDown.event; }
+    get onPreserveCaseKeyDown() { return this._onPreserveCaseKeyDown.event; }
     constructor(parent, contextViewProvider, _showOptionButtons, options) {
         super();
         this._showOptionButtons = _showOptionButtons;
         this.fixFocusOnOptionClickEnabled = true;
         this.cachedOptionsWidth = 0;
         this._onDidOptionChange = this._register(new Emitter());
-        this.onDidOptionChange = this._onDidOptionChange.event;
         this._onKeyDown = this._register(new Emitter());
-        this.onKeyDown = this._onKeyDown.event;
         this._onMouseDown = this._register(new Emitter());
         this._onInput = this._register(new Emitter());
         this._onKeyUp = this._register(new Emitter());
         this._onPreserveCaseKeyDown = this._register(new Emitter());
-        this.onPreserveCaseKeyDown = this._onPreserveCaseKeyDown.event;
         this.contextViewProvider = contextViewProvider;
         this.placeholder = options.placeholder || '';
         this.validation = options.validation;
         this.label = options.label || NLS_DEFAULT_LABEL;
         const appendPreserveCaseLabel = options.appendPreserveCaseLabel || '';
-        const history = options.history || [];
+        const history = options.history || new Set([]);
         const flexibleHeight = !!options.flexibleHeight;
         const flexibleWidth = !!options.flexibleWidth;
         const flexibleMaxHeight = options.flexibleMaxHeight;
@@ -64,7 +66,11 @@ export class ReplaceInput extends Widget {
             flexibleMaxHeight,
             inputBoxStyles: options.inputBoxStyles
         }));
-        this.preserveCase = this._register(new PreserveCaseToggle(Object.assign({ appendTitle: appendPreserveCaseLabel, isChecked: false }, options.toggleStyles)));
+        this.preserveCase = this._register(new PreserveCaseToggle({
+            appendTitle: appendPreserveCaseLabel,
+            isChecked: false,
+            ...options.toggleStyles
+        }));
         this._register(this.preserveCase.onChange(viaKeyboard => {
             this._onDidOptionChange.fire(viaKeyboard);
             if (!viaKeyboard && this.fixFocusOnOptionClickEnabled) {
@@ -85,7 +91,7 @@ export class ReplaceInput extends Widget {
         const indexes = [this.preserveCase.domNode];
         this.onkeydown(this.domNode, (event) => {
             if (event.equals(15 /* KeyCode.LeftArrow */) || event.equals(17 /* KeyCode.RightArrow */) || event.equals(9 /* KeyCode.Escape */)) {
-                const index = indexes.indexOf(document.activeElement);
+                const index = indexes.indexOf(this.domNode.ownerDocument.activeElement);
                 if (index >= 0) {
                     let newIndex = -1;
                     if (event.equals(17 /* KeyCode.RightArrow */)) {
@@ -115,7 +121,7 @@ export class ReplaceInput extends Widget {
         controls.style.display = this._showOptionButtons ? 'block' : 'none';
         controls.appendChild(this.preserveCase.domNode);
         this.domNode.appendChild(controls);
-        parent === null || parent === void 0 ? void 0 : parent.appendChild(this.domNode);
+        parent?.appendChild(this.domNode);
         this.onkeydown(this.inputBox.inputElement, (e) => this._onKeyDown.fire(e));
         this.onkeyup(this.inputBox.inputElement, (e) => this._onKeyUp.fire(e));
         this.oninput(this.inputBox.inputElement, (e) => this._onInput.fire());
@@ -155,8 +161,7 @@ export class ReplaceInput extends Widget {
         this.preserveCase.focus();
     }
     validate() {
-        var _a;
-        (_a = this.inputBox) === null || _a === void 0 ? void 0 : _a.validate();
+        this.inputBox?.validate();
     }
     set width(newWidth) {
         this.inputBox.paddingRight = this.cachedOptionsWidth;
@@ -166,3 +171,4 @@ export class ReplaceInput extends Widget {
         super.dispose();
     }
 }
+//# sourceMappingURL=replaceInput.js.map

@@ -2,8 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-let hasDifferentOriginAncestorFlag = false;
-let sameOriginWindowChainCache = null;
+const sameOriginWindowChainCache = new WeakMap();
 function getParentWindowIfSameOrigin(w) {
     if (!w.parent || w.parent === w) {
         return null;
@@ -13,12 +12,10 @@ function getParentWindowIfSameOrigin(w) {
         const location = w.location;
         const parentLocation = w.parent.location;
         if (location.origin !== 'null' && parentLocation.origin !== 'null' && location.origin !== parentLocation.origin) {
-            hasDifferentOriginAncestorFlag = true;
             return null;
         }
     }
     catch (e) {
-        hasDifferentOriginAncestorFlag = true;
         return null;
     }
     return w.parent;
@@ -27,31 +24,32 @@ export class IframeUtils {
     /**
      * Returns a chain of embedded windows with the same origin (which can be accessed programmatically).
      * Having a chain of length 1 might mean that the current execution environment is running outside of an iframe or inside an iframe embedded in a window with a different origin.
-     * To distinguish if at one point the current execution environment is running inside a window with a different origin, see hasDifferentOriginAncestor()
      */
-    static getSameOriginWindowChain() {
-        if (!sameOriginWindowChainCache) {
-            sameOriginWindowChainCache = [];
-            let w = window;
+    static getSameOriginWindowChain(targetWindow) {
+        let windowChainCache = sameOriginWindowChainCache.get(targetWindow);
+        if (!windowChainCache) {
+            windowChainCache = [];
+            sameOriginWindowChainCache.set(targetWindow, windowChainCache);
+            let w = targetWindow;
             let parent;
             do {
                 parent = getParentWindowIfSameOrigin(w);
                 if (parent) {
-                    sameOriginWindowChainCache.push({
-                        window: w,
+                    windowChainCache.push({
+                        window: new WeakRef(w),
                         iframeElement: w.frameElement || null
                     });
                 }
                 else {
-                    sameOriginWindowChainCache.push({
-                        window: w,
+                    windowChainCache.push({
+                        window: new WeakRef(w),
                         iframeElement: null
                     });
                 }
                 w = parent;
             } while (w);
         }
-        return sameOriginWindowChainCache.slice(0);
+        return windowChainCache.slice(0);
     }
     /**
      * Returns the position of `childWindow` relative to `ancestorWindow`
@@ -64,11 +62,12 @@ export class IframeUtils {
             };
         }
         let top = 0, left = 0;
-        const windowChain = this.getSameOriginWindowChain();
+        const windowChain = this.getSameOriginWindowChain(childWindow);
         for (const windowChainEl of windowChain) {
-            top += windowChainEl.window.scrollY;
-            left += windowChainEl.window.scrollX;
-            if (windowChainEl.window === ancestorWindow) {
+            const windowInChain = windowChainEl.window.deref();
+            top += windowInChain?.scrollY ?? 0;
+            left += windowInChain?.scrollX ?? 0;
+            if (windowInChain === ancestorWindow) {
                 break;
             }
             if (!windowChainEl.iframeElement) {
@@ -84,3 +83,4 @@ export class IframeUtils {
         };
     }
 }
+//# sourceMappingURL=iframe.js.map

@@ -11,55 +11,45 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { Color, RGBA } from '../../../../base/common/color.js';
-import { EditorWorkerClient } from '../../../browser/services/editorWorkerService.js';
-import { IModelService } from '../../../common/services/model.js';
-import { ILanguageConfigurationService } from '../../../common/languages/languageConfigurationRegistry.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
-import { registerEditorFeature } from '../../../common/editorFeatures.js';
-export class DefaultDocumentColorProvider {
-    constructor(modelService, languageConfigurationService) {
-        this._editorWorkerClient = new EditorWorkerClient(modelService, false, 'editorWorkerService', languageConfigurationService);
+import { IEditorWorkerService } from '../../../common/services/editorWorker.js';
+let DefaultDocumentColorProvider = class DefaultDocumentColorProvider {
+    constructor(_editorWorkerService) {
+        this._editorWorkerService = _editorWorkerService;
     }
-    provideDocumentColors(model, _token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this._editorWorkerClient.computeDefaultDocumentColors(model.uri);
-        });
+    async provideDocumentColors(model, _token) {
+        return this._editorWorkerService.computeDefaultDocumentColors(model.uri);
     }
     provideColorPresentations(_model, colorInfo, _token) {
         const range = colorInfo.range;
         const colorFromInfo = colorInfo.color;
         const alpha = colorFromInfo.alpha;
         const color = new Color(new RGBA(Math.round(255 * colorFromInfo.red), Math.round(255 * colorFromInfo.green), Math.round(255 * colorFromInfo.blue), alpha));
-        const rgb = alpha ? Color.Format.CSS.formatRGB(color) : Color.Format.CSS.formatRGBA(color);
-        const hsl = alpha ? Color.Format.CSS.formatHSL(color) : Color.Format.CSS.formatHSLA(color);
-        const hex = alpha ? Color.Format.CSS.formatHex(color) : Color.Format.CSS.formatHexA(color);
+        const rgb = alpha ? Color.Format.CSS.formatRGBA(color) : Color.Format.CSS.formatRGB(color);
+        const hsl = alpha ? Color.Format.CSS.formatHSLA(color) : Color.Format.CSS.formatHSL(color);
+        const hex = alpha ? Color.Format.CSS.formatHexA(color) : Color.Format.CSS.formatHex(color);
         const colorPresentations = [];
         colorPresentations.push({ label: rgb, textEdit: { range: range, text: rgb } });
         colorPresentations.push({ label: hsl, textEdit: { range: range, text: hsl } });
         colorPresentations.push({ label: hex, textEdit: { range: range, text: hex } });
         return colorPresentations;
     }
-}
+};
+DefaultDocumentColorProvider = __decorate([
+    __param(0, IEditorWorkerService)
+], DefaultDocumentColorProvider);
+export { DefaultDocumentColorProvider };
 let DefaultDocumentColorProviderFeature = class DefaultDocumentColorProviderFeature extends Disposable {
-    constructor(_modelService, _languageConfigurationService, _languageFeaturesService) {
+    constructor(_languageFeaturesService, editorWorkerService) {
         super();
-        this._register(_languageFeaturesService.colorProvider.register('*', new DefaultDocumentColorProvider(_modelService, _languageConfigurationService)));
+        this._register(_languageFeaturesService.colorProvider.register('*', new DefaultDocumentColorProvider(editorWorkerService)));
     }
 };
 DefaultDocumentColorProviderFeature = __decorate([
-    __param(0, IModelService),
-    __param(1, ILanguageConfigurationService),
-    __param(2, ILanguageFeaturesService)
+    __param(0, ILanguageFeaturesService),
+    __param(1, IEditorWorkerService)
 ], DefaultDocumentColorProviderFeature);
-registerEditorFeature(DefaultDocumentColorProviderFeature);
+export { DefaultDocumentColorProviderFeature };
+//# sourceMappingURL=defaultDocumentColorProvider.js.map

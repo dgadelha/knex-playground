@@ -19,16 +19,17 @@ export var OverviewRulerLane;
 export var GlyphMarginLane;
 (function (GlyphMarginLane) {
     GlyphMarginLane[GlyphMarginLane["Left"] = 1] = "Left";
-    GlyphMarginLane[GlyphMarginLane["Right"] = 2] = "Right";
+    GlyphMarginLane[GlyphMarginLane["Center"] = 2] = "Center";
+    GlyphMarginLane[GlyphMarginLane["Right"] = 3] = "Right";
 })(GlyphMarginLane || (GlyphMarginLane = {}));
 /**
- * Position in the minimap to render the decoration.
+ * Text Direction for a decoration.
  */
-export var MinimapPosition;
-(function (MinimapPosition) {
-    MinimapPosition[MinimapPosition["Inline"] = 1] = "Inline";
-    MinimapPosition[MinimapPosition["Gutter"] = 2] = "Gutter";
-})(MinimapPosition || (MinimapPosition = {}));
+export var TextDirection;
+(function (TextDirection) {
+    TextDirection[TextDirection["LTR"] = 0] = "LTR";
+    TextDirection[TextDirection["RTL"] = 1] = "RTL";
+})(TextDirection || (TextDirection = {}));
 export var InjectedTextCursorStops;
 (function (InjectedTextCursorStops) {
     InjectedTextCursorStops[InjectedTextCursorStops["Both"] = 0] = "Both";
@@ -138,3 +139,4 @@ export class ApplyEditsResult {
 export function shouldSynchronizeModel(model) {
     return (!model.isTooLargeForSyncing() && !model.isForSimpleWidget);
 }
+//# sourceMappingURL=model.js.map

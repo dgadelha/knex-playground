@@ -18,7 +18,7 @@ import { ThemeIcon } from '../../../../base/common/themables.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { MarkdownString } from '../../../../base/common/htmlContent.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
-import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import { ResizableHTMLElement } from '../../../../base/browser/ui/resizable/resizable.js';
 import * as nls from '../../../../nls.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
@@ -47,12 +47,14 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         this._disposables.add(this._scrollbar);
         this._header = dom.append(this._body, dom.$('.header'));
         this._close = dom.append(this._header, dom.$('span' + ThemeIcon.asCSSSelector(Codicon.close)));
-        this._close.title = nls.localize('details.close', "Close");
+        this._close.title = nls.localize(1475, "Close");
+        this._close.role = 'button';
+        this._close.tabIndex = -1;
         this._type = dom.append(this._header, dom.$('p.type'));
         this._docs = dom.append(this._body, dom.$('p.docs'));
         this._configureFont();
         this._disposables.add(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(50 /* EditorOption.fontInfo */)) {
+            if (e.hasChanged(59 /* EditorOption.fontInfo */)) {
                 this._configureFont();
             }
         }));
@@ -63,10 +65,10 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
     }
     _configureFont() {
         const options = this._editor.getOptions();
-        const fontInfo = options.get(50 /* EditorOption.fontInfo */);
+        const fontInfo = options.get(59 /* EditorOption.fontInfo */);
         const fontFamily = fontInfo.getMassagedFontFamily();
-        const fontSize = options.get(118 /* EditorOption.suggestFontSize */) || fontInfo.fontSize;
-        const lineHeight = options.get(119 /* EditorOption.suggestLineHeight */) || fontInfo.lineHeight;
+        const fontSize = options.get(135 /* EditorOption.suggestFontSize */) || fontInfo.fontSize;
+        const lineHeight = options.get(136 /* EditorOption.suggestLineHeight */) || fontInfo.lineHeight;
         const fontWeight = fontInfo.fontWeight;
         const fontSizePx = `${fontSize}px`;
         const lineHeightPx = `${lineHeight}px`;
@@ -79,7 +81,7 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         this._close.style.width = lineHeightPx;
     }
     getLayoutInfo() {
-        const lineHeight = this._editor.getOption(119 /* EditorOption.suggestLineHeight */) || this._editor.getOption(50 /* EditorOption.fontInfo */).lineHeight;
+        const lineHeight = this._editor.getOption(136 /* EditorOption.suggestLineHeight */) || this._editor.getOption(59 /* EditorOption.fontInfo */).lineHeight;
         const borderWidth = this._borderWidth;
         const borderHeight = borderWidth * 2;
         return {
@@ -91,24 +93,23 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         };
     }
     renderLoading() {
-        this._type.textContent = nls.localize('loading', "Loading...");
+        this._type.textContent = nls.localize(1476, "Loading...");
         this._docs.textContent = '';
         this.domNode.classList.remove('no-docs', 'no-type');
         this.layout(this.size.width, this.getLayoutInfo().lineHeight * 2);
         this._onDidChangeContents.fire(this);
     }
     renderItem(item, explainMode) {
-        var _a, _b;
         this._renderDisposeable.clear();
         let { detail, documentation } = item.completion;
         if (explainMode) {
             let md = '';
             md += `score: ${item.score[0]}\n`;
-            md += `prefix: ${(_a = item.word) !== null && _a !== void 0 ? _a : '(no prefix)'}\n`;
+            md += `prefix: ${item.word ?? '(no prefix)'}\n`;
             md += `word: ${item.completion.filterText ? item.completion.filterText + ' (filterText)' : item.textLabel}\n`;
             md += `distance: ${item.distance} (localityBonus-setting)\n`;
             md += `index: ${item.idx}, based on ${item.completion.sortText && `sortText: "${item.completion.sortText}"` || 'label'}\n`;
-            md += `commit_chars: ${(_b = item.completion.commitCharacters) === null || _b === void 0 ? void 0 : _b.join('')}\n`;
+            md += `commit_chars: ${item.completion.commitCharacters?.join('')}\n`;
             documentation = new MarkdownString().appendCodeblock('empty', md);
             detail = `Provider: ${item.provider._debugDisplayName}`;
         }
@@ -140,14 +141,16 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         else if (documentation) {
             this._docs.classList.add('markdown-docs');
             dom.clearNode(this._docs);
-            const renderedContents = this._markdownRenderer.render(documentation);
+            const renderedContents = this._markdownRenderer.render(documentation, {
+                asyncRenderCallback: () => {
+                    this.layout(this._size.width, this._type.clientHeight + this._docs.clientHeight);
+                    this._onDidChangeContents.fire(this);
+                }
+            });
             this._docs.appendChild(renderedContents.element);
             this._renderDisposeable.add(renderedContents);
-            this._renderDisposeable.add(this._markdownRenderer.onDidRenderAsync(() => {
-                this.layout(this._size.width, this._type.clientHeight + this._docs.clientHeight);
-                this._onDidChangeContents.fire(this);
-            }));
         }
+        this.domNode.classList.toggle('detail-and-doc', !!detail && !!documentation);
         this.domNode.style.userSelect = 'text';
         this.domNode.tabIndex = -1;
         this._close.onmousedown = e => {
@@ -167,6 +170,9 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
         this.domNode.classList.add('no-docs');
         this._type.textContent = '';
         this._docs.textContent = '';
+    }
+    get isEmpty() {
+        return this.domNode.classList.contains('no-docs');
     }
     get size() {
         return this._size;
@@ -203,6 +209,9 @@ let SuggestDetailsWidget = class SuggestDetailsWidget {
     get borderWidth() {
         return this._borderWidth;
     }
+    focus() {
+        this.domNode.focus();
+    }
 };
 SuggestDetailsWidget = __decorate([
     __param(1, IInstantiationService)
@@ -212,6 +221,7 @@ export class SuggestDetailsOverlay {
     constructor(widget, _editor) {
         this.widget = widget;
         this._editor = _editor;
+        this.allowEditorOverflow = true;
         this._disposables = new DisposableStore();
         this._added = false;
         this._preferAlignAtTop = true;
@@ -255,9 +265,8 @@ export class SuggestDetailsOverlay {
             }
         }));
         this._disposables.add(this.widget.onDidChangeContents(() => {
-            var _a;
             if (this._anchorBox) {
-                this._placeAtAnchor(this._anchorBox, (_a = this._userSize) !== null && _a !== void 0 ? _a : this.widget.size, this._preferAlignAtTop);
+                this._placeAtAnchor(this._anchorBox, this._userSize ?? this.widget.size, this._preferAlignAtTop);
             }
         }));
     }
@@ -273,12 +282,11 @@ export class SuggestDetailsOverlay {
         return this._resizable.domNode;
     }
     getPosition() {
-        return null;
+        return this._topLeft ? { preference: this._topLeft } : null;
     }
     show() {
         if (!this._added) {
             this._editor.addOverlayWidget(this);
-            this.getDomNode().style.position = 'fixed';
             this._added = true;
         }
     }
@@ -296,14 +304,12 @@ export class SuggestDetailsOverlay {
         }
     }
     placeAtAnchor(anchor, preferAlignAtTop) {
-        var _a;
         const anchorBox = anchor.getBoundingClientRect();
         this._anchorBox = anchorBox;
         this._preferAlignAtTop = preferAlignAtTop;
-        this._placeAtAnchor(this._anchorBox, (_a = this._userSize) !== null && _a !== void 0 ? _a : this.widget.size, preferAlignAtTop);
+        this._placeAtAnchor(this._anchorBox, this._userSize ?? this.widget.size, preferAlignAtTop);
     }
     _placeAtAnchor(anchorBox, size, preferAlignAtTop) {
-        var _a;
         const bodyBox = dom.getClientArea(this.getDomNode().ownerDocument.body);
         const info = this.widget.getLayoutInfo();
         const defaultMinSize = new dom.Dimension(220, 2 * info.lineHeight);
@@ -333,7 +339,7 @@ export class SuggestDetailsOverlay {
         })();
         // take first placement that fits or the first with "least bad" fit
         const placements = [eastPlacement, westPlacement, southPacement];
-        const placement = (_a = placements.find(p => p.fit >= 0)) !== null && _a !== void 0 ? _a : placements.sort((a, b) => b.fit - a.fit)[0];
+        const placement = placements.find(p => p.fit >= 0) ?? placements.sort((a, b) => b.fit - a.fit)[0];
         // top/bottom placement
         const bottom = anchorBox.top + anchorBox.height - info.borderHeight;
         let alignAtTop;
@@ -363,8 +369,18 @@ export class SuggestDetailsOverlay {
                 maxSize = placement.maxSizeTop;
             }
         }
-        this._applyTopLeft({ left: placement.left, top: alignAtTop ? placement.top : bottom - height });
-        this.getDomNode().style.position = 'fixed';
+        let { top, left } = placement;
+        if (!alignAtTop && height > anchorBox.height) {
+            top = bottom - height;
+        }
+        const editorDomNode = this._editor.getDomNode();
+        if (editorDomNode) {
+            // get bounding rectangle of the suggest widget relative to the editor
+            const editorBoundingBox = editorDomNode.getBoundingClientRect();
+            top -= editorBoundingBox.top;
+            left -= editorBoundingBox.left;
+        }
+        this._applyTopLeft({ left, top });
         this._resizable.enableSashes(!alignAtTop, placement === eastPlacement, alignAtTop, placement !== eastPlacement);
         this._resizable.minSize = placement.minSize;
         this._resizable.maxSize = maxSize;
@@ -373,7 +389,7 @@ export class SuggestDetailsOverlay {
     }
     _applyTopLeft(topLeft) {
         this._topLeft = topLeft;
-        this.getDomNode().style.left = `${this._topLeft.left}px`;
-        this.getDomNode().style.top = `${this._topLeft.top}px`;
+        this._editor.layoutOverlayWidget(this);
     }
 }
+//# sourceMappingURL=suggestWidgetDetails.js.map

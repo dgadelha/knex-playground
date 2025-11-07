@@ -8,69 +8,48 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
 };
+var QuickPickItemElementRenderer_1;
+import * as cssJs from '../../../base/browser/cssValue.js';
 import * as dom from '../../../base/browser/dom.js';
 import { StandardKeyboardEvent } from '../../../base/browser/keyboardEvent.js';
 import { ActionBar } from '../../../base/browser/ui/actionbar/actionbar.js';
 import { IconLabel } from '../../../base/browser/ui/iconLabel/iconLabel.js';
 import { KeybindingLabel } from '../../../base/browser/ui/keybindingLabel/keybindingLabel.js';
-import { range } from '../../../base/common/arrays.js';
+import { Checkbox } from '../../../base/browser/ui/toggle/toggle.js';
+import { RenderIndentGuides } from '../../../base/browser/ui/tree/abstractTree.js';
+import { equals } from '../../../base/common/arrays.js';
 import { ThrottledDelayer } from '../../../base/common/async.js';
 import { compareAnything } from '../../../base/common/comparers.js';
 import { memoize } from '../../../base/common/decorators.js';
 import { isCancellationError } from '../../../base/common/errors.js';
-import { Emitter, Event } from '../../../base/common/event.js';
+import { Emitter, Event, EventBufferer } from '../../../base/common/event.js';
 import { getCodiconAriaLabel, matchesFuzzyIconAware, parseLabelWithIcons } from '../../../base/common/iconLabels.js';
-import { DisposableStore, dispose } from '../../../base/common/lifecycle.js';
-import * as platform from '../../../base/common/platform.js';
-import { ltrim } from '../../../base/common/strings.js';
-import './media/quickInput.css';
-import { localize } from '../../../nls.js';
-import { getIconClass } from './quickInputUtils.js';
 import { Lazy } from '../../../base/common/lazy.js';
+import { Disposable, DisposableStore, MutableDisposable } from '../../../base/common/lifecycle.js';
+import { observableValue, observableValueOpts, transaction } from '../../../base/common/observable.js';
+import { OS } from '../../../base/common/platform.js';
+import { escape, ltrim } from '../../../base/common/strings.js';
 import { URI } from '../../../base/common/uri.js';
+import { localize } from '../../../nls.js';
+import { IAccessibilityService } from '../../accessibility/common/accessibility.js';
+import { IInstantiationService } from '../../instantiation/common/instantiation.js';
+import { WorkbenchObjectTree } from '../../list/browser/listService.js';
+import { defaultCheckboxStyles } from '../../theme/browser/defaultStyles.js';
 import { isDark } from '../../theme/common/theme.js';
+import { IThemeService } from '../../theme/common/themeService.js';
+import { QuickPickFocus } from '../common/quickInput.js';
+import { quickInputButtonToAction } from './quickInputUtils.js';
 const $ = dom.$;
-class ListElement {
-    constructor(mainItem, previous, index, hasCheckbox, fireButtonTriggered, fireSeparatorButtonTriggered, onCheckedEmitter) {
-        var _a, _b, _c;
-        // state will get updated later
-        this._checked = false;
-        this._hidden = false;
-        this.hasCheckbox = hasCheckbox;
+class BaseQuickPickItemElement {
+    constructor(index, hasCheckbox, mainItem) {
         this.index = index;
-        this.fireButtonTriggered = fireButtonTriggered;
-        this.fireSeparatorButtonTriggered = fireSeparatorButtonTriggered;
-        this._onChecked = onCheckedEmitter;
-        this.onChecked = hasCheckbox
-            ? Event.map(Event.filter(this._onChecked.event, e => e.listElement === this), e => e.checked)
-            : Event.None;
-        if (mainItem.type === 'separator') {
-            this._separator = mainItem;
-        }
-        else {
-            this.item = mainItem;
-            if (previous && previous.type === 'separator' && !previous.buttons) {
-                this._separator = previous;
-            }
-            this.saneDescription = this.item.description;
-            this.saneDetail = this.item.detail;
-            this._labelHighlights = (_a = this.item.highlights) === null || _a === void 0 ? void 0 : _a.label;
-            this._descriptionHighlights = (_b = this.item.highlights) === null || _b === void 0 ? void 0 : _b.description;
-            this._detailHighlights = (_c = this.item.highlights) === null || _c === void 0 ? void 0 : _c.detail;
-            this.saneTooltip = this.item.tooltip;
-        }
+        this.hasCheckbox = hasCheckbox;
+        this._hidden = false;
         this._init = new Lazy(() => {
-            var _a;
-            const saneLabel = (_a = mainItem.label) !== null && _a !== void 0 ? _a : '';
+            const saneLabel = mainItem.label ?? '';
             const saneSortLabel = parseLabelWithIcons(saneLabel).text.trim();
             const saneAriaLabel = mainItem.ariaLabel || [saneLabel, this.saneDescription, this.saneDetail]
                 .map(s => getCodiconAriaLabel(s))
@@ -82,6 +61,8 @@ class ListElement {
                 saneAriaLabel
             };
         });
+        this._saneDescription = mainItem.description;
+        this._saneTooltip = mainItem.tooltip;
     }
     // #region Lazy Getters
     get saneLabel() {
@@ -93,8 +74,6 @@ class ListElement {
     get saneAriaLabel() {
         return this._init.value.saneAriaLabel;
     }
-    // #endregion
-    // #region Getters and Setters
     get element() {
         return this._element;
     }
@@ -107,20 +86,23 @@ class ListElement {
     set hidden(value) {
         this._hidden = value;
     }
-    get checked() {
-        return this._checked;
+    get saneDescription() {
+        return this._saneDescription;
     }
-    set checked(value) {
-        if (value !== this._checked) {
-            this._checked = value;
-            this._onChecked.fire({ listElement: this, checked: value });
-        }
+    set saneDescription(value) {
+        this._saneDescription = value;
     }
-    get separator() {
-        return this._separator;
+    get saneDetail() {
+        return this._saneDetail;
     }
-    set separator(value) {
-        this._separator = value;
+    set saneDetail(value) {
+        this._saneDetail = value;
+    }
+    get saneTooltip() {
+        return this._saneTooltip;
+    }
+    set saneTooltip(value) {
+        this._saneTooltip = value;
     }
     get labelHighlights() {
         return this._labelHighlights;
@@ -141,96 +123,268 @@ class ListElement {
         this._detailHighlights = value;
     }
 }
-class ListElementRenderer {
-    constructor(themeService) {
-        this.themeService = themeService;
+class QuickPickItemElement extends BaseQuickPickItemElement {
+    constructor(index, childIndex, hasCheckbox, fireButtonTriggered, _onChecked, item, _separator) {
+        super(index, hasCheckbox, item);
+        this.childIndex = childIndex;
+        this.fireButtonTriggered = fireButtonTriggered;
+        this._onChecked = _onChecked;
+        this.item = item;
+        this._separator = _separator;
+        this._checked = false;
+        this.onChecked = hasCheckbox
+            ? Event.map(Event.filter(this._onChecked.event, e => e.element === this), e => e.checked)
+            : Event.None;
+        this._saneDetail = item.detail;
+        this._labelHighlights = item.highlights?.label;
+        this._descriptionHighlights = item.highlights?.description;
+        this._detailHighlights = item.highlights?.detail;
     }
-    get templateId() {
-        return ListElementRenderer.ID;
+    get separator() {
+        return this._separator;
     }
+    set separator(value) {
+        this._separator = value;
+    }
+    get checked() {
+        return this._checked;
+    }
+    set checked(value) {
+        if (value !== this._checked) {
+            this._checked = value;
+            this._onChecked.fire({ element: this, checked: value });
+        }
+    }
+    get checkboxDisabled() {
+        return !!this.item.disabled;
+    }
+}
+var QuickPickSeparatorFocusReason;
+(function (QuickPickSeparatorFocusReason) {
+    /**
+     * No item is hovered or active
+     */
+    QuickPickSeparatorFocusReason[QuickPickSeparatorFocusReason["NONE"] = 0] = "NONE";
+    /**
+     * Some item within this section is hovered
+     */
+    QuickPickSeparatorFocusReason[QuickPickSeparatorFocusReason["MOUSE_HOVER"] = 1] = "MOUSE_HOVER";
+    /**
+     * Some item within this section is active
+     */
+    QuickPickSeparatorFocusReason[QuickPickSeparatorFocusReason["ACTIVE_ITEM"] = 2] = "ACTIVE_ITEM";
+})(QuickPickSeparatorFocusReason || (QuickPickSeparatorFocusReason = {}));
+class QuickPickSeparatorElement extends BaseQuickPickItemElement {
+    constructor(index, fireSeparatorButtonTriggered, separator) {
+        super(index, false, separator);
+        this.fireSeparatorButtonTriggered = fireSeparatorButtonTriggered;
+        this.separator = separator;
+        this.children = new Array();
+        /**
+         * If this item is >0, it means that there is some item in the list that is either:
+         * * hovered over
+         * * active
+         */
+        this.focusInsideSeparator = QuickPickSeparatorFocusReason.NONE;
+    }
+}
+class QuickInputItemDelegate {
+    getHeight(element) {
+        if (element instanceof QuickPickSeparatorElement) {
+            return 30;
+        }
+        return element.saneDetail ? 44 : 22;
+    }
+    getTemplateId(element) {
+        if (element instanceof QuickPickItemElement) {
+            return QuickPickItemElementRenderer.ID;
+        }
+        else {
+            return QuickPickSeparatorElementRenderer.ID;
+        }
+    }
+}
+class QuickInputAccessibilityProvider {
+    getWidgetAriaLabel() {
+        return localize(1753, "Quick Input");
+    }
+    getAriaLabel(element) {
+        return element.separator?.label
+            ? `${element.saneAriaLabel}, ${element.separator.label}`
+            : element.saneAriaLabel;
+    }
+    getWidgetRole() {
+        return 'listbox';
+    }
+    getRole(element) {
+        return element.hasCheckbox ? 'checkbox' : 'option';
+    }
+    isChecked(element) {
+        if (!element.hasCheckbox || !(element instanceof QuickPickItemElement)) {
+            return undefined;
+        }
+        return {
+            get value() { return element.checked; },
+            onDidChange: e => element.onChecked(() => e()),
+        };
+    }
+}
+class BaseQuickInputListRenderer {
+    constructor(hoverDelegate) {
+        this.hoverDelegate = hoverDelegate;
+    }
+    // TODO: only do the common stuff here and have a subclass handle their specific stuff
     renderTemplate(container) {
         const data = Object.create(null);
-        data.toDisposeElement = [];
-        data.toDisposeTemplate = [];
+        data.toDisposeElement = new DisposableStore();
+        data.toDisposeTemplate = new DisposableStore();
         data.entry = dom.append(container, $('.quick-input-list-entry'));
         // Checkbox
         const label = dom.append(data.entry, $('label.quick-input-list-label'));
-        data.toDisposeTemplate.push(dom.addStandardDisposableListener(label, dom.EventType.CLICK, e => {
-            if (!data.checkbox.offsetParent) { // If checkbox not visible:
-                e.preventDefault(); // Prevent toggle of checkbox when it is immediately shown afterwards. #91740
+        data.outerLabel = label;
+        data.checkbox = data.toDisposeTemplate.add(new MutableDisposable());
+        data.toDisposeTemplate.add(dom.addStandardDisposableListener(label, dom.EventType.CLICK, e => {
+            // `label` elements with role=checkboxes don't automatically toggle them like normal <checkbox> elements
+            if (data.checkbox.value && !e.defaultPrevented && data.checkbox.value.enabled) {
+                const checked = !data.checkbox.value.checked;
+                data.checkbox.value.checked = checked;
+                data.element.checked = checked;
             }
-        }));
-        data.checkbox = dom.append(label, $('input.quick-input-list-checkbox'));
-        data.checkbox.type = 'checkbox';
-        data.toDisposeTemplate.push(dom.addStandardDisposableListener(data.checkbox, dom.EventType.CHANGE, e => {
-            data.element.checked = data.checkbox.checked;
         }));
         // Rows
         const rows = dom.append(label, $('.quick-input-list-rows'));
         const row1 = dom.append(rows, $('.quick-input-list-row'));
         const row2 = dom.append(rows, $('.quick-input-list-row'));
         // Label
-        data.label = new IconLabel(row1, { supportHighlights: true, supportDescriptionHighlights: true, supportIcons: true });
-        data.toDisposeTemplate.push(data.label);
+        data.label = new IconLabel(row1, { supportHighlights: true, supportDescriptionHighlights: true, supportIcons: true, hoverDelegate: this.hoverDelegate });
+        data.toDisposeTemplate.add(data.label);
         data.icon = dom.prepend(data.label.element, $('.quick-input-list-icon'));
         // Keybinding
         const keybindingContainer = dom.append(row1, $('.quick-input-list-entry-keybinding'));
-        data.keybinding = new KeybindingLabel(keybindingContainer, platform.OS);
+        data.keybinding = new KeybindingLabel(keybindingContainer, OS);
+        data.toDisposeTemplate.add(data.keybinding);
         // Detail
         const detailContainer = dom.append(row2, $('.quick-input-list-label-meta'));
-        data.detail = new IconLabel(detailContainer, { supportHighlights: true, supportIcons: true });
-        data.toDisposeTemplate.push(data.detail);
+        data.detail = new IconLabel(detailContainer, { supportHighlights: true, supportIcons: true, hoverDelegate: this.hoverDelegate });
+        data.toDisposeTemplate.add(data.detail);
         // Separator
         data.separator = dom.append(data.entry, $('.quick-input-list-separator'));
         // Actions
-        data.actionBar = new ActionBar(data.entry);
+        data.actionBar = new ActionBar(data.entry, this.hoverDelegate ? { hoverDelegate: this.hoverDelegate } : undefined);
         data.actionBar.domNode.classList.add('quick-input-list-entry-action-bar');
-        data.toDisposeTemplate.push(data.actionBar);
+        data.toDisposeTemplate.add(data.actionBar);
         return data;
     }
-    renderElement(element, index, data) {
-        var _a, _b, _c, _d;
+    disposeTemplate(data) {
+        data.toDisposeElement.dispose();
+        data.toDisposeTemplate.dispose();
+    }
+    disposeElement(_element, _index, data) {
+        data.toDisposeElement.clear();
+        data.actionBar.clear();
+    }
+}
+let QuickPickItemElementRenderer = class QuickPickItemElementRenderer extends BaseQuickInputListRenderer {
+    static { QuickPickItemElementRenderer_1 = this; }
+    static { this.ID = 'quickpickitem'; }
+    constructor(hoverDelegate, themeService) {
+        super(hoverDelegate);
+        this.themeService = themeService;
+        // Follow what we do in the separator renderer
+        this._itemsWithSeparatorsFrequency = new Map();
+    }
+    get templateId() {
+        return QuickPickItemElementRenderer_1.ID;
+    }
+    ensureCheckbox(element, data) {
+        if (!element.hasCheckbox) {
+            data.checkbox.value?.domNode.remove();
+            data.checkbox.clear();
+            return;
+        }
+        let checkbox = data.checkbox.value;
+        if (!checkbox) {
+            checkbox = new Checkbox(element.saneLabel, element.checked, { ...defaultCheckboxStyles, size: 15 });
+            data.checkbox.value = checkbox;
+            data.outerLabel.prepend(checkbox.domNode);
+        }
+        else {
+            checkbox.setTitle(element.saneLabel);
+        }
+        if (element.checkboxDisabled) {
+            checkbox.disable();
+        }
+        else {
+            checkbox.enable();
+        }
+        checkbox.checked = element.checked;
+        data.toDisposeElement.add(element.onChecked(checked => checkbox.checked = checked));
+        data.toDisposeElement.add(checkbox.onChange(() => element.checked = checkbox.checked));
+    }
+    renderElement(node, index, data) {
+        const element = node.element;
         data.element = element;
-        element.element = (_a = data.entry) !== null && _a !== void 0 ? _a : undefined;
-        const mainItem = element.item ? element.item : element.separator;
-        data.checkbox.checked = element.checked;
-        data.toDisposeElement.push(element.onChecked(checked => data.checkbox.checked = checked));
+        element.element = data.entry ?? undefined;
+        const mainItem = element.item;
+        element.element.classList.toggle('not-pickable', element.item.pickable === false);
+        this.ensureCheckbox(element, data);
         const { labelHighlights, descriptionHighlights, detailHighlights } = element;
-        if ((_b = element.item) === null || _b === void 0 ? void 0 : _b.iconPath) {
-            const icon = isDark(this.themeService.getColorTheme().type) ? element.item.iconPath.dark : ((_c = element.item.iconPath.light) !== null && _c !== void 0 ? _c : element.item.iconPath.dark);
+        // Icon
+        if (mainItem.iconPath) {
+            const icon = isDark(this.themeService.getColorTheme().type) ? mainItem.iconPath.dark : (mainItem.iconPath.light ?? mainItem.iconPath.dark);
             const iconUrl = URI.revive(icon);
             data.icon.className = 'quick-input-list-icon';
-            data.icon.style.backgroundImage = dom.asCSSUrl(iconUrl);
+            data.icon.style.backgroundImage = cssJs.asCSSUrl(iconUrl);
         }
         else {
             data.icon.style.backgroundImage = '';
-            data.icon.className = ((_d = element.item) === null || _d === void 0 ? void 0 : _d.iconClass) ? `quick-input-list-icon ${element.item.iconClass}` : '';
+            data.icon.className = mainItem.iconClass ? `quick-input-list-icon ${mainItem.iconClass}` : '';
         }
         // Label
+        let descriptionTitle;
+        // if we have a tooltip, that will be the hover,
+        // with the saneDescription as fallback if it
+        // is defined
+        if (!element.saneTooltip && element.saneDescription) {
+            descriptionTitle = {
+                markdown: {
+                    value: escape(element.saneDescription),
+                    supportThemeIcons: true
+                },
+                markdownNotSupportedFallback: element.saneDescription
+            };
+        }
         const options = {
             matches: labelHighlights || [],
-            descriptionTitle: element.saneDescription,
+            // If we have a tooltip, we want that to be shown and not any other hover
+            descriptionTitle,
             descriptionMatches: descriptionHighlights || [],
             labelEscapeNewLines: true
         };
-        if (mainItem.type !== 'separator') {
-            options.extraClasses = mainItem.iconClasses;
-            options.italic = mainItem.italic;
-            options.strikethrough = mainItem.strikethrough;
-            data.entry.classList.remove('quick-input-list-separator-as-item');
-        }
-        else {
-            data.entry.classList.add('quick-input-list-separator-as-item');
-        }
+        options.extraClasses = mainItem.iconClasses;
+        options.italic = mainItem.italic;
+        options.strikethrough = mainItem.strikethrough;
+        data.entry.classList.remove('quick-input-list-separator-as-item');
         data.label.setLabel(element.saneLabel, element.saneDescription, options);
         // Keybinding
-        data.keybinding.set(mainItem.type === 'separator' ? undefined : mainItem.keybinding);
+        data.keybinding.set(mainItem.keybinding);
         // Detail
         if (element.saneDetail) {
+            let title;
+            // If we have a tooltip, we want that to be shown and not any other hover
+            if (!element.saneTooltip) {
+                title = {
+                    markdown: {
+                        value: escape(element.saneDetail),
+                        supportThemeIcons: true
+                    },
+                    markdownNotSupportedFallback: element.saneDetail
+                };
+            }
             data.detail.element.style.display = '';
             data.detail.setLabel(element.saneDetail, undefined, {
                 matches: detailHighlights,
-                title: element.saneDetail,
+                title,
                 labelEscapeNewLines: true
             });
         }
@@ -238,479 +392,770 @@ class ListElementRenderer {
             data.detail.element.style.display = 'none';
         }
         // Separator
-        if (element.item && element.separator && element.separator.label) {
+        if (element.separator?.label) {
             data.separator.textContent = element.separator.label;
             data.separator.style.display = '';
+            this.addItemWithSeparator(element);
         }
         else {
             data.separator.style.display = 'none';
         }
-        data.entry.classList.toggle('quick-input-list-separator-border', !!element.separator);
+        data.entry.classList.toggle('quick-input-list-separator-border', !!element.separator && element.childIndex !== 0);
         // Actions
         const buttons = mainItem.buttons;
         if (buttons && buttons.length) {
-            data.actionBar.push(buttons.map((button, index) => {
-                let cssClasses = button.iconClass || (button.iconPath ? getIconClass(button.iconPath) : undefined);
-                if (button.alwaysVisible) {
-                    cssClasses = cssClasses ? `${cssClasses} always-visible` : 'always-visible';
-                }
-                return {
-                    id: `id-${index}`,
-                    class: cssClasses,
-                    enabled: true,
-                    label: '',
-                    tooltip: button.tooltip || '',
-                    run: () => {
-                        mainItem.type !== 'separator'
-                            ? element.fireButtonTriggered({
-                                button,
-                                item: mainItem
-                            })
-                            : element.fireSeparatorButtonTriggered({
-                                button,
-                                separator: mainItem
-                            });
-                    }
-                };
-            }), { icon: true, label: false });
+            data.actionBar.push(buttons.map((button, index) => quickInputButtonToAction(button, `id-${index}`, () => element.fireButtonTriggered({ button, item: element.item }))), { icon: true, label: false });
             data.entry.classList.add('has-actions');
         }
         else {
             data.entry.classList.remove('has-actions');
         }
     }
-    disposeElement(element, index, data) {
-        data.toDisposeElement = dispose(data.toDisposeElement);
-        data.actionBar.clear();
+    disposeElement(element, _index, data) {
+        this.removeItemWithSeparator(element.element);
+        super.disposeElement(element, _index, data);
     }
-    disposeTemplate(data) {
-        data.toDisposeElement = dispose(data.toDisposeElement);
-        data.toDisposeTemplate = dispose(data.toDisposeTemplate);
+    isItemWithSeparatorVisible(item) {
+        return this._itemsWithSeparatorsFrequency.has(item);
     }
-}
-ListElementRenderer.ID = 'listelement';
-class ListElementDelegate {
-    getHeight(element) {
-        if (!element.item) {
-            // must be a separator
-            return 24;
+    addItemWithSeparator(item) {
+        this._itemsWithSeparatorsFrequency.set(item, (this._itemsWithSeparatorsFrequency.get(item) || 0) + 1);
+    }
+    removeItemWithSeparator(item) {
+        const frequency = this._itemsWithSeparatorsFrequency.get(item) || 0;
+        if (frequency > 1) {
+            this._itemsWithSeparatorsFrequency.set(item, frequency - 1);
         }
-        return element.saneDetail ? 44 : 22;
+        else {
+            this._itemsWithSeparatorsFrequency.delete(item);
+        }
     }
-    getTemplateId(element) {
-        return ListElementRenderer.ID;
+};
+QuickPickItemElementRenderer = QuickPickItemElementRenderer_1 = __decorate([
+    __param(1, IThemeService)
+], QuickPickItemElementRenderer);
+class QuickPickSeparatorElementRenderer extends BaseQuickInputListRenderer {
+    constructor() {
+        super(...arguments);
+        // This is a frequency map because sticky scroll re-uses the same renderer to render a second
+        // instance of the same separator.
+        this._visibleSeparatorsFrequency = new Map();
+    }
+    static { this.ID = 'quickpickseparator'; }
+    get templateId() {
+        return QuickPickSeparatorElementRenderer.ID;
+    }
+    get visibleSeparators() {
+        return [...this._visibleSeparatorsFrequency.keys()];
+    }
+    isSeparatorVisible(separator) {
+        return this._visibleSeparatorsFrequency.has(separator);
+    }
+    renderElement(node, index, data) {
+        const element = node.element;
+        data.element = element;
+        element.element = data.entry ?? undefined;
+        element.element.classList.toggle('focus-inside', !!element.focusInsideSeparator);
+        const mainItem = element.separator;
+        const { labelHighlights, descriptionHighlights } = element;
+        // Icon
+        data.icon.style.backgroundImage = '';
+        data.icon.className = '';
+        // Label
+        let descriptionTitle;
+        // if we have a tooltip, that will be the hover,
+        // with the saneDescription as fallback if it
+        // is defined
+        if (!element.saneTooltip && element.saneDescription) {
+            descriptionTitle = {
+                markdown: {
+                    value: escape(element.saneDescription),
+                    supportThemeIcons: true
+                },
+                markdownNotSupportedFallback: element.saneDescription
+            };
+        }
+        const options = {
+            matches: labelHighlights || [],
+            // If we have a tooltip, we want that to be shown and not any other hover
+            descriptionTitle,
+            descriptionMatches: descriptionHighlights || [],
+            labelEscapeNewLines: true
+        };
+        data.entry.classList.add('quick-input-list-separator-as-item');
+        data.label.setLabel(element.saneLabel, element.saneDescription, options);
+        // Separator
+        data.separator.style.display = 'none';
+        data.entry.classList.add('quick-input-list-separator-border');
+        // Actions
+        const buttons = mainItem.buttons;
+        if (buttons && buttons.length) {
+            data.actionBar.push(buttons.map((button, index) => quickInputButtonToAction(button, `id-${index}`, () => element.fireSeparatorButtonTriggered({ button, separator: element.separator }))), { icon: true, label: false });
+            data.entry.classList.add('has-actions');
+        }
+        else {
+            data.entry.classList.remove('has-actions');
+        }
+        this.addSeparator(element);
+    }
+    disposeElement(element, _index, data) {
+        this.removeSeparator(element.element);
+        if (!this.isSeparatorVisible(element.element)) {
+            element.element.element?.classList.remove('focus-inside');
+        }
+        super.disposeElement(element, _index, data);
+    }
+    addSeparator(separator) {
+        this._visibleSeparatorsFrequency.set(separator, (this._visibleSeparatorsFrequency.get(separator) || 0) + 1);
+    }
+    removeSeparator(separator) {
+        const frequency = this._visibleSeparatorsFrequency.get(separator) || 0;
+        if (frequency > 1) {
+            this._visibleSeparatorsFrequency.set(separator, frequency - 1);
+        }
+        else {
+            this._visibleSeparatorsFrequency.delete(separator);
+        }
     }
 }
-export var QuickInputListFocus;
-(function (QuickInputListFocus) {
-    QuickInputListFocus[QuickInputListFocus["First"] = 1] = "First";
-    QuickInputListFocus[QuickInputListFocus["Second"] = 2] = "Second";
-    QuickInputListFocus[QuickInputListFocus["Last"] = 3] = "Last";
-    QuickInputListFocus[QuickInputListFocus["Next"] = 4] = "Next";
-    QuickInputListFocus[QuickInputListFocus["Previous"] = 5] = "Previous";
-    QuickInputListFocus[QuickInputListFocus["NextPage"] = 6] = "NextPage";
-    QuickInputListFocus[QuickInputListFocus["PreviousPage"] = 7] = "PreviousPage";
-})(QuickInputListFocus || (QuickInputListFocus = {}));
-export class QuickInputList {
-    constructor(parent, id, options, themeService) {
+let QuickInputList = class QuickInputList extends Disposable {
+    constructor(parent, hoverDelegate, linkOpenerDelegate, id, instantiationService, accessibilityService) {
+        super();
         this.parent = parent;
-        this.options = options;
-        this.inputElements = [];
-        this.elements = [];
-        this.elementsToIndexes = new Map();
-        this.matchOnDescription = false;
-        this.matchOnDetail = false;
-        this.matchOnLabel = true;
-        this.matchOnLabelMode = 'fuzzy';
-        this.sortByLabel = true;
-        this._onChangedAllVisibleChecked = new Emitter();
-        this.onChangedAllVisibleChecked = this._onChangedAllVisibleChecked.event;
-        this._onChangedCheckedCount = new Emitter();
-        this.onChangedCheckedCount = this._onChangedCheckedCount.event;
-        this._onChangedVisibleCount = new Emitter();
-        this.onChangedVisibleCount = this._onChangedVisibleCount.event;
-        this._onChangedCheckedElements = new Emitter();
-        this.onChangedCheckedElements = this._onChangedCheckedElements.event;
+        this.hoverDelegate = hoverDelegate;
+        this.linkOpenerDelegate = linkOpenerDelegate;
+        this.accessibilityService = accessibilityService;
+        //#region QuickInputList Events
+        this._onKeyDown = new Emitter();
+        this._onLeave = new Emitter();
+        /**
+         * Event that is fired when the tree would no longer have focus.
+        */
+        this.onLeave = this._onLeave.event;
+        this._visibleCountObservable = observableValue('VisibleCount', 0);
+        this.onChangedVisibleCount = Event.fromObservable(this._visibleCountObservable, this._store);
+        this._allVisibleCheckedObservable = observableValue('AllVisibleChecked', false);
+        this.onChangedAllVisibleChecked = Event.fromObservable(this._allVisibleCheckedObservable, this._store);
+        this._checkedCountObservable = observableValue('CheckedCount', 0);
+        this.onChangedCheckedCount = Event.fromObservable(this._checkedCountObservable, this._store);
+        this._checkedElementsObservable = observableValueOpts({ equalsFn: equals }, new Array());
+        this.onChangedCheckedElements = Event.fromObservable(this._checkedElementsObservable, this._store);
         this._onButtonTriggered = new Emitter();
         this.onButtonTriggered = this._onButtonTriggered.event;
         this._onSeparatorButtonTriggered = new Emitter();
         this.onSeparatorButtonTriggered = this._onSeparatorButtonTriggered.event;
-        this._onKeyDown = new Emitter();
-        this.onKeyDown = this._onKeyDown.event;
-        this._onLeave = new Emitter();
-        this.onLeave = this._onLeave.event;
-        this._listElementChecked = new Emitter();
-        this._fireCheckedEvents = true;
-        this.elementDisposables = [];
-        this.disposables = [];
-        this.id = id;
-        this.container = dom.append(this.parent, $('.quick-input-list'));
-        const delegate = new ListElementDelegate();
-        const accessibilityProvider = new QuickInputAccessibilityProvider();
-        this.list = options.createList('QuickInput', this.container, delegate, [new ListElementRenderer(themeService)], {
-            identityProvider: {
-                getId: element => {
-                    var _a, _b, _c, _d, _e, _f, _g, _h;
-                    // always prefer item over separator because if item is defined, it must be the main item type
-                    // always prefer a defined id if one was specified and use label as a fallback
-                    return (_h = (_f = (_d = (_b = (_a = element.item) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : (_c = element.item) === null || _c === void 0 ? void 0 : _c.label) !== null && _d !== void 0 ? _d : (_e = element.separator) === null || _e === void 0 ? void 0 : _e.id) !== null && _f !== void 0 ? _f : (_g = element.separator) === null || _g === void 0 ? void 0 : _g.label) !== null && _h !== void 0 ? _h : '';
-                }
+        this._elementChecked = new Emitter();
+        this._elementCheckedEventBufferer = new EventBufferer();
+        //#endregion
+        this._hasCheckboxes = false;
+        this._inputElements = new Array();
+        this._elementTree = new Array();
+        this._itemElements = new Array();
+        // Elements that apply to the current set of elements
+        this._elementDisposable = this._register(new DisposableStore());
+        this._matchOnDescription = false;
+        this._matchOnDetail = false;
+        this._matchOnLabel = true;
+        this._matchOnLabelMode = 'fuzzy';
+        this._sortByLabel = true;
+        this._shouldLoop = true;
+        this._container = dom.append(this.parent, $('.quick-input-list'));
+        this._separatorRenderer = new QuickPickSeparatorElementRenderer(hoverDelegate);
+        this._itemRenderer = instantiationService.createInstance(QuickPickItemElementRenderer, hoverDelegate);
+        this._tree = this._register(instantiationService.createInstance((WorkbenchObjectTree), 'QuickInput', this._container, new QuickInputItemDelegate(), [this._itemRenderer, this._separatorRenderer], {
+            filter: {
+                filter(element) {
+                    return element.hidden
+                        ? 0 /* TreeVisibility.Hidden */
+                        : element instanceof QuickPickSeparatorElement
+                            ? 2 /* TreeVisibility.Recurse */
+                            : 1 /* TreeVisibility.Visible */;
+                },
             },
+            sorter: {
+                compare: (element, otherElement) => {
+                    if (!this.sortByLabel || !this._lastQueryString) {
+                        return 0;
+                    }
+                    const normalizedSearchValue = this._lastQueryString.toLowerCase();
+                    return compareEntries(element, otherElement, normalizedSearchValue);
+                },
+            },
+            accessibilityProvider: new QuickInputAccessibilityProvider(),
             setRowLineHeight: false,
             multipleSelectionSupport: false,
+            hideTwistiesOfChildlessElements: true,
+            renderIndentGuides: RenderIndentGuides.None,
+            findWidgetEnabled: false,
+            indent: 0,
             horizontalScrolling: false,
-            accessibilityProvider
-        });
-        this.list.getHTMLElement().id = id;
-        this.disposables.push(this.list);
-        this.disposables.push(this.list.onKeyDown(e => {
+            allowNonCollapsibleParents: true,
+            alwaysConsumeMouseWheel: true
+        }));
+        this._tree.getHTMLElement().id = id;
+        this._registerListeners();
+    }
+    //#region public getters/setters
+    get onDidChangeFocus() {
+        return Event.map(this._tree.onDidChangeFocus, e => e.elements.filter((e) => e instanceof QuickPickItemElement).map(e => e.item), this._store);
+    }
+    get onDidChangeSelection() {
+        return Event.map(this._tree.onDidChangeSelection, e => ({
+            items: e.elements.filter((e) => e instanceof QuickPickItemElement).map(e => e.item),
+            event: e.browserEvent
+        }), this._store);
+    }
+    get displayed() {
+        return this._container.style.display !== 'none';
+    }
+    set displayed(value) {
+        this._container.style.display = value ? '' : 'none';
+    }
+    get scrollTop() {
+        return this._tree.scrollTop;
+    }
+    set scrollTop(scrollTop) {
+        this._tree.scrollTop = scrollTop;
+    }
+    get ariaLabel() {
+        return this._tree.ariaLabel;
+    }
+    set ariaLabel(label) {
+        this._tree.ariaLabel = label ?? '';
+    }
+    set enabled(value) {
+        this._tree.getHTMLElement().style.pointerEvents = value ? '' : 'none';
+    }
+    get matchOnDescription() {
+        return this._matchOnDescription;
+    }
+    set matchOnDescription(value) {
+        this._matchOnDescription = value;
+    }
+    get matchOnDetail() {
+        return this._matchOnDetail;
+    }
+    set matchOnDetail(value) {
+        this._matchOnDetail = value;
+    }
+    get matchOnLabel() {
+        return this._matchOnLabel;
+    }
+    set matchOnLabel(value) {
+        this._matchOnLabel = value;
+    }
+    get matchOnLabelMode() {
+        return this._matchOnLabelMode;
+    }
+    set matchOnLabelMode(value) {
+        this._matchOnLabelMode = value;
+    }
+    get sortByLabel() {
+        return this._sortByLabel;
+    }
+    set sortByLabel(value) {
+        this._sortByLabel = value;
+    }
+    get shouldLoop() {
+        return this._shouldLoop;
+    }
+    set shouldLoop(value) {
+        this._shouldLoop = value;
+    }
+    //#endregion
+    //#region register listeners
+    _registerListeners() {
+        this._registerOnKeyDown();
+        this._registerOnContainerClick();
+        this._registerOnMouseMiddleClick();
+        this._registerOnTreeModelChanged();
+        this._registerOnElementChecked();
+        this._registerOnContextMenu();
+        this._registerHoverListeners();
+        this._registerSelectionChangeListener();
+        this._registerSeparatorActionShowingListeners();
+    }
+    _registerOnKeyDown() {
+        // TODO: Should this be added at a higher level?
+        this._register(this._tree.onKeyDown(e => {
             const event = new StandardKeyboardEvent(e);
             switch (event.keyCode) {
                 case 10 /* KeyCode.Space */:
                     this.toggleCheckbox();
                     break;
-                case 31 /* KeyCode.KeyA */:
-                    if (platform.isMacintosh ? e.metaKey : e.ctrlKey) {
-                        this.list.setFocus(range(this.list.length));
-                    }
-                    break;
-                case 16 /* KeyCode.UpArrow */: {
-                    const focus1 = this.list.getFocus();
-                    if (focus1.length === 1 && focus1[0] === 0) {
-                        this._onLeave.fire();
-                    }
-                    break;
-                }
-                case 18 /* KeyCode.DownArrow */: {
-                    const focus2 = this.list.getFocus();
-                    if (focus2.length === 1 && focus2[0] === this.list.length - 1) {
-                        this._onLeave.fire();
-                    }
-                    break;
-                }
             }
             this._onKeyDown.fire(event);
         }));
-        this.disposables.push(this.list.onMouseDown(e => {
-            if (e.browserEvent.button !== 2) {
-                // Works around / fixes #64350.
-                e.browserEvent.preventDefault();
-            }
-        }));
-        this.disposables.push(dom.addDisposableListener(this.container, dom.EventType.CLICK, e => {
+    }
+    _registerOnContainerClick() {
+        this._register(dom.addDisposableListener(this._container, dom.EventType.CLICK, e => {
             if (e.x || e.y) { // Avoid 'click' triggered by 'space' on checkbox.
                 this._onLeave.fire();
             }
         }));
-        this.disposables.push(this.list.onMouseMiddleClick(e => {
-            this._onLeave.fire();
+    }
+    _registerOnMouseMiddleClick() {
+        this._register(dom.addDisposableListener(this._container, dom.EventType.AUXCLICK, e => {
+            if (e.button === 1) {
+                this._onLeave.fire();
+            }
         }));
-        this.disposables.push(this.list.onContextMenu(e => {
-            if (typeof e.index === 'number') {
+    }
+    _registerOnTreeModelChanged() {
+        this._register(this._tree.onDidChangeModel(() => {
+            const visibleCount = this._itemElements.filter(e => !e.hidden).length;
+            this._visibleCountObservable.set(visibleCount, undefined);
+            if (this._hasCheckboxes) {
+                this._updateCheckedObservables();
+            }
+        }));
+    }
+    _registerOnElementChecked() {
+        // Only fire the last event when buffered
+        this._register(this._elementCheckedEventBufferer.wrapEvent(this._elementChecked.event, (_, e) => e)(_ => this._updateCheckedObservables()));
+    }
+    _registerOnContextMenu() {
+        this._register(this._tree.onContextMenu(e => {
+            if (e.element) {
                 e.browserEvent.preventDefault();
                 // we want to treat a context menu event as
                 // a gesture to open the item at the index
                 // since we do not have any context menu
                 // this enables for example macOS to Ctrl-
                 // click on an item to open it.
-                this.list.setSelection([e.index]);
+                this._tree.setSelection([e.element]);
             }
         }));
-        if (options.hoverDelegate) {
-            const delayer = new ThrottledDelayer(options.hoverDelegate.delay);
-            // onMouseOver triggers every time a new element has been moused over
-            // even if it's on the same list item.
-            this.disposables.push(this.list.onMouseOver((e) => __awaiter(this, void 0, void 0, function* () {
-                var _a;
-                // If we hover over an anchor element, we don't want to show the hover because
-                // the anchor may have a tooltip that we want to show instead.
-                if (e.browserEvent.target instanceof HTMLAnchorElement) {
-                    delayer.cancel();
-                    return;
-                }
-                if (
-                // anchors are an exception as called out above so we skip them here
-                !(e.browserEvent.relatedTarget instanceof HTMLAnchorElement) &&
-                    // check if the mouse is still over the same element
-                    dom.isAncestor(e.browserEvent.relatedTarget, (_a = e.element) === null || _a === void 0 ? void 0 : _a.element)) {
-                    return;
-                }
-                try {
-                    yield delayer.trigger(() => __awaiter(this, void 0, void 0, function* () {
-                        if (e.element) {
-                            this.showHover(e.element);
-                        }
-                    }));
-                }
-                catch (e) {
-                    // Ignore cancellation errors due to mouse out
-                    if (!isCancellationError(e)) {
-                        throw e;
-                    }
-                }
-            })));
-            this.disposables.push(this.list.onMouseOut(e => {
-                var _a;
-                // onMouseOut triggers every time a new element has been moused over
-                // even if it's on the same list item. We only want one event, so we
-                // check if the mouse is still over the same element.
-                if (dom.isAncestor(e.browserEvent.relatedTarget, (_a = e.element) === null || _a === void 0 ? void 0 : _a.element)) {
-                    return;
-                }
+    }
+    _registerHoverListeners() {
+        const delayer = this._register(new ThrottledDelayer(typeof this.hoverDelegate.delay === 'function' ? this.hoverDelegate.delay() : this.hoverDelegate.delay));
+        this._register(this._tree.onMouseOver(async (e) => {
+            // If we hover over an anchor element, we don't want to show the hover because
+            // the anchor may have a tooltip that we want to show instead.
+            if (dom.isHTMLAnchorElement(e.browserEvent.target)) {
                 delayer.cancel();
-            }));
-            this.disposables.push(delayer);
-        }
-        this.disposables.push(this._listElementChecked.event(_ => this.fireCheckedEvents()));
-        this.disposables.push(this._onChangedAllVisibleChecked, this._onChangedCheckedCount, this._onChangedVisibleCount, this._onChangedCheckedElements, this._onButtonTriggered, this._onSeparatorButtonTriggered, this._onLeave, this._onKeyDown);
-    }
-    get onDidChangeFocus() {
-        return Event.map(this.list.onDidChangeFocus, e => e.elements.map(e => e.item));
-    }
-    get onDidChangeSelection() {
-        return Event.map(this.list.onDidChangeSelection, e => ({ items: e.elements.map(e => e.item), event: e.browserEvent }));
-    }
-    get scrollTop() {
-        return this.list.scrollTop;
-    }
-    set scrollTop(scrollTop) {
-        this.list.scrollTop = scrollTop;
-    }
-    get ariaLabel() {
-        return this.list.getHTMLElement().ariaLabel;
-    }
-    set ariaLabel(label) {
-        this.list.getHTMLElement().ariaLabel = label;
-    }
-    getAllVisibleChecked() {
-        return this.allVisibleChecked(this.elements, false);
-    }
-    allVisibleChecked(elements, whenNoneVisible = true) {
-        for (let i = 0, n = elements.length; i < n; i++) {
-            const element = elements[i];
-            if (!element.hidden) {
-                if (!element.checked) {
-                    return false;
-                }
-                else {
-                    whenNoneVisible = true;
+                return;
+            }
+            if (
+            // anchors are an exception as called out above so we skip them here
+            !(dom.isHTMLAnchorElement(e.browserEvent.relatedTarget)) &&
+                // check if the mouse is still over the same element
+                dom.isAncestor(e.browserEvent.relatedTarget, e.element?.element)) {
+                return;
+            }
+            try {
+                await delayer.trigger(async () => {
+                    if (e.element instanceof QuickPickItemElement) {
+                        this.showHover(e.element);
+                    }
+                });
+            }
+            catch (e) {
+                // Ignore cancellation errors due to mouse out
+                if (!isCancellationError(e)) {
+                    throw e;
                 }
             }
-        }
-        return whenNoneVisible;
-    }
-    getCheckedCount() {
-        let count = 0;
-        const elements = this.elements;
-        for (let i = 0, n = elements.length; i < n; i++) {
-            if (elements[i].checked) {
-                count++;
+        }));
+        this._register(this._tree.onMouseOut(e => {
+            // onMouseOut triggers every time a new element has been moused over
+            // even if it's on the same list item. We only want one event, so we
+            // check if the mouse is still over the same element.
+            if (dom.isAncestor(e.browserEvent.relatedTarget, e.element?.element)) {
+                return;
             }
-        }
-        return count;
+            delayer.cancel();
+        }));
     }
-    getVisibleCount() {
-        let count = 0;
-        const elements = this.elements;
-        for (let i = 0, n = elements.length; i < n; i++) {
-            if (!elements[i].hidden) {
-                count++;
+    /**
+     * Register's focus change and mouse events so that we can track when items inside of a
+     * separator's section are focused or hovered so that we can display the separator's actions
+     */
+    _registerSeparatorActionShowingListeners() {
+        this._register(this._tree.onDidChangeFocus(e => {
+            const parent = e.elements[0]
+                ? this._tree.getParentElement(e.elements[0])
+                // treat null as focus lost and when we have no separators
+                : null;
+            for (const separator of this._separatorRenderer.visibleSeparators) {
+                const value = separator === parent;
+                // get bitness of ACTIVE_ITEM and check if it changed
+                const currentActive = !!(separator.focusInsideSeparator & QuickPickSeparatorFocusReason.ACTIVE_ITEM);
+                if (currentActive !== value) {
+                    if (value) {
+                        separator.focusInsideSeparator |= QuickPickSeparatorFocusReason.ACTIVE_ITEM;
+                    }
+                    else {
+                        separator.focusInsideSeparator &= ~QuickPickSeparatorFocusReason.ACTIVE_ITEM;
+                    }
+                    this._tree.rerender(separator);
+                }
             }
-        }
-        return count;
+        }));
+        this._register(this._tree.onMouseOver(e => {
+            const parent = e.element
+                ? this._tree.getParentElement(e.element)
+                : null;
+            for (const separator of this._separatorRenderer.visibleSeparators) {
+                if (separator !== parent) {
+                    continue;
+                }
+                const currentMouse = !!(separator.focusInsideSeparator & QuickPickSeparatorFocusReason.MOUSE_HOVER);
+                if (!currentMouse) {
+                    separator.focusInsideSeparator |= QuickPickSeparatorFocusReason.MOUSE_HOVER;
+                    this._tree.rerender(separator);
+                }
+            }
+        }));
+        this._register(this._tree.onMouseOut(e => {
+            const parent = e.element
+                ? this._tree.getParentElement(e.element)
+                : null;
+            for (const separator of this._separatorRenderer.visibleSeparators) {
+                if (separator !== parent) {
+                    continue;
+                }
+                const currentMouse = !!(separator.focusInsideSeparator & QuickPickSeparatorFocusReason.MOUSE_HOVER);
+                if (currentMouse) {
+                    separator.focusInsideSeparator &= ~QuickPickSeparatorFocusReason.MOUSE_HOVER;
+                    this._tree.rerender(separator);
+                }
+            }
+        }));
     }
+    _registerSelectionChangeListener() {
+        // When the user selects a separator, the separator will move to the top and focus will be
+        // set to the first element after the separator.
+        this._register(this._tree.onDidChangeSelection(e => {
+            const elementsWithoutSeparators = e.elements.filter((e) => e instanceof QuickPickItemElement);
+            if (elementsWithoutSeparators.length !== e.elements.length) {
+                if (e.elements.length === 1 && e.elements[0] instanceof QuickPickSeparatorElement) {
+                    this._tree.setFocus([e.elements[0].children[0]]);
+                    this._tree.reveal(e.elements[0], 0);
+                }
+                this._tree.setSelection(elementsWithoutSeparators);
+            }
+        }));
+    }
+    //#endregion
+    //#region public methods
     setAllVisibleChecked(checked) {
-        try {
-            this._fireCheckedEvents = false;
-            this.elements.forEach(element => {
-                if (!element.hidden) {
+        this._elementCheckedEventBufferer.bufferEvents(() => {
+            this._itemElements.forEach(element => {
+                if (!element.hidden && !element.checkboxDisabled && element.item.pickable !== false) {
+                    // Would fire an event if we didn't beffer the events
                     element.checked = checked;
                 }
             });
-        }
-        finally {
-            this._fireCheckedEvents = true;
-            this.fireCheckedEvents();
-        }
+        });
     }
     setElements(inputElements) {
-        this.elementDisposables = dispose(this.elementDisposables);
-        const fireButtonTriggered = (event) => this.fireButtonTriggered(event);
-        const fireSeparatorButtonTriggered = (event) => this.fireSeparatorButtonTriggered(event);
-        this.inputElements = inputElements;
-        const elementsToIndexes = new Map();
-        const hasCheckbox = this.parent.classList.contains('show-checkboxes');
-        this.elements = inputElements.reduce((result, item, index) => {
-            var _a;
-            const previous = index > 0 ? inputElements[index - 1] : undefined;
+        this._elementDisposable.clear();
+        this._lastQueryString = undefined;
+        this._inputElements = inputElements;
+        this._hasCheckboxes = this.parent.classList.contains('show-checkboxes');
+        let currentSeparatorElement;
+        this._itemElements = new Array();
+        this._elementTree = inputElements.reduce((result, item, index) => {
+            let element;
             if (item.type === 'separator') {
                 if (!item.buttons) {
                     // This separator will be rendered as a part of the list item
                     return result;
                 }
+                currentSeparatorElement = new QuickPickSeparatorElement(index, e => this._onSeparatorButtonTriggered.fire(e), item);
+                element = currentSeparatorElement;
             }
-            const element = new ListElement(item, previous, index, hasCheckbox, fireButtonTriggered, fireSeparatorButtonTriggered, this._listElementChecked);
-            const resultIndex = result.length;
+            else {
+                const previous = index > 0 ? inputElements[index - 1] : undefined;
+                let separator;
+                if (previous && previous.type === 'separator' && !previous.buttons) {
+                    separator = previous;
+                }
+                const qpi = new QuickPickItemElement(index, currentSeparatorElement?.children
+                    ? currentSeparatorElement.children.length
+                    : index, this._hasCheckboxes && item.pickable !== false, e => this._onButtonTriggered.fire(e), this._elementChecked, item, separator);
+                this._itemElements.push(qpi);
+                if (currentSeparatorElement) {
+                    currentSeparatorElement.children.push(qpi);
+                    return result;
+                }
+                element = qpi;
+            }
             result.push(element);
-            elementsToIndexes.set((_a = element.item) !== null && _a !== void 0 ? _a : element.separator, resultIndex);
             return result;
-        }, []);
-        this.elementsToIndexes = elementsToIndexes;
-        this.list.splice(0, this.list.length); // Clear focus and selection first, sending the events when the list is empty.
-        this.list.splice(0, this.list.length, this.elements);
-        this._onChangedVisibleCount.fire(this.elements.length);
-    }
-    getFocusedElements() {
-        return this.list.getFocusedElements()
-            .map(e => e.item);
+        }, new Array());
+        this._setElementsToTree(this._elementTree);
+        // Accessibility hack, unfortunately on next tick
+        // https://github.com/microsoft/vscode/issues/211976
+        if (this.accessibilityService.isScreenReaderOptimized()) {
+            setTimeout(() => {
+                const focusedElement = this._tree.getHTMLElement().querySelector(`.monaco-list-row.focused`);
+                const parent = focusedElement?.parentNode;
+                if (focusedElement && parent) {
+                    const nextSibling = focusedElement.nextSibling;
+                    focusedElement.remove();
+                    parent.insertBefore(focusedElement, nextSibling);
+                }
+            }, 0);
+        }
     }
     setFocusedElements(items) {
-        this.list.setFocus(items
-            .filter(item => this.elementsToIndexes.has(item))
-            .map(item => this.elementsToIndexes.get(item)));
+        const elements = items.map(item => this._itemElements.find(e => e.item === item))
+            .filter((e) => !!e)
+            .filter(e => !e.hidden);
+        this._tree.setFocus(elements);
         if (items.length > 0) {
-            const focused = this.list.getFocus()[0];
-            if (typeof focused === 'number') {
-                this.list.reveal(focused);
+            const focused = this._tree.getFocus()[0];
+            if (focused) {
+                this._tree.reveal(focused);
             }
         }
     }
     getActiveDescendant() {
-        return this.list.getHTMLElement().getAttribute('aria-activedescendant');
+        return this._tree.getHTMLElement().getAttribute('aria-activedescendant');
     }
     setSelectedElements(items) {
-        this.list.setSelection(items
-            .filter(item => this.elementsToIndexes.has(item))
-            .map(item => this.elementsToIndexes.get(item)));
+        const elements = items.map(item => this._itemElements.find(e => e.item === item))
+            .filter((e) => !!e);
+        this._tree.setSelection(elements);
     }
     getCheckedElements() {
-        return this.elements.filter(e => e.checked)
-            .map(e => e.item)
-            .filter(e => !!e);
+        return this._itemElements.filter(e => e.checked)
+            .map(e => e.item);
     }
     setCheckedElements(items) {
-        try {
-            this._fireCheckedEvents = false;
+        this._elementCheckedEventBufferer.bufferEvents(() => {
             const checked = new Set();
             for (const item of items) {
                 checked.add(item);
             }
-            for (const element of this.elements) {
+            for (const element of this._itemElements) {
+                // Would fire an event if we didn't beffer the events
                 element.checked = checked.has(element.item);
             }
-        }
-        finally {
-            this._fireCheckedEvents = true;
-            this.fireCheckedEvents();
-        }
-    }
-    set enabled(value) {
-        this.list.getHTMLElement().style.pointerEvents = value ? '' : 'none';
+        });
     }
     focus(what) {
-        if (!this.list.length) {
+        if (!this._itemElements.length) {
             return;
         }
-        if (what === QuickInputListFocus.Second && this.list.length < 2) {
-            what = QuickInputListFocus.First;
+        if (what === QuickPickFocus.Second && this._itemElements.length < 2) {
+            what = QuickPickFocus.First;
         }
         switch (what) {
-            case QuickInputListFocus.First:
-                this.list.scrollTop = 0;
-                this.list.focusFirst(undefined, (e) => !!e.item);
+            case QuickPickFocus.First:
+                this._tree.scrollTop = 0;
+                this._tree.focusFirst(undefined, (e) => e.element instanceof QuickPickItemElement);
                 break;
-            case QuickInputListFocus.Second:
-                this.list.scrollTop = 0;
-                this.list.focusNth(1, undefined, (e) => !!e.item);
+            case QuickPickFocus.Second: {
+                this._tree.scrollTop = 0;
+                let isSecondItem = false;
+                this._tree.focusFirst(undefined, (e) => {
+                    if (!(e.element instanceof QuickPickItemElement)) {
+                        return false;
+                    }
+                    if (isSecondItem) {
+                        return true;
+                    }
+                    isSecondItem = !isSecondItem;
+                    return false;
+                });
                 break;
-            case QuickInputListFocus.Last:
-                this.list.scrollTop = this.list.scrollHeight;
-                this.list.focusLast(undefined, (e) => !!e.item);
+            }
+            case QuickPickFocus.Last:
+                this._tree.scrollTop = this._tree.scrollHeight;
+                this._tree.focusLast(undefined, (e) => e.element instanceof QuickPickItemElement);
                 break;
-            case QuickInputListFocus.Next: {
-                this.list.focusNext(undefined, true, undefined, (e) => !!e.item);
-                const index = this.list.getFocus()[0];
-                if (index !== 0 && !this.elements[index - 1].item && this.list.firstVisibleIndex > index - 1) {
-                    this.list.reveal(index - 1);
+            case QuickPickFocus.Next: {
+                const prevFocus = this._tree.getFocus();
+                this._tree.focusNext(undefined, this._shouldLoop, undefined, (e) => {
+                    if (!(e.element instanceof QuickPickItemElement)) {
+                        return false;
+                    }
+                    this._tree.reveal(e.element);
+                    return true;
+                });
+                const currentFocus = this._tree.getFocus();
+                if (prevFocus.length && prevFocus[0] === currentFocus[0]) {
+                    this._onLeave.fire();
                 }
                 break;
             }
-            case QuickInputListFocus.Previous: {
-                this.list.focusPrevious(undefined, true, undefined, (e) => !!e.item);
-                const index = this.list.getFocus()[0];
-                if (index !== 0 && !this.elements[index - 1].item && this.list.firstVisibleIndex > index - 1) {
-                    this.list.reveal(index - 1);
+            case QuickPickFocus.Previous: {
+                const prevFocus = this._tree.getFocus();
+                this._tree.focusPrevious(undefined, this._shouldLoop, undefined, (e) => {
+                    if (!(e.element instanceof QuickPickItemElement)) {
+                        return false;
+                    }
+                    const parent = this._tree.getParentElement(e.element);
+                    if (parent === null || parent.children[0] !== e.element) {
+                        this._tree.reveal(e.element);
+                    }
+                    else {
+                        // Only if we are the first child of a separator do we reveal the separator
+                        this._tree.reveal(parent);
+                    }
+                    return true;
+                });
+                const currentFocus = this._tree.getFocus();
+                if (prevFocus.length && prevFocus[0] === currentFocus[0]) {
+                    this._onLeave.fire();
                 }
                 break;
             }
-            case QuickInputListFocus.NextPage:
-                this.list.focusNextPage(undefined, (e) => !!e.item);
+            case QuickPickFocus.NextPage:
+                this._tree.focusNextPage(undefined, (e) => {
+                    if (!(e.element instanceof QuickPickItemElement)) {
+                        return false;
+                    }
+                    this._tree.reveal(e.element);
+                    return true;
+                });
                 break;
-            case QuickInputListFocus.PreviousPage:
-                this.list.focusPreviousPage(undefined, (e) => !!e.item);
+            case QuickPickFocus.PreviousPage:
+                this._tree.focusPreviousPage(undefined, (e) => {
+                    if (!(e.element instanceof QuickPickItemElement)) {
+                        return false;
+                    }
+                    const parent = this._tree.getParentElement(e.element);
+                    if (parent === null || parent.children[0] !== e.element) {
+                        this._tree.reveal(e.element);
+                    }
+                    else {
+                        this._tree.reveal(parent);
+                    }
+                    return true;
+                });
                 break;
-        }
-        const focused = this.list.getFocus()[0];
-        if (typeof focused === 'number') {
-            this.list.reveal(focused);
+            case QuickPickFocus.NextSeparator: {
+                let foundSeparatorAsItem = false;
+                const before = this._tree.getFocus()[0];
+                this._tree.focusNext(undefined, true, undefined, (e) => {
+                    if (foundSeparatorAsItem) {
+                        // This should be the index right after the separator so it
+                        // is the item we want to focus.
+                        return true;
+                    }
+                    if (e.element instanceof QuickPickSeparatorElement) {
+                        foundSeparatorAsItem = true;
+                        // If the separator is visible, then we should just reveal its first child so it's not as jarring.
+                        if (this._separatorRenderer.isSeparatorVisible(e.element)) {
+                            this._tree.reveal(e.element.children[0]);
+                        }
+                        else {
+                            // If the separator is not visible, then we should
+                            // push it up to the top of the list.
+                            this._tree.reveal(e.element, 0);
+                        }
+                    }
+                    else if (e.element instanceof QuickPickItemElement) {
+                        if (e.element.separator) {
+                            if (this._itemRenderer.isItemWithSeparatorVisible(e.element)) {
+                                this._tree.reveal(e.element);
+                            }
+                            else {
+                                this._tree.reveal(e.element, 0);
+                            }
+                            return true;
+                        }
+                        else if (e.element === this._elementTree[0]) {
+                            // We should stop at the first item in the list if it's a regular item.
+                            this._tree.reveal(e.element, 0);
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+                const after = this._tree.getFocus()[0];
+                if (before === after) {
+                    // If we didn't move, then we should just move to the end
+                    // of the list.
+                    this._tree.scrollTop = this._tree.scrollHeight;
+                    this._tree.focusLast(undefined, (e) => e.element instanceof QuickPickItemElement);
+                }
+                break;
+            }
+            case QuickPickFocus.PreviousSeparator: {
+                let focusElement;
+                // If we are already sitting on an inline separator, then we
+                // have already found the _current_ separator and need to
+                // move to the previous one.
+                let foundSeparator = !!this._tree.getFocus()[0]?.separator;
+                this._tree.focusPrevious(undefined, true, undefined, (e) => {
+                    if (e.element instanceof QuickPickSeparatorElement) {
+                        if (foundSeparator) {
+                            if (!focusElement) {
+                                if (this._separatorRenderer.isSeparatorVisible(e.element)) {
+                                    this._tree.reveal(e.element);
+                                }
+                                else {
+                                    this._tree.reveal(e.element, 0);
+                                }
+                                focusElement = e.element.children[0];
+                            }
+                        }
+                        else {
+                            foundSeparator = true;
+                        }
+                    }
+                    else if (e.element instanceof QuickPickItemElement) {
+                        if (!focusElement) {
+                            if (e.element.separator) {
+                                if (this._itemRenderer.isItemWithSeparatorVisible(e.element)) {
+                                    this._tree.reveal(e.element);
+                                }
+                                else {
+                                    this._tree.reveal(e.element, 0);
+                                }
+                                focusElement = e.element;
+                            }
+                            else if (e.element === this._elementTree[0]) {
+                                // We should stop at the first item in the list if it's a regular item.
+                                this._tree.reveal(e.element, 0);
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                });
+                if (focusElement) {
+                    this._tree.setFocus([focusElement]);
+                }
+                break;
+            }
         }
     }
     clearFocus() {
-        this.list.setFocus([]);
+        this._tree.setFocus([]);
     }
     domFocus() {
-        this.list.domFocus();
-    }
-    /**
-     * Disposes of the hover and shows a new one for the given index if it has a tooltip.
-     * @param element The element to show the hover for
-     */
-    showHover(element) {
-        var _a, _b, _c;
-        if (this.options.hoverDelegate === undefined) {
-            return;
-        }
-        if (this._lastHover && !this._lastHover.isDisposed) {
-            (_b = (_a = this.options.hoverDelegate).onDidHideHover) === null || _b === void 0 ? void 0 : _b.call(_a);
-            (_c = this._lastHover) === null || _c === void 0 ? void 0 : _c.dispose();
-        }
-        if (!element.element || !element.saneTooltip) {
-            return;
-        }
-        this._lastHover = this.options.hoverDelegate.showHover({
-            content: element.saneTooltip,
-            target: element.element,
-            linkHandler: (url) => {
-                this.options.linkOpenerDelegate(url);
-            },
-            showPointer: true,
-            container: this.container,
-            hoverPosition: 1 /* HoverPosition.RIGHT */
-        }, false);
+        this._tree.domFocus();
     }
     layout(maxHeight) {
-        this.list.getHTMLElement().style.maxHeight = maxHeight ? `${
+        this._tree.getHTMLElement().style.maxHeight = maxHeight ? `${
         // Make sure height aligns with list item heights
         Math.floor(maxHeight / 44) * 44
             // Add some extra height so that it's clear there's more to scroll
             + 6}px` : '';
-        this.list.layout();
+        this._tree.layout();
     }
     filter(query) {
-        if (!(this.sortByLabel || this.matchOnLabel || this.matchOnDescription || this.matchOnDetail)) {
-            this.list.layout();
+        this._lastQueryString = query;
+        if (!(this._sortByLabel || this._matchOnLabel || this._matchOnDescription || this._matchOnDetail)) {
+            this._tree.layout();
             return false;
         }
         const queryWithWhitespace = query;
         query = query.trim();
         // Reset filtering
         if (!query || !(this.matchOnLabel || this.matchOnDescription || this.matchOnDetail)) {
-            this.elements.forEach(element => {
+            this._itemElements.forEach(element => {
                 element.labelHighlights = undefined;
                 element.descriptionHighlights = undefined;
                 element.detailHighlights = undefined;
                 element.hidden = false;
-                const previous = element.index && this.inputElements[element.index - 1];
+                const previous = element.index && this._inputElements[element.index - 1];
                 if (element.item) {
                     element.separator = previous && previous.type === 'separator' && !previous.buttons ? previous : undefined;
                 }
@@ -719,17 +1164,16 @@ export class QuickInputList {
         // Filter by value (since we support icons in labels, use $(..) aware fuzzy matching)
         else {
             let currentSeparator;
-            this.elements.forEach(element => {
-                var _a, _b, _c, _d;
+            this._itemElements.forEach(element => {
                 let labelHighlights;
                 if (this.matchOnLabelMode === 'fuzzy') {
-                    labelHighlights = this.matchOnLabel ? (_a = matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneLabel))) !== null && _a !== void 0 ? _a : undefined : undefined;
+                    labelHighlights = this.matchOnLabel ? matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneLabel)) ?? undefined : undefined;
                 }
                 else {
-                    labelHighlights = this.matchOnLabel ? (_b = matchesContiguousIconAware(queryWithWhitespace, parseLabelWithIcons(element.saneLabel))) !== null && _b !== void 0 ? _b : undefined : undefined;
+                    labelHighlights = this.matchOnLabel ? matchesContiguousIconAware(queryWithWhitespace, parseLabelWithIcons(element.saneLabel)) ?? undefined : undefined;
                 }
-                const descriptionHighlights = this.matchOnDescription ? (_c = matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDescription || ''))) !== null && _c !== void 0 ? _c : undefined : undefined;
-                const detailHighlights = this.matchOnDetail ? (_d = matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDetail || ''))) !== null && _d !== void 0 ? _d : undefined : undefined;
+                const descriptionHighlights = this.matchOnDescription ? matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDescription || '')) ?? undefined : undefined;
+                const detailHighlights = this.matchOnDetail ? matchesFuzzyIconAware(query, parseLabelWithIcons(element.saneDetail || '')) ?? undefined : undefined;
                 if (labelHighlights || descriptionHighlights || detailHighlights) {
                     element.labelHighlights = labelHighlights;
                     element.descriptionHighlights = descriptionHighlights;
@@ -751,8 +1195,10 @@ export class QuickInputList {
                 }
                 // we can show the separator unless the list gets sorted by match
                 if (!this.sortByLabel) {
-                    const previous = element.index && this.inputElements[element.index - 1];
-                    currentSeparator = previous && previous.type === 'separator' ? previous : currentSeparator;
+                    const previous = element.index && this._inputElements[element.index - 1] || undefined;
+                    if (previous?.type === 'separator' && !previous.buttons) {
+                        currentSeparator = previous;
+                    }
                     if (currentSeparator && !element.hidden) {
                         element.separator = currentSeparator;
                         currentSeparator = undefined;
@@ -760,69 +1206,32 @@ export class QuickInputList {
                 }
             });
         }
-        const shownElements = this.elements.filter(element => !element.hidden);
-        // Sort by value
-        if (this.sortByLabel && query) {
-            const normalizedSearchValue = query.toLowerCase();
-            shownElements.sort((a, b) => {
-                return compareEntries(a, b, normalizedSearchValue);
-            });
-        }
-        this.elementsToIndexes = shownElements.reduce((map, element, index) => {
-            var _a;
-            map.set((_a = element.item) !== null && _a !== void 0 ? _a : element.separator, index);
-            return map;
-        }, new Map());
-        this.list.splice(0, this.list.length, shownElements);
-        this.list.setFocus([]);
-        this.list.layout();
-        this._onChangedAllVisibleChecked.fire(this.getAllVisibleChecked());
-        this._onChangedVisibleCount.fire(shownElements.length);
+        this._setElementsToTree(this._sortByLabel && query
+            // We don't render any separators if we're sorting so just render the elements
+            ? this._itemElements
+            // Render the full tree
+            : this._elementTree);
+        this._tree.layout();
         return true;
     }
     toggleCheckbox() {
-        try {
-            this._fireCheckedEvents = false;
-            const elements = this.list.getFocusedElements();
-            const allChecked = this.allVisibleChecked(elements);
+        this._elementCheckedEventBufferer.bufferEvents(() => {
+            const elements = this._tree.getFocus().filter((e) => e instanceof QuickPickItemElement);
+            const allChecked = this._allVisibleChecked(elements);
             for (const element of elements) {
-                element.checked = !allChecked;
+                if (!element.checkboxDisabled) {
+                    // Would fire an event if we didn't have the flag set
+                    element.checked = !allChecked;
+                }
             }
-        }
-        finally {
-            this._fireCheckedEvents = true;
-            this.fireCheckedEvents();
-        }
-    }
-    display(display) {
-        this.container.style.display = display ? '' : 'none';
-    }
-    isDisplayed() {
-        return this.container.style.display !== 'none';
-    }
-    dispose() {
-        this.elementDisposables = dispose(this.elementDisposables);
-        this.disposables = dispose(this.disposables);
-    }
-    fireCheckedEvents() {
-        if (this._fireCheckedEvents) {
-            this._onChangedAllVisibleChecked.fire(this.getAllVisibleChecked());
-            this._onChangedCheckedCount.fire(this.getCheckedCount());
-            this._onChangedCheckedElements.fire(this.getCheckedElements());
-        }
-    }
-    fireButtonTriggered(event) {
-        this._onButtonTriggered.fire(event);
-    }
-    fireSeparatorButtonTriggered(event) {
-        this._onSeparatorButtonTriggered.fire(event);
+        });
     }
     style(styles) {
-        this.list.style(styles);
+        this._tree.style(styles);
     }
     toggleHover() {
-        const element = this.list.getFocusedElements()[0];
-        if (!(element === null || element === void 0 ? void 0 : element.saneTooltip)) {
+        const focused = this._tree.getFocus()[0];
+        if (!focused?.saneTooltip || !(focused instanceof QuickPickItemElement)) {
             return;
         }
         // if there's a hover already, hide it (toggle off)
@@ -831,30 +1240,106 @@ export class QuickInputList {
             return;
         }
         // If there is no hover, show it (toggle on)
-        const focused = this.list.getFocusedElements()[0];
-        if (!focused) {
-            return;
-        }
         this.showHover(focused);
         const store = new DisposableStore();
-        store.add(this.list.onDidChangeFocus(e => {
-            if (e.indexes.length) {
+        store.add(this._tree.onDidChangeFocus(e => {
+            if (e.elements[0] instanceof QuickPickItemElement) {
                 this.showHover(e.elements[0]);
             }
         }));
         if (this._lastHover) {
             store.add(this._lastHover);
         }
-        this._toggleHover = store;
-        this.elementDisposables.push(this._toggleHover);
+        this._elementDisposable.add(store);
     }
-}
+    //#endregion
+    //#region private methods
+    _setElementsToTree(elements) {
+        const treeElements = new Array();
+        for (const element of elements) {
+            if (element instanceof QuickPickSeparatorElement) {
+                treeElements.push({
+                    element,
+                    collapsible: false,
+                    collapsed: false,
+                    children: element.children.map(e => ({
+                        element: e,
+                        collapsible: false,
+                        collapsed: false,
+                    })),
+                });
+            }
+            else {
+                treeElements.push({
+                    element,
+                    collapsible: false,
+                    collapsed: false,
+                });
+            }
+        }
+        this._tree.setChildren(null, treeElements);
+    }
+    _allVisibleChecked(elements, whenNoneVisible = true) {
+        for (let i = 0, n = elements.length; i < n; i++) {
+            const element = elements[i];
+            if (!element.hidden && element.item.pickable !== false) {
+                if (!element.checked) {
+                    return false;
+                }
+                else {
+                    whenNoneVisible = true;
+                }
+            }
+        }
+        return whenNoneVisible;
+    }
+    _updateCheckedObservables() {
+        transaction((tx) => {
+            this._allVisibleCheckedObservable.set(this._allVisibleChecked(this._itemElements, false), tx);
+            const checkedCount = this._itemElements.filter(element => element.checked).length;
+            this._checkedCountObservable.set(checkedCount, tx);
+            this._checkedElementsObservable.set(this.getCheckedElements(), tx);
+        });
+    }
+    /**
+     * Disposes of the hover and shows a new one for the given index if it has a tooltip.
+     * @param element The element to show the hover for
+     */
+    showHover(element) {
+        if (this._lastHover && !this._lastHover.isDisposed) {
+            this.hoverDelegate.onDidHideHover?.();
+            this._lastHover?.dispose();
+        }
+        if (!element.element || !element.saneTooltip) {
+            return;
+        }
+        this._lastHover = this.hoverDelegate.showHover({
+            content: element.saneTooltip,
+            target: element.element,
+            linkHandler: (url) => {
+                this.linkOpenerDelegate(url);
+            },
+            appearance: {
+                showPointer: true,
+            },
+            container: this._container,
+            position: {
+                hoverPosition: 1 /* HoverPosition.RIGHT */
+            }
+        }, false);
+    }
+};
 __decorate([
     memoize
 ], QuickInputList.prototype, "onDidChangeFocus", null);
 __decorate([
     memoize
 ], QuickInputList.prototype, "onDidChangeSelection", null);
+QuickInputList = __decorate([
+    __param(4, IInstantiationService),
+    __param(5, IAccessibilityService)
+], QuickInputList);
+export { QuickInputList };
 function matchesContiguousIconAware(query, target) {
     const { text, iconOffsets } = target;
     // Return early if there are no icon markers in the word to match against
@@ -898,29 +1383,4 @@ function compareEntries(elementA, elementB, lookFor) {
     }
     return compareAnything(elementA.saneSortLabel, elementB.saneSortLabel, lookFor);
 }
-class QuickInputAccessibilityProvider {
-    getWidgetAriaLabel() {
-        return localize('quickInput', "Quick Input");
-    }
-    getAriaLabel(element) {
-        var _a;
-        return ((_a = element.separator) === null || _a === void 0 ? void 0 : _a.label)
-            ? `${element.saneAriaLabel}, ${element.separator.label}`
-            : element.saneAriaLabel;
-    }
-    getWidgetRole() {
-        return 'listbox';
-    }
-    getRole(element) {
-        return element.hasCheckbox ? 'checkbox' : 'option';
-    }
-    isChecked(element) {
-        if (!element.hasCheckbox) {
-            return undefined;
-        }
-        return {
-            value: element.checked,
-            onDidChange: element.onChecked
-        };
-    }
-}
+//# sourceMappingURL=quickInputList.js.map

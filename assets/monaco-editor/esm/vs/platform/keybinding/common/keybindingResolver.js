@@ -20,7 +20,6 @@ export class KeybindingResolver {
     defaultKeybindings, 
     /** user's keybindings */
     overrides, log) {
-        var _a;
         this._log = log;
         this._defaultKeybindings = defaultKeybindings;
         this._defaultBoundCommands = new Map();
@@ -40,7 +39,7 @@ export class KeybindingResolver {
                 continue;
             }
             // substitute with constants that are registered after startup - https://github.com/microsoft/vscode/issues/174218#issuecomment-1437972127
-            const when = (_a = k.when) === null || _a === void 0 ? void 0 : _a.substituteConstants();
+            const when = k.when?.substituteConstants();
             if (when && when.type === 0 /* ContextKeyExprType.False */) {
                 // when condition is false
                 continue;
@@ -199,12 +198,12 @@ export class KeybindingResolver {
     getKeybindings() {
         return this._keybindings;
     }
-    lookupPrimaryKeybinding(commandId, context) {
+    lookupPrimaryKeybinding(commandId, context, enforceContextCheck = false) {
         const items = this._lookupMap.get(commandId);
         if (typeof items === 'undefined' || items.length === 0) {
             return null;
         }
-        if (items.length === 1) {
+        if (items.length === 1 && !enforceContextCheck) {
             return items[0];
         }
         for (let i = items.length - 1; i >= 0; i--) {
@@ -212,6 +211,9 @@ export class KeybindingResolver {
             if (context.contextMatchesRules(item.when)) {
                 return item;
             }
+        }
+        if (enforceContextCheck) {
+            return null;
         }
         return items[items.length - 1];
     }
@@ -297,3 +299,4 @@ function printSourceExplanation(kb) {
         ? (kb.isBuiltinExtension ? `built-in extension ${kb.extensionId}` : `user extension ${kb.extensionId}`)
         : (kb.isDefault ? `built-in` : `user`));
 }
+//# sourceMappingURL=keybindingResolver.js.map

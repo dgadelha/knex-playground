@@ -11,7 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 import { $, append, hide, show } from '../../../../base/browser/dom.js';
 import { IconLabel } from '../../../../base/browser/ui/iconLabel/iconLabel.js';
 import { Codicon } from '../../../../base/common/codicons.js';
@@ -29,33 +28,32 @@ import { FileKind } from '../../../../platform/files/common/files.js';
 import { registerIcon } from '../../../../platform/theme/common/iconRegistry.js';
 import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { canExpandCompletionItem } from './suggestWidgetDetails.js';
-export function getAriaId(index) {
-    return `suggest-aria-id:${index}`;
-}
-const suggestMoreInfoIcon = registerIcon('suggest-more-info', Codicon.chevronRight, nls.localize('suggestMoreInfoIcon', 'Icon for more information in the suggest widget.'));
-const _completionItemColor = new (_a = class ColorExtractor {
-        extract(item, out) {
-            if (item.textLabel.match(_a._regexStrict)) {
-                out[0] = item.textLabel;
-                return true;
-            }
-            if (item.completion.detail && item.completion.detail.match(_a._regexStrict)) {
-                out[0] = item.completion.detail;
-                return true;
-            }
-            if (typeof item.completion.documentation === 'string') {
-                const match = _a._regexRelaxed.exec(item.completion.documentation);
-                if (match && (match.index === 0 || match.index + match[0].length === item.completion.documentation.length)) {
-                    out[0] = match[0];
-                    return true;
-                }
-            }
-            return false;
+const suggestMoreInfoIcon = registerIcon('suggest-more-info', Codicon.chevronRight, nls.localize(1477, 'Icon for more information in the suggest widget.'));
+const _completionItemColor = new class ColorExtractor {
+    static { this._regexRelaxed = /(#([\da-fA-F]{3}){1,2}|(rgb|hsl)a\(\s*(\d{1,3}%?\s*,\s*){3}(1|0?\.\d+)\)|(rgb|hsl)\(\s*\d{1,3}%?(\s*,\s*\d{1,3}%?){2}\s*\))/; }
+    static { this._regexStrict = new RegExp(`^${ColorExtractor._regexRelaxed.source}$`, 'i'); }
+    extract(item, out) {
+        if (item.textLabel.match(ColorExtractor._regexStrict)) {
+            out[0] = item.textLabel;
+            return true;
         }
-    },
-    _a._regexRelaxed = /(#([\da-fA-F]{3}){1,2}|(rgb|hsl)a\(\s*(\d{1,3}%?\s*,\s*){3}(1|0?\.\d+)\)|(rgb|hsl)\(\s*\d{1,3}%?(\s*,\s*\d{1,3}%?){2}\s*\))/,
-    _a._regexStrict = new RegExp(`^${_a._regexRelaxed.source}$`, 'i'),
-    _a);
+        if (item.completion.detail && item.completion.detail.match(ColorExtractor._regexStrict)) {
+            out[0] = item.completion.detail;
+            return true;
+        }
+        if (item.completion.documentation) {
+            const value = typeof item.completion.documentation === 'string'
+                ? item.completion.documentation
+                : item.completion.documentation.value;
+            const match = ColorExtractor._regexRelaxed.exec(value);
+            if (match && (match.index === 0 || match.index + match[0].length === value.length)) {
+                out[0] = match[0];
+                return true;
+            }
+        }
+        return false;
+    }
+};
 let ItemRenderer = class ItemRenderer {
     constructor(_editor, _modelService, _languageService, _themeService) {
         this._editor = _editor;
@@ -86,14 +84,15 @@ let ItemRenderer = class ItemRenderer {
         const qualifierLabel = append(left, $('span.qualifier-label'));
         const detailsLabel = append(right, $('span.details-label'));
         const readMore = append(right, $('span.readMore' + ThemeIcon.asCSSSelector(suggestMoreInfoIcon)));
-        readMore.title = nls.localize('readMore', "Read More");
+        readMore.title = nls.localize(1478, "Read More");
         const configureFont = () => {
             const options = this._editor.getOptions();
-            const fontInfo = options.get(50 /* EditorOption.fontInfo */);
+            const fontInfo = options.get(59 /* EditorOption.fontInfo */);
             const fontFamily = fontInfo.getMassagedFontFamily();
             const fontFeatureSettings = fontInfo.fontFeatureSettings;
-            const fontSize = options.get(118 /* EditorOption.suggestFontSize */) || fontInfo.fontSize;
-            const lineHeight = options.get(119 /* EditorOption.suggestLineHeight */) || fontInfo.lineHeight;
+            const fontVariationSettings = fontInfo.fontVariationSettings;
+            const fontSize = options.get(135 /* EditorOption.suggestFontSize */) || fontInfo.fontSize;
+            const lineHeight = options.get(136 /* EditorOption.suggestLineHeight */) || fontInfo.lineHeight;
             const fontWeight = fontInfo.fontWeight;
             const letterSpacing = fontInfo.letterSpacing;
             const fontSizePx = `${fontSize}px`;
@@ -104,23 +103,18 @@ let ItemRenderer = class ItemRenderer {
             root.style.letterSpacing = letterSpacingPx;
             main.style.fontFamily = fontFamily;
             main.style.fontFeatureSettings = fontFeatureSettings;
+            main.style.fontVariationSettings = fontVariationSettings;
             main.style.lineHeight = lineHeightPx;
             icon.style.height = lineHeightPx;
             icon.style.width = lineHeightPx;
             readMore.style.height = lineHeightPx;
             readMore.style.width = lineHeightPx;
         };
-        configureFont();
-        disposables.add(this._editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(50 /* EditorOption.fontInfo */) || e.hasChanged(118 /* EditorOption.suggestFontSize */) || e.hasChanged(119 /* EditorOption.suggestLineHeight */)) {
-                configureFont();
-            }
-        }));
-        return { root, left, right, icon, colorspan, iconLabel, iconContainer, parametersLabel, qualifierLabel, detailsLabel, readMore, disposables };
+        return { root, left, right, icon, colorspan, iconLabel, iconContainer, parametersLabel, qualifierLabel, detailsLabel, readMore, disposables, configureFont };
     }
     renderElement(element, index, data) {
+        data.configureFont();
         const { completion } = element;
-        data.root.id = getAriaId(index);
         data.colorspan.style.backgroundColor = '';
         const labelOptions = {
             labelEscapeNewLines: true,
@@ -171,7 +165,7 @@ let ItemRenderer = class ItemRenderer {
             data.detailsLabel.textContent = stripNewLines(completion.label.description || '');
             data.root.classList.remove('string-label');
         }
-        if (this._editor.getOption(117 /* EditorOption.suggest */).showInlineDetails) {
+        if (this._editor.getOption(134 /* EditorOption.suggest */).showInlineDetails) {
             show(data.detailsLabel);
         }
         else {
@@ -210,3 +204,4 @@ export { ItemRenderer };
 function stripNewLines(str) {
     return str.replace(/\r\n|\r|\n/g, '');
 }
+//# sourceMappingURL=suggestWidgetRenderer.js.map

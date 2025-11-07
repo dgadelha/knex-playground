@@ -89,7 +89,7 @@ export class URI {
         if (thing instanceof URI) {
             return true;
         }
-        if (!thing) {
+        if (!thing || typeof thing !== 'object') {
             return false;
         }
         return typeof thing.authority === 'string'
@@ -308,7 +308,6 @@ export class URI {
         return this;
     }
     static revive(data) {
-        var _a, _b;
         if (!data) {
             return data;
         }
@@ -317,8 +316,8 @@ export class URI {
         }
         else {
             const result = new Uri(data);
-            result._formatted = (_a = data.external) !== null && _a !== void 0 ? _a : null;
-            result._fsPath = data._sep === _pathSepMarker ? (_b = data.fsPath) !== null && _b !== void 0 ? _b : null : null;
+            result._formatted = data.external ?? null;
+            result._fsPath = data._sep === _pathSepMarker ? data.fsPath ?? null : null;
             return result;
         }
     }
@@ -350,6 +349,7 @@ class Uri extends URI {
         }
     }
     toJSON() {
+        // eslint-disable-next-line local/code-no-dangerous-type-assertions
         const res = {
             $mid: 1 /* MarshalledId.Uri */
         };
@@ -585,7 +585,7 @@ function decodeURIComponentGraceful(str) {
     try {
         return decodeURIComponent(str);
     }
-    catch (_a) {
+    catch {
         if (str.length > 3) {
             return str.substr(0, 3) + decodeURIComponentGraceful(str.substr(3));
         }
@@ -601,3 +601,4 @@ function percentDecode(str) {
     }
     return str.replace(_rEncodedAsHex, (match) => decodeURIComponentGraceful(match));
 }
+//# sourceMappingURL=uri.js.map

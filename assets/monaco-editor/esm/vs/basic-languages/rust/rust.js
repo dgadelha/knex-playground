@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/rust/rust.ts
 var conf = {
@@ -262,6 +263,7 @@ var language = {
   floatSuffixes: /f(32|64)/,
   tokenizer: {
     root: [
+      // Raw string literals
       [/r(#*)"/, { token: "string.quote", bracket: "@open", next: "@stringraw.$1" }],
       [
         /[a-zA-Z][a-zA-Z0-9_]*!?|_[a-zA-Z0-9_]+/,
@@ -276,11 +278,16 @@ var language = {
           }
         }
       ],
+      // Designator
       [/\$/, "identifier"],
+      // Lifetime annotations
       [/'[a-zA-Z_][a-zA-Z0-9_]*(?=[^\'])/, "identifier"],
+      // Byte literal
       [/'(\S|@escapes)'/, "string.byteliteral"],
+      // Strings
       [/"/, { token: "string.quote", bracket: "@open", next: "@string" }],
       { include: "@numbers" },
+      // Whitespace + comments
       { include: "@whitespace" },
       [
         /@delimiters/,
@@ -325,11 +332,17 @@ var language = {
       [/["#]/, { token: "string" }]
     ],
     numbers: [
+      //Octal
       [/(0o[0-7_]+)(@intSuffixes)?/, { token: "number" }],
+      //Binary
       [/(0b[0-1_]+)(@intSuffixes)?/, { token: "number" }],
+      //Exponent
       [/[\d][\d_]*(\.[\d][\d_]*)?[eE][+-][\d_]+(@floatSuffixes)?/, { token: "number" }],
+      //Float
       [/\b(\d\.?[\d_]*)(@floatSuffixes)?\b/, { token: "number" }],
+      //Hexadecimal
       [/(0x[\da-fA-F]+)_?(@intSuffixes)?/, { token: "number" }],
+      //Integer
       [/[\d][\d_]*(@intSuffixes?)?/, { token: "number" }]
     ]
   }

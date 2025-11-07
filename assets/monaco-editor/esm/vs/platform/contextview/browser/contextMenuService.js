@@ -15,7 +15,7 @@ import { ModifierKeyEmitter } from '../../../base/browser/dom.js';
 import { Separator } from '../../../base/common/actions.js';
 import { Emitter } from '../../../base/common/event.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
-import { createAndFillInContextMenuActions } from '../../actions/browser/menuEntryActionViewItem.js';
+import { getFlatContextMenuActions } from '../../actions/browser/menuEntryActionViewItem.js';
 import { IMenuService, MenuId } from '../../actions/common/actions.js';
 import { IContextKeyService } from '../../contextkey/common/contextkey.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
@@ -40,7 +40,9 @@ let ContextMenuService = class ContextMenuService extends Disposable {
         this.contextKeyService = contextKeyService;
         this._contextMenuHandler = undefined;
         this._onDidShowContextMenu = this._store.add(new Emitter());
+        this.onDidShowContextMenu = this._onDidShowContextMenu.event;
         this._onDidHideContextMenu = this._store.add(new Emitter());
+        this.onDidHideContextMenu = this._onDidHideContextMenu.event;
     }
     configure(options) {
         this.contextMenuHandler.configure(options);
@@ -48,11 +50,13 @@ let ContextMenuService = class ContextMenuService extends Disposable {
     // ContextMenu
     showContextMenu(delegate) {
         delegate = ContextMenuMenuDelegate.transform(delegate, this.menuService, this.contextKeyService);
-        this.contextMenuHandler.showContextMenu(Object.assign(Object.assign({}, delegate), { onHide: (didCancel) => {
-                var _a;
-                (_a = delegate.onHide) === null || _a === void 0 ? void 0 : _a.call(delegate, didCancel);
+        this.contextMenuHandler.showContextMenu({
+            ...delegate,
+            onHide: (didCancel) => {
+                delegate.onHide?.(didCancel);
                 this._onDidHideContextMenu.fire();
-            } }));
+            }
+        });
         ModifierKeyEmitter.getInstance().resetKeyStatus();
         this._onDidShowContextMenu.fire();
     }
@@ -76,12 +80,13 @@ export var ContextMenuMenuDelegate;
             return delegate;
         }
         const { menuId, menuActionOptions, contextKeyService } = delegate;
-        return Object.assign(Object.assign({}, delegate), { getActions: () => {
-                const target = [];
+        return {
+            ...delegate,
+            getActions: () => {
+                let target = [];
                 if (menuId) {
-                    const menu = menuService.createMenu(menuId, contextKeyService !== null && contextKeyService !== void 0 ? contextKeyService : globalContextKeyService);
-                    createAndFillInContextMenuActions(menu, menuActionOptions, target);
-                    menu.dispose();
+                    const menu = menuService.getMenuActions(menuId, contextKeyService ?? globalContextKeyService, menuActionOptions);
+                    target = getFlatContextMenuActions(menu);
                 }
                 if (!delegate.getActions) {
                     return target;
@@ -89,7 +94,9 @@ export var ContextMenuMenuDelegate;
                 else {
                     return Separator.join(delegate.getActions(), target);
                 }
-            } });
+            }
+        };
     }
     ContextMenuMenuDelegate.transform = transform;
 })(ContextMenuMenuDelegate || (ContextMenuMenuDelegate = {}));
+//# sourceMappingURL=contextMenuService.js.map

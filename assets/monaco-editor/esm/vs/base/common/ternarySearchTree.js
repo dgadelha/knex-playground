@@ -1,3 +1,4 @@
+import { assert } from './assert.js';
 import { compare, compareIgnoreCase, compareSubstring, compareSubstringIgnoreCase } from './strings.js';
 export class StringIterator {
     constructor() {
@@ -201,9 +202,23 @@ export class UriIterator {
         throw new Error();
     }
 }
+class Undef {
+    static { this.Val = Symbol('undefined_placeholder'); }
+    static wrap(value) {
+        return value === undefined ? Undef.Val : value;
+    }
+    static unwrap(value) {
+        return value === Undef.Val ? undefined : value;
+    }
+}
 class TernarySearchTreeNode {
     constructor() {
         this.height = 1;
+        this.value = undefined;
+        this.key = undefined;
+        this.left = undefined;
+        this.mid = undefined;
+        this.right = undefined;
     }
     rotateLeft() {
         const tmp = this.right;
@@ -228,12 +243,10 @@ class TernarySearchTreeNode {
         return this.heightRight - this.heightLeft;
     }
     get heightLeft() {
-        var _a, _b;
-        return (_b = (_a = this.left) === null || _a === void 0 ? void 0 : _a.height) !== null && _b !== void 0 ? _b : 0;
+        return this.left?.height ?? 0;
     }
     get heightRight() {
-        var _a, _b;
-        return (_b = (_a = this.right) === null || _a === void 0 ? void 0 : _a.height) !== null && _b !== void 0 ? _b : 0;
+        return this.right?.height ?? 0;
     }
 }
 export class TernarySearchTree {
@@ -297,8 +310,8 @@ export class TernarySearchTree {
             }
         }
         // set value
-        const oldElement = node.value;
-        node.value = element;
+        const oldElement = Undef.unwrap(node.value);
+        node.value = Undef.wrap(element);
         node.key = key;
         // balance
         for (let i = stack.length - 1; i >= 0; i--) {
@@ -352,8 +365,7 @@ export class TernarySearchTree {
         return oldElement;
     }
     get(key) {
-        var _a;
-        return (_a = this._getNode(key)) === null || _a === void 0 ? void 0 : _a.value;
+        return Undef.unwrap(this._getNode(key)?.value);
     }
     _getNode(key) {
         const iter = this._iter.reset(key);
@@ -381,7 +393,7 @@ export class TernarySearchTree {
     }
     has(key) {
         const node = this._getNode(key);
-        return !((node === null || node === void 0 ? void 0 : node.value) === undefined && (node === null || node === void 0 ? void 0 : node.mid) === undefined);
+        return !(node?.value === undefined && node?.mid === undefined);
     }
     delete(key) {
         return this._delete(key, false);
@@ -390,7 +402,6 @@ export class TernarySearchTree {
         return this._delete(key, true);
     }
     _delete(key, superStr) {
-        var _a;
         const iter = this._iter.reset(key);
         const stack = [];
         let node = this._root;
@@ -439,18 +450,51 @@ export class TernarySearchTree {
                 // full node
                 // replace deleted-node with the min-node of the right branch.
                 // If there is no true min-node leave things as they are
-                const min = this._min(node.right);
+                const stack2 = [[1 /* Dir.Right */, node]];
+                const min = this._min(node.right, stack2);
                 if (min.key) {
-                    const { key, value, segment } = min;
-                    this._delete(min.key, false);
-                    node.key = key;
-                    node.value = value;
-                    node.segment = segment;
+                    node.key = min.key;
+                    node.value = min.value;
+                    node.segment = min.segment;
+                    // remove NODE (inorder successor can only have right child)
+                    const newChild = min.right;
+                    if (stack2.length > 1) {
+                        const [dir, parent] = stack2[stack2.length - 1];
+                        switch (dir) {
+                            case -1 /* Dir.Left */:
+                                parent.left = newChild;
+                                break;
+                            case 0 /* Dir.Mid */: assert(false);
+                            case 1 /* Dir.Right */: assert(false);
+                        }
+                    }
+                    else {
+                        node.right = newChild;
+                    }
+                    // balance right branch and UPDATE parent pointer for stack
+                    const newChild2 = this._balanceByStack(stack2);
+                    if (stack.length > 0) {
+                        const [dir, parent] = stack[stack.length - 1];
+                        switch (dir) {
+                            case -1 /* Dir.Left */:
+                                parent.left = newChild2;
+                                break;
+                            case 0 /* Dir.Mid */:
+                                parent.mid = newChild2;
+                                break;
+                            case 1 /* Dir.Right */:
+                                parent.right = newChild2;
+                                break;
+                        }
+                    }
+                    else {
+                        this._root = newChild2;
+                    }
                 }
             }
             else {
                 // empty or half empty
-                const newChild = (_a = node.left) !== null && _a !== void 0 ? _a : node.right;
+                const newChild = node.left ?? node.right;
                 if (stack.length > 0) {
                     const [dir, parent] = stack[stack.length - 1];
                     switch (dir) {
@@ -471,6 +515,16 @@ export class TernarySearchTree {
             }
         }
         // AVL balance
+        this._root = this._balanceByStack(stack) ?? this._root;
+    }
+    _min(node, stack) {
+        while (node.left) {
+            stack.push([-1 /* Dir.Left */, node]);
+            node = node.left;
+        }
+        return node;
+    }
+    _balanceByStack(stack) {
         for (let i = stack.length - 1; i >= 0; i--) {
             const node = stack[i][1];
             node.updateHeight();
@@ -514,15 +568,10 @@ export class TernarySearchTree {
                 }
             }
             else {
-                this._root = stack[0][1];
+                return stack[0][1];
             }
         }
-    }
-    _min(node) {
-        while (node.left) {
-            node = node.left;
-        }
-        return node;
+        return undefined;
     }
     findSubstr(key) {
         const iter = this._iter.reset(key);
@@ -541,14 +590,14 @@ export class TernarySearchTree {
             else if (iter.hasNext()) {
                 // mid
                 iter.next();
-                candidate = node.value || candidate;
+                candidate = Undef.unwrap(node.value) || candidate;
                 node = node.mid;
             }
             else {
                 break;
             }
         }
-        return node && node.value || candidate;
+        return node && Undef.unwrap(node.value) || candidate;
     }
     findSuperstr(key) {
         return this._findSuperstrOrElement(key, false);
@@ -575,7 +624,7 @@ export class TernarySearchTree {
                 // collect
                 if (!node.mid) {
                     if (allowValue) {
-                        return node.value;
+                        return Undef.unwrap(node.value);
                     }
                     else {
                         return undefined;
@@ -609,8 +658,8 @@ export class TernarySearchTree {
         if (node.left) {
             this._dfsEntries(node.left, bucket);
         }
-        if (node.value) {
-            bucket.push([node.key, node.value]);
+        if (node.value !== undefined) {
+            bucket.push([node.key, Undef.unwrap(node.value)]);
         }
         if (node.mid) {
             this._dfsEntries(node.mid, bucket);
@@ -620,3 +669,4 @@ export class TernarySearchTree {
         }
     }
 }
+//# sourceMappingURL=ternarySearchTree.js.map

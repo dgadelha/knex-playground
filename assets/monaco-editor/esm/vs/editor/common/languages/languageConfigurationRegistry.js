@@ -12,11 +12,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { Emitter } from '../../../base/common/event.js';
-import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
+import { Disposable, markAsSingleton, toDisposable } from '../../../base/common/lifecycle.js';
 import * as strings from '../../../base/common/strings.js';
 import { DEFAULT_WORD_REGEXP, ensureValidWordDefinition } from '../core/wordHelper.js';
 import { AutoClosingPairs } from './languageConfiguration.js';
-import { createScopedLineTokens } from './supports.js';
 import { CharacterPairSupport } from './supports/characterPair.js';
 import { BracketElectricCharacterSupport } from './supports/electricCharacter.js';
 import { IndentRulesSupport } from './supports/indentRules.js';
@@ -137,12 +136,6 @@ export function getIndentationAtPosition(model, lineNumber, column) {
     }
     return indentation;
 }
-export function getScopedLineTokens(model, lineNumber, columnNumber) {
-    model.tokenization.forceTokenization(lineNumber);
-    const lineTokens = model.tokenization.getLineTokens(lineNumber);
-    const column = (typeof columnNumber === 'undefined' ? model.getLineMaxColumn(lineNumber) - 1 : columnNumber - 1);
-    return createScopedLineTokens(lineTokens, column);
-}
 class ComposedLanguageConfiguration {
     constructor(languageId) {
         this.languageId = languageId;
@@ -155,7 +148,7 @@ class ComposedLanguageConfiguration {
         const entry = new LanguageConfigurationContribution(configuration, priority, ++this._order);
         this._entries.push(entry);
         this._resolved = null;
-        return toDisposable(() => {
+        return markAsSingleton(toDisposable(() => {
             for (let i = 0; i < this._entries.length; i++) {
                 if (this._entries[i] === entry) {
                     this._entries.splice(i, 1);
@@ -163,7 +156,7 @@ class ComposedLanguageConfiguration {
                     break;
                 }
             }
-        });
+        }));
     }
     getResolvedConfiguration() {
         if (!this._resolved) {
@@ -271,14 +264,14 @@ export class LanguageConfigurationRegistry extends Disposable {
         }
         const disposable = entries.register(configuration, priority);
         this._onDidChange.fire(new LanguageConfigurationChangeEvent(languageId));
-        return toDisposable(() => {
+        return markAsSingleton(toDisposable(() => {
             disposable.dispose();
             this._onDidChange.fire(new LanguageConfigurationChangeEvent(languageId));
-        });
+        }));
     }
     getLanguageConfiguration(languageId) {
         const entries = this._entries.get(languageId);
-        return (entries === null || entries === void 0 ? void 0 : entries.getResolvedConfiguration()) || null;
+        return entries?.getResolvedConfiguration() || null;
     }
 }
 /**
@@ -347,7 +340,13 @@ export class ResolvedLanguageConfiguration {
         // comment configuration
         const comments = {};
         if (commentRule.lineComment) {
-            comments.lineCommentToken = commentRule.lineComment;
+            if (typeof commentRule.lineComment === 'string') {
+                comments.lineCommentToken = commentRule.lineComment;
+            }
+            else {
+                comments.lineCommentToken = commentRule.lineComment.comment;
+                comments.lineCommentNoIndent = commentRule.lineComment.noIndent;
+            }
         }
         if (commentRule.blockComment) {
             const [blockStart, blockEnd] = commentRule.blockComment;
@@ -358,3 +357,4 @@ export class ResolvedLanguageConfiguration {
     }
 }
 registerSingleton(ILanguageConfigurationService, LanguageConfigurationService, 1 /* InstantiationType.Delayed */);
+//# sourceMappingURL=languageConfigurationRegistry.js.map

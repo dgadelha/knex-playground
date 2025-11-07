@@ -1,6 +1,6 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
@@ -27,18 +27,13 @@ import * as monaco_editor_core_star from "../editor/editor.api.js";
 // src/basic-languages/_.contribution.ts
 var languageDefinitions = {};
 var lazyLanguageLoaders = {};
-var LazyLanguageLoader = class {
+var LazyLanguageLoader = class _LazyLanguageLoader {
   static getOrCreate(languageId) {
     if (!lazyLanguageLoaders[languageId]) {
-      lazyLanguageLoaders[languageId] = new LazyLanguageLoader(languageId);
+      lazyLanguageLoaders[languageId] = new _LazyLanguageLoader(languageId);
     }
     return lazyLanguageLoaders[languageId];
   }
-  _languageId;
-  _loadingTriggered;
-  _lazyLoadPromise;
-  _lazyLoadPromiseResolve;
-  _lazyLoadPromiseReject;
   constructor(languageId) {
     this._languageId = languageId;
     this._loadingTriggered = false;
@@ -50,7 +45,10 @@ var LazyLanguageLoader = class {
   load() {
     if (!this._loadingTriggered) {
       this._loadingTriggered = true;
-      languageDefinitions[this._languageId].loader().then((mod) => this._lazyLoadPromiseResolve(mod), (err) => this._lazyLoadPromiseReject(err));
+      languageDefinitions[this._languageId].loader().then(
+        (mod) => this._lazyLoadPromiseResolve(mod),
+        (err) => this._lazyLoadPromiseReject(err)
+      );
     }
     return this._lazyLoadPromise;
   }

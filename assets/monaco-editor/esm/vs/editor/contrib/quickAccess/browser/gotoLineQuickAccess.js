@@ -7,11 +7,12 @@ import { getCodeEditor } from '../../../browser/editorBrowser.js';
 import { AbstractEditorNavigationQuickAccessProvider } from './editorNavigationQuickAccess.js';
 import { localize } from '../../../../nls.js';
 export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigationQuickAccessProvider {
+    static { this.PREFIX = ':'; }
     constructor() {
         super({ canAcceptInBackground: true });
     }
     provideWithoutTextEditor(picker) {
-        const label = localize('cannotRunGotoLine', "Open a text editor first to go to a line.");
+        const label = localize(1325, "Open a text editor first to go to a line.");
         picker.items = [{ label }];
         picker.ariaLabel = label;
         return Disposable.None;
@@ -61,7 +62,7 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         const codeEditor = getCodeEditor(editor);
         if (codeEditor) {
             const options = codeEditor.getOptions();
-            const lineNumbers = options.get(67 /* EditorOption.lineNumbers */);
+            const lineNumbers = options.get(76 /* EditorOption.lineNumbers */);
             if (lineNumbers.renderType === 2 /* RenderLineNumbersType.Relative */) {
                 codeEditor.updateOptions({ lineNumbers: 'on' });
                 disposables.add(toDisposable(() => codeEditor.updateOptions({ lineNumbers: 'relative' })));
@@ -90,17 +91,17 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         // Location valid: indicate this as picker label
         if (this.isValidLineNumber(editor, lineNumber)) {
             if (this.isValidColumn(editor, lineNumber, column)) {
-                return localize('gotoLineColumnLabel', "Go to line {0} and character {1}.", lineNumber, column);
+                return localize(1326, "Go to line {0} and character {1}.", lineNumber, column);
             }
-            return localize('gotoLineLabel', "Go to line {0}.", lineNumber);
+            return localize(1327, "Go to line {0}.", lineNumber);
         }
         // Location invalid: show generic label
         const position = editor.getPosition() || { lineNumber: 1, column: 1 };
         const lineCount = this.lineCount(editor);
         if (lineCount > 1) {
-            return localize('gotoLineLabelEmptyWithLimit', "Current Line: {0}, Character: {1}. Type a line number between 1 and {2} to navigate to.", position.lineNumber, position.column, lineCount);
+            return localize(1328, "Current Line: {0}, Character: {1}. Type a line number between 1 and {2} to navigate to.", position.lineNumber, position.column, lineCount);
         }
-        return localize('gotoLineLabelEmpty', "Current Line: {0}, Character: {1}. Type a line number to navigate to.", position.lineNumber, position.column);
+        return localize(1329, "Current Line: {0}, Character: {1}. Type a line number to navigate to.", position.lineNumber, position.column);
     }
     isValidLineNumber(editor, lineNumber) {
         if (!lineNumber || typeof lineNumber !== 'number') {
@@ -120,8 +121,7 @@ export class AbstractGotoLineQuickAccessProvider extends AbstractEditorNavigatio
         return model.validatePosition(positionCandidate).equals(positionCandidate);
     }
     lineCount(editor) {
-        var _a, _b;
-        return (_b = (_a = this.getModel(editor)) === null || _a === void 0 ? void 0 : _a.getLineCount()) !== null && _b !== void 0 ? _b : 0;
+        return this.getModel(editor)?.getLineCount() ?? 0;
     }
 }
-AbstractGotoLineQuickAccessProvider.PREFIX = ':';
+//# sourceMappingURL=gotoLineQuickAccess.js.map

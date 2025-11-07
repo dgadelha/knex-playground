@@ -74,7 +74,7 @@ export class RangeMap {
         this.groups = [];
         this._size = 0;
         this._paddingTop = 0;
-        this._paddingTop = topPadding !== null && topPadding !== void 0 ? topPadding : 0;
+        this._paddingTop = topPadding ?? 0;
         this._size = this._paddingTop;
     }
     splice(index, deleteCount, items = []) {
@@ -156,3 +156,4 @@ export class RangeMap {
         return -1;
     }
 }
+//# sourceMappingURL=rangeMap.js.map

@@ -2,15 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { createTrustedTypesPolicy } from '../../../base/browser/trustedTypes.js';
 import * as strings from '../../../base/common/strings.js';
 import { TokenizationRegistry } from '../../common/languages.js';
@@ -33,37 +24,34 @@ export class Colorizer {
         const text = domNode.firstChild ? domNode.firstChild.nodeValue : '';
         domNode.className += ' ' + theme;
         const render = (str) => {
-            var _a;
-            const trustedhtml = (_a = ttPolicy === null || ttPolicy === void 0 ? void 0 : ttPolicy.createHTML(str)) !== null && _a !== void 0 ? _a : str;
+            const trustedhtml = ttPolicy?.createHTML(str) ?? str;
             domNode.innerHTML = trustedhtml;
         };
         return this.colorize(languageService, text || '', languageId, options).then(render, (err) => console.error(err));
     }
-    static colorize(languageService, text, languageId, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const languageIdCodec = languageService.languageIdCodec;
-            let tabSize = 4;
-            if (options && typeof options.tabSize === 'number') {
-                tabSize = options.tabSize;
-            }
-            if (strings.startsWithUTF8BOM(text)) {
-                text = text.substr(1);
-            }
-            const lines = strings.splitLines(text);
-            if (!languageService.isRegisteredLanguageId(languageId)) {
-                return _fakeColorize(lines, tabSize, languageIdCodec);
-            }
-            const tokenizationSupport = yield TokenizationRegistry.getOrCreate(languageId);
-            if (tokenizationSupport) {
-                return _colorize(lines, tabSize, tokenizationSupport, languageIdCodec);
-            }
+    static async colorize(languageService, text, languageId, options) {
+        const languageIdCodec = languageService.languageIdCodec;
+        let tabSize = 4;
+        if (options && typeof options.tabSize === 'number') {
+            tabSize = options.tabSize;
+        }
+        if (strings.startsWithUTF8BOM(text)) {
+            text = text.substr(1);
+        }
+        const lines = strings.splitLines(text);
+        if (!languageService.isRegisteredLanguageId(languageId)) {
             return _fakeColorize(lines, tabSize, languageIdCodec);
-        });
+        }
+        const tokenizationSupport = await TokenizationRegistry.getOrCreate(languageId);
+        if (tokenizationSupport) {
+            return _colorize(lines, tabSize, tokenizationSupport, languageIdCodec);
+        }
+        return _fakeColorize(lines, tabSize, languageIdCodec);
     }
     static colorizeLine(line, mightContainNonBasicASCII, mightContainRTL, tokens, tabSize = 4) {
         const isBasicASCII = ViewLineRenderingData.isBasicASCII(line, mightContainNonBasicASCII);
         const containsRTL = ViewLineRenderingData.containsRTL(line, isBasicASCII, mightContainRTL);
-        const renderResult = renderViewLine(new RenderLineInput(false, true, line, false, isBasicASCII, containsRTL, 0, tokens, [], tabSize, 0, 0, 0, 0, -1, 'none', false, false, null));
+        const renderResult = renderViewLine(new RenderLineInput(false, true, line, false, isBasicASCII, containsRTL, 0, tokens, [], tabSize, 0, 0, 0, 0, -1, 'none', false, false, null, null, 0));
         return renderResult.html;
     }
     static colorizeModelLine(model, lineNumber, tabSize = 4) {
@@ -104,7 +92,7 @@ function _fakeColorize(lines, tabSize, languageIdCodec) {
         const lineTokens = new LineTokens(tokens, line, languageIdCodec);
         const isBasicASCII = ViewLineRenderingData.isBasicASCII(line, /* check for basic ASCII */ true);
         const containsRTL = ViewLineRenderingData.containsRTL(line, isBasicASCII, /* check for RTL */ true);
-        const renderResult = renderViewLine(new RenderLineInput(false, true, line, false, isBasicASCII, containsRTL, 0, lineTokens, [], tabSize, 0, 0, 0, 0, -1, 'none', false, false, null));
+        const renderResult = renderViewLine(new RenderLineInput(false, true, line, false, isBasicASCII, containsRTL, 0, lineTokens, [], tabSize, 0, 0, 0, 0, -1, 'none', false, false, null, null, 0));
         html = html.concat(renderResult.html);
         html.push('<br/>');
     }
@@ -120,10 +108,11 @@ function _actualColorize(lines, tabSize, tokenizationSupport, languageIdCodec) {
         const lineTokens = new LineTokens(tokenizeResult.tokens, line, languageIdCodec);
         const isBasicASCII = ViewLineRenderingData.isBasicASCII(line, /* check for basic ASCII */ true);
         const containsRTL = ViewLineRenderingData.containsRTL(line, isBasicASCII, /* check for RTL */ true);
-        const renderResult = renderViewLine(new RenderLineInput(false, true, line, false, isBasicASCII, containsRTL, 0, lineTokens.inflate(), [], tabSize, 0, 0, 0, 0, -1, 'none', false, false, null));
+        const renderResult = renderViewLine(new RenderLineInput(false, true, line, false, isBasicASCII, containsRTL, 0, lineTokens.inflate(), [], tabSize, 0, 0, 0, 0, -1, 'none', false, false, null, null, 0));
         html = html.concat(renderResult.html);
         html.push('<br/>');
         state = tokenizeResult.endState;
     }
     return html.join('');
 }
+//# sourceMappingURL=colorizer.js.map

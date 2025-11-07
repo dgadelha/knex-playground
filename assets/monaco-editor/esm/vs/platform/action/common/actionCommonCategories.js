@@ -2,12 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { localize } from '../../../nls.js';
+import { localize2 } from '../../../nls.js';
 export const Categories = Object.freeze({
-    View: { value: localize('view', "View"), original: 'View' },
-    Help: { value: localize('help', "Help"), original: 'Help' },
-    Test: { value: localize('test', "Test"), original: 'Test' },
-    File: { value: localize('file', "File"), original: 'File' },
-    Preferences: { value: localize('preferences', "Preferences"), original: 'Preferences' },
-    Developer: { value: localize({ key: 'developer', comment: ['A developer on Code itself or someone diagnosing issues in Code'] }, "Developer"), original: 'Developer' }
+    View: localize2(1623, 'View'),
+    Help: localize2(1624, 'Help'),
+    Test: localize2(1625, 'Test'),
+    File: localize2(1626, 'File'),
+    Preferences: localize2(1627, 'Preferences'),
+    Developer: localize2(1628, "Developer"),
 });
+//# sourceMappingURL=actionCommonCategories.js.map

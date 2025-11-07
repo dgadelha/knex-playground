@@ -1,14 +1,16 @@
+import { Emitter } from '../../../common/event.js';
 import { $, append } from '../../dom.js';
 import { BaseActionViewItem } from '../actionbar/actionViewItems.js';
-import { DropdownMenu } from './dropdown.js';
-import { Emitter } from '../../../common/event.js';
+import { getBaseLayerHoverDelegate } from '../hover/hoverDelegate2.js';
+import { getDefaultHoverDelegate } from '../hover/hoverDelegateFactory.js';
 import './dropdown.css';
+import { DropdownMenu } from './dropdown.js';
 export class DropdownMenuActionViewItem extends BaseActionViewItem {
+    get onDidChangeVisibility() { return this._onDidChangeVisibility.event; }
     constructor(action, menuActionsOrProvider, contextMenuProvider, options = Object.create(null)) {
         super(null, action, options);
         this.actionItem = null;
         this._onDidChangeVisibility = this._register(new Emitter());
-        this.onDidChangeVisibility = this._onDidChangeVisibility.event;
         this.menuActionsOrProvider = menuActionsOrProvider;
         this.contextMenuProvider = contextMenuProvider;
         this.options = options;
@@ -20,24 +22,7 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
         this.actionItem = container;
         const labelRenderer = (el) => {
             this.element = append(el, $('a.action-label'));
-            let classNames = [];
-            if (typeof this.options.classNames === 'string') {
-                classNames = this.options.classNames.split(/\s+/g).filter(s => !!s);
-            }
-            else if (this.options.classNames) {
-                classNames = this.options.classNames;
-            }
-            // todo@aeschli: remove codicon, should come through `this.options.classNames`
-            if (!classNames.find(c => c === 'icon')) {
-                classNames.push('codicon');
-            }
-            this.element.classList.add(...classNames);
-            this.element.setAttribute('role', 'button');
-            this.element.setAttribute('aria-haspopup', 'true');
-            this.element.setAttribute('aria-expanded', 'false');
-            this.element.title = this._action.label || '';
-            this.element.ariaLabel = this._action.label || '';
-            return null;
+            return this.renderLabel(this.element);
         };
         const isActionsArray = Array.isArray(this.menuActionsOrProvider);
         const options = {
@@ -50,8 +35,7 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
         };
         this.dropdownMenu = this._register(new DropdownMenu(container, options));
         this._register(this.dropdownMenu.onDidChangeVisibility(visible => {
-            var _a;
-            (_a = this.element) === null || _a === void 0 ? void 0 : _a.setAttribute('aria-expanded', `${visible}`);
+            this.element?.setAttribute('aria-expanded', `${visible}`);
             this._onDidChangeVisibility.fire(visible);
         }));
         this.dropdownMenu.menuOptions = {
@@ -62,12 +46,33 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
         };
         if (this.options.anchorAlignmentProvider) {
             const that = this;
-            this.dropdownMenu.menuOptions = Object.assign(Object.assign({}, this.dropdownMenu.menuOptions), { get anchorAlignment() {
+            this.dropdownMenu.menuOptions = {
+                ...this.dropdownMenu.menuOptions,
+                get anchorAlignment() {
                     return that.options.anchorAlignmentProvider();
-                } });
+                }
+            };
         }
         this.updateTooltip();
         this.updateEnabled();
+    }
+    renderLabel(element) {
+        let classNames = [];
+        if (typeof this.options.classNames === 'string') {
+            classNames = this.options.classNames.split(/\s+/g).filter(s => !!s);
+        }
+        else if (this.options.classNames) {
+            classNames = this.options.classNames;
+        }
+        // todo@aeschli: remove codicon, should come through `this.options.classNames`
+        if (!classNames.find(c => c === 'icon')) {
+            classNames.push('codicon');
+        }
+        element.classList.add(...classNames);
+        if (this._action.label) {
+            this._register(getBaseLayerHoverDelegate().setupManagedHover(this.options.hoverDelegate ?? getDefaultHoverDelegate('mouse'), element, this._action.label));
+        }
+        return null;
     }
     getTooltip() {
         let title = null;
@@ -77,7 +82,7 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
         else if (this.action.label) {
             title = this.action.label;
         }
-        return title !== null && title !== void 0 ? title : undefined;
+        return title ?? undefined;
     }
     setActionContext(newContext) {
         super.setActionContext(newContext);
@@ -91,13 +96,12 @@ export class DropdownMenuActionViewItem extends BaseActionViewItem {
         }
     }
     show() {
-        var _a;
-        (_a = this.dropdownMenu) === null || _a === void 0 ? void 0 : _a.show();
+        this.dropdownMenu?.show();
     }
     updateEnabled() {
-        var _a, _b;
         const disabled = !this.action.enabled;
-        (_a = this.actionItem) === null || _a === void 0 ? void 0 : _a.classList.toggle('disabled', disabled);
-        (_b = this.element) === null || _b === void 0 ? void 0 : _b.classList.toggle('disabled', disabled);
+        this.actionItem?.classList.toggle('disabled', disabled);
+        this.element?.classList.toggle('disabled', disabled);
     }
 }
+//# sourceMappingURL=dropdownActionViewItem.js.map

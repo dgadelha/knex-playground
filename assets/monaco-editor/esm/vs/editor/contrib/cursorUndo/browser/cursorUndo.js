@@ -32,6 +32,7 @@ class StackElement {
     }
 }
 export class CursorUndoRedoController extends Disposable {
+    static { this.ID = 'editor.contrib.cursorUndoRedoController'; }
     static get(editor) {
         return editor.getContribution(CursorUndoRedoController.ID);
     }
@@ -95,13 +96,11 @@ export class CursorUndoRedoController extends Disposable {
         this._isCursorUndoRedo = false;
     }
 }
-CursorUndoRedoController.ID = 'editor.contrib.cursorUndoRedoController';
 export class CursorUndo extends EditorAction {
     constructor() {
         super({
             id: 'cursorUndo',
-            label: nls.localize('cursor.undo', "Cursor Undo"),
-            alias: 'Cursor Undo',
+            label: nls.localize2(906, "Cursor Undo"),
             precondition: undefined,
             kbOpts: {
                 kbExpr: EditorContextKeys.textInputFocus,
@@ -111,24 +110,22 @@ export class CursorUndo extends EditorAction {
         });
     }
     run(accessor, editor, args) {
-        var _a;
-        (_a = CursorUndoRedoController.get(editor)) === null || _a === void 0 ? void 0 : _a.cursorUndo();
+        CursorUndoRedoController.get(editor)?.cursorUndo();
     }
 }
 export class CursorRedo extends EditorAction {
     constructor() {
         super({
             id: 'cursorRedo',
-            label: nls.localize('cursor.redo', "Cursor Redo"),
-            alias: 'Cursor Redo',
+            label: nls.localize2(907, "Cursor Redo"),
             precondition: undefined
         });
     }
     run(accessor, editor, args) {
-        var _a;
-        (_a = CursorUndoRedoController.get(editor)) === null || _a === void 0 ? void 0 : _a.cursorRedo();
+        CursorUndoRedoController.get(editor)?.cursorRedo();
     }
 }
 registerEditorContribution(CursorUndoRedoController.ID, CursorUndoRedoController, 0 /* EditorContributionInstantiation.Eager */); // eager because it needs to listen to record cursor state ASAP
 registerEditorAction(CursorUndo);
 registerEditorAction(CursorRedo);
+//# sourceMappingURL=cursorUndo.js.map

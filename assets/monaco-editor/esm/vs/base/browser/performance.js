@@ -5,9 +5,9 @@
 export var inputLatency;
 (function (inputLatency) {
     const totalKeydownTime = { total: 0, min: Number.MAX_VALUE, max: 0 };
-    const totalInputTime = Object.assign({}, totalKeydownTime);
-    const totalRenderTime = Object.assign({}, totalKeydownTime);
-    const totalInputLatencyTime = Object.assign({}, totalKeydownTime);
+    const totalInputTime = { ...totalKeydownTime };
+    const totalRenderTime = { ...totalKeydownTime };
+    const totalInputLatencyTime = { ...totalKeydownTime };
     let measurementsCount = 0;
     const state = {
         keydown: 0 /* EventPhase.Before */,
@@ -218,3 +218,4 @@ export var inputLatency;
         cumulative.max = 0;
     }
 })(inputLatency || (inputLatency = {}));
+//# sourceMappingURL=performance.js.map

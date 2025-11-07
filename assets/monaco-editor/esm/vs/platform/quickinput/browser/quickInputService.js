@@ -16,13 +16,15 @@ import { Emitter } from '../../../base/common/event.js';
 import { IContextKeyService, RawContextKey } from '../../contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../instantiation/common/instantiation.js';
 import { ILayoutService } from '../../layout/browser/layoutService.js';
-import { WorkbenchList } from '../../list/browser/listService.js';
 import { IOpenerService } from '../../opener/common/opener.js';
 import { QuickAccessController } from './quickAccess.js';
 import { defaultButtonStyles, defaultCountBadgeStyles, defaultInputBoxStyles, defaultKeybindingLabelStyles, defaultProgressBarStyles, defaultToggleStyles, getListStyles } from '../../theme/browser/defaultStyles.js';
 import { activeContrastBorder, asCssVariable, pickerGroupBorder, pickerGroupForeground, quickInputBackground, quickInputForeground, quickInputListFocusBackground, quickInputListFocusForeground, quickInputListFocusIconForeground, quickInputTitleBackground, widgetBorder, widgetShadow } from '../../theme/common/colorRegistry.js';
 import { IThemeService, Themable } from '../../theme/common/themeService.js';
+import { QuickInputHoverDelegate } from './quickInput.js';
 import { QuickInputController } from './quickInputController.js';
+import { IConfigurationService } from '../../configuration/common/configuration.js';
+import { getWindow } from '../../../base/browser/dom.js';
 let QuickInputService = class QuickInputService extends Themable {
     get controller() {
         if (!this._controller) {
@@ -31,17 +33,19 @@ let QuickInputService = class QuickInputService extends Themable {
         return this._controller;
     }
     get hasController() { return !!this._controller; }
+    get currentQuickInput() { return this.controller.currentQuickInput; }
     get quickAccess() {
         if (!this._quickAccess) {
             this._quickAccess = this._register(this.instantiationService.createInstance(QuickAccessController));
         }
         return this._quickAccess;
     }
-    constructor(instantiationService, contextKeyService, themeService, layoutService) {
+    constructor(instantiationService, contextKeyService, themeService, layoutService, configurationService) {
         super(themeService);
         this.instantiationService = instantiationService;
         this.contextKeyService = contextKeyService;
         this.layoutService = layoutService;
+        this.configurationService = configurationService;
         this._onShow = this._register(new Emitter());
         this._onHide = this._register(new Emitter());
         this.contexts = new Map();
@@ -49,7 +53,7 @@ let QuickInputService = class QuickInputService extends Themable {
     createController(host = this.layoutService, options) {
         const defaultOptions = {
             idPrefix: 'quickInput_',
-            container: host.container,
+            container: host.activeContainer,
             ignoreFocusOut: () => false,
             backKeybindingLabel: () => undefined,
             setContextKey: (id) => this.setContextKey(id),
@@ -61,13 +65,26 @@ let QuickInputService = class QuickInputService extends Themable {
                 });
             },
             returnFocus: () => host.focus(),
-            createList: (user, container, delegate, renderers, options) => this.instantiationService.createInstance(WorkbenchList, user, container, delegate, renderers, options),
-            styles: this.computeStyles()
+            styles: this.computeStyles(),
+            hoverDelegate: this._register(this.instantiationService.createInstance(QuickInputHoverDelegate))
         };
-        const controller = this._register(new QuickInputController(Object.assign(Object.assign({}, defaultOptions), options), this.themeService));
-        controller.layout(host.dimension, host.offset.quickPickTop);
+        const controller = this._register(this.instantiationService.createInstance(QuickInputController, {
+            ...defaultOptions,
+            ...options
+        }));
+        controller.layout(host.activeContainerDimension, host.activeContainerOffset.quickPickTop);
         // Layout changes
-        this._register(host.onDidLayout(dimension => controller.layout(dimension, host.offset.quickPickTop)));
+        this._register(host.onDidLayoutActiveContainer(dimension => {
+            if (getWindow(host.activeContainer) === getWindow(controller.container)) {
+                controller.layout(dimension, host.activeContainerOffset.quickPickTop);
+            }
+        }));
+        this._register(host.onDidChangeActiveContainer(() => {
+            if (controller.isVisible()) {
+                return;
+            }
+            controller.layout(host.activeContainerDimension, host.activeContainerOffset.quickPickTop);
+        }));
         // Context keys
         this._register(controller.onShow(() => {
             this.resetContextKeys();
@@ -93,7 +110,7 @@ let QuickInputService = class QuickInputService extends Themable {
             return; // already active context
         }
         this.resetContextKeys();
-        key === null || key === void 0 ? void 0 : key.set(true);
+        key?.set(true);
     }
     resetContextKeys() {
         this.contexts.forEach(context => {
@@ -102,14 +119,22 @@ let QuickInputService = class QuickInputService extends Themable {
             }
         });
     }
-    pick(picks, options = {}, token = CancellationToken.None) {
+    pick(picks, options, token = CancellationToken.None) {
         return this.controller.pick(picks, options, token);
     }
-    createQuickPick() {
-        return this.controller.createQuickPick();
+    input(options = {}, token = CancellationToken.None) {
+        return this.controller.input(options, token);
+    }
+    createQuickPick(options = { useSeparators: false }) {
+        return this.controller.createQuickPick(options);
     }
     createInputBox() {
         return this.controller.createInputBox();
+    }
+    toggleHover() {
+        if (this.hasController) {
+            this.controller.toggleHover();
+        }
     }
     updateStyles() {
         if (this.hasController) {
@@ -141,6 +166,7 @@ let QuickInputService = class QuickInputService extends Themable {
                 listInactiveFocusBackground: quickInputListFocusBackground,
                 listFocusOutline: activeContrastBorder,
                 listInactiveFocusOutline: activeContrastBorder,
+                treeStickyScrollBackground: quickInputBackground,
             }),
             pickerGroup: {
                 pickerGroupBorder: asCssVariable(pickerGroupBorder),
@@ -153,6 +179,8 @@ QuickInputService = __decorate([
     __param(0, IInstantiationService),
     __param(1, IContextKeyService),
     __param(2, IThemeService),
-    __param(3, ILayoutService)
+    __param(3, ILayoutService),
+    __param(4, IConfigurationService)
 ], QuickInputService);
 export { QuickInputService };
+//# sourceMappingURL=quickInputService.js.map

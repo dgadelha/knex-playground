@@ -28,15 +28,16 @@ exports.features = [
     "entry": "vs/editor/contrib/codeAction/browser/codeActionContributions"
   },
   {
+    "label": "codeEditor",
+    "entry": "vs/editor/browser/widget/codeEditor/codeEditorWidget"
+  },
+  {
     "label": "codelens",
     "entry": "vs/editor/contrib/codelens/browser/codelensController"
   },
   {
     "label": "colorPicker",
-    "entry": [
-      "vs/editor/contrib/colorPicker/browser/colorContributions",
-      "vs/editor/contrib/colorPicker/browser/standaloneColorPickerActions"
-    ]
+    "entry": "vs/editor/contrib/colorPicker/browser/colorPickerContribution"
   },
   {
     "label": "comment",
@@ -53,6 +54,10 @@ exports.features = [
   {
     "label": "diffEditor",
     "entry": "vs/editor/browser/widget/diffEditor/diffEditor.contribution"
+  },
+  {
+    "label": "diffEditorBreadcrumbs",
+    "entry": "vs/editor/contrib/diffEditorBreadcrumbs/browser/contribution"
   },
   {
     "label": "dnd",
@@ -72,6 +77,10 @@ exports.features = [
   {
     "label": "find",
     "entry": "vs/editor/contrib/find/browser/findController"
+  },
+  {
+    "label": "floatingMenu",
+    "entry": "vs/editor/contrib/floatingMenu/browser/floatingMenu.contribution"
   },
   {
     "label": "folding",
@@ -101,8 +110,12 @@ exports.features = [
     ]
   },
   {
+    "label": "gpu",
+    "entry": "vs/editor/contrib/gpu/browser/gpuActions"
+  },
+  {
     "label": "hover",
-    "entry": "vs/editor/contrib/hover/browser/hover"
+    "entry": "vs/editor/contrib/hover/browser/hoverContribution"
   },
   {
     "label": "iPadShowKeyboard",
@@ -129,6 +142,10 @@ exports.features = [
     "entry": "vs/editor/contrib/inlineProgress/browser/inlineProgress"
   },
   {
+    "label": "insertFinalNewLine",
+    "entry": "vs/editor/contrib/insertFinalNewLine/browser/insertFinalNewLine"
+  },
+  {
     "label": "inspectTokens",
     "entry": "vs/editor/standalone/browser/inspectTokens/inspectTokens"
   },
@@ -153,12 +170,20 @@ exports.features = [
     "entry": "vs/editor/contrib/longLinesHelper/browser/longLinesHelper"
   },
   {
+    "label": "middleScroll",
+    "entry": "vs/editor/contrib/middleScroll/browser/middleScroll.contribution"
+  },
+  {
     "label": "multicursor",
     "entry": "vs/editor/contrib/multicursor/browser/multicursor"
   },
   {
     "label": "parameterHints",
     "entry": "vs/editor/contrib/parameterHints/browser/parameterHints"
+  },
+  {
+    "label": "placeholderText",
+    "entry": "vs/editor/contrib/placeholderText/browser/placeholderText.contribution"
   },
   {
     "label": "quickCommand",
@@ -183,6 +208,10 @@ exports.features = [
   {
     "label": "rename",
     "entry": "vs/editor/contrib/rename/browser/rename"
+  },
+  {
+    "label": "sectionHeaders",
+    "entry": "vs/editor/contrib/sectionHeaders/browser/sectionHeaders"
   },
   {
     "label": "semanticTokens",
@@ -576,6 +605,10 @@ exports.languages = [
       "id": "vs/language/typescript/tsWorker",
       "entry": "vs/language/typescript/ts.worker"
     }
+  },
+  {
+    "label": "typespec",
+    "entry": "vs/basic-languages/typespec/typespec.contribution"
   },
   {
     "label": "vb",

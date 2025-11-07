@@ -1,12 +1,13 @@
 /**
- * Returns the last element of an array.
- * @param array The array.
- * @param n Which element from the end (default is zero).
+ * Returns the last entry and the initial N-1 entries of the array, as a tuple of [rest, last].
+ *
+ * The array must have at least one element.
+ *
+ * @param arr The input array
+ * @returns A tuple of [rest, last] where rest is all but the last element and last is the last element
+ * @throws Error if the array is empty
  */
-export function tail(array, n = 0) {
-    return array[array.length - (1 + n)];
-}
-export function tail2(arr) {
+export function tail(arr) {
     if (arr.length === 0) {
         throw new Error('Invalid tail call');
     }
@@ -169,7 +170,7 @@ export function forEachWithNeighbors(arr, f) {
  * @returns New array with all falsy values removed. The original array IS NOT modified.
  */
 export function coalesce(array) {
-    return array.filter(e => !!e);
+    return array.filter((e) => !!e);
 }
 /**
  * Remove all falsy values from `array`. The original array IS modified.
@@ -207,9 +208,6 @@ export function distinct(array, keyFn = value => value) {
         seen.add(key);
         return true;
     });
-}
-export function firstOrDefault(array, notFoundValue) {
-    return array.length > 0 ? array[0] : notFoundValue;
 }
 export function range(arg, to) {
     let from = typeof to === 'number' ? arg : 0;
@@ -361,13 +359,28 @@ export const booleanComparator = (a, b) => numberComparator(a ? 1 : 0, b ? 1 : 0
 export function reverseOrder(comparator) {
     return (a, b) => -comparator(a, b);
 }
+/**
+ * Returns a new comparator that treats `undefined` as the smallest value.
+ * All other values are compared using the given comparator.
+*/
+export function compareUndefinedSmallest(comparator) {
+    return (a, b) => {
+        if (a === undefined) {
+            return b === undefined ? CompareResult.neitherLessOrGreaterThan : CompareResult.lessThan;
+        }
+        else if (b === undefined) {
+            return CompareResult.greaterThan;
+        }
+        return comparator(a, b);
+    };
+}
 export class ArrayQueue {
     /**
      * Constructs a queue that is backed by the given array. Runtime is O(1).
     */
     constructor(items) {
-        this.items = items;
         this.firstIdx = 0;
+        this.items = items;
         this.lastIdx = this.items.length - 1;
     }
     get length() {
@@ -425,6 +438,7 @@ export class ArrayQueue {
  * This class is faster than an iterator and array for lazy computed data.
 */
 export class CallbackIterable {
+    static { this.empty = new CallbackIterable(_callback => { }); }
     constructor(
     /**
      * Calls the callback for every item.
@@ -467,4 +481,38 @@ export class CallbackIterable {
         return result;
     }
 }
-CallbackIterable.empty = new CallbackIterable(_callback => { });
+/**
+ * Represents a re-arrangement of items in an array.
+ */
+export class Permutation {
+    constructor(_indexMap) {
+        this._indexMap = _indexMap;
+    }
+    /**
+     * Returns a permutation that sorts the given array according to the given compare function.
+     */
+    static createSortPermutation(arr, compareFn) {
+        const sortIndices = Array.from(arr.keys()).sort((index1, index2) => compareFn(arr[index1], arr[index2]));
+        return new Permutation(sortIndices);
+    }
+    /**
+     * Returns a new array with the elements of the given array re-arranged according to this permutation.
+     */
+    apply(arr) {
+        return arr.map((_, index) => arr[this._indexMap[index]]);
+    }
+    /**
+     * Returns a new permutation that undoes the re-arrangement of this permutation.
+    */
+    inverse() {
+        const inverseIndexMap = this._indexMap.slice();
+        for (let i = 0; i < this._indexMap.length; i++) {
+            inverseIndexMap[this._indexMap[i]] = i;
+        }
+        return new Permutation(inverseIndexMap);
+    }
+}
+export function sum(array) {
+    return array.reduce((acc, value) => acc + value, 0);
+}
+//# sourceMappingURL=arrays.js.map

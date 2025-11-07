@@ -4,20 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { splitLines } from '../../../../../base/common/strings.js';
 import { Range } from '../../../core/range.js';
-/**
- * Represents a non-negative length in terms of line and column count.
- * Prefer using {@link Length} for performance reasons.
-*/
-export class LengthObj {
-    constructor(lineCount, columnCount) {
-        this.lineCount = lineCount;
-        this.columnCount = columnCount;
-    }
-    toString() {
-        return `${this.lineCount},${this.columnCount}`;
-    }
-}
-LengthObj.zero = new LengthObj(0, 0);
+import { TextLength } from '../../../core/text/textLength.js';
 /**
  * The end must be greater than or equal to the start.
 */
@@ -35,7 +22,7 @@ export function lengthIsZero(length) {
  * We use the upper 26 bits to store the line and the lower 26 bits to store the column.
  */
 ///*
-const factor = Math.pow(2, 26);
+const factor = 2 ** 26;
 /*/
 const factor = 1000000;
 // */
@@ -50,7 +37,7 @@ export function lengthToObj(length) {
     const l = length;
     const lineCount = Math.floor(l / factor);
     const columnCount = l - lineCount * factor;
-    return new LengthObj(lineCount, columnCount);
+    return new TextLength(lineCount, columnCount);
 }
 export function lengthGetLineCount(length) {
     return Math.floor(length / factor);
@@ -123,3 +110,4 @@ export function lengthOfString(str) {
     const lines = splitLines(str);
     return toLength(lines.length - 1, lines[lines.length - 1].length);
 }
+//# sourceMappingURL=length.js.map

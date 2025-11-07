@@ -3,53 +3,44 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { findLastIdxMonotonous, findLastMonotonous, findFirstMonotonous } from '../../../../base/common/arraysFind.js';
-import { OffsetRange } from '../../core/offsetRange.js';
+import { OffsetRange } from '../../core/ranges/offsetRange.js';
 import { Position } from '../../core/position.js';
 import { Range } from '../../core/range.js';
 import { isSpace } from './utils.js';
 export class LinesSliceCharSequence {
-    constructor(lines, lineRange, considerWhitespaceChanges) {
-        // This slice has to have lineRange.length many \n! (otherwise diffing against an empty slice will be problematic)
-        // (Unless it covers the entire document, in that case the other slice also has to cover the entire document ands it's okay)
+    constructor(lines, range, considerWhitespaceChanges) {
         this.lines = lines;
+        this.range = range;
         this.considerWhitespaceChanges = considerWhitespaceChanges;
         this.elements = [];
-        this.firstCharOffsetByLine = [];
-        // To account for trimming
-        this.additionalOffsetByLine = [];
-        // If the slice covers the end, but does not start at the beginning, we include just the \n of the previous line.
-        let trimFirstLineFully = false;
-        if (lineRange.start > 0 && lineRange.endExclusive >= lines.length) {
-            lineRange = new OffsetRange(lineRange.start - 1, lineRange.endExclusive);
-            trimFirstLineFully = true;
-        }
-        this.lineRange = lineRange;
-        this.firstCharOffsetByLine[0] = 0;
-        for (let i = this.lineRange.start; i < this.lineRange.endExclusive; i++) {
-            let line = lines[i];
-            let offset = 0;
-            if (trimFirstLineFully) {
-                offset = line.length;
-                line = '';
-                trimFirstLineFully = false;
+        this.firstElementOffsetByLineIdx = [];
+        this.lineStartOffsets = [];
+        this.trimmedWsLengthsByLineIdx = [];
+        this.firstElementOffsetByLineIdx.push(0);
+        for (let lineNumber = this.range.startLineNumber; lineNumber <= this.range.endLineNumber; lineNumber++) {
+            let line = lines[lineNumber - 1];
+            let lineStartOffset = 0;
+            if (lineNumber === this.range.startLineNumber && this.range.startColumn > 1) {
+                lineStartOffset = this.range.startColumn - 1;
+                line = line.substring(lineStartOffset);
             }
-            else if (!considerWhitespaceChanges) {
+            this.lineStartOffsets.push(lineStartOffset);
+            let trimmedWsLength = 0;
+            if (!considerWhitespaceChanges) {
                 const trimmedStartLine = line.trimStart();
-                offset = line.length - trimmedStartLine.length;
+                trimmedWsLength = line.length - trimmedStartLine.length;
                 line = trimmedStartLine.trimEnd();
             }
-            this.additionalOffsetByLine.push(offset);
-            for (let i = 0; i < line.length; i++) {
+            this.trimmedWsLengthsByLineIdx.push(trimmedWsLength);
+            const lineLength = lineNumber === this.range.endLineNumber ? Math.min(this.range.endColumn - 1 - lineStartOffset - trimmedWsLength, line.length) : line.length;
+            for (let i = 0; i < lineLength; i++) {
                 this.elements.push(line.charCodeAt(i));
             }
-            // Don't add an \n that does not exist in the document.
-            if (i < lines.length - 1) {
+            if (lineNumber < this.range.endLineNumber) {
                 this.elements.push('\n'.charCodeAt(0));
-                this.firstCharOffsetByLine[i - this.lineRange.start + 1] = this.elements.length;
+                this.firstElementOffsetByLineIdx.push(this.elements.length);
             }
         }
-        // To account for the last line
-        this.additionalOffsetByLine.push(0);
     }
     toString() {
         return `Slice: "${this.text}"`;
@@ -71,9 +62,13 @@ export class LinesSliceCharSequence {
         // 11  0   0   12  15  6   13  0   0   11
         const prevCategory = getCategory(length > 0 ? this.elements[length - 1] : -1);
         const nextCategory = getCategory(length < this.elements.length ? this.elements[length] : -1);
-        if (prevCategory === 6 /* CharBoundaryCategory.LineBreakCR */ && nextCategory === 7 /* CharBoundaryCategory.LineBreakLF */) {
+        if (prevCategory === 7 /* CharBoundaryCategory.LineBreakCR */ && nextCategory === 8 /* CharBoundaryCategory.LineBreakLF */) {
             // don't break between \r and \n
             return 0;
+        }
+        if (prevCategory === 8 /* CharBoundaryCategory.LineBreakLF */) {
+            // prefer the linebreak before the change
+            return 150;
         }
         let score = 0;
         if (prevCategory !== nextCategory) {
@@ -86,16 +81,19 @@ export class LinesSliceCharSequence {
         score += getCategoryBoundaryScore(nextCategory);
         return score;
     }
-    translateOffset(offset) {
+    translateOffset(offset, preference = 'right') {
         // find smallest i, so that lineBreakOffsets[i] <= offset using binary search
-        if (this.lineRange.isEmpty) {
-            return new Position(this.lineRange.start + 1, 1);
-        }
-        const i = findLastIdxMonotonous(this.firstCharOffsetByLine, (value) => value <= offset);
-        return new Position(this.lineRange.start + i + 1, offset - this.firstCharOffsetByLine[i] + this.additionalOffsetByLine[i] + 1);
+        const i = findLastIdxMonotonous(this.firstElementOffsetByLineIdx, (value) => value <= offset);
+        const lineOffset = offset - this.firstElementOffsetByLineIdx[i];
+        return new Position(this.range.startLineNumber + i, 1 + this.lineStartOffsets[i] + lineOffset + ((lineOffset === 0 && preference === 'left') ? 0 : this.trimmedWsLengthsByLineIdx[i]));
     }
     translateRange(range) {
-        return Range.fromPositions(this.translateOffset(range.start), this.translateOffset(range.endExclusive));
+        const pos1 = this.translateOffset(range.start, 'right');
+        const pos2 = this.translateOffset(range.endExclusive, 'left');
+        if (pos2.isBefore(pos1)) {
+            return Range.fromPositions(pos2, pos2);
+        }
+        return Range.fromPositions(pos1, pos2);
     }
     /**
      * Finds the word that contains the character at the given offset
@@ -119,6 +117,26 @@ export class LinesSliceCharSequence {
         }
         return new OffsetRange(start, end);
     }
+    /** fooBar has the two sub-words foo and bar */
+    findSubWordContaining(offset) {
+        if (offset < 0 || offset >= this.elements.length) {
+            return undefined;
+        }
+        if (!isWordChar(this.elements[offset])) {
+            return undefined;
+        }
+        // find start
+        let start = offset;
+        while (start > 0 && isWordChar(this.elements[start - 1]) && !isUpperCase(this.elements[start])) {
+            start--;
+        }
+        // find end
+        let end = offset;
+        while (end < this.elements.length && isWordChar(this.elements[end]) && !isUpperCase(this.elements[end])) {
+            end++;
+        }
+        return new OffsetRange(start, end);
+    }
     countLinesIn(range) {
         return this.translateOffset(range.endExclusive).lineNumber - this.translateOffset(range.start).lineNumber;
     }
@@ -126,9 +144,8 @@ export class LinesSliceCharSequence {
         return this.elements[offset1] === this.elements[offset2];
     }
     extendToFullLines(range) {
-        var _a, _b;
-        const start = (_a = findLastMonotonous(this.firstCharOffsetByLine, x => x <= range.start)) !== null && _a !== void 0 ? _a : 0;
-        const end = (_b = findFirstMonotonous(this.firstCharOffsetByLine, x => range.endExclusive <= x)) !== null && _b !== void 0 ? _b : this.elements.length;
+        const start = findLastMonotonous(this.firstElementOffsetByLineIdx, x => x <= range.start) ?? 0;
+        const end = findFirstMonotonous(this.firstElementOffsetByLineIdx, x => range.endExclusive <= x) ?? this.elements.length;
         return new OffsetRange(start, end);
     }
 }
@@ -137,28 +154,32 @@ function isWordChar(charCode) {
         || charCode >= 65 /* CharCode.A */ && charCode <= 90 /* CharCode.Z */
         || charCode >= 48 /* CharCode.Digit0 */ && charCode <= 57 /* CharCode.Digit9 */;
 }
+function isUpperCase(charCode) {
+    return charCode >= 65 /* CharCode.A */ && charCode <= 90 /* CharCode.Z */;
+}
 const score = {
     [0 /* CharBoundaryCategory.WordLower */]: 0,
     [1 /* CharBoundaryCategory.WordUpper */]: 0,
     [2 /* CharBoundaryCategory.WordNumber */]: 0,
     [3 /* CharBoundaryCategory.End */]: 10,
     [4 /* CharBoundaryCategory.Other */]: 2,
-    [5 /* CharBoundaryCategory.Space */]: 3,
-    [6 /* CharBoundaryCategory.LineBreakCR */]: 10,
-    [7 /* CharBoundaryCategory.LineBreakLF */]: 10,
+    [5 /* CharBoundaryCategory.Separator */]: 30,
+    [6 /* CharBoundaryCategory.Space */]: 3,
+    [7 /* CharBoundaryCategory.LineBreakCR */]: 10,
+    [8 /* CharBoundaryCategory.LineBreakLF */]: 10,
 };
 function getCategoryBoundaryScore(category) {
     return score[category];
 }
 function getCategory(charCode) {
     if (charCode === 10 /* CharCode.LineFeed */) {
-        return 7 /* CharBoundaryCategory.LineBreakLF */;
+        return 8 /* CharBoundaryCategory.LineBreakLF */;
     }
     else if (charCode === 13 /* CharCode.CarriageReturn */) {
-        return 6 /* CharBoundaryCategory.LineBreakCR */;
+        return 7 /* CharBoundaryCategory.LineBreakCR */;
     }
     else if (isSpace(charCode)) {
-        return 5 /* CharBoundaryCategory.Space */;
+        return 6 /* CharBoundaryCategory.Space */;
     }
     else if (charCode >= 97 /* CharCode.a */ && charCode <= 122 /* CharCode.z */) {
         return 0 /* CharBoundaryCategory.WordLower */;
@@ -172,7 +193,11 @@ function getCategory(charCode) {
     else if (charCode === -1) {
         return 3 /* CharBoundaryCategory.End */;
     }
+    else if (charCode === 44 /* CharCode.Comma */ || charCode === 59 /* CharCode.Semicolon */) {
+        return 5 /* CharBoundaryCategory.Separator */;
+    }
     else {
         return 4 /* CharBoundaryCategory.Other */;
     }
 }
+//# sourceMappingURL=linesSliceCharSequence.js.map

@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 import { illegalArgument } from './errors.js';
 import { escapeIcons } from './iconLabels.js';
+import { Schemas } from './network.js';
 import { isEqual } from './resources.js';
 import { escapeRegExpCharacters } from './strings.js';
 import { URI } from './uri.js';
 export class MarkdownString {
     constructor(value = '', isTrustedOrOptions = false) {
-        var _a, _b, _c;
         this.value = value;
         if (typeof this.value !== 'string') {
             throw illegalArgument('value');
@@ -20,13 +20,13 @@ export class MarkdownString {
             this.supportHtml = false;
         }
         else {
-            this.isTrusted = (_a = isTrustedOrOptions.isTrusted) !== null && _a !== void 0 ? _a : undefined;
-            this.supportThemeIcons = (_b = isTrustedOrOptions.supportThemeIcons) !== null && _b !== void 0 ? _b : false;
-            this.supportHtml = (_c = isTrustedOrOptions.supportHtml) !== null && _c !== void 0 ? _c : false;
+            this.isTrusted = isTrustedOrOptions.isTrusted ?? undefined;
+            this.supportThemeIcons = isTrustedOrOptions.supportThemeIcons ?? false;
+            this.supportHtml = isTrustedOrOptions.supportHtml ?? false;
         }
     }
     appendText(value, newlineStyle = 0 /* MarkdownStringTextNewlineStyle.Paragraph */) {
-        this.value += escapeMarkdownSyntaxTokens(this.supportThemeIcons ? escapeIcons(value) : value)
+        this.value += escapeMarkdownSyntaxTokens(this.supportThemeIcons ? escapeIcons(value) : value) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
             .replace(/([ \t]+)/g, (_match, g1) => '&nbsp;'.repeat(g1.length)) // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
             .replace(/\>/gm, '\\>') // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
             .replace(/\n/g, newlineStyle === 1 /* MarkdownStringTextNewlineStyle.Break */ ? '\\\n' : '\n\n'); // CodeQL [SM02383] The Markdown is fully sanitized after being rendered.
@@ -37,11 +37,7 @@ export class MarkdownString {
         return this;
     }
     appendCodeblock(langId, code) {
-        this.value += '\n```';
-        this.value += langId;
-        this.value += '\n';
-        this.value += code;
-        this.value += '\n```\n';
+        this.value += `\n${appendEscapedMarkdownCodeBlockFence(code, langId)}\n`;
         return this;
     }
     appendLink(target, label, title) {
@@ -108,6 +104,20 @@ export function escapeMarkdownSyntaxTokens(text) {
     // escape markdown syntax tokens: http://daringfireball.net/projects/markdown/syntax#backslash
     return text.replace(/[\\`*_{}[\]()#+\-!~]/g, '\\$&'); // CodeQL [SM02383] Backslash is escaped in the character class
 }
+/**
+ * @see https://github.com/microsoft/vscode/issues/193746
+ */
+export function appendEscapedMarkdownCodeBlockFence(code, langId) {
+    const longestFenceLength = code.match(/^`+/gm)?.reduce((a, b) => (a.length > b.length ? a : b)).length ??
+        0;
+    const desiredFenceLength = longestFenceLength >= 3 ? longestFenceLength + 1 : 3;
+    // the markdown result
+    return [
+        `${'`'.repeat(desiredFenceLength)}${langId}`,
+        code,
+        `${'`'.repeat(desiredFenceLength)}`,
+    ].join('\n');
+}
 export function escapeDoubleQuotes(input) {
     return input.replace(/"/g, '&quot;');
 }
@@ -138,3 +148,11 @@ export function parseHrefAndDimensions(href) {
     }
     return { href, dimensions };
 }
+export function createCommandUri(commandId, ...commandArgs) {
+    return URI.from({
+        scheme: Schemas.command,
+        path: commandId,
+        query: commandArgs.length ? encodeURIComponent(JSON.stringify(commandArgs)) : undefined,
+    });
+}
+//# sourceMappingURL=htmlContent.js.map

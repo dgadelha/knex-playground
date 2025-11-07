@@ -2,15 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
+import { mainWindow } from '../../../base/browser/window.js';
 import { Disposable, DisposableStore } from '../../../base/common/lifecycle.js';
 import { splitLines } from '../../../base/common/strings.js';
 import { URI } from '../../../base/common/uri.js';
@@ -18,14 +10,13 @@ import './standalone-tokens.css';
 import { FontMeasurements } from '../../browser/config/fontMeasurements.js';
 import { EditorCommand } from '../../browser/editorExtensions.js';
 import { ICodeEditorService } from '../../browser/services/codeEditorService.js';
-import { createWebWorker as actualCreateWebWorker } from '../../browser/services/webWorker.js';
+import { createWebWorker as actualCreateWebWorker } from './standaloneWebWorker.js';
 import { ApplyUpdateResult, ConfigurationChangedEvent, EditorOptions } from '../../common/config/editorOptions.js';
 import { EditorZoom } from '../../common/config/editorZoom.js';
 import { BareFontInfo, FontInfo } from '../../common/config/fontInfo.js';
 import { EditorType } from '../../common/editorCommon.js';
 import * as languages from '../../common/languages.js';
 import { ILanguageService } from '../../common/languages/language.js';
-import { ILanguageConfigurationService } from '../../common/languages/languageConfigurationRegistry.js';
 import { PLAINTEXT_LANGUAGE_ID } from '../../common/languages/modesRegistry.js';
 import { NullState, nullTokenize } from '../../common/languages/nullTokenize.js';
 import { FindMatch, TextModelResolvedOptions } from '../../common/model.js';
@@ -41,6 +32,7 @@ import { ContextKeyExpr } from '../../../platform/contextkey/common/contextkey.j
 import { IKeybindingService } from '../../../platform/keybinding/common/keybinding.js';
 import { IMarkerService } from '../../../platform/markers/common/markers.js';
 import { IOpenerService } from '../../../platform/opener/common/opener.js';
+import { MultiDiffEditorWidget } from '../../browser/widget/multiDiffEditor/multiDiffEditorWidget.js';
 /**
  * Create a new editor under `domElement`.
  * `domElement` should be empty (not contain other dom nodes).
@@ -93,6 +85,10 @@ export function getDiffEditors() {
 export function createDiffEditor(domElement, options, override) {
     const instantiationService = StandaloneServices.initialize(override || {});
     return instantiationService.createInstance(StandaloneDiffEditor2, domElement, options);
+}
+export function createMultiFileDiffEditor(domElement, override) {
+    const instantiationService = StandaloneServices.initialize(override || {});
+    return new MultiDiffEditorWidget(domElement, {}, instantiationService);
 }
 /**
  * Add a command.
@@ -271,7 +267,7 @@ export function onDidChangeModelLanguage(listener) {
  * Specify an AMD module to load that will `create` an object that will be proxied.
  */
 export function createWebWorker(opts) {
-    return actualCreateWebWorker(StandaloneServices.get(IModelService), StandaloneServices.get(ILanguageConfigurationService), opts);
+    return actualCreateWebWorker(StandaloneServices.get(IModelService), opts);
 }
 /**
  * Colorize the contents of `domNode` using attribute `data-lang`.
@@ -289,7 +285,7 @@ export function colorizeElement(domNode, options) {
 export function colorize(text, languageId, options) {
     const languageService = StandaloneServices.get(ILanguageService);
     const themeService = StandaloneServices.get(IStandaloneThemeService);
-    themeService.registerEditorContainer(document.body);
+    themeService.registerEditorContainer(mainWindow.document.body);
     return Colorizer.colorize(languageService, text, languageId, options);
 }
 /**
@@ -297,7 +293,7 @@ export function colorize(text, languageId, options) {
  */
 export function colorizeModelLine(model, lineNumber, tabSize = 4) {
     const themeService = StandaloneServices.get(IStandaloneThemeService);
-    themeService.registerEditorContainer(document.body);
+    themeService.registerEditorContainer(mainWindow.document.body);
     return Colorizer.colorizeModelLine(model, lineNumber, tabSize);
 }
 /**
@@ -366,13 +362,11 @@ export function registerCommand(id, handler) {
 export function registerLinkOpener(opener) {
     const openerService = StandaloneServices.get(IOpenerService);
     return openerService.registerOpener({
-        open(resource) {
-            return __awaiter(this, void 0, void 0, function* () {
-                if (typeof resource === 'string') {
-                    resource = URI.parse(resource);
-                }
-                return opener.open(resource);
-            });
+        async open(resource) {
+            if (typeof resource === 'string') {
+                resource = URI.parse(resource);
+            }
+            return opener.open(resource);
         }
     });
 }
@@ -386,12 +380,11 @@ export function registerLinkOpener(opener) {
  */
 export function registerEditorOpener(opener) {
     const codeEditorService = StandaloneServices.get(ICodeEditorService);
-    return codeEditorService.registerCodeEditorOpenHandler((input, source, sideBySide) => __awaiter(this, void 0, void 0, function* () {
-        var _a;
+    return codeEditorService.registerCodeEditorOpenHandler(async (input, source, sideBySide) => {
         if (!source) {
             return null;
         }
-        const selection = (_a = input.options) === null || _a === void 0 ? void 0 : _a.selection;
+        const selection = input.options?.selection;
         let selectionOrPosition;
         if (selection && typeof selection.endLineNumber === 'number' && typeof selection.endColumn === 'number') {
             selectionOrPosition = selection;
@@ -399,11 +392,11 @@ export function registerEditorOpener(opener) {
         else if (selection) {
             selectionOrPosition = { lineNumber: selection.startLineNumber, column: selection.startColumn };
         }
-        if (yield opener.openCodeEditor(source, input.resource, selectionOrPosition)) {
+        if (await opener.openCodeEditor(source, input.resource, selectionOrPosition)) {
             return source; // return source editor to indicate that this handler has successfully handled the opening
         }
         return null; // fallback to other registered handlers
-    }));
+    });
 }
 /**
  * @internal
@@ -453,6 +446,7 @@ export function createMonacoEditorAPI() {
         EndOfLinePreference: standaloneEnums.EndOfLinePreference,
         EndOfLineSequence: standaloneEnums.EndOfLineSequence,
         MinimapPosition: standaloneEnums.MinimapPosition,
+        MinimapSectionHeaderStyle: standaloneEnums.MinimapSectionHeaderStyle,
         MouseTargetType: standaloneEnums.MouseTargetType,
         OverlayWidgetPositionPreference: standaloneEnums.OverlayWidgetPositionPreference,
         OverviewRulerLane: standaloneEnums.OverviewRulerLane,
@@ -467,6 +461,8 @@ export function createMonacoEditorAPI() {
         WrappingIndent: standaloneEnums.WrappingIndent,
         InjectedTextCursorStops: standaloneEnums.InjectedTextCursorStops,
         PositionAffinity: standaloneEnums.PositionAffinity,
+        ShowLightbulbIconMode: standaloneEnums.ShowLightbulbIconMode,
+        TextDirection: standaloneEnums.TextDirection,
         // classes
         ConfigurationChangedEvent: ConfigurationChangedEvent,
         BareFontInfo: BareFontInfo,
@@ -475,8 +471,10 @@ export function createMonacoEditorAPI() {
         FindMatch: FindMatch,
         ApplyUpdateResult: ApplyUpdateResult,
         EditorZoom: EditorZoom,
+        createMultiFileDiffEditor: createMultiFileDiffEditor,
         // vars
         EditorType: EditorType,
         EditorOptions: EditorOptions
     };
 }
+//# sourceMappingURL=standaloneEditor.js.map

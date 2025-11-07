@@ -3,10 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 function countMapFrom(values) {
-    var _a;
     const map = new Map();
     for (const value of values) {
-        map.set(value, ((_a = map.get(value)) !== null && _a !== void 0 ? _a : 0) + 1);
+        map.set(value, (map.get(value) ?? 0) + 1);
     }
     return map;
 }
@@ -57,8 +56,7 @@ export class TfIdfCalculator {
         // Only match on words that are at least 3 characters long and start with a letter
         for (const [word] of input.matchAll(/\b\p{Letter}[\p{Letter}\d]{2,}\b/gu)) {
             yield normalize(word);
-            // eslint-disable-next-line local/code-no-look-behind-regex
-            const camelParts = word.split(/(?<=[a-z])(?=[A-Z])/g);
+            const camelParts = word.replace(/([a-z])([A-Z])/g, '$1 $2').split(/\s+/g);
             if (camelParts.length > 1) {
                 for (const part of camelParts) {
                     // Require at least 3 letters in the parts of a camel case word
@@ -70,7 +68,6 @@ export class TfIdfCalculator {
         }
     }
     updateDocuments(documents) {
-        var _a;
         for (const { key } of documents) {
             this.deleteDocument(key);
         }
@@ -84,7 +81,7 @@ export class TfIdfCalculator {
                 const tf = TfIdfCalculator.termFrequencies(text);
                 // Update occurrences list
                 for (const term of tf.keys()) {
-                    this.chunkOccurrences.set(term, ((_a = this.chunkOccurrences.get(term)) !== null && _a !== void 0 ? _a : 0) + 1);
+                    this.chunkOccurrences.set(term, (this.chunkOccurrences.get(term) ?? 0) + 1);
                 }
                 chunks.push({ text, tf });
             }
@@ -143,8 +140,7 @@ export class TfIdfCalculator {
         return this.computeTfidf(tf);
     }
     computeIdf(term) {
-        var _a;
-        const chunkOccurrences = (_a = this.chunkOccurrences.get(term)) !== null && _a !== void 0 ? _a : 0;
+        const chunkOccurrences = this.chunkOccurrences.get(term) ?? 0;
         return chunkOccurrences > 0
             ? Math.log((this.chunkCount + 1) / chunkOccurrences)
             : 0;
@@ -166,13 +162,12 @@ export class TfIdfCalculator {
  * @returns normalized scores
  */
 export function normalizeTfIdfScores(scores) {
-    var _a, _b;
     // copy of scores
     const result = scores.slice(0);
     // sort descending
     result.sort((a, b) => b.score - a.score);
     // normalize
-    const max = (_b = (_a = result[0]) === null || _a === void 0 ? void 0 : _a.score) !== null && _b !== void 0 ? _b : 0;
+    const max = result[0]?.score ?? 0;
     if (max > 0) {
         for (const score of result) {
             score.score /= max;
@@ -180,3 +175,4 @@ export function normalizeTfIdfScores(scores) {
     }
     return result;
 }
+//# sourceMappingURL=tfIdf.js.map

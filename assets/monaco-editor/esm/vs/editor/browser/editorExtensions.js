@@ -24,7 +24,7 @@ export class Command {
         this.precondition = opts.precondition;
         this._kbOpts = opts.kbOpts;
         this._menuOpts = opts.menuOpts;
-        this._description = opts.description;
+        this.metadata = opts.metadata;
     }
     register() {
         if (Array.isArray(this._menuOpts)) {
@@ -62,7 +62,7 @@ export class Command {
         CommandsRegistry.registerCommand({
             id: this.id,
             handler: (accessor, args) => this.runCommand(accessor, args),
-            description: this._description
+            metadata: this.metadata
         });
     }
     _registerMenuItem(item) {
@@ -168,7 +168,7 @@ export class EditorCommand extends Command {
         }
         return editor.invokeWithinContext((editorAccessor) => {
             const kbService = editorAccessor.get(IContextKeyService);
-            if (!kbService.contextMatchesRules(precondition !== null && precondition !== void 0 ? precondition : undefined)) {
+            if (!kbService.contextMatchesRules(precondition ?? undefined)) {
                 // precondition does not hold
                 return;
             }
@@ -196,7 +196,7 @@ export class EditorAction extends EditorCommand {
                 item.menuId = MenuId.EditorContext;
             }
             if (!item.title) {
-                item.title = opts.label;
+                item.title = typeof opts.label === 'string' ? opts.label : opts.label.value;
             }
             item.when = ContextKeyExpr.and(opts.precondition, item.when);
             return item;
@@ -212,8 +212,14 @@ export class EditorAction extends EditorCommand {
     }
     constructor(opts) {
         super(EditorAction.convertOptions(opts));
-        this.label = opts.label;
-        this.alias = opts.alias;
+        if (typeof opts.label === 'string') {
+            this.label = opts.label;
+            this.alias = opts.alias ?? opts.label;
+        }
+        else {
+            this.label = opts.label.value;
+            this.alias = opts.alias ?? opts.label.original;
+        }
     }
     runEditorCommand(accessor, editor, args) {
         this.reportTelemetry(accessor, editor);
@@ -270,12 +276,11 @@ export class EditorAction2 extends Action2 {
         }
         // precondition does hold
         return editor.invokeWithinContext((editorAccessor) => {
-            var _a, _b;
             const kbService = editorAccessor.get(IContextKeyService);
             const logService = editorAccessor.get(ILogService);
-            const enabled = kbService.contextMatchesRules((_a = this.desc.precondition) !== null && _a !== void 0 ? _a : undefined);
+            const enabled = kbService.contextMatchesRules(this.desc.precondition ?? undefined);
             if (!enabled) {
-                logService.debug(`[EditorAction2] NOT running command because its precondition is FALSE`, this.desc.id, (_b = this.desc.precondition) === null || _b === void 0 ? void 0 : _b.serialize());
+                logService.debug(`[EditorAction2] NOT running command because its precondition is FALSE`, this.desc.id, this.desc.precondition?.serialize());
                 return;
             }
             return this.runEditorCommand(editorAccessor, editor, ...args);
@@ -361,6 +366,7 @@ const Extensions = {
     EditorCommonContributions: 'editor.contributions'
 };
 class EditorContributionRegistry {
+    static { this.INSTANCE = new EditorContributionRegistry(); }
     constructor() {
         this.editorContributions = [];
         this.diffEditorContributions = [];
@@ -391,7 +397,6 @@ class EditorContributionRegistry {
         return (this.editorCommands[commandId] || null);
     }
 }
-EditorContributionRegistry.INSTANCE = new EditorContributionRegistry();
 Registry.add(Extensions.EditorCommonContributions, EditorContributionRegistry.INSTANCE);
 function registerCommand(command) {
     command.register();
@@ -407,12 +412,17 @@ export const UndoCommand = registerCommand(new MultiCommand({
     menuOpts: [{
             menuId: MenuId.MenubarEditMenu,
             group: '1_do',
-            title: nls.localize({ key: 'miUndo', comment: ['&& denotes a mnemonic'] }, "&&Undo"),
+            title: nls.localize(64, "&&Undo"),
             order: 1
         }, {
             menuId: MenuId.CommandPalette,
             group: '',
-            title: nls.localize('undo', "Undo"),
+            title: nls.localize(65, "Undo"),
+            order: 1
+        }, {
+            menuId: MenuId.SimpleEditorContext,
+            group: '1_do',
+            title: nls.localize(66, "Undo"),
             order: 1
         }]
 }));
@@ -429,13 +439,18 @@ export const RedoCommand = registerCommand(new MultiCommand({
     menuOpts: [{
             menuId: MenuId.MenubarEditMenu,
             group: '1_do',
-            title: nls.localize({ key: 'miRedo', comment: ['&& denotes a mnemonic'] }, "&&Redo"),
+            title: nls.localize(67, "&&Redo"),
             order: 2
         }, {
             menuId: MenuId.CommandPalette,
             group: '',
-            title: nls.localize('redo', "Redo"),
+            title: nls.localize(68, "Redo"),
             order: 1
+        }, {
+            menuId: MenuId.SimpleEditorContext,
+            group: '1_do',
+            title: nls.localize(69, "Redo"),
+            order: 2
         }]
 }));
 registerCommand(new ProxyCommand(RedoCommand, { id: 'default:redo', precondition: undefined }));
@@ -450,12 +465,18 @@ export const SelectAllCommand = registerCommand(new MultiCommand({
     menuOpts: [{
             menuId: MenuId.MenubarSelectionMenu,
             group: '1_basic',
-            title: nls.localize({ key: 'miSelectAll', comment: ['&& denotes a mnemonic'] }, "&&Select All"),
+            title: nls.localize(70, "&&Select All"),
             order: 1
         }, {
             menuId: MenuId.CommandPalette,
             group: '',
-            title: nls.localize('selectAll', "Select All"),
+            title: nls.localize(71, "Select All"),
+            order: 1
+        }, {
+            menuId: MenuId.SimpleEditorContext,
+            group: '9_select',
+            title: nls.localize(72, "Select All"),
             order: 1
         }]
 }));
+//# sourceMappingURL=editorExtensions.js.map

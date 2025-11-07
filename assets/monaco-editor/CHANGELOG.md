@@ -1,5 +1,108 @@
 # Monaco Editor Changelog
 
+## [0.54.0]
+
+- Adds option `editor.mouseMiddleClickAction`
+- Various bug fixes
+
+## [0.53.0]
+
+- :warning: This release deprecates the AMD build and ships with significant changes of the AMD build. The AMD build will still be shipped for a while, but we don't offer support for it anymore. Please migrate to the ESM build.
+
+### New Features
+
+- Next Edit Suggestion support.
+- Scroll On Middle Click
+- Edit Context Support
+
+### Breaking Changes
+
+- Internal AMD modules are no longer accessible. Accessing internal AMD modules was never supported. While this is still possible in the ESM build, we don't encourage this usage pattern.
+- The [browser-script-editor scenario](https://github.com/microsoft/monaco-editor/blob/a4d7907bd439b06b24e334bdf2ab597bcae658b5/samples/browser-script-editor/index.html) for unbundled synchronous script import and editor creation no longer works. Instead, a the ESM build should be used with a bundler, such as vite or webpack.
+- Custom AMD workers don't work anymore out of the box.
+
+## [0.52.0]
+
+- Comment added inside of `IModelContentChangedEvent`
+
+## [0.51.0]
+
+- New fields `IEditorOptions.placeholder` and `IEditorOptions.compactMode`
+- New fields `IGotoLocationOptions.multipleTests` and `IGotoLocationOptions.alternativeTestsCommand`
+- New field `IInlineEditOptions.backgroundColoring`
+- New experimental field `IEditorOptions.experimental.useTrueInlineView`
+- New options `CommentThreadRevealOptions` for comments
+
+Contributions to `monaco-editor`:
+
+- [@ScottCarda-MS (Scott Carda)](https://github.com/ScottCarda-MS): Update Q# Keywords [PR #4586](https://github.com/microsoft/monaco-editor/pull/4586)
+
+## [0.50.0]
+
+- New field `IEditorMinimapOptions.sectionHeaderLetterSpacing`
+- New field `IOverlayWidgetPosition.stackOridinal`
+- New field `EmitOutput.diagnostics`
+- New event `IOverlayWidget.onDidLayout`
+- New events `ICodeEditor.onBeginUpdate` and `ICodeEditor.onEndUpdate`
+- `HoverVerbosityRequest.action` -> `HoverVerbosityRequest.verbosityDelta`
+- `MultiDocumentHighlightProvider.selector` changed from `LanguageFilter` to `LanguageSelector`
+- New optional parameters in `getEmitOutput`: `emitOnlyDtsFiles` and `forceDtsEmit`
+
+Contributions to `monaco-editor`:
+
+- [@htcfreek (Heiko)](https://github.com/htcfreek): Add extension to `csp.contribution.ts` [PR #4504](https://github.com/microsoft/monaco-editor/pull/4504)
+- [@jakebailey (Jake Bailey)](https://github.com/jakebailey): Call clearFiles on internal EmitOutput diagnostics, pass args down [PR #4482](https://github.com/microsoft/monaco-editor/pull/4482)
+- [@johnyanarella (John Yanarella)](https://github.com/johnyanarella): Update TypeScript to TS 5.4.5 in all projects, vendored files [PR #4305](https://github.com/microsoft/monaco-editor/pull/4305)
+- [@samstrohkorbatt](https://github.com/samstrohkorbatt): Adding Python f-string syntax support [PR #4401](https://github.com/microsoft/monaco-editor/pull/4401)
+
+## [0.49.0]
+
+- New proposed `editorHoverVerbosityLevel` API
+- New proposed `newSymbolNamesProvider` API
+
+Contributions to `monaco-editor`:
+
+- [@timotheeguerin (Timothee Guerin)](https://github.com/timotheeguerin): Add support for TypeSpec language [PR #4450](https://github.com/microsoft/monaco-editor/pull/4450)
+
+## [0.48.0]
+
+### Additions
+
+- Various bug fixes
+- Minimap Section Headers (see config option `showRegionSectionHeaders`)
+- Diff Editor Gutter Menu (see config option `renderGutterMenu`)
+- `InlineCompletionsProvider.handlePartialAccept` has `PartialAcceptInfo`
+
+Contributions to `monaco-editor`:
+
+- [@jeremy-rifkin (Jeremy Rifkin)](https://github.com/jeremy-rifkin): Fix bug with highlighting of C++ raw string literals [PR #4436](https://github.com/microsoft/monaco-editor/pull/4436)
+
+## [0.47.0]
+
+### Additions
+
+- Bug fixes
+- `registerNewSymbolNameProvider`
+- Experimental `registerInlineEditProvider`
+
+## [0.46.0]
+
+- Bug fixes
+
+## [0.45.0]
+
+### Breaking Changes
+
+- `wordBasedSuggestions: boolean` -> `'off' | 'currentDocument' | 'matchingDocuments' | 'allDocuments'`
+- `occurrencesHighlight: boolean` -> `'off' | 'singleFile' | 'multiFile'`
+
+### Additions
+
+- Many bug fixes
+- `IEditorScrollbarOptions.ignoreHorizontalScrollbarInContentHeight`
+- `IDiffEditor.goToDiff`
+- `IDiffEditor.revealFirstDiff`
+
 ## [0.44.0]
 
 - Removes old diff editor implementation.

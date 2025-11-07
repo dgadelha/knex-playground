@@ -46,9 +46,9 @@ export function writeUInt16LE(destination, value, offset) {
     destination[offset + 1] = (value & 0b11111111);
 }
 export function readUInt32BE(source, offset) {
-    return (source[offset] * Math.pow(2, 24)
-        + source[offset + 1] * Math.pow(2, 16)
-        + source[offset + 2] * Math.pow(2, 8)
+    return (source[offset] * 2 ** 24
+        + source[offset + 1] * 2 ** 16
+        + source[offset + 2] * 2 ** 8
         + source[offset + 3]);
 }
 export function writeUInt32BE(destination, value, offset) {
@@ -66,3 +66,14 @@ export function readUInt8(source, offset) {
 export function writeUInt8(destination, value, offset) {
     destination[offset] = value;
 }
+const hexChars = '0123456789abcdef';
+export function encodeHex({ buffer }) {
+    let result = '';
+    for (let i = 0; i < buffer.length; i++) {
+        const byte = buffer[i];
+        result += hexChars[byte >>> 4];
+        result += hexChars[byte & 0x0f];
+    }
+    return result;
+}
+//# sourceMappingURL=buffer.js.map

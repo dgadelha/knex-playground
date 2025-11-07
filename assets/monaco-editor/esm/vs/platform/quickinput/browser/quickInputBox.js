@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as dom from '../../../base/browser/dom.js';
-import { StandardKeyboardEvent } from '../../../base/browser/keyboardEvent.js';
-import { StandardMouseEvent } from '../../../base/browser/mouseEvent.js';
 import { FindInput } from '../../../base/browser/ui/findinput/findInput.js';
 import { Disposable } from '../../../base/common/lifecycle.js';
 import Severity from '../../../base/common/severity.js';
@@ -14,26 +12,18 @@ export class QuickInputBox extends Disposable {
     constructor(parent, inputBoxStyles, toggleStyles) {
         super();
         this.parent = parent;
-        this.onKeyDown = (handler) => {
-            return dom.addDisposableListener(this.findInput.inputBox.inputElement, dom.EventType.KEY_DOWN, (e) => {
-                handler(new StandardKeyboardEvent(e));
-            });
-        };
-        this.onMouseDown = (handler) => {
-            return dom.addDisposableListener(this.findInput.inputBox.inputElement, dom.EventType.MOUSE_DOWN, (e) => {
-                handler(new StandardMouseEvent(e));
-            });
-        };
         this.onDidChange = (handler) => {
             return this.findInput.onDidChange(handler);
         };
         this.container = dom.append(this.parent, $('.quick-input-box'));
         this.findInput = this._register(new FindInput(this.container, undefined, { label: '', inputBoxStyles, toggleStyles }));
         const input = this.findInput.inputBox.inputElement;
-        input.role = 'combobox';
+        input.role = 'textbox';
         input.ariaHasPopup = 'menu';
         input.ariaAutoComplete = 'list';
-        input.ariaExpanded = 'true';
+    }
+    get onKeyDown() {
+        return this.findInput.onKeyDown;
     }
     get value() {
         return this.findInput.getValue();
@@ -43,6 +33,9 @@ export class QuickInputBox extends Disposable {
     }
     select(range = null) {
         this.findInput.inputBox.select(range);
+    }
+    getSelection() {
+        return this.findInput.inputBox.getSelection();
     }
     isSelectionAtEnd() {
         return this.findInput.inputBox.isSelectionAtEnd();
@@ -73,8 +66,20 @@ export class QuickInputBox extends Disposable {
     set toggles(toggles) {
         this.findInput.setAdditionalToggles(toggles);
     }
+    get ariaLabel() {
+        return this.findInput.inputBox.inputElement.getAttribute('aria-label') || '';
+    }
+    set ariaLabel(ariaLabel) {
+        this.findInput.inputBox.inputElement.setAttribute('aria-label', ariaLabel);
+    }
+    hasFocus() {
+        return this.findInput.inputBox.hasFocus();
+    }
     setAttribute(name, value) {
         this.findInput.inputBox.inputElement.setAttribute(name, value);
+    }
+    removeAttribute(name) {
+        this.findInput.inputBox.inputElement.removeAttribute(name);
     }
     showDecoration(decoration) {
         if (decoration === Severity.Ignore) {
@@ -94,3 +99,4 @@ export class QuickInputBox extends Disposable {
         this.findInput.inputBox.layout();
     }
 }
+//# sourceMappingURL=quickInputBox.js.map

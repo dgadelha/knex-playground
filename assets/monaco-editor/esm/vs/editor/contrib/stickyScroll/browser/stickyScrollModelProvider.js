@@ -11,16 +11,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { Disposable, DisposableStore } from '../../../../base/common/lifecycle.js';
+import { Disposable, DisposableStore, MutableDisposable } from '../../../../base/common/lifecycle.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 import { OutlineElement, OutlineGroup, OutlineModel } from '../../documentSymbols/browser/outlineModel.js';
 import { createCancelablePromise, Delayer } from '../../../../base/common/async.js';
@@ -31,6 +22,7 @@ import { ILanguageConfigurationService } from '../../../common/languages/languag
 import { onUnexpectedError } from '../../../../base/common/errors.js';
 import { StickyElement, StickyModel, StickyRange } from './stickyScrollElement.js';
 import { Iterable } from '../../../../base/common/iterator.js';
+import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 var ModelProvider;
 (function (ModelProvider) {
     ModelProvider["OUTLINE_MODEL"] = "outlineModel";
@@ -44,32 +36,30 @@ var Status;
     Status[Status["CANCELED"] = 2] = "CANCELED";
 })(Status || (Status = {}));
 let StickyModelProvider = class StickyModelProvider extends Disposable {
-    constructor(_editor, _languageConfigurationService, _languageFeaturesService, defaultModel) {
+    constructor(_editor, onProviderUpdate, _languageConfigurationService, _languageFeaturesService) {
         super();
         this._editor = _editor;
-        this._languageConfigurationService = _languageConfigurationService;
-        this._languageFeaturesService = _languageFeaturesService;
         this._modelProviders = [];
         this._modelPromise = null;
         this._updateScheduler = this._register(new Delayer(300));
         this._updateOperation = this._register(new DisposableStore());
-        const stickyModelFromCandidateOutlineProvider = new StickyModelFromCandidateOutlineProvider(_languageFeaturesService);
-        const stickyModelFromSyntaxFoldingProvider = new StickyModelFromCandidateSyntaxFoldingProvider(this._editor, _languageFeaturesService);
-        const stickyModelFromIndentationFoldingProvider = new StickyModelFromCandidateIndentationFoldingProvider(this._editor, _languageConfigurationService);
-        switch (defaultModel) {
+        switch (this._editor.getOption(131 /* EditorOption.stickyScroll */).defaultModel) {
             case ModelProvider.OUTLINE_MODEL:
-                this._modelProviders.push(stickyModelFromCandidateOutlineProvider);
-                this._modelProviders.push(stickyModelFromSyntaxFoldingProvider);
-                this._modelProviders.push(stickyModelFromIndentationFoldingProvider);
-                break;
+                this._modelProviders.push(new StickyModelFromCandidateOutlineProvider(this._editor, _languageFeaturesService));
+            // fall through
             case ModelProvider.FOLDING_PROVIDER_MODEL:
-                this._modelProviders.push(stickyModelFromSyntaxFoldingProvider);
-                this._modelProviders.push(stickyModelFromIndentationFoldingProvider);
-                break;
+                this._modelProviders.push(new StickyModelFromCandidateSyntaxFoldingProvider(this._editor, onProviderUpdate, _languageFeaturesService));
+            // fall through
             case ModelProvider.INDENTATION_MODEL:
-                this._modelProviders.push(stickyModelFromIndentationFoldingProvider);
+                this._modelProviders.push(new StickyModelFromCandidateIndentationFoldingProvider(this._editor, _languageConfigurationService));
                 break;
         }
+    }
+    dispose() {
+        this._modelProviders.forEach(provider => provider.dispose());
+        this._updateOperation.clear();
+        this._cancelModelPromise();
+        super.dispose();
     }
     _cancelModelPromise() {
         if (this._modelPromise) {
@@ -77,47 +67,47 @@ let StickyModelProvider = class StickyModelProvider extends Disposable {
             this._modelPromise = null;
         }
     }
-    update(textModel, textModelVersionId, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            this._updateOperation.clear();
-            this._updateOperation.add({
-                dispose: () => {
-                    this._cancelModelPromise();
-                    this._updateScheduler.cancel();
+    async update(token) {
+        this._updateOperation.clear();
+        this._updateOperation.add({
+            dispose: () => {
+                this._cancelModelPromise();
+                this._updateScheduler.cancel();
+            }
+        });
+        this._cancelModelPromise();
+        return await this._updateScheduler.trigger(async () => {
+            for (const modelProvider of this._modelProviders) {
+                const { statusPromise, modelPromise } = modelProvider.computeStickyModel(token);
+                this._modelPromise = modelPromise;
+                const status = await statusPromise;
+                if (this._modelPromise !== modelPromise) {
+                    return null;
                 }
-            });
-            this._cancelModelPromise();
-            return yield this._updateScheduler.trigger(() => __awaiter(this, void 0, void 0, function* () {
-                for (const modelProvider of this._modelProviders) {
-                    const { statusPromise, modelPromise } = modelProvider.computeStickyModel(textModel, textModelVersionId, token);
-                    this._modelPromise = modelPromise;
-                    const status = yield statusPromise;
-                    if (this._modelPromise !== modelPromise) {
+                switch (status) {
+                    case Status.CANCELED:
+                        this._updateOperation.clear();
                         return null;
-                    }
-                    switch (status) {
-                        case Status.CANCELED:
-                            this._updateOperation.clear();
-                            return null;
-                        case Status.VALID:
-                            return modelProvider.stickyModel;
-                    }
+                    case Status.VALID:
+                        return modelProvider.stickyModel;
                 }
-                return null;
-            })).catch((error) => {
-                onUnexpectedError(error);
-                return null;
-            });
+            }
+            return null;
+        }).catch((error) => {
+            onUnexpectedError(error);
+            return null;
         });
     }
 };
 StickyModelProvider = __decorate([
-    __param(1, ILanguageConfigurationService),
-    __param(2, ILanguageFeaturesService)
+    __param(2, IInstantiationService),
+    __param(3, ILanguageFeaturesService)
 ], StickyModelProvider);
 export { StickyModelProvider };
-class StickyModelCandidateProvider {
-    constructor() {
+class StickyModelCandidateProvider extends Disposable {
+    constructor(_editor) {
+        super();
+        this._editor = _editor;
         this._stickyModel = null;
     }
     get stickyModel() {
@@ -127,11 +117,11 @@ class StickyModelCandidateProvider {
         this._stickyModel = null;
         return Status.INVALID;
     }
-    computeStickyModel(textModel, modelVersionId, token) {
-        if (token.isCancellationRequested || !this.isProviderValid(textModel)) {
+    computeStickyModel(token) {
+        if (token.isCancellationRequested || !this.isProviderValid()) {
             return { statusPromise: this._invalid(), modelPromise: null };
         }
-        const providerModelPromise = createCancelablePromise(token => this.createModelFromProvider(textModel, modelVersionId, token));
+        const providerModelPromise = createCancelablePromise(token => this.createModelFromProvider(token));
         return {
             statusPromise: providerModelPromise.then(providerModel => {
                 if (!this.isModelValid(providerModel)) {
@@ -140,7 +130,7 @@ class StickyModelCandidateProvider {
                 if (token.isCancellationRequested) {
                     return Status.CANCELED;
                 }
-                this._stickyModel = this.createStickyModel(textModel, modelVersionId, token, providerModel);
+                this._stickyModel = this.createStickyModel(token, providerModel);
                 return Status.VALID;
             }).then(undefined, (err) => {
                 onUnexpectedError(err);
@@ -161,25 +151,24 @@ class StickyModelCandidateProvider {
     /**
      * Method which checks whether the provider is valid before applying it to find the provider model.
      * This method by default returns true.
-     * @param textModel text-model of the editor
      * @returns boolean indicating whether the provider is valid
      */
-    isProviderValid(textModel) {
+    isProviderValid() {
         return true;
     }
 }
 let StickyModelFromCandidateOutlineProvider = class StickyModelFromCandidateOutlineProvider extends StickyModelCandidateProvider {
-    constructor(_languageFeaturesService) {
-        super();
+    constructor(_editor, _languageFeaturesService) {
+        super(_editor);
         this._languageFeaturesService = _languageFeaturesService;
     }
-    createModelFromProvider(textModel, modelVersionId, token) {
-        return OutlineModel.create(this._languageFeaturesService.documentSymbolProvider, textModel, token);
+    createModelFromProvider(token) {
+        return OutlineModel.create(this._languageFeaturesService.documentSymbolProvider, this._editor.getModel(), token);
     }
-    createStickyModel(textModel, modelVersionId, token, model) {
-        var _a;
-        const { stickyOutlineElement, providerID } = this._stickyModelFromOutlineModel(model, (_a = this._stickyModel) === null || _a === void 0 ? void 0 : _a.outlineProviderId);
-        return new StickyModel(textModel.uri, modelVersionId, stickyOutlineElement, providerID);
+    createStickyModel(token, model) {
+        const { stickyOutlineElement, providerID } = this._stickyModelFromOutlineModel(model, this._stickyModel?.outlineProviderId);
+        const textModel = this._editor.getModel();
+        return new StickyModel(textModel.uri, textModel.getVersionId(), stickyOutlineElement, providerID);
     }
     isModelValid(model) {
         return model && model.children.size > 0;
@@ -266,16 +255,17 @@ let StickyModelFromCandidateOutlineProvider = class StickyModelFromCandidateOutl
     }
 };
 StickyModelFromCandidateOutlineProvider = __decorate([
-    __param(0, ILanguageFeaturesService)
+    __param(1, ILanguageFeaturesService)
 ], StickyModelFromCandidateOutlineProvider);
 class StickyModelFromCandidateFoldingProvider extends StickyModelCandidateProvider {
     constructor(editor) {
-        super();
-        this._foldingLimitReporter = new RangesLimitReporter(editor);
+        super(editor);
+        this._foldingLimitReporter = this._register(new RangesLimitReporter(editor));
     }
-    createStickyModel(textModel, modelVersionId, token, model) {
+    createStickyModel(token, model) {
         const foldingElement = this._fromFoldingRegions(model);
-        return new StickyModel(textModel.uri, modelVersionId, foldingElement, undefined);
+        const textModel = this._editor.getModel();
+        return new StickyModel(textModel.uri, textModel.getVersionId(), foldingElement, undefined);
     }
     isModelValid(model) {
         return model !== null;
@@ -308,30 +298,40 @@ let StickyModelFromCandidateIndentationFoldingProvider = class StickyModelFromCa
     constructor(editor, _languageConfigurationService) {
         super(editor);
         this._languageConfigurationService = _languageConfigurationService;
+        this.provider = this._register(new IndentRangeProvider(editor.getModel(), this._languageConfigurationService, this._foldingLimitReporter));
     }
-    createModelFromProvider(textModel, modelVersionId, token) {
-        const provider = new IndentRangeProvider(textModel, this._languageConfigurationService, this._foldingLimitReporter);
-        return provider.compute(token);
+    async createModelFromProvider(token) {
+        return this.provider.compute(token);
     }
 };
 StickyModelFromCandidateIndentationFoldingProvider = __decorate([
     __param(1, ILanguageConfigurationService)
 ], StickyModelFromCandidateIndentationFoldingProvider);
 let StickyModelFromCandidateSyntaxFoldingProvider = class StickyModelFromCandidateSyntaxFoldingProvider extends StickyModelFromCandidateFoldingProvider {
-    constructor(editor, _languageFeaturesService) {
+    constructor(editor, onProviderUpdate, _languageFeaturesService) {
         super(editor);
         this._languageFeaturesService = _languageFeaturesService;
+        this.provider = this._register(new MutableDisposable());
+        this._register(this._languageFeaturesService.foldingRangeProvider.onDidChange(() => {
+            this._updateProvider(editor, onProviderUpdate);
+        }));
+        this._updateProvider(editor, onProviderUpdate);
     }
-    isProviderValid(textModel) {
-        const selectedProviders = FoldingController.getFoldingRangeProviders(this._languageFeaturesService, textModel);
-        return selectedProviders.length > 0;
+    _updateProvider(editor, onProviderUpdate) {
+        const selectedProviders = FoldingController.getFoldingRangeProviders(this._languageFeaturesService, editor.getModel());
+        if (selectedProviders.length === 0) {
+            return;
+        }
+        this.provider.value = new SyntaxRangeProvider(editor.getModel(), selectedProviders, onProviderUpdate, this._foldingLimitReporter, undefined);
     }
-    createModelFromProvider(textModel, modelVersionId, token) {
-        const selectedProviders = FoldingController.getFoldingRangeProviders(this._languageFeaturesService, textModel);
-        const provider = new SyntaxRangeProvider(textModel, selectedProviders, () => this.createModelFromProvider(textModel, modelVersionId, token), this._foldingLimitReporter, undefined);
-        return provider.compute(token);
+    isProviderValid() {
+        return this.provider !== undefined;
+    }
+    async createModelFromProvider(token) {
+        return this.provider.value?.compute(token) ?? null;
     }
 };
 StickyModelFromCandidateSyntaxFoldingProvider = __decorate([
-    __param(1, ILanguageFeaturesService)
+    __param(2, ILanguageFeaturesService)
 ], StickyModelFromCandidateSyntaxFoldingProvider);
+//# sourceMappingURL=stickyScrollModelProvider.js.map

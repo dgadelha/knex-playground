@@ -18,7 +18,8 @@ import { Range } from '../common/core/range.js';
 import { EditorContextKeys } from '../common/editorContextKeys.js';
 import { ContextKeyExpr } from '../../platform/contextkey/common/contextkey.js';
 import { KeybindingsRegistry } from '../../platform/keybinding/common/keybindingsRegistry.js';
-import { getActiveElement } from '../../base/browser/dom.js';
+import { getActiveElement, isEditableElement } from '../../base/browser/dom.js';
+import { EnterOperation } from '../common/cursor/cursorTypeEditOperations.js';
 const CORE_WEIGHT = 0 /* KeybindingWeight.EditorCore */;
 export class CoreEditorCommand extends EditorCommand {
     runEditorCommand(accessor, editor, args) {
@@ -51,7 +52,7 @@ export var EditorScroll_;
         }
         return true;
     };
-    EditorScroll_.description = {
+    EditorScroll_.metadata = {
         description: 'Scroll editor in the given direction',
         args: [
             {
@@ -182,7 +183,7 @@ export var RevealLine_;
         }
         return true;
     };
-    RevealLine_.description = {
+    RevealLine_.metadata = {
         description: 'Reveal the given line at the given logical position',
         args: [
             {
@@ -235,7 +236,7 @@ class EditorOrNativeTextInputCommand {
         target.addImplementation(1000, 'generic-dom-input-textarea', (accessor, args) => {
             // Only if focused on an element that allows for entering text
             const activeElement = getActiveElement();
-            if (activeElement && ['input', 'textarea'].indexOf(activeElement.tagName.toLowerCase()) >= 0) {
+            if (activeElement && isEditableElement(activeElement)) {
                 this.runDOMCommand(activeElement);
                 return true;
             }
@@ -276,7 +277,7 @@ export var CoreNavigationCommands;
                 CursorMoveCommands.moveTo(viewModel, viewModel.getPrimaryCursorState(), this._inSelectionMode, args.position, args.viewPosition)
             ]);
             if (cursorStateChanged && args.revealType !== 2 /* NavigationCommandRevealType.None */) {
-                viewModel.revealPrimaryCursor(args.source, true, true);
+                viewModel.revealAllCursors(args.source, true, true);
             }
         }
     }
@@ -434,7 +435,7 @@ export var CoreNavigationCommands;
             super({
                 id: 'cursorMove',
                 precondition: undefined,
-                description: CursorMove_.description
+                metadata: CursorMove_.metadata
             });
         }
         runCoreEditorCommand(viewModel, args) {
@@ -448,7 +449,7 @@ export var CoreNavigationCommands;
         _runCursorMove(viewModel, source, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(source, 3 /* CursorChangeReason.Explicit */, CursorMoveImpl._move(viewModel, viewModel.getCursorStates(), args));
-            viewModel.revealPrimaryCursor(source, true);
+            viewModel.revealAllCursors(source, true);
         }
         static _move(viewModel, cursors, args) {
             const inSelectionMode = args.select;
@@ -496,7 +497,7 @@ export var CoreNavigationCommands;
             }
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(dynamicArgs.source, 3 /* CursorChangeReason.Explicit */, CursorMoveCommands.simpleMove(viewModel, viewModel.getCursorStates(), args.direction, args.select, args.value, args.unit));
-            viewModel.revealPrimaryCursor(dynamicArgs.source, true);
+            viewModel.revealAllCursors(dynamicArgs.source, true);
         }
     }
     CoreNavigationCommands.CursorLeft = registerEditorCommand(new CursorMoveBasedCommand({
@@ -760,7 +761,7 @@ export var CoreNavigationCommands;
         runCoreEditorCommand(viewModel, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, CursorMoveCommands.moveToBeginningOfLine(viewModel, viewModel.getCursorStates(), this._inSelectionMode));
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
     }
     CoreNavigationCommands.CursorHome = registerEditorCommand(new HomeCommand({
@@ -793,7 +794,7 @@ export var CoreNavigationCommands;
         runCoreEditorCommand(viewModel, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, this._exec(viewModel.getCursorStates()));
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
         _exec(cursors) {
             const result = [];
@@ -835,7 +836,7 @@ export var CoreNavigationCommands;
         runCoreEditorCommand(viewModel, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, CursorMoveCommands.moveToEndOfLine(viewModel, viewModel.getCursorStates(), this._inSelectionMode, args.sticky || false));
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
     }
     CoreNavigationCommands.CursorEnd = registerEditorCommand(new EndCommand({
@@ -849,7 +850,7 @@ export var CoreNavigationCommands;
             primary: 13 /* KeyCode.End */,
             mac: { primary: 13 /* KeyCode.End */, secondary: [2048 /* KeyMod.CtrlCmd */ | 17 /* KeyCode.RightArrow */] }
         },
-        description: {
+        metadata: {
             description: `Go to End`,
             args: [{
                     name: 'args',
@@ -857,7 +858,7 @@ export var CoreNavigationCommands;
                         type: 'object',
                         properties: {
                             'sticky': {
-                                description: nls.localize('stickydesc', "Stick to the end even when going to longer lines"),
+                                description: nls.localize(61, "Stick to the end even when going to longer lines"),
                                 type: 'boolean',
                                 default: false
                             }
@@ -877,7 +878,7 @@ export var CoreNavigationCommands;
             primary: 1024 /* KeyMod.Shift */ | 13 /* KeyCode.End */,
             mac: { primary: 1024 /* KeyMod.Shift */ | 13 /* KeyCode.End */, secondary: [2048 /* KeyMod.CtrlCmd */ | 1024 /* KeyMod.Shift */ | 17 /* KeyCode.RightArrow */] }
         },
-        description: {
+        metadata: {
             description: `Select to End`,
             args: [{
                     name: 'args',
@@ -885,7 +886,7 @@ export var CoreNavigationCommands;
                         type: 'object',
                         properties: {
                             'sticky': {
-                                description: nls.localize('stickydesc', "Stick to the end even when going to longer lines"),
+                                description: nls.localize(62, "Stick to the end even when going to longer lines"),
                                 type: 'boolean',
                                 default: false
                             }
@@ -902,7 +903,7 @@ export var CoreNavigationCommands;
         runCoreEditorCommand(viewModel, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, this._exec(viewModel, viewModel.getCursorStates()));
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
         _exec(viewModel, cursors) {
             const result = [];
@@ -945,7 +946,7 @@ export var CoreNavigationCommands;
         runCoreEditorCommand(viewModel, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, CursorMoveCommands.moveToBeginningOfBuffer(viewModel, viewModel.getCursorStates(), this._inSelectionMode));
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
     }
     CoreNavigationCommands.CursorTop = registerEditorCommand(new TopCommand({
@@ -978,7 +979,7 @@ export var CoreNavigationCommands;
         runCoreEditorCommand(viewModel, args) {
             viewModel.model.pushStackElement();
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, CursorMoveCommands.moveToEndOfBuffer(viewModel, viewModel.getCursorStates(), this._inSelectionMode));
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
     }
     CoreNavigationCommands.CursorBottom = registerEditorCommand(new BottomCommand({
@@ -1008,7 +1009,7 @@ export var CoreNavigationCommands;
             super({
                 id: 'editorScroll',
                 precondition: undefined,
-                description: EditorScroll_.description
+                metadata: EditorScroll_.metadata
             });
         }
         determineScrollMethod(args) {
@@ -1304,7 +1305,7 @@ export var CoreNavigationCommands;
                 CursorMoveCommands.word(viewModel, viewModel.getPrimaryCursorState(), this._inSelectionMode, args.position)
             ]);
             if (args.revealType !== 2 /* NavigationCommandRevealType.None */) {
-                viewModel.revealPrimaryCursor(args.source, true, true);
+                viewModel.revealAllCursors(args.source, true, true);
             }
         }
     }
@@ -1352,7 +1353,7 @@ export var CoreNavigationCommands;
                 CursorMoveCommands.line(viewModel, viewModel.getPrimaryCursorState(), this._inSelectionMode, args.position, args.viewPosition)
             ]);
             if (args.revealType !== 2 /* NavigationCommandRevealType.None */) {
-                viewModel.revealPrimaryCursor(args.source, false, true);
+                viewModel.revealAllCursors(args.source, false, true);
             }
         }
     }
@@ -1411,7 +1412,7 @@ export var CoreNavigationCommands;
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, [
                 CursorMoveCommands.cancelSelection(viewModel, viewModel.getPrimaryCursorState())
             ]);
-            viewModel.revealPrimaryCursor(args.source, true);
+            viewModel.revealAllCursors(args.source, true);
         }
     });
     CoreNavigationCommands.RemoveSecondaryCursors = registerEditorCommand(new class extends CoreEditorCommand {
@@ -1432,8 +1433,8 @@ export var CoreNavigationCommands;
             viewModel.setCursorStates(args.source, 3 /* CursorChangeReason.Explicit */, [
                 viewModel.getPrimaryCursorState()
             ]);
-            viewModel.revealPrimaryCursor(args.source, true);
-            status(nls.localize('removedCursor', "Removed secondary cursors"));
+            viewModel.revealAllCursors(args.source, true);
+            status(nls.localize(63, "Removed secondary cursors"));
         }
     });
     CoreNavigationCommands.RevealLine = registerEditorCommand(new class extends CoreEditorCommand {
@@ -1441,7 +1442,7 @@ export var CoreNavigationCommands;
             super({
                 id: 'revealLine',
                 precondition: undefined,
-                description: RevealLine_.description
+                metadata: RevealLine_.metadata
             });
         }
         runCoreEditorCommand(viewModel, args) {
@@ -1567,7 +1568,7 @@ export var CoreEditingCommands;
         }
         runCoreEditingCommand(editor, viewModel, args) {
             editor.pushUndoStop();
-            editor.executeCommands(this.id, TypeOperations.lineBreakInsert(viewModel.cursorConfig, viewModel.model, viewModel.getCursorStates().map(s => s.modelState.selection)));
+            editor.executeCommands(this.id, EnterOperation.lineBreakInsert(viewModel.cursorConfig, viewModel.model, viewModel.getCursorStates().map(s => s.modelState.selection)));
         }
     });
     CoreEditingCommands.Outdent = registerEditorCommand(new class extends CoreEditingCommand {
@@ -1659,7 +1660,7 @@ export var CoreEditingCommands;
             activeElement.ownerDocument.execCommand('undo');
         }
         runEditorCommand(accessor, editor, args) {
-            if (!editor.hasModel() || editor.getOption(90 /* EditorOption.readOnly */) === true) {
+            if (!editor.hasModel() || editor.getOption(104 /* EditorOption.readOnly */) === true) {
                 return;
             }
             return editor.getModel().undo();
@@ -1673,7 +1674,7 @@ export var CoreEditingCommands;
             activeElement.ownerDocument.execCommand('redo');
         }
         runEditorCommand(accessor, editor, args) {
-            if (!editor.hasModel() || editor.getOption(90 /* EditorOption.readOnly */) === true) {
+            if (!editor.hasModel() || editor.getOption(104 /* EditorOption.readOnly */) === true) {
                 return;
             }
             return editor.getModel().redo();
@@ -1684,11 +1685,11 @@ export var CoreEditingCommands;
  * A command that will invoke a command on the focused editor.
  */
 class EditorHandlerCommand extends Command {
-    constructor(id, handlerId, description) {
+    constructor(id, handlerId, metadata) {
         super({
             id: id,
             precondition: undefined,
-            description: description
+            metadata
         });
         this._handlerId = handlerId;
     }
@@ -1700,9 +1701,9 @@ class EditorHandlerCommand extends Command {
         editor.trigger('keyboard', this._handlerId, args);
     }
 }
-function registerOverwritableCommand(handlerId, description) {
+function registerOverwritableCommand(handlerId, metadata) {
     registerCommand(new EditorHandlerCommand('default:' + handlerId, handlerId));
-    registerCommand(new EditorHandlerCommand(handlerId, handlerId, description));
+    registerCommand(new EditorHandlerCommand(handlerId, handlerId, metadata));
 }
 registerOverwritableCommand("type" /* Handler.Type */, {
     description: `Type`,
@@ -1725,3 +1726,4 @@ registerOverwritableCommand("compositionStart" /* Handler.CompositionStart */);
 registerOverwritableCommand("compositionEnd" /* Handler.CompositionEnd */);
 registerOverwritableCommand("paste" /* Handler.Paste */);
 registerOverwritableCommand("cut" /* Handler.Cut */);
+//# sourceMappingURL=coreCommands.js.map

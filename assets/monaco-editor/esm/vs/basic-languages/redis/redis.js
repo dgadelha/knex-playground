@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/redis/redis.ts
 var conf = {
@@ -234,10 +235,18 @@ var language = {
     "HSCAN",
     "ZSCAN"
   ],
-  operators: [],
-  builtinFunctions: [],
-  builtinVariables: [],
-  pseudoColumns: [],
+  operators: [
+    // NOT SUPPORTED
+  ],
+  builtinFunctions: [
+    // NOT SUPPORTED
+  ],
+  builtinVariables: [
+    // NOT SUPPORTED
+  ],
+  pseudoColumns: [
+    // NOT SUPPORTED
+  ],
   tokenizer: {
     root: [
       { include: "@whitespace" },
@@ -292,7 +301,9 @@ var language = {
       [/""/, "string.double"],
       [/"/, { token: "string.double", next: "@pop" }]
     ],
-    scopes: []
+    scopes: [
+      // NOT SUPPORTED
+    ]
   }
 };
 export {

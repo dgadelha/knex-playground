@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/restructuredtext/restructuredtext.ts
 var conf = {
@@ -61,8 +62,13 @@ var language = {
   punctuation: /(=|-|~|`|#|"|\^|\+|\*|:|\.|'|_|\+)/,
   tokenizer: {
     root: [
+      //sections
       [/^(@punctuation{3,}$){1,1}?/, "keyword"],
+      //line-blocks
+      //No rules on it
+      //bullet-lists
       [/^\s*([\*\-+‣•]|[a-zA-Z0-9]+\.|\([a-zA-Z0-9]+\)|[a-zA-Z0-9]+\))\s/, "keyword"],
+      //literal-blocks
       [/([ ]::)\s*$/, "keyword", "@blankLineOfLiteralBlocks"],
       [/(::)\s*$/, "keyword", "@blankLineOfLiteralBlocks"],
       { include: "@tables" },
@@ -70,41 +76,54 @@ var language = {
       { include: "@inlineMarkup" }
     ],
     explicitMarkupBlocks: [
+      //citations
       { include: "@citations" },
+      //footnotes
       { include: "@footnotes" },
+      //directives
       [
         /^(\.\.\s)(@simpleRefName)(::\s)(.*)$/,
         [{ token: "", next: "subsequentLines" }, "keyword", "", ""]
       ],
+      //hyperlink-targets
       [
         /^(\.\.)(\s+)(_)(@simpleRefName)(:)(\s+)(.*)/,
         [{ token: "", next: "hyperlinks" }, "", "", "string.link", "", "", "string.link"]
       ],
+      //anonymous-hyperlinks
       [
         /^((?:(?:\.\.)(?:\s+))?)(__)(:)(\s+)(.*)/,
         [{ token: "", next: "subsequentLines" }, "", "", "", "string.link"]
       ],
       [/^(__\s+)(.+)/, ["", "string.link"]],
+      //substitution-definitions
       [
         /^(\.\.)( \|)([^| ]+[^|]*[^| ]*)(\| )(@simpleRefName)(:: .*)/,
         [{ token: "", next: "subsequentLines" }, "", "string.link", "", "keyword", ""],
         "@rawBlocks"
       ],
       [/(\|)([^| ]+[^|]*[^| ]*)(\|_{0,2})/, ["", "string.link", ""]],
+      //comments
       [/^(\.\.)([ ].*)$/, [{ token: "", next: "@comments" }, "comment"]]
     ],
     inlineMarkup: [
       { include: "@citationsReference" },
       { include: "@footnotesReference" },
+      //hyperlink-references
       [/(@simpleRefName)(_{1,2})/, ["string.link", ""]],
+      //embedded-uris-and-aliases
       [/(`)([^<`]+\s+)(<)(.*)(>)(`)(_)/, ["", "string.link", "", "string.link", "", "", ""]],
+      //emphasis
       [/\*\*([^\\*]|\*(?!\*))+\*\*/, "strong"],
       [/\*[^*]+\*/, "emphasis"],
+      //inline-literals
       [/(``)((?:[^`]|\`(?!`))+)(``)/, ["", "keyword", ""]],
       [/(__\s+)(.+)/, ["", "keyword"]],
+      //interpreted-text
       [/(:)((?:@simpleRefNameWithoutBq)?)(:`)([^`]+)(`)/, ["", "keyword", "", "", ""]],
       [/(`)([^`]+)(`:)((?:@simpleRefNameWithoutBq)?)(:)/, ["", "", "", "keyword", ""]],
       [/(`)([^`]+)(`)/, ""],
+      //inline-internal-targets
       [/(_`)(@phrase)(`)/, ["", "string.link", ""]]
     ],
     citations: [

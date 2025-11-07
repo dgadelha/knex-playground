@@ -24,10 +24,16 @@ import { IEditorWorkerService } from '../../../common/services/editorWorker.js';
 import * as nls from '../../../../nls.js';
 import { InPlaceReplaceCommand } from './inPlaceReplaceCommand.js';
 import './inPlaceReplace.css';
-let InPlaceReplaceController = InPlaceReplaceController_1 = class InPlaceReplaceController {
+let InPlaceReplaceController = class InPlaceReplaceController {
+    static { InPlaceReplaceController_1 = this; }
+    static { this.ID = 'editor.contrib.inPlaceReplaceController'; }
     static get(editor) {
         return editor.getContribution(InPlaceReplaceController_1.ID);
     }
+    static { this.DECORATION = ModelDecorationOptions.register({
+        description: 'in-place-replace',
+        className: 'valueSetReplacement'
+    }); }
     constructor(editor, editorWorkerService) {
         this.editor = editor;
         this.editorWorkerService = editorWorkerService;
@@ -36,9 +42,8 @@ let InPlaceReplaceController = InPlaceReplaceController_1 = class InPlaceReplace
     dispose() {
     }
     run(source, up) {
-        var _a;
         // cancel any pending request
-        (_a = this.currentRequest) === null || _a === void 0 ? void 0 : _a.cancel();
+        this.currentRequest?.cancel();
         const editorSelection = this.editor.getSelection();
         const model = this.editor.getModel();
         if (!model || !editorSelection) {
@@ -56,7 +61,6 @@ let InPlaceReplaceController = InPlaceReplaceController_1 = class InPlaceReplace
         }
         this.currentRequest = createCancelablePromise(token => this.editorWorkerService.navigateValueSet(modelURI, selection, up));
         return this.currentRequest.then(result => {
-            var _a;
             if (!result || !result.range || !result.value) {
                 // No proper result
                 return;
@@ -90,17 +94,12 @@ let InPlaceReplaceController = InPlaceReplaceController_1 = class InPlaceReplace
                     options: InPlaceReplaceController_1.DECORATION
                 }]);
             // remove decoration after delay
-            (_a = this.decorationRemover) === null || _a === void 0 ? void 0 : _a.cancel();
+            this.decorationRemover?.cancel();
             this.decorationRemover = timeout(350);
             this.decorationRemover.then(() => this.decorations.clear()).catch(onUnexpectedError);
         }).catch(onUnexpectedError);
     }
 };
-InPlaceReplaceController.ID = 'editor.contrib.inPlaceReplaceController';
-InPlaceReplaceController.DECORATION = ModelDecorationOptions.register({
-    description: 'in-place-replace',
-    className: 'valueSetReplacement'
-});
 InPlaceReplaceController = InPlaceReplaceController_1 = __decorate([
     __param(1, IEditorWorkerService)
 ], InPlaceReplaceController);
@@ -108,8 +107,7 @@ class InPlaceReplaceUp extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.inPlaceReplace.up',
-            label: nls.localize('InPlaceReplaceAction.previous.label', "Replace with Previous Value"),
-            alias: 'Replace with Previous Value',
+            label: nls.localize2(1230, "Replace with Previous Value"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -130,8 +128,7 @@ class InPlaceReplaceDown extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.inPlaceReplace.down',
-            label: nls.localize('InPlaceReplaceAction.next.label', "Replace with Next Value"),
-            alias: 'Replace with Next Value',
+            label: nls.localize2(1231, "Replace with Next Value"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -151,3 +148,4 @@ class InPlaceReplaceDown extends EditorAction {
 registerEditorContribution(InPlaceReplaceController.ID, InPlaceReplaceController, 4 /* EditorContributionInstantiation.Lazy */);
 registerEditorAction(InPlaceReplaceUp);
 registerEditorAction(InPlaceReplaceDown);
+//# sourceMappingURL=inPlaceReplace.js.map

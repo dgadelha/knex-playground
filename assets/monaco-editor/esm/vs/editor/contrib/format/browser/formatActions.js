@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { isNonEmptyArray } from '../../../../base/common/arrays.js';
 import { CancellationToken, CancellationTokenSource } from '../../../../base/common/cancellation.js';
 import { onUnexpectedError } from '../../../../base/common/errors.js';
@@ -32,25 +23,28 @@ import { Range } from '../../../common/core/range.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { IEditorWorkerService } from '../../../common/services/editorWorker.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
-import { alertFormattingEdits, formatDocumentRangesWithSelectedProvider, formatDocumentWithSelectedProvider, getOnTypeFormattingEdits } from './format.js';
+import { formatDocumentRangesWithSelectedProvider, formatDocumentWithSelectedProvider, getOnTypeFormattingEdits } from './format.js';
 import { FormattingEdit } from './formattingEdit.js';
 import * as nls from '../../../../nls.js';
+import { AccessibilitySignal, IAccessibilitySignalService } from '../../../../platform/accessibilitySignal/browser/accessibilitySignalService.js';
 import { CommandsRegistry, ICommandService } from '../../../../platform/commands/common/commands.js';
 import { ContextKeyExpr } from '../../../../platform/contextkey/common/contextkey.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IEditorProgressService, Progress } from '../../../../platform/progress/common/progress.js';
 let FormatOnType = class FormatOnType {
-    constructor(_editor, _languageFeaturesService, _workerService) {
+    static { this.ID = 'editor.contrib.autoFormat'; }
+    constructor(_editor, _languageFeaturesService, _workerService, _accessibilitySignalService) {
         this._editor = _editor;
         this._languageFeaturesService = _languageFeaturesService;
         this._workerService = _workerService;
+        this._accessibilitySignalService = _accessibilitySignalService;
         this._disposables = new DisposableStore();
         this._sessionDisposables = new DisposableStore();
         this._disposables.add(_languageFeaturesService.onTypeFormattingEditProvider.onDidChange(this._update, this));
         this._disposables.add(_editor.onDidChangeModel(() => this._update()));
         this._disposables.add(_editor.onDidChangeModelLanguage(() => this._update()));
         this._disposables.add(_editor.onDidChangeConfiguration(e => {
-            if (e.hasChanged(56 /* EditorOption.formatOnType */)) {
+            if (e.hasChanged(65 /* EditorOption.formatOnType */)) {
                 this._update();
             }
         }));
@@ -64,7 +58,7 @@ let FormatOnType = class FormatOnType {
         // clean up
         this._sessionDisposables.clear();
         // we are disabled
-        if (!this._editor.getOption(56 /* EditorOption.formatOnType */)) {
+        if (!this._editor.getOption(65 /* EditorOption.formatOnType */)) {
             return;
         }
         // no model
@@ -125,21 +119,22 @@ let FormatOnType = class FormatOnType {
                 return;
             }
             if (isNonEmptyArray(edits)) {
+                this._accessibilitySignalService.playSignal(AccessibilitySignal.format, { userGesture: false });
                 FormattingEdit.execute(this._editor, edits, true);
-                alertFormattingEdits(edits);
             }
         }).finally(() => {
             unbind.dispose();
         });
     }
 };
-FormatOnType.ID = 'editor.contrib.autoFormat';
 FormatOnType = __decorate([
     __param(1, ILanguageFeaturesService),
-    __param(2, IEditorWorkerService)
+    __param(2, IEditorWorkerService),
+    __param(3, IAccessibilitySignalService)
 ], FormatOnType);
 export { FormatOnType };
 let FormatOnPaste = class FormatOnPaste {
+    static { this.ID = 'editor.contrib.formatOnPaste'; }
     constructor(editor, _languageFeaturesService, _instantiationService) {
         this.editor = editor;
         this._languageFeaturesService = _languageFeaturesService;
@@ -159,7 +154,7 @@ let FormatOnPaste = class FormatOnPaste {
         // clean up
         this._callOnModel.clear();
         // we are disabled
-        if (!this.editor.getOption(55 /* EditorOption.formatOnPaste */)) {
+        if (!this.editor.getOption(64 /* EditorOption.formatOnPaste */)) {
             return;
         }
         // no model
@@ -179,10 +174,9 @@ let FormatOnPaste = class FormatOnPaste {
         if (this.editor.getSelections().length > 1) {
             return;
         }
-        this._instantiationService.invokeFunction(formatDocumentRangesWithSelectedProvider, this.editor, range, 2 /* FormattingMode.Silent */, Progress.None, CancellationToken.None).catch(onUnexpectedError);
+        this._instantiationService.invokeFunction(formatDocumentRangesWithSelectedProvider, this.editor, range, 2 /* FormattingMode.Silent */, Progress.None, CancellationToken.None, false).catch(onUnexpectedError);
     }
 };
-FormatOnPaste.ID = 'editor.contrib.formatOnPaste';
 FormatOnPaste = __decorate([
     __param(1, ILanguageFeaturesService),
     __param(2, IInstantiationService)
@@ -191,8 +185,7 @@ class FormatDocumentAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.formatDocument',
-            label: nls.localize('formatDocument.label', "Format Document"),
-            alias: 'Format Document',
+            label: nls.localize2(1009, "Format Document"),
             precondition: ContextKeyExpr.and(EditorContextKeys.notInCompositeEditor, EditorContextKeys.writable, EditorContextKeys.hasDocumentFormattingProvider),
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -206,22 +199,19 @@ class FormatDocumentAction extends EditorAction {
             }
         });
     }
-    run(accessor, editor) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (editor.hasModel()) {
-                const instaService = accessor.get(IInstantiationService);
-                const progressService = accessor.get(IEditorProgressService);
-                yield progressService.showWhile(instaService.invokeFunction(formatDocumentWithSelectedProvider, editor, 1 /* FormattingMode.Explicit */, Progress.None, CancellationToken.None), 250);
-            }
-        });
+    async run(accessor, editor) {
+        if (editor.hasModel()) {
+            const instaService = accessor.get(IInstantiationService);
+            const progressService = accessor.get(IEditorProgressService);
+            await progressService.showWhile(instaService.invokeFunction(formatDocumentWithSelectedProvider, editor, 1 /* FormattingMode.Explicit */, Progress.None, CancellationToken.None, true), 250);
+        }
     }
 }
 class FormatSelectionAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.formatSelection',
-            label: nls.localize('formatSelection.label', "Format Selection"),
-            alias: 'Format Selection',
+            label: nls.localize2(1010, "Format Selection"),
             precondition: ContextKeyExpr.and(EditorContextKeys.writable, EditorContextKeys.hasDocumentSelectionFormattingProvider),
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -235,21 +225,19 @@ class FormatSelectionAction extends EditorAction {
             }
         });
     }
-    run(accessor, editor) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!editor.hasModel()) {
-                return;
-            }
-            const instaService = accessor.get(IInstantiationService);
-            const model = editor.getModel();
-            const ranges = editor.getSelections().map(range => {
-                return range.isEmpty()
-                    ? new Range(range.startLineNumber, 1, range.startLineNumber, model.getLineMaxColumn(range.startLineNumber))
-                    : range;
-            });
-            const progressService = accessor.get(IEditorProgressService);
-            yield progressService.showWhile(instaService.invokeFunction(formatDocumentRangesWithSelectedProvider, editor, ranges, 1 /* FormattingMode.Explicit */, Progress.None, CancellationToken.None), 250);
+    async run(accessor, editor) {
+        if (!editor.hasModel()) {
+            return;
+        }
+        const instaService = accessor.get(IInstantiationService);
+        const model = editor.getModel();
+        const ranges = editor.getSelections().map(range => {
+            return range.isEmpty()
+                ? new Range(range.startLineNumber, 1, range.startLineNumber, model.getLineMaxColumn(range.startLineNumber))
+                : range;
         });
+        const progressService = accessor.get(IEditorProgressService);
+        await progressService.showWhile(instaService.invokeFunction(formatDocumentRangesWithSelectedProvider, editor, ranges, 1 /* FormattingMode.Explicit */, Progress.None, CancellationToken.None, true), 250);
     }
 }
 registerEditorContribution(FormatOnType.ID, FormatOnType, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);
@@ -258,16 +246,17 @@ registerEditorAction(FormatDocumentAction);
 registerEditorAction(FormatSelectionAction);
 // this is the old format action that does both (format document OR format selection)
 // and we keep it here such that existing keybinding configurations etc will still work
-CommandsRegistry.registerCommand('editor.action.format', (accessor) => __awaiter(void 0, void 0, void 0, function* () {
+CommandsRegistry.registerCommand('editor.action.format', async (accessor) => {
     const editor = accessor.get(ICodeEditorService).getFocusedCodeEditor();
     if (!editor || !editor.hasModel()) {
         return;
     }
     const commandService = accessor.get(ICommandService);
     if (editor.getSelection().isEmpty()) {
-        yield commandService.executeCommand('editor.action.formatDocument');
+        await commandService.executeCommand('editor.action.formatDocument');
     }
     else {
-        yield commandService.executeCommand('editor.action.formatSelection');
+        await commandService.executeCommand('editor.action.formatSelection');
     }
-}));
+});
+//# sourceMappingURL=formatActions.js.map

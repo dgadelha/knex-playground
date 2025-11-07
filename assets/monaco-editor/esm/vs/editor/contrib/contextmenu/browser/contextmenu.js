@@ -20,13 +20,15 @@ import { isIOS } from '../../../../base/common/platform.js';
 import { EditorAction, registerEditorAction, registerEditorContribution } from '../../../browser/editorExtensions.js';
 import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import * as nls from '../../../../nls.js';
-import { IMenuService, MenuId, SubmenuItemAction } from '../../../../platform/actions/common/actions.js';
+import { IMenuService, SubmenuItemAction } from '../../../../platform/actions/common/actions.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
 import { IContextMenuService, IContextViewService } from '../../../../platform/contextview/browser/contextView.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { IWorkspaceContextService, isStandaloneEditorWorkspace } from '../../../../platform/workspace/common/workspace.js';
-let ContextMenuController = ContextMenuController_1 = class ContextMenuController {
+let ContextMenuController = class ContextMenuController {
+    static { ContextMenuController_1 = this; }
+    static { this.ID = 'editor.contrib.contextmenu'; }
     static get(editor) {
         return editor.getContribution(ContextMenuController_1.ID);
     }
@@ -54,7 +56,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             }
         }));
         this._toDispose.add(this._editor.onKeyDown((e) => {
-            if (!this._editor.getOption(24 /* EditorOption.contextmenu */)) {
+            if (!this._editor.getOption(30 /* EditorOption.contextmenu */)) {
                 return; // Context menu is turned off through configuration
             }
             if (e.keyCode === 58 /* KeyCode.ContextMenu */) {
@@ -69,7 +71,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         if (!this._editor.hasModel()) {
             return;
         }
-        if (!this._editor.getOption(24 /* EditorOption.contextmenu */)) {
+        if (!this._editor.getOption(30 /* EditorOption.contextmenu */)) {
             this._editor.focus();
             // Ensure the cursor is at the position of the mouse click
             if (e.target.position && !this._editor.getSelection().containsPosition(e.target.position)) {
@@ -115,14 +117,14 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         this.showContextMenu(anchor);
     }
     showContextMenu(anchor) {
-        if (!this._editor.getOption(24 /* EditorOption.contextmenu */)) {
+        if (!this._editor.getOption(30 /* EditorOption.contextmenu */)) {
             return; // Context menu is turned off through configuration
         }
         if (!this._editor.hasModel()) {
             return;
         }
         // Find actions available for menu
-        const menuActions = this._getMenuActions(this._editor.getModel(), this._editor.isSimpleWidget ? MenuId.SimpleEditorContext : MenuId.EditorContext);
+        const menuActions = this._getMenuActions(this._editor.getModel(), this._editor.contextMenuId);
         // Show menu if we have actions to show
         if (menuActions.length > 0) {
             this._doShowContextMenu(menuActions, anchor);
@@ -131,9 +133,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
     _getMenuActions(model, menuId) {
         const result = [];
         // get menu groups
-        const menu = this._menuService.createMenu(menuId, this._contextKeyService);
-        const groups = menu.getActions({ arg: model.uri });
-        menu.dispose();
+        const groups = this._menuService.getMenuActions(menuId, this._contextKeyService, { arg: model.uri });
         // translate them into other actions
         for (const group of groups) {
             const [, actions] = group;
@@ -164,13 +164,6 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         if (!this._editor.hasModel()) {
             return;
         }
-        // Disable hover
-        const oldHoverSetting = this._editor.getOption(60 /* EditorOption.hover */);
-        this._editor.updateOptions({
-            hover: {
-                enabled: false
-            }
-        });
         let anchor = event;
         if (!anchor) {
             // Ensure selection is visible
@@ -183,11 +176,11 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             const posy = editorCoords.top + cursorCoords.top + cursorCoords.height;
             anchor = { x: posx, y: posy };
         }
-        const useShadowDOM = this._editor.getOption(126 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
+        const useShadowDOM = this._editor.getOption(144 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         // Show menu
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
-            domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,
+            domForShadowRoot: useShadowDOM ? this._editor.getOverflowWidgetsDomNode() ?? this._editor.getDomNode() : undefined,
             getAnchor: () => anchor,
             getActions: () => actions,
             getActionViewItem: (action) => {
@@ -206,9 +199,6 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             },
             onHide: (wasCancelled) => {
                 this._contextMenuIsBeingShownCount--;
-                this._editor.updateOptions({
-                    hover: oldHoverSetting
-                });
             }
         });
     }
@@ -220,7 +210,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
             // can't update the configuration properly in the standalone editor
             return;
         }
-        const minimapOptions = this._editor.getOption(72 /* EditorOption.minimap */);
+        const minimapOptions = this._editor.getOption(81 /* EditorOption.minimap */);
         let lastId = 0;
         const createAction = (opts) => {
             return {
@@ -257,7 +247,7 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         };
         const actions = [];
         actions.push(createAction({
-            label: nls.localize('context.minimap.minimap', "Minimap"),
+            label: nls.localize(896, "Minimap"),
             checked: minimapOptions.enabled,
             run: () => {
                 this._configurationService.updateValue(`editor.minimap.enabled`, !minimapOptions.enabled);
@@ -265,31 +255,31 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         }));
         actions.push(new Separator());
         actions.push(createAction({
-            label: nls.localize('context.minimap.renderCharacters', "Render Characters"),
+            label: nls.localize(897, "Render Characters"),
             enabled: minimapOptions.enabled,
             checked: minimapOptions.renderCharacters,
             run: () => {
                 this._configurationService.updateValue(`editor.minimap.renderCharacters`, !minimapOptions.renderCharacters);
             }
         }));
-        actions.push(createEnumAction(nls.localize('context.minimap.size', "Vertical size"), minimapOptions.enabled, 'editor.minimap.size', minimapOptions.size, [{
-                label: nls.localize('context.minimap.size.proportional', "Proportional"),
+        actions.push(createEnumAction(nls.localize(898, "Vertical size"), minimapOptions.enabled, 'editor.minimap.size', minimapOptions.size, [{
+                label: nls.localize(899, "Proportional"),
                 value: 'proportional'
             }, {
-                label: nls.localize('context.minimap.size.fill', "Fill"),
+                label: nls.localize(900, "Fill"),
                 value: 'fill'
             }, {
-                label: nls.localize('context.minimap.size.fit', "Fit"),
+                label: nls.localize(901, "Fit"),
                 value: 'fit'
             }]));
-        actions.push(createEnumAction(nls.localize('context.minimap.slider', "Slider"), minimapOptions.enabled, 'editor.minimap.showSlider', minimapOptions.showSlider, [{
-                label: nls.localize('context.minimap.slider.mouseover', "Mouse Over"),
+        actions.push(createEnumAction(nls.localize(902, "Slider"), minimapOptions.enabled, 'editor.minimap.showSlider', minimapOptions.showSlider, [{
+                label: nls.localize(903, "Mouse Over"),
                 value: 'mouseover'
             }, {
-                label: nls.localize('context.minimap.slider.always', "Always"),
+                label: nls.localize(904, "Always"),
                 value: 'always'
             }]));
-        const useShadowDOM = this._editor.getOption(126 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
+        const useShadowDOM = this._editor.getOption(144 /* EditorOption.useShadowDOM */) && !isIOS; // Do not use shadow dom on IOS #122035
         this._contextMenuIsBeingShownCount++;
         this._contextMenuService.showContextMenu({
             domForShadowRoot: useShadowDOM ? this._editor.getDomNode() : undefined,
@@ -311,7 +301,6 @@ let ContextMenuController = ContextMenuController_1 = class ContextMenuControlle
         this._toDispose.dispose();
     }
 };
-ContextMenuController.ID = 'editor.contrib.contextmenu';
 ContextMenuController = ContextMenuController_1 = __decorate([
     __param(1, IContextMenuService),
     __param(2, IContextViewService),
@@ -326,8 +315,7 @@ class ShowContextMenu extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.showContextMenu',
-            label: nls.localize('action.showContextMenu.label', "Show Editor Context Menu"),
-            alias: 'Show Editor Context Menu',
+            label: nls.localize2(905, "Show Editor Context Menu"),
             precondition: undefined,
             kbOpts: {
                 kbExpr: EditorContextKeys.textInputFocus,
@@ -337,9 +325,9 @@ class ShowContextMenu extends EditorAction {
         });
     }
     run(accessor, editor) {
-        var _a;
-        (_a = ContextMenuController.get(editor)) === null || _a === void 0 ? void 0 : _a.showContextMenu();
+        ContextMenuController.get(editor)?.showContextMenu();
     }
 }
 registerEditorContribution(ContextMenuController.ID, ContextMenuController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);
 registerEditorAction(ShowContextMenu);
+//# sourceMappingURL=contextmenu.js.map

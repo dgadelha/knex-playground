@@ -24,7 +24,7 @@ import { createDecorator } from '../../../../platform/instantiation/common/insta
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
 import { KeybindingsRegistry } from '../../../../platform/keybinding/common/keybindingsRegistry.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
-export const ctxHasSymbols = new RawContextKey('hasSymbols', false, localize('hasSymbols', "Whether there are symbol locations that can be navigated via keyboard-only."));
+export const ctxHasSymbols = new RawContextKey('hasSymbols', false, localize(1090, "Whether there are symbol locations that can be navigated via keyboard-only."));
 export const ISymbolNavigationService = createDecorator('ISymbolNavigationService');
 let SymbolNavigationService = class SymbolNavigationService {
     constructor(contextKeyService, _editorService, _notificationService, _keybindingService) {
@@ -37,10 +37,9 @@ let SymbolNavigationService = class SymbolNavigationService {
         this._ctxHasSymbols = ctxHasSymbols.bindTo(contextKeyService);
     }
     reset() {
-        var _a, _b;
         this._ctxHasSymbols.reset();
-        (_a = this._currentState) === null || _a === void 0 ? void 0 : _a.dispose();
-        (_b = this._currentMessage) === null || _b === void 0 ? void 0 : _b.dispose();
+        this._currentState?.dispose();
+        this._currentMessage?.close();
         this._currentModel = undefined;
         this._currentIdx = -1;
     }
@@ -108,12 +107,11 @@ let SymbolNavigationService = class SymbolNavigationService {
         });
     }
     _showMessage() {
-        var _a;
-        (_a = this._currentMessage) === null || _a === void 0 ? void 0 : _a.dispose();
+        this._currentMessage?.close();
         const kb = this._keybindingService.lookupKeybinding('editor.gotoNextSymbolFromResult');
         const message = kb
-            ? localize('location.kb', "Symbol {0} of {1}, {2} for next", this._currentIdx + 1, this._currentModel.references.length, kb.getLabel())
-            : localize('location', "Symbol {0} of {1}", this._currentIdx + 1, this._currentModel.references.length);
+            ? localize(1091, "Symbol {0} of {1}, {2} for next", this._currentIdx + 1, this._currentModel.references.length, kb.getLabel())
+            : localize(1092, "Symbol {0} of {1}", this._currentIdx + 1, this._currentModel.references.length);
         this._currentMessage = this._notificationService.status(message);
     }
 };
@@ -168,11 +166,11 @@ let EditorState = class EditorState {
         this._listener.set(editor, combinedDisposable(editor.onDidChangeCursorPosition(_ => this._onDidChange.fire({ editor })), editor.onDidChangeModelContent(_ => this._onDidChange.fire({ editor }))));
     }
     _onDidRemoveEditor(editor) {
-        var _a;
-        (_a = this._listener.get(editor)) === null || _a === void 0 ? void 0 : _a.dispose();
+        this._listener.get(editor)?.dispose();
         this._listener.delete(editor);
     }
 };
 EditorState = __decorate([
     __param(0, ICodeEditorService)
 ], EditorState);
+//# sourceMappingURL=symbolNavigation.js.map

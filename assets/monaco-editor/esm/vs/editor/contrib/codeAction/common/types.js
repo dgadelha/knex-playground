@@ -2,47 +2,23 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { onUnexpectedExternalError } from '../../../../base/common/errors.js';
-export class CodeActionKind {
-    constructor(value) {
-        this.value = value;
+import { HierarchicalKind } from '../../../../base/common/hierarchicalKind.js';
+export const CodeActionKind = new class {
+    constructor() {
+        this.QuickFix = new HierarchicalKind('quickfix');
+        this.Refactor = new HierarchicalKind('refactor');
+        this.RefactorExtract = this.Refactor.append('extract');
+        this.RefactorInline = this.Refactor.append('inline');
+        this.RefactorMove = this.Refactor.append('move');
+        this.RefactorRewrite = this.Refactor.append('rewrite');
+        this.Notebook = new HierarchicalKind('notebook');
+        this.Source = new HierarchicalKind('source');
+        this.SourceOrganizeImports = this.Source.append('organizeImports');
+        this.SourceFixAll = this.Source.append('fixAll');
+        this.SurroundWith = this.Refactor.append('surround');
     }
-    equals(other) {
-        return this.value === other.value;
-    }
-    contains(other) {
-        return this.equals(other) || this.value === '' || other.value.startsWith(this.value + CodeActionKind.sep);
-    }
-    intersects(other) {
-        return this.contains(other) || other.contains(this);
-    }
-    append(part) {
-        return new CodeActionKind(this.value + CodeActionKind.sep + part);
-    }
-}
-CodeActionKind.sep = '.';
-CodeActionKind.None = new CodeActionKind('@@none@@'); // Special code action that contains nothing
-CodeActionKind.Empty = new CodeActionKind('');
-CodeActionKind.QuickFix = new CodeActionKind('quickfix');
-CodeActionKind.Refactor = new CodeActionKind('refactor');
-CodeActionKind.RefactorExtract = CodeActionKind.Refactor.append('extract');
-CodeActionKind.RefactorInline = CodeActionKind.Refactor.append('inline');
-CodeActionKind.RefactorMove = CodeActionKind.Refactor.append('move');
-CodeActionKind.RefactorRewrite = CodeActionKind.Refactor.append('rewrite');
-CodeActionKind.Notebook = new CodeActionKind('notebook');
-CodeActionKind.Source = new CodeActionKind('source');
-CodeActionKind.SourceOrganizeImports = CodeActionKind.Source.append('organizeImports');
-CodeActionKind.SourceFixAll = CodeActionKind.Source.append('fixAll');
-CodeActionKind.SurroundWith = CodeActionKind.Refactor.append('surround');
+};
 export var CodeActionTriggerSource;
 (function (CodeActionTriggerSource) {
     CodeActionTriggerSource["Refactor"] = "refactor";
@@ -75,7 +51,7 @@ export function mayIncludeActionsOfKind(filter, providedKind) {
     return true;
 }
 export function filtersAction(filter, action) {
-    const actionKind = action.kind ? new CodeActionKind(action.kind) : undefined;
+    const actionKind = action.kind ? new HierarchicalKind(action.kind) : undefined;
     // Filter out actions by kind
     if (filter.include) {
         if (!actionKind || !filter.include.contains(actionKind)) {
@@ -127,7 +103,7 @@ export class CodeActionCommandArgs {
     }
     static getKindFromUser(arg, defaultKind) {
         return typeof arg.kind === 'string'
-            ? new CodeActionKind(arg.kind)
+            ? new HierarchicalKind(arg.kind)
             : defaultKind;
     }
     static getPreferredUser(arg) {
@@ -147,22 +123,20 @@ export class CodeActionItem {
         this.provider = provider;
         this.highlightRange = highlightRange;
     }
-    resolve(token) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            if (((_a = this.provider) === null || _a === void 0 ? void 0 : _a.resolveCodeAction) && !this.action.edit) {
-                let action;
-                try {
-                    action = yield this.provider.resolveCodeAction(this.action, token);
-                }
-                catch (err) {
-                    onUnexpectedExternalError(err);
-                }
-                if (action) {
-                    this.action.edit = action.edit;
-                }
+    async resolve(token) {
+        if (this.provider?.resolveCodeAction && !this.action.edit) {
+            let action;
+            try {
+                action = await this.provider.resolveCodeAction(this.action, token);
             }
-            return this;
-        });
+            catch (err) {
+                onUnexpectedExternalError(err);
+            }
+            if (action) {
+                this.action.edit = action.edit;
+            }
+        }
+        return this;
     }
 }
+//# sourceMappingURL=types.js.map

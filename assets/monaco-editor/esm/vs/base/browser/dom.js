@@ -6,45 +6,87 @@ import * as browser from './browser.js';
 import { BrowserFeatures } from './canIUse.js';
 import { StandardKeyboardEvent } from './keyboardEvent.js';
 import { StandardMouseEvent } from './mouseEvent.js';
-import { onUnexpectedError } from '../common/errors.js';
+import { AbstractIdleValue, IntervalTimer, _runWhenIdle } from '../common/async.js';
+import { BugIndicatingError, onUnexpectedError } from '../common/errors.js';
 import * as event from '../common/event.js';
-import * as dompurify from './dompurify/dompurify.js';
 import { Disposable, DisposableStore, toDisposable } from '../common/lifecycle.js';
-import { FileAccess, RemoteAuthorities } from '../common/network.js';
+import { RemoteAuthorities } from '../common/network.js';
 import * as platform from '../common/platform.js';
-export const { registerWindow, getWindows, onDidCreateWindow } = (function () {
-    const windows = [];
-    const onDidCreateWindow = new event.Emitter();
+import { hash } from '../common/hash.js';
+import { ensureCodeWindow, mainWindow } from './window.js';
+import { derived, derivedOpts, observableValue } from '../common/observable.js';
+//# region Multi-Window Support Utilities
+export const { registerWindow, getWindow, getDocument, getWindows, getWindowsCount, getWindowId, getWindowById, hasWindow, onDidRegisterWindow, onWillUnregisterWindow, onDidUnregisterWindow } = (function () {
+    const windows = new Map();
+    ensureCodeWindow(mainWindow, 1);
+    const mainWindowRegistration = { window: mainWindow, disposables: new DisposableStore() };
+    windows.set(mainWindow.vscodeWindowId, mainWindowRegistration);
+    const onDidRegisterWindow = new event.Emitter();
+    const onDidUnregisterWindow = new event.Emitter();
+    const onWillUnregisterWindow = new event.Emitter();
+    function getWindowById(windowId, fallbackToMain) {
+        const window = typeof windowId === 'number' ? windows.get(windowId) : undefined;
+        return window ?? (fallbackToMain ? mainWindowRegistration : undefined);
+    }
     return {
-        onDidCreateWindow: onDidCreateWindow.event,
+        onDidRegisterWindow: onDidRegisterWindow.event,
+        onWillUnregisterWindow: onWillUnregisterWindow.event,
+        onDidUnregisterWindow: onDidUnregisterWindow.event,
         registerWindow(window) {
-            windows.push(window);
-            const disposableStore = new DisposableStore();
-            disposableStore.add(toDisposable(() => {
-                const index = windows.indexOf(window);
-                if (index !== -1) {
-                    windows.splice(index, 1);
-                }
+            if (windows.has(window.vscodeWindowId)) {
+                return Disposable.None;
+            }
+            const disposables = new DisposableStore();
+            const registeredWindow = {
+                window,
+                disposables: disposables.add(new DisposableStore())
+            };
+            windows.set(window.vscodeWindowId, registeredWindow);
+            disposables.add(toDisposable(() => {
+                windows.delete(window.vscodeWindowId);
+                onDidUnregisterWindow.fire(window);
             }));
-            onDidCreateWindow.fire({ window, disposableStore });
-            return disposableStore;
+            disposables.add(addDisposableListener(window, EventType.BEFORE_UNLOAD, () => {
+                onWillUnregisterWindow.fire(window);
+            }));
+            onDidRegisterWindow.fire(registeredWindow);
+            return disposables;
         },
         getWindows() {
-            return windows;
+            return windows.values();
+        },
+        getWindowsCount() {
+            return windows.size;
+        },
+        getWindowId(targetWindow) {
+            return targetWindow.vscodeWindowId;
+        },
+        hasWindow(windowId) {
+            return windows.has(windowId);
+        },
+        getWindowById,
+        getWindow(e) {
+            const candidateNode = e;
+            if (candidateNode?.ownerDocument?.defaultView) {
+                return candidateNode.ownerDocument.defaultView.window;
+            }
+            const candidateEvent = e;
+            if (candidateEvent?.view) {
+                return candidateEvent.view.window;
+            }
+            return mainWindow;
+        },
+        getDocument(e) {
+            const candidateNode = e;
+            return getWindow(candidateNode).document;
         }
     };
 })();
+//#endregion
 export function clearNode(node) {
     while (node.firstChild) {
         node.firstChild.remove();
     }
-}
-/**
- * @deprecated Use node.isConnected directly
- */
-export function isInDOM(node) {
-    var _a;
-    return (_a = node === null || node === void 0 ? void 0 : node.isConnected) !== null && _a !== void 0 ? _a : false;
 }
 class DomListener {
     constructor(node, type, handler, options) {
@@ -68,9 +110,9 @@ class DomListener {
 export function addDisposableListener(node, type, handler, useCaptureOrOptions) {
     return new DomListener(node, type, handler, useCaptureOrOptions);
 }
-function _wrapAsStandardMouseEvent(handler) {
+function _wrapAsStandardMouseEvent(targetWindow, handler) {
     return function (e) {
-        return handler(new StandardMouseEvent(e));
+        return handler(new StandardMouseEvent(targetWindow, e));
     };
 }
 function _wrapAsStandardKeyboardEvent(handler) {
@@ -80,8 +122,8 @@ function _wrapAsStandardKeyboardEvent(handler) {
 }
 export const addStandardDisposableListener = function addStandardDisposableListener(node, type, handler, useCapture) {
     let wrapHandler = handler;
-    if (type === 'click' || type === 'mousedown') {
-        wrapHandler = _wrapAsStandardMouseEvent(handler);
+    if (type === 'click' || type === 'mousedown' || type === 'contextmenu') {
+        wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
     }
     else if (type === 'keydown' || type === 'keypress' || type === 'keyup') {
         wrapHandler = _wrapAsStandardKeyboardEvent(handler);
@@ -89,18 +131,52 @@ export const addStandardDisposableListener = function addStandardDisposableListe
     return addDisposableListener(node, type, wrapHandler, useCapture);
 };
 export const addStandardDisposableGenericMouseDownListener = function addStandardDisposableListener(node, handler, useCapture) {
-    const wrapHandler = _wrapAsStandardMouseEvent(handler);
+    const wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
     return addDisposableGenericMouseDownListener(node, wrapHandler, useCapture);
 };
 export const addStandardDisposableGenericMouseUpListener = function addStandardDisposableListener(node, handler, useCapture) {
-    const wrapHandler = _wrapAsStandardMouseEvent(handler);
+    const wrapHandler = _wrapAsStandardMouseEvent(getWindow(node), handler);
     return addDisposableGenericMouseUpListener(node, wrapHandler, useCapture);
 };
 export function addDisposableGenericMouseDownListener(node, handler, useCapture) {
     return addDisposableListener(node, platform.isIOS && BrowserFeatures.pointerEvents ? EventType.POINTER_DOWN : EventType.MOUSE_DOWN, handler, useCapture);
 }
+export function addDisposableGenericMouseMoveListener(node, handler, useCapture) {
+    return addDisposableListener(node, platform.isIOS && BrowserFeatures.pointerEvents ? EventType.POINTER_MOVE : EventType.MOUSE_MOVE, handler, useCapture);
+}
 export function addDisposableGenericMouseUpListener(node, handler, useCapture) {
     return addDisposableListener(node, platform.isIOS && BrowserFeatures.pointerEvents ? EventType.POINTER_UP : EventType.MOUSE_UP, handler, useCapture);
+}
+/**
+ * Execute the callback the next time the browser is idle, returning an
+ * {@link IDisposable} that will cancel the callback when disposed. This wraps
+ * [requestIdleCallback] so it will fallback to [setTimeout] if the environment
+ * doesn't support it.
+ *
+ * @param targetWindow The window for which to run the idle callback
+ * @param callback The callback to run when idle, this includes an
+ * [IdleDeadline] that provides the time alloted for the idle callback by the
+ * browser. Not respecting this deadline will result in a degraded user
+ * experience.
+ * @param timeout A timeout at which point to queue no longer wait for an idle
+ * callback but queue it on the regular event loop (like setTimeout). Typically
+ * this should not be used.
+ *
+ * [IdleDeadline]: https://developer.mozilla.org/en-US/docs/Web/API/IdleDeadline
+ * [requestIdleCallback]: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestIdleCallback
+ * [setTimeout]: https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout
+ */
+export function runWhenWindowIdle(targetWindow, callback, timeout) {
+    return _runWhenIdle(targetWindow, callback, timeout);
+}
+/**
+ * An implementation of the "idle-until-urgent"-strategy as introduced
+ * here: https://philipwalton.com/articles/idle-until-urgent/
+ */
+export class WindowIdleValue extends AbstractIdleValue {
+    constructor(targetWindow, executor) {
+        super(targetWindow, executor);
+    }
 }
 /**
  * Schedule a callback to be run at the next animation frame.
@@ -116,6 +192,19 @@ export let runAtThisOrScheduleAtNextAnimationFrame;
  * @return token that can be used to cancel the scheduled runner.
  */
 export let scheduleAtNextAnimationFrame;
+export class WindowIntervalTimer extends IntervalTimer {
+    /**
+     *
+     * @param node The optional node from which the target window is determined
+     */
+    constructor(node) {
+        super();
+        this.defaultTarget = node && getWindow(node);
+    }
+    cancelAndSet(runner, interval, targetWindow) {
+        return super.cancelAndSet(runner, interval, targetWindow ?? this.defaultTarget);
+    }
+}
 class AnimationFrameQueueItem {
     constructor(runner, priority = 0) {
         this._runner = runner;
@@ -145,68 +234,80 @@ class AnimationFrameQueueItem {
     /**
      * The runners scheduled at the next animation frame
      */
-    let NEXT_QUEUE = [];
+    const NEXT_QUEUE = new Map();
     /**
      * The runners scheduled at the current animation frame
      */
-    let CURRENT_QUEUE = null;
+    const CURRENT_QUEUE = new Map();
     /**
      * A flag to keep track if the native requestAnimationFrame was already called
      */
-    let animFrameRequested = false;
+    const animFrameRequested = new Map();
     /**
      * A flag to indicate if currently handling a native requestAnimationFrame callback
      */
-    let inAnimationFrameRunner = false;
-    const animationFrameRunner = () => {
-        animFrameRequested = false;
-        CURRENT_QUEUE = NEXT_QUEUE;
-        NEXT_QUEUE = [];
-        inAnimationFrameRunner = true;
-        while (CURRENT_QUEUE.length > 0) {
-            CURRENT_QUEUE.sort(AnimationFrameQueueItem.sort);
-            const top = CURRENT_QUEUE.shift();
+    const inAnimationFrameRunner = new Map();
+    const animationFrameRunner = (targetWindowId) => {
+        animFrameRequested.set(targetWindowId, false);
+        const currentQueue = NEXT_QUEUE.get(targetWindowId) ?? [];
+        CURRENT_QUEUE.set(targetWindowId, currentQueue);
+        NEXT_QUEUE.set(targetWindowId, []);
+        inAnimationFrameRunner.set(targetWindowId, true);
+        while (currentQueue.length > 0) {
+            currentQueue.sort(AnimationFrameQueueItem.sort);
+            const top = currentQueue.shift();
             top.execute();
         }
-        inAnimationFrameRunner = false;
+        inAnimationFrameRunner.set(targetWindowId, false);
     };
-    scheduleAtNextAnimationFrame = (runner, priority = 0) => {
+    scheduleAtNextAnimationFrame = (targetWindow, runner, priority = 0) => {
+        const targetWindowId = getWindowId(targetWindow);
         const item = new AnimationFrameQueueItem(runner, priority);
-        NEXT_QUEUE.push(item);
-        if (!animFrameRequested) {
-            animFrameRequested = true;
-            requestAnimationFrame(animationFrameRunner);
+        let nextQueue = NEXT_QUEUE.get(targetWindowId);
+        if (!nextQueue) {
+            nextQueue = [];
+            NEXT_QUEUE.set(targetWindowId, nextQueue);
+        }
+        nextQueue.push(item);
+        if (!animFrameRequested.get(targetWindowId)) {
+            animFrameRequested.set(targetWindowId, true);
+            targetWindow.requestAnimationFrame(() => animationFrameRunner(targetWindowId));
         }
         return item;
     };
-    runAtThisOrScheduleAtNextAnimationFrame = (runner, priority) => {
-        if (inAnimationFrameRunner) {
+    runAtThisOrScheduleAtNextAnimationFrame = (targetWindow, runner, priority) => {
+        const targetWindowId = getWindowId(targetWindow);
+        if (inAnimationFrameRunner.get(targetWindowId)) {
             const item = new AnimationFrameQueueItem(runner, priority);
-            CURRENT_QUEUE.push(item);
+            let currentQueue = CURRENT_QUEUE.get(targetWindowId);
+            if (!currentQueue) {
+                currentQueue = [];
+                CURRENT_QUEUE.set(targetWindowId, currentQueue);
+            }
+            currentQueue.push(item);
             return item;
         }
         else {
-            return scheduleAtNextAnimationFrame(runner, priority);
+            return scheduleAtNextAnimationFrame(targetWindow, runner, priority);
         }
     };
 })();
 export function getComputedStyle(el) {
-    return el.ownerDocument.defaultView.getComputedStyle(el, null);
+    return getWindow(el).getComputedStyle(el, null);
 }
-export function getClientArea(element) {
-    var _a;
-    const elDocument = element.ownerDocument;
-    const elWindow = (_a = elDocument.defaultView) === null || _a === void 0 ? void 0 : _a.window;
+export function getClientArea(element, defaultValue, fallbackElement) {
+    const elWindow = getWindow(element);
+    const elDocument = elWindow.document;
     // Try with DOM clientWidth / clientHeight
     if (element !== elDocument.body) {
         return new Dimension(element.clientWidth, element.clientHeight);
     }
     // If visual view port exits and it's on mobile, it should be used instead of window innerWidth / innerHeight, or document.body.clientWidth / document.body.clientHeight
-    if (platform.isIOS && (elWindow === null || elWindow === void 0 ? void 0 : elWindow.visualViewport)) {
+    if (platform.isIOS && elWindow?.visualViewport) {
         return new Dimension(elWindow.visualViewport.width, elWindow.visualViewport.height);
     }
     // Try innerWidth / innerHeight
-    if ((elWindow === null || elWindow === void 0 ? void 0 : elWindow.innerWidth) && elWindow.innerHeight) {
+    if (elWindow?.innerWidth && elWindow.innerHeight) {
         return new Dimension(elWindow.innerWidth, elWindow.innerHeight);
     }
     // Try with document.body.clientWidth / document.body.clientHeight
@@ -217,6 +318,12 @@ export function getClientArea(element) {
     if (elDocument.documentElement && elDocument.documentElement.clientWidth && elDocument.documentElement.clientHeight) {
         return new Dimension(elDocument.documentElement.clientWidth, elDocument.documentElement.clientHeight);
     }
+    if (fallbackElement) {
+        return getClientArea(fallbackElement, defaultValue);
+    }
+    if (defaultValue) {
+        return defaultValue;
+    }
     throw new Error('Unable to figure out browser width and height');
 }
 class SizeUtils {
@@ -225,49 +332,50 @@ class SizeUtils {
     static convertToPixels(element, value) {
         return parseFloat(value) || 0;
     }
-    static getDimension(element, cssPropertyName, jsPropertyName) {
+    static getDimension(element, cssPropertyName) {
         const computedStyle = getComputedStyle(element);
         const value = computedStyle ? computedStyle.getPropertyValue(cssPropertyName) : '0';
         return SizeUtils.convertToPixels(element, value);
     }
     static getBorderLeftWidth(element) {
-        return SizeUtils.getDimension(element, 'border-left-width', 'borderLeftWidth');
+        return SizeUtils.getDimension(element, 'border-left-width');
     }
     static getBorderRightWidth(element) {
-        return SizeUtils.getDimension(element, 'border-right-width', 'borderRightWidth');
+        return SizeUtils.getDimension(element, 'border-right-width');
     }
     static getBorderTopWidth(element) {
-        return SizeUtils.getDimension(element, 'border-top-width', 'borderTopWidth');
+        return SizeUtils.getDimension(element, 'border-top-width');
     }
     static getBorderBottomWidth(element) {
-        return SizeUtils.getDimension(element, 'border-bottom-width', 'borderBottomWidth');
+        return SizeUtils.getDimension(element, 'border-bottom-width');
     }
     static getPaddingLeft(element) {
-        return SizeUtils.getDimension(element, 'padding-left', 'paddingLeft');
+        return SizeUtils.getDimension(element, 'padding-left');
     }
     static getPaddingRight(element) {
-        return SizeUtils.getDimension(element, 'padding-right', 'paddingRight');
+        return SizeUtils.getDimension(element, 'padding-right');
     }
     static getPaddingTop(element) {
-        return SizeUtils.getDimension(element, 'padding-top', 'paddingTop');
+        return SizeUtils.getDimension(element, 'padding-top');
     }
     static getPaddingBottom(element) {
-        return SizeUtils.getDimension(element, 'padding-bottom', 'paddingBottom');
+        return SizeUtils.getDimension(element, 'padding-bottom');
     }
     static getMarginLeft(element) {
-        return SizeUtils.getDimension(element, 'margin-left', 'marginLeft');
+        return SizeUtils.getDimension(element, 'margin-left');
     }
     static getMarginTop(element) {
-        return SizeUtils.getDimension(element, 'margin-top', 'marginTop');
+        return SizeUtils.getDimension(element, 'margin-top');
     }
     static getMarginRight(element) {
-        return SizeUtils.getDimension(element, 'margin-right', 'marginRight');
+        return SizeUtils.getDimension(element, 'margin-right');
     }
     static getMarginBottom(element) {
-        return SizeUtils.getDimension(element, 'margin-bottom', 'marginBottom');
+        return SizeUtils.getDimension(element, 'margin-bottom');
     }
 }
 export class Dimension {
+    static { this.None = new Dimension(0, 0); }
     constructor(width, height) {
         this.width = width;
         this.height = height;
@@ -301,7 +409,6 @@ export class Dimension {
         return a.width === b.width && a.height === b.height;
     }
 }
-Dimension.None = new Dimension(0, 0);
 export function getTopLeftOffset(element) {
     // Adapted from WinJS.Utilities.getPosition
     // and added borders to the mix
@@ -341,11 +448,11 @@ export function size(element, width, height) {
  * Returns the position of a dom node relative to the entire page.
  */
 export function getDomNodePagePosition(domNode) {
-    var _a, _b, _c, _d;
     const bb = domNode.getBoundingClientRect();
+    const window = getWindow(domNode);
     return {
-        left: bb.left + ((_b = (_a = domNode.ownerDocument.defaultView) === null || _a === void 0 ? void 0 : _a.scrollX) !== null && _b !== void 0 ? _b : 0),
-        top: bb.top + ((_d = (_c = domNode.ownerDocument.defaultView) === null || _c === void 0 ? void 0 : _c.scrollY) !== null && _d !== void 0 ? _d : 0),
+        left: bb.left + window.scrollX,
+        top: bb.top + window.scrollY,
         width: bb.width,
         height: bb.height
     };
@@ -391,13 +498,7 @@ export function getTotalHeight(element) {
 }
 // ----------------------------------------------------------------------------------------
 export function isAncestor(testChild, testAncestor) {
-    while (testChild) {
-        if (testChild === testAncestor) {
-            return true;
-        }
-        testChild = testChild.parentNode;
-    }
-    return false;
+    return Boolean(testAncestor?.contains(testChild));
 }
 export function findParentWithClass(node, clazz, stopAtClazzOrNode) {
     while (node && node.nodeType === node.ELEMENT_NODE) {
@@ -430,9 +531,8 @@ export function isInShadowDOM(domNode) {
     return !!getShadowRoot(domNode);
 }
 export function getShadowRoot(domNode) {
-    var _a;
     while (domNode.parentNode) {
-        if (domNode === ((_a = domNode.ownerDocument) === null || _a === void 0 ? void 0 : _a.body)) {
+        if (domNode === domNode.ownerDocument?.body) {
             // reached the body
             return null;
         }
@@ -441,79 +541,112 @@ export function getShadowRoot(domNode) {
     return isShadowRoot(domNode) ? domNode : null;
 }
 /**
- * Returns the active element across all child windows.
- * Use this instead of `document.activeElement` to handle multiple windows.
+ * Returns the active element across all child windows
+ * based on document focus. Falls back to the main
+ * window if no window has focus.
  */
 export function getActiveElement() {
     let result = getActiveDocument().activeElement;
-    while (result === null || result === void 0 ? void 0 : result.shadowRoot) {
+    while (result?.shadowRoot) {
         result = result.shadowRoot.activeElement;
     }
     return result;
 }
 /**
- * Returns the active document across all child windows.
- * Use this instead of `document` when reacting to dom events to handle multiple windows.
+ * Returns true if the focused window active element matches
+ * the provided element. Falls back to the main window if no
+ * window has focus.
+ */
+export function isActiveElement(element) {
+    return getActiveElement() === element;
+}
+/**
+ * Returns true if the focused window active element is contained in
+ * `ancestor`. Falls back to the main window if no window has focus.
+ */
+export function isAncestorOfActiveElement(ancestor) {
+    return isAncestor(getActiveElement(), ancestor);
+}
+/**
+ * Returns the active document across main and child windows.
+ * Prefers the window with focus, otherwise falls back to
+ * the main windows document.
  */
 export function getActiveDocument() {
-    var _a;
-    const documents = [document, ...getWindows().map(w => w.document)];
-    return (_a = documents.find(doc => doc.hasFocus())) !== null && _a !== void 0 ? _a : document;
-}
-export function createStyleSheet(container = document.getElementsByTagName('head')[0], beforeAppend) {
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    style.media = 'screen';
-    beforeAppend === null || beforeAppend === void 0 ? void 0 : beforeAppend(style);
-    container.appendChild(style);
-    return style;
-}
-let _sharedStyleSheet = null;
-function getSharedStyleSheet() {
-    if (!_sharedStyleSheet) {
-        _sharedStyleSheet = createStyleSheet();
+    if (getWindowsCount() <= 1) {
+        return mainWindow.document;
     }
-    return _sharedStyleSheet;
+    const documents = Array.from(getWindows()).map(({ window }) => window.document);
+    return documents.find(doc => doc.hasFocus()) ?? mainWindow.document;
 }
-function getDynamicStyleSheetRules(style) {
-    var _a, _b;
-    if ((_a = style === null || style === void 0 ? void 0 : style.sheet) === null || _a === void 0 ? void 0 : _a.rules) {
-        // Chrome, IE
-        return style.sheet.rules;
-    }
-    if ((_b = style === null || style === void 0 ? void 0 : style.sheet) === null || _b === void 0 ? void 0 : _b.cssRules) {
-        // FF
-        return style.sheet.cssRules;
-    }
-    return [];
+/**
+ * Returns the active window across main and child windows.
+ * Prefers the window with focus, otherwise falls back to
+ * the main window.
+ */
+export function getActiveWindow() {
+    const document = getActiveDocument();
+    return (document.defaultView?.window ?? mainWindow);
 }
-export function createCSSRule(selector, cssText, style = getSharedStyleSheet()) {
-    if (!style || !cssText) {
-        return;
+export const sharedMutationObserver = new class {
+    constructor() {
+        this.mutationObservers = new Map();
     }
-    style.sheet.insertRule(selector + '{' + cssText + '}', 0);
-}
-export function removeCSSRulesContainingSelector(ruleName, style = getSharedStyleSheet()) {
-    if (!style) {
-        return;
-    }
-    const rules = getDynamicStyleSheetRules(style);
-    const toDelete = [];
-    for (let i = 0; i < rules.length; i++) {
-        const rule = rules[i];
-        if (rule.selectorText.indexOf(ruleName) !== -1) {
-            toDelete.push(i);
+    observe(target, disposables, options) {
+        let mutationObserversPerTarget = this.mutationObservers.get(target);
+        if (!mutationObserversPerTarget) {
+            mutationObserversPerTarget = new Map();
+            this.mutationObservers.set(target, mutationObserversPerTarget);
         }
+        const optionsHash = hash(options);
+        let mutationObserverPerOptions = mutationObserversPerTarget.get(optionsHash);
+        if (!mutationObserverPerOptions) {
+            const onDidMutate = new event.Emitter();
+            const observer = new MutationObserver(mutations => onDidMutate.fire(mutations));
+            observer.observe(target, options);
+            const resolvedMutationObserverPerOptions = mutationObserverPerOptions = {
+                users: 1,
+                observer,
+                onDidMutate: onDidMutate.event
+            };
+            disposables.add(toDisposable(() => {
+                resolvedMutationObserverPerOptions.users -= 1;
+                if (resolvedMutationObserverPerOptions.users === 0) {
+                    onDidMutate.dispose();
+                    observer.disconnect();
+                    mutationObserversPerTarget?.delete(optionsHash);
+                    if (mutationObserversPerTarget?.size === 0) {
+                        this.mutationObservers.delete(target);
+                    }
+                }
+            }));
+            mutationObserversPerTarget.set(optionsHash, mutationObserverPerOptions);
+        }
+        else {
+            mutationObserverPerOptions.users += 1;
+        }
+        return mutationObserverPerOptions.onDidMutate;
     }
-    for (let i = toDelete.length - 1; i >= 0; i--) {
-        style.sheet.deleteRule(toDelete[i]);
-    }
+};
+export function isHTMLElement(e) {
+    // eslint-disable-next-line no-restricted-syntax
+    return e instanceof HTMLElement || e instanceof getWindow(e).HTMLElement;
 }
-export function isHTMLElement(o) {
-    if (typeof HTMLElement === 'object') {
-        return o instanceof HTMLElement;
-    }
-    return o && typeof o === 'object' && o.nodeType === 1 && typeof o.nodeName === 'string';
+export function isHTMLAnchorElement(e) {
+    // eslint-disable-next-line no-restricted-syntax
+    return e instanceof HTMLAnchorElement || e instanceof getWindow(e).HTMLAnchorElement;
+}
+export function isSVGElement(e) {
+    // eslint-disable-next-line no-restricted-syntax
+    return e instanceof SVGElement || e instanceof getWindow(e).SVGElement;
+}
+export function isMouseEvent(e) {
+    // eslint-disable-next-line no-restricted-syntax
+    return e instanceof MouseEvent || e instanceof getWindow(e).MouseEvent;
+}
+export function isKeyboardEvent(e) {
+    // eslint-disable-next-line no-restricted-syntax
+    return e instanceof KeyboardEvent || e instanceof getWindow(e).KeyboardEvent;
 }
 export const EventType = {
     // Mouse
@@ -544,6 +677,7 @@ export const EventType = {
     UNLOAD: 'unload',
     PAGE_SHOW: 'pageshow',
     PAGE_HIDE: 'pagehide',
+    PASTE: 'paste',
     ABORT: 'abort',
     ERROR: 'error',
     RESIZE: 'resize',
@@ -605,6 +739,8 @@ export function restoreParentsScrollTop(node, state) {
     }
 }
 class FocusTracker extends Disposable {
+    get onDidFocus() { return this._onDidFocus.event; }
+    get onDidBlur() { return this._onDidBlur.event; }
     static hasFocusWithin(element) {
         if (isHTMLElement(element)) {
             const shadowRoot = getShadowRoot(element);
@@ -612,15 +748,14 @@ class FocusTracker extends Disposable {
             return isAncestor(activeElement, element);
         }
         else {
+            const window = element;
             return isAncestor(window.document.activeElement, window.document);
         }
     }
     constructor(element) {
         super();
         this._onDidFocus = this._register(new event.Emitter());
-        this.onDidFocus = this._onDidFocus.event;
         this._onDidBlur = this._register(new event.Emitter());
-        this.onDidBlur = this._onDidBlur.event;
         let hasFocus = FocusTracker.hasFocusWithin(element);
         let loosingFocus = false;
         const onFocus = () => {
@@ -633,7 +768,7 @@ class FocusTracker extends Disposable {
         const onBlur = () => {
             if (hasFocus) {
                 loosingFocus = true;
-                window.setTimeout(() => {
+                (isHTMLElement(element) ? getWindow(element) : element).setTimeout(() => {
                     if (loosingFocus) {
                         loosingFocus = false;
                         hasFocus = false;
@@ -655,7 +790,7 @@ class FocusTracker extends Disposable {
         };
         this._register(addDisposableListener(element, EventType.FOCUS, onFocus, true));
         this._register(addDisposableListener(element, EventType.BLUR, onBlur, true));
-        if (element instanceof HTMLElement) {
+        if (isHTMLElement(element)) {
             this._register(addDisposableListener(element, EventType.FOCUS_IN, () => this._refreshStateHandler()));
             this._register(addDisposableListener(element, EventType.FOCUS_OUT, () => this._refreshStateHandler()));
         }
@@ -669,6 +804,10 @@ class FocusTracker extends Disposable {
  */
 export function trackFocus(element) {
     return new FocusTracker(element);
+}
+export function after(sibling, child) {
+    sibling.after(child);
+    return child;
 }
 export function append(parent, ...children) {
     parent.append(...children);
@@ -684,7 +823,7 @@ export function prepend(parent, child) {
  * Removes all children from `parent` and appends `children`
  */
 export function reset(parent, ...children) {
-    parent.innerText = '';
+    parent.textContent = '';
     append(parent, ...children);
 }
 const SELECTOR_REGEX = /([\w\-]+)?(#([\w\-]+))?((\.([\w\-]+))*)/;
@@ -767,7 +906,7 @@ export function hide(...elements) {
  * of 1.25, the cursor will be 2.5 screen pixels wide. Depending on how the dom node aligns/"snaps"
  * with the screen pixels, it will sometimes be rendered with 2 screen pixels, and sometimes with 3 screen pixels.
  */
-export function computeScreenAwareSize(cssPx) {
+export function computeScreenAwareSize(window, cssPx) {
     const screenPx = window.devicePixelRatio * cssPx;
     return Math.max(1, Math.floor(screenPx)) / window.devicePixelRatio;
 }
@@ -789,153 +928,17 @@ export function windowOpenNoOpener(url) {
     // See https://developer.mozilla.org/en-US/docs/Web/API/Window/open#noopener
     // However, this also doesn't allow us to realize if the browser blocked
     // the creation of the window.
-    window.open(url, '_blank', 'noopener');
+    mainWindow.open(url, '_blank', 'noopener');
 }
-export function animate(fn) {
+export function animate(targetWindow, fn) {
     const step = () => {
         fn();
-        stepDisposable = scheduleAtNextAnimationFrame(step);
+        stepDisposable = scheduleAtNextAnimationFrame(targetWindow, step);
     };
-    let stepDisposable = scheduleAtNextAnimationFrame(step);
+    let stepDisposable = scheduleAtNextAnimationFrame(targetWindow, step);
     return toDisposable(() => stepDisposable.dispose());
 }
-RemoteAuthorities.setPreferredWebSchema(/^https:/.test(window.location.href) ? 'https' : 'http');
-/**
- * returns url('...')
- */
-export function asCSSUrl(uri) {
-    if (!uri) {
-        return `url('')`;
-    }
-    return `url('${FileAccess.uriToBrowserUri(uri).toString(true).replace(/'/g, '%27')}')`;
-}
-export function asCSSPropertyValue(value) {
-    return `'${value.replace(/'/g, '%27')}'`;
-}
-export function asCssValueWithDefault(cssPropertyValue, dflt) {
-    if (cssPropertyValue !== undefined) {
-        const variableMatch = cssPropertyValue.match(/^\s*var\((.+)\)$/);
-        if (variableMatch) {
-            const varArguments = variableMatch[1].split(',', 2);
-            if (varArguments.length === 2) {
-                dflt = asCssValueWithDefault(varArguments[1].trim(), dflt);
-            }
-            return `var(${varArguments[0]}, ${dflt})`;
-        }
-        return cssPropertyValue;
-    }
-    return dflt;
-}
-// -- sanitize and trusted html
-/**
- * Hooks dompurify using `afterSanitizeAttributes` to check that all `href` and `src`
- * attributes are valid.
- */
-export function hookDomPurifyHrefAndSrcSanitizer(allowedProtocols, allowDataImages = false) {
-    // https://github.com/cure53/DOMPurify/blob/main/demos/hooks-scheme-allowlist.html
-    // build an anchor to map URLs to
-    const anchor = document.createElement('a');
-    dompurify.addHook('afterSanitizeAttributes', (node) => {
-        // check all href/src attributes for validity
-        for (const attr of ['href', 'src']) {
-            if (node.hasAttribute(attr)) {
-                const attrValue = node.getAttribute(attr);
-                if (attr === 'href' && attrValue.startsWith('#')) {
-                    // Allow fragment links
-                    continue;
-                }
-                anchor.href = attrValue;
-                if (!allowedProtocols.includes(anchor.protocol.replace(/:$/, ''))) {
-                    if (allowDataImages && attr === 'src' && anchor.href.startsWith('data:')) {
-                        continue;
-                    }
-                    node.removeAttribute(attr);
-                }
-            }
-        }
-    });
-    return toDisposable(() => {
-        dompurify.removeHook('afterSanitizeAttributes');
-    });
-}
-/**
- * List of safe, non-input html tags.
- */
-export const basicMarkupHtmlTags = Object.freeze([
-    'a',
-    'abbr',
-    'b',
-    'bdo',
-    'blockquote',
-    'br',
-    'caption',
-    'cite',
-    'code',
-    'col',
-    'colgroup',
-    'dd',
-    'del',
-    'details',
-    'dfn',
-    'div',
-    'dl',
-    'dt',
-    'em',
-    'figcaption',
-    'figure',
-    'h1',
-    'h2',
-    'h3',
-    'h4',
-    'h5',
-    'h6',
-    'hr',
-    'i',
-    'img',
-    'ins',
-    'kbd',
-    'label',
-    'li',
-    'mark',
-    'ol',
-    'p',
-    'pre',
-    'q',
-    'rp',
-    'rt',
-    'ruby',
-    'samp',
-    'small',
-    'small',
-    'source',
-    'span',
-    'strike',
-    'strong',
-    'sub',
-    'summary',
-    'sup',
-    'table',
-    'tbody',
-    'td',
-    'tfoot',
-    'th',
-    'thead',
-    'time',
-    'tr',
-    'tt',
-    'u',
-    'ul',
-    'var',
-    'video',
-    'wbr',
-]);
-const defaultDomPurifyConfig = Object.freeze({
-    ALLOWED_TAGS: ['a', 'button', 'blockquote', 'code', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'input', 'label', 'li', 'p', 'pre', 'select', 'small', 'span', 'strong', 'textarea', 'ul', 'ol'],
-    ALLOWED_ATTR: ['href', 'data-href', 'data-command', 'target', 'title', 'name', 'src', 'alt', 'class', 'id', 'role', 'tabindex', 'style', 'data-code', 'width', 'height', 'align', 'x-dispatch', 'required', 'checked', 'placeholder', 'type', 'start'],
-    RETURN_DOM: false,
-    RETURN_DOM_FRAGMENT: false,
-    RETURN_TRUSTED_TYPE: true
-});
+RemoteAuthorities.setPreferredWebSchema(/^https:/.test(mainWindow.location.href) ? 'https' : 'http');
 export class ModifierKeyEmitter extends event.Emitter {
     constructor() {
         super();
@@ -946,7 +949,10 @@ export class ModifierKeyEmitter extends event.Emitter {
             ctrlKey: false,
             metaKey: false
         };
-        this._subscriptions.add(addDisposableListener(window, 'keydown', e => {
+        this._subscriptions.add(event.Event.runAndSubscribe(onDidRegisterWindow, ({ window, disposables }) => this.registerListeners(window, disposables), { window: mainWindow, disposables: this._subscriptions }));
+    }
+    registerListeners(window, disposables) {
+        disposables.add(addDisposableListener(window, 'keydown', e => {
             if (e.defaultPrevented) {
                 return;
             }
@@ -983,7 +989,7 @@ export class ModifierKeyEmitter extends event.Emitter {
                 this.fire(this._keyStatus);
             }
         }, true));
-        this._subscriptions.add(addDisposableListener(window, 'keyup', e => {
+        disposables.add(addDisposableListener(window, 'keyup', e => {
             if (e.defaultPrevented) {
                 return;
             }
@@ -1014,18 +1020,18 @@ export class ModifierKeyEmitter extends event.Emitter {
                 this.fire(this._keyStatus);
             }
         }, true));
-        this._subscriptions.add(addDisposableListener(document.body, 'mousedown', () => {
+        disposables.add(addDisposableListener(window.document.body, 'mousedown', () => {
             this._keyStatus.lastKeyPressed = undefined;
         }, true));
-        this._subscriptions.add(addDisposableListener(document.body, 'mouseup', () => {
+        disposables.add(addDisposableListener(window.document.body, 'mouseup', () => {
             this._keyStatus.lastKeyPressed = undefined;
         }, true));
-        this._subscriptions.add(addDisposableListener(document.body, 'mousemove', e => {
+        disposables.add(addDisposableListener(window.document.body, 'mousemove', e => {
             if (e.buttons) {
                 this._keyStatus.lastKeyPressed = undefined;
             }
         }, true));
-        this._subscriptions.add(addDisposableListener(window, 'blur', () => {
+        disposables.add(addDisposableListener(window, 'blur', () => {
             this.resetKeyStatus();
         }));
     }
@@ -1073,32 +1079,41 @@ export class DragAndDropObserver extends Disposable {
         this.registerListeners();
     }
     registerListeners() {
+        if (this.callbacks.onDragStart) {
+            this._register(addDisposableListener(this.element, EventType.DRAG_START, (e) => {
+                this.callbacks.onDragStart?.(e);
+            }));
+        }
+        if (this.callbacks.onDrag) {
+            this._register(addDisposableListener(this.element, EventType.DRAG, (e) => {
+                this.callbacks.onDrag?.(e);
+            }));
+        }
         this._register(addDisposableListener(this.element, EventType.DRAG_ENTER, (e) => {
             this.counter++;
             this.dragStartTime = e.timeStamp;
-            this.callbacks.onDragEnter(e);
+            this.callbacks.onDragEnter?.(e);
         }));
         this._register(addDisposableListener(this.element, EventType.DRAG_OVER, (e) => {
-            var _a, _b;
             e.preventDefault(); // needed so that the drop event fires (https://stackoverflow.com/questions/21339924/drop-event-not-firing-in-chrome)
-            (_b = (_a = this.callbacks).onDragOver) === null || _b === void 0 ? void 0 : _b.call(_a, e, e.timeStamp - this.dragStartTime);
+            this.callbacks.onDragOver?.(e, e.timeStamp - this.dragStartTime);
         }));
         this._register(addDisposableListener(this.element, EventType.DRAG_LEAVE, (e) => {
             this.counter--;
             if (this.counter === 0) {
                 this.dragStartTime = 0;
-                this.callbacks.onDragLeave(e);
+                this.callbacks.onDragLeave?.(e);
             }
         }));
         this._register(addDisposableListener(this.element, EventType.DRAG_END, (e) => {
             this.counter = 0;
             this.dragStartTime = 0;
-            this.callbacks.onDragEnd(e);
+            this.callbacks.onDragEnd?.(e);
         }));
         this._register(addDisposableListener(this.element, EventType.DROP, (e) => {
             this.counter = 0;
             this.dragStartTime = 0;
-            this.callbacks.onDrop(e);
+            this.callbacks.onDrop?.(e);
         }));
     }
 }
@@ -1147,7 +1162,7 @@ export function h(tag, ...args) {
     }
     if (children) {
         for (const c of children) {
-            if (c instanceof HTMLElement) {
+            if (isHTMLElement(c)) {
                 el.appendChild(c);
             }
             else if (typeof c === 'string') {
@@ -1181,3 +1196,282 @@ export function h(tag, ...args) {
 function camelCaseToHyphenCase(str) {
     return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
+export function isEditableElement(element) {
+    return element.tagName.toLowerCase() === 'input' || element.tagName.toLowerCase() === 'textarea' || isHTMLElement(element) && !!element.editContext;
+}
+export var n;
+(function (n) {
+    function nodeNs(elementNs = undefined) {
+        return (tag, attributes, children) => {
+            const className = attributes.class;
+            delete attributes.class;
+            const ref = attributes.ref;
+            delete attributes.ref;
+            const obsRef = attributes.obsRef;
+            delete attributes.obsRef;
+            return new ObserverNodeWithElement(tag, ref, obsRef, elementNs, className, attributes, children);
+        };
+    }
+    function node(tag, elementNs = undefined) {
+        const f = nodeNs(elementNs);
+        return (attributes, children) => {
+            return f(tag, attributes, children);
+        };
+    }
+    n.div = node('div');
+    n.elem = nodeNs(undefined);
+    n.svg = node('svg', 'http://www.w3.org/2000/svg');
+    n.svgElem = nodeNs('http://www.w3.org/2000/svg');
+    function ref() {
+        let value = undefined;
+        const result = function (val) {
+            value = val;
+        };
+        Object.defineProperty(result, 'element', {
+            get() {
+                if (!value) {
+                    throw new BugIndicatingError('Make sure the ref is set before accessing the element. Maybe wrong initialization order?');
+                }
+                return value;
+            }
+        });
+        return result;
+    }
+    n.ref = ref;
+})(n || (n = {}));
+export class ObserverNode {
+    constructor(tag, ref, obsRef, ns, className, attributes, children) {
+        this._deriveds = [];
+        this._element = (ns ? document.createElementNS(ns, tag) : document.createElement(tag));
+        if (ref) {
+            ref(this._element);
+        }
+        if (obsRef) {
+            this._deriveds.push(derived((_reader) => {
+                obsRef(this);
+                _reader.store.add({
+                    dispose: () => {
+                        obsRef(null);
+                    }
+                });
+            }));
+        }
+        if (className) {
+            if (hasObservable(className)) {
+                this._deriveds.push(derived(this, reader => {
+                    /** @description set.class */
+                    setClassName(this._element, getClassName(className, reader));
+                }));
+            }
+            else {
+                setClassName(this._element, getClassName(className, undefined));
+            }
+        }
+        for (const [key, value] of Object.entries(attributes)) {
+            if (key === 'style') {
+                for (const [cssKey, cssValue] of Object.entries(value)) {
+                    const key = camelCaseToHyphenCase(cssKey);
+                    if (isObservable(cssValue)) {
+                        this._deriveds.push(derivedOpts({ owner: this, debugName: () => `set.style.${key}` }, reader => {
+                            this._element.style.setProperty(key, convertCssValue(cssValue.read(reader)));
+                        }));
+                    }
+                    else {
+                        this._element.style.setProperty(key, convertCssValue(cssValue));
+                    }
+                }
+            }
+            else if (key === 'tabIndex') {
+                if (isObservable(value)) {
+                    this._deriveds.push(derived(this, reader => {
+                        /** @description set.tabIndex */
+                        this._element.tabIndex = value.read(reader);
+                    }));
+                }
+                else {
+                    this._element.tabIndex = value;
+                }
+            }
+            else if (key.startsWith('on')) {
+                this._element[key] = value;
+            }
+            else {
+                if (isObservable(value)) {
+                    this._deriveds.push(derivedOpts({ owner: this, debugName: () => `set.${key}` }, reader => {
+                        setOrRemoveAttribute(this._element, key, value.read(reader));
+                    }));
+                }
+                else {
+                    setOrRemoveAttribute(this._element, key, value);
+                }
+            }
+        }
+        if (children) {
+            function getChildren(reader, children) {
+                if (isObservable(children)) {
+                    return getChildren(reader, children.read(reader));
+                }
+                if (Array.isArray(children)) {
+                    return children.flatMap(c => getChildren(reader, c));
+                }
+                if (children instanceof ObserverNode) {
+                    if (reader) {
+                        children.readEffect(reader);
+                    }
+                    return [children._element];
+                }
+                if (children) {
+                    return [children];
+                }
+                return [];
+            }
+            const d = derived(this, reader => {
+                /** @description set.children */
+                this._element.replaceChildren(...getChildren(reader, children));
+            });
+            this._deriveds.push(d);
+            if (!childrenIsObservable(children)) {
+                d.get();
+            }
+        }
+    }
+    readEffect(reader) {
+        for (const d of this._deriveds) {
+            d.read(reader);
+        }
+    }
+    keepUpdated(store) {
+        derived(reader => {
+            /** update */
+            this.readEffect(reader);
+        }).recomputeInitiallyAndOnChange(store);
+        return this;
+    }
+    /**
+     * Creates a live element that will keep the element updated as long as the returned object is not disposed.
+    */
+    toDisposableLiveElement() {
+        const store = new DisposableStore();
+        this.keepUpdated(store);
+        return new LiveElement(this._element, store);
+    }
+}
+function setClassName(domNode, className) {
+    if (isSVGElement(domNode)) {
+        domNode.setAttribute('class', className);
+    }
+    else {
+        domNode.className = className;
+    }
+}
+function resolve(value, reader, cb) {
+    if (isObservable(value)) {
+        cb(value.read(reader));
+        return;
+    }
+    if (Array.isArray(value)) {
+        for (const v of value) {
+            resolve(v, reader, cb);
+        }
+        return;
+    }
+    cb(value);
+}
+function getClassName(className, reader) {
+    let result = '';
+    resolve(className, reader, val => {
+        if (val) {
+            if (result.length === 0) {
+                result = val;
+            }
+            else {
+                result += ' ' + val;
+            }
+        }
+    });
+    return result;
+}
+function hasObservable(value) {
+    if (isObservable(value)) {
+        return true;
+    }
+    if (Array.isArray(value)) {
+        return value.some(v => hasObservable(v));
+    }
+    return false;
+}
+function convertCssValue(value) {
+    if (typeof value === 'number') {
+        return value + 'px';
+    }
+    return value;
+}
+function childrenIsObservable(children) {
+    if (isObservable(children)) {
+        return true;
+    }
+    if (Array.isArray(children)) {
+        return children.some(c => childrenIsObservable(c));
+    }
+    return false;
+}
+export class LiveElement {
+    constructor(element, _disposable) {
+        this.element = element;
+        this._disposable = _disposable;
+    }
+    dispose() {
+        this._disposable.dispose();
+    }
+}
+export class ObserverNodeWithElement extends ObserverNode {
+    constructor() {
+        super(...arguments);
+        this._isHovered = undefined;
+        this._didMouseMoveDuringHover = undefined;
+    }
+    get element() {
+        return this._element;
+    }
+    get isHovered() {
+        if (!this._isHovered) {
+            const hovered = observableValue('hovered', false);
+            this._element.addEventListener('mouseenter', (_e) => hovered.set(true, undefined));
+            this._element.addEventListener('mouseleave', (_e) => hovered.set(false, undefined));
+            this._isHovered = hovered;
+        }
+        return this._isHovered;
+    }
+    get didMouseMoveDuringHover() {
+        if (!this._didMouseMoveDuringHover) {
+            let _hovering = false;
+            const hovered = observableValue('didMouseMoveDuringHover', false);
+            this._element.addEventListener('mouseenter', (_e) => {
+                _hovering = true;
+            });
+            this._element.addEventListener('mousemove', (_e) => {
+                if (_hovering) {
+                    hovered.set(true, undefined);
+                }
+            });
+            this._element.addEventListener('mouseleave', (_e) => {
+                _hovering = false;
+                hovered.set(false, undefined);
+            });
+            this._didMouseMoveDuringHover = hovered;
+        }
+        return this._didMouseMoveDuringHover;
+    }
+}
+function setOrRemoveAttribute(element, key, value) {
+    if (value === null || value === undefined) {
+        element.removeAttribute(camelCaseToHyphenCase(key));
+    }
+    else {
+        element.setAttribute(camelCaseToHyphenCase(key), String(value));
+    }
+}
+function isObservable(obj) {
+    return !!obj && obj.read !== undefined && obj.reportChanges !== undefined;
+}
+//# sourceMappingURL=dom.js.map

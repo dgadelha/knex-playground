@@ -2,29 +2,21 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { Color } from '../../../base/common/color.js';
 import { Range } from '../../common/core/range.js';
 import * as languages from '../../common/languages.js';
+import { ILanguageService } from '../../common/languages/language.js';
 import { ILanguageConfigurationService } from '../../common/languages/languageConfigurationRegistry.js';
 import { ModesRegistry } from '../../common/languages/modesRegistry.js';
-import { ILanguageService } from '../../common/languages/language.js';
+import { ILanguageFeaturesService } from '../../common/services/languageFeatures.js';
 import * as standaloneEnums from '../../common/standalone/standaloneEnums.js';
 import { StandaloneServices } from './standaloneServices.js';
 import { compile } from '../common/monarch/monarchCompile.js';
 import { MonarchTokenizer } from '../common/monarch/monarchLexer.js';
 import { IStandaloneThemeService } from '../common/standaloneTheme.js';
-import { IMarkerService } from '../../../platform/markers/common/markers.js';
-import { ILanguageFeaturesService } from '../../common/services/languageFeatures.js';
 import { IConfigurationService } from '../../../platform/configuration/common/configuration.js';
+import { IMarkerService } from '../../../platform/markers/common/markers.js';
+import { EditDeltaInfo } from '../../common/textModelEditSource.js';
 /**
  * Register information about a new language.
  */
@@ -260,8 +252,8 @@ function createTokenizationSupportAdapter(languageId, provider) {
  * with a tokens provider set using `registerDocumentSemanticTokensProvider` or `registerDocumentRangeSemanticTokensProvider`.
  */
 export function registerTokensProviderFactory(languageId, factory) {
-    const adaptedFactory = new languages.LazyTokenizationSupport(() => __awaiter(this, void 0, void 0, function* () {
-        const result = yield Promise.resolve(factory.create());
+    const adaptedFactory = new languages.LazyTokenizationSupport(async () => {
+        const result = await Promise.resolve(factory.create());
         if (!result) {
             return null;
         }
@@ -269,7 +261,7 @@ export function registerTokensProviderFactory(languageId, factory) {
             return createTokenizationSupportAdapter(languageId, result);
         }
         return new MonarchTokenizer(StandaloneServices.get(ILanguageService), StandaloneServices.get(IStandaloneThemeService), languageId, compile(languageId, result), StandaloneServices.get(IConfigurationService));
-    }));
+    });
     return languages.TokenizationRegistry.registerFactory(languageId, adaptedFactory);
 }
 /**
@@ -318,6 +310,13 @@ export function registerRenameProvider(languageSelector, provider) {
     return languageFeaturesService.renameProvider.register(languageSelector, provider);
 }
 /**
+ * Register a new symbol-name provider (e.g., when a symbol is being renamed, show new possible symbol-names)
+ */
+export function registerNewSymbolNameProvider(languageSelector, provider) {
+    const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
+    return languageFeaturesService.newSymbolNamesProvider.register(languageSelector, provider);
+}
+/**
  * Register a signature help provider (used by e.g. parameter hints).
  */
 export function registerSignatureHelpProvider(languageSelector, provider) {
@@ -330,9 +329,9 @@ export function registerSignatureHelpProvider(languageSelector, provider) {
 export function registerHoverProvider(languageSelector, provider) {
     const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
     return languageFeaturesService.hoverProvider.register(languageSelector, {
-        provideHover: (model, position, token) => {
+        provideHover: async (model, position, token, context) => {
             const word = model.getWordAtPosition(position);
-            return Promise.resolve(provider.provideHover(model, position, token)).then((value) => {
+            return Promise.resolve(provider.provideHover(model, position, token, context)).then((value) => {
                 if (!value) {
                     return undefined;
                 }
@@ -402,8 +401,8 @@ export function registerCodeLensProvider(languageSelector, provider) {
 export function registerCodeActionProvider(languageSelector, provider, metadata) {
     const languageFeaturesService = StandaloneServices.get(ILanguageFeaturesService);
     return languageFeaturesService.codeActionProvider.register(languageSelector, {
-        providedCodeActionKinds: metadata === null || metadata === void 0 ? void 0 : metadata.providedCodeActionKinds,
-        documentation: metadata === null || metadata === void 0 ? void 0 : metadata.documentation,
+        providedCodeActionKinds: metadata?.providedCodeActionKinds,
+        documentation: metadata?.documentation,
         provideCodeActions: (model, range, context, token) => {
             const markerService = StandaloneServices.get(IMarkerService);
             const markers = markerService.read({ resource: model.uri }).filter(m => {
@@ -531,6 +530,7 @@ export function createMonacoLanguagesAPI() {
         setMonarchTokensProvider: setMonarchTokensProvider,
         registerReferenceProvider: registerReferenceProvider,
         registerRenameProvider: registerRenameProvider,
+        registerNewSymbolNameProvider: registerNewSymbolNameProvider,
         registerCompletionItemProvider: registerCompletionItemProvider,
         registerSignatureHelpProvider: registerSignatureHelpProvider,
         registerHoverProvider: registerHoverProvider,
@@ -567,8 +567,16 @@ export function createMonacoLanguagesAPI() {
         InlayHintKind: standaloneEnums.InlayHintKind,
         InlineCompletionTriggerKind: standaloneEnums.InlineCompletionTriggerKind,
         CodeActionTriggerType: standaloneEnums.CodeActionTriggerType,
+        NewSymbolNameTag: standaloneEnums.NewSymbolNameTag,
+        NewSymbolNameTriggerKind: standaloneEnums.NewSymbolNameTriggerKind,
+        PartialAcceptTriggerKind: standaloneEnums.PartialAcceptTriggerKind,
+        HoverVerbosityAction: standaloneEnums.HoverVerbosityAction,
+        InlineCompletionEndOfLifeReasonKind: standaloneEnums.InlineCompletionEndOfLifeReasonKind,
+        InlineCompletionDisplayLocationKind: standaloneEnums.InlineCompletionDisplayLocationKind,
         // classes
         FoldingRangeKind: languages.FoldingRangeKind,
         SelectedSuggestionInfo: languages.SelectedSuggestionInfo,
+        EditDeltaInfo: EditDeltaInfo,
     };
 }
+//# sourceMappingURL=standaloneLanguages.js.map

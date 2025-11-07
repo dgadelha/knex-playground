@@ -11,3 +11,4 @@ export var EditorOpenSource;
      */
     EditorOpenSource[EditorOpenSource["USER"] = 1] = "USER";
 })(EditorOpenSource || (EditorOpenSource = {}));
+//# sourceMappingURL=editor.js.map

@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/cypher/cypher.ts
 var conf = {
@@ -157,18 +158,21 @@ var language = {
     "type"
   ],
   operators: [
+    // Math operators
     "+",
     "-",
     "*",
     "/",
     "%",
     "^",
+    // Comparison operators
     "=",
     "<>",
     "<",
     ">",
     "<=",
     ">=",
+    // Pattern operators
     "->",
     "<-",
     "-->",
@@ -184,6 +188,7 @@ var language = {
       { include: "@whitespace" },
       { include: "@numbers" },
       { include: "@strings" },
+      // Cypher labels on nodes/relationships, e.g. (n:NodeLabel)-[e:RelationshipLabel]
       [/:[a-zA-Z_][\w]*/, "type.identifier"],
       [
         /[a-zA-Z_][\w]*(?=\()/,
@@ -204,6 +209,7 @@ var language = {
         }
       ],
       [/`/, "identifier.escape", "@identifierBacktick"],
+      // delimiter and operator after number because of `.\d` floats and `:` in labels
       [/[;,.:|]/, "delimiter"],
       [
         /[<>=%+\-*/^]+/,
@@ -224,7 +230,9 @@ var language = {
     ],
     strings: [
       [/"([^"\\]|\\.)*$/, "string.invalid"],
+      // non-teminated string
       [/'([^'\\]|\\.)*$/, "string.invalid"],
+      // non-teminated string
       [/"/, "string", "@stringDouble"],
       [/'/, "string", "@stringSingle"]
     ],

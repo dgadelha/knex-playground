@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 export class EditorSettingMigration {
+    static { this.items = []; }
     constructor(key, migrate) {
         this.key = key;
         this.migrate = migrate;
@@ -35,7 +36,6 @@ export class EditorSettingMigration {
         target[key] = value;
     }
 }
-EditorSettingMigration.items = [];
 function registerEditorSettingMigration(key, migrate) {
     EditorSettingMigration.items.push(new EditorSettingMigration(key, migrate));
 }
@@ -70,6 +70,10 @@ registerSimpleEditorSettingMigration('autoIndent', [[false, 'advanced'], [true, 
 registerSimpleEditorSettingMigration('matchBrackets', [[true, 'always'], [false, 'never']]);
 registerSimpleEditorSettingMigration('renderFinalNewline', [[true, 'on'], [false, 'off']]);
 registerSimpleEditorSettingMigration('cursorSmoothCaretAnimation', [[true, 'on'], [false, 'off']]);
+registerSimpleEditorSettingMigration('occurrencesHighlight', [[true, 'singleFile'], [false, 'off']]);
+registerSimpleEditorSettingMigration('wordBasedSuggestions', [[true, 'matchingDocuments'], [false, 'off']]);
+registerSimpleEditorSettingMigration('defaultColorDecorators', [[true, 'auto'], [false, 'never']]);
+registerSimpleEditorSettingMigration('minimap.autohide', [[true, 'mouseover'], [false, 'none']]);
 registerEditorSettingMigration('autoClosingBrackets', (value, read, write) => {
     if (value === false) {
         write('autoClosingBrackets', 'never');
@@ -162,21 +166,54 @@ registerEditorSettingMigration('experimental.stickyScroll.maxLineCount', (value,
         }
     }
 });
+// Edit Context
+registerEditorSettingMigration('editor.experimentalEditContextEnabled', (value, read, write) => {
+    if (typeof value === 'boolean') {
+        write('editor.experimentalEditContextEnabled', undefined);
+        if (typeof read('editor.editContext') === 'undefined') {
+            write('editor.editContext', value);
+        }
+    }
+});
 // Code Actions on Save
-// registerEditorSettingMigration('codeActionsOnSave', (value, read, write) => {
-// 	if (value && typeof value === 'object') {
-// 		let toBeModified = false;
-// 		const newValue = {} as any;
-// 		for (const entry of Object.entries(value)) {
-// 			if (typeof entry[1] === 'boolean') {
-// 				toBeModified = true;
-// 				newValue[entry[0]] = entry[1] ? 'explicit' : 'never';
-// 			} else {
-// 				newValue[entry[0]] = entry[1];
-// 			}
-// 		}
-// 		if (toBeModified) {
-// 			write(`codeActionsOnSave`, newValue);
-// 		}
-// 	}
-// });
+registerEditorSettingMigration('codeActionsOnSave', (value, read, write) => {
+    if (value && typeof value === 'object') {
+        let toBeModified = false;
+        const newValue = {};
+        for (const entry of Object.entries(value)) {
+            if (typeof entry[1] === 'boolean') {
+                toBeModified = true;
+                newValue[entry[0]] = entry[1] ? 'explicit' : 'never';
+            }
+            else {
+                newValue[entry[0]] = entry[1];
+            }
+        }
+        if (toBeModified) {
+            write(`codeActionsOnSave`, newValue);
+        }
+    }
+});
+// Migrate Quick Fix Settings
+registerEditorSettingMigration('codeActionWidget.includeNearbyQuickfixes', (value, read, write) => {
+    if (typeof value === 'boolean') {
+        write('codeActionWidget.includeNearbyQuickfixes', undefined);
+        if (typeof read('codeActionWidget.includeNearbyQuickFixes') === 'undefined') {
+            write('codeActionWidget.includeNearbyQuickFixes', value);
+        }
+    }
+});
+// Migrate the lightbulb settings
+registerEditorSettingMigration('lightbulb.enabled', (value, read, write) => {
+    if (typeof value === 'boolean') {
+        write('lightbulb.enabled', value ? undefined : 'off');
+    }
+});
+// NES Code Shifting
+registerEditorSettingMigration('inlineSuggest.edits.codeShifting', (value, read, write) => {
+    if (typeof value === 'boolean') {
+        write('inlineSuggest.edits.codeShifting', undefined);
+        write('inlineSuggest.edits.allowCodeShifting', value ? 'always' : 'never');
+    }
+});
+//# sourceMappingURL=migrateOptions.js.map

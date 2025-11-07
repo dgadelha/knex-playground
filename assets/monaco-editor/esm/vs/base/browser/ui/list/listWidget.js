@@ -8,22 +8,15 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-import { asCssValueWithDefault, createStyleSheet, EventHelper } from '../../dom.js';
+import { EventHelper, getActiveElement, getWindow, isEditableElement, isHTMLElement, isMouseEvent } from '../../dom.js';
+import { createStyleSheet } from '../../domStylesheets.js';
+import { asCssValueWithDefault } from '../../cssValue.js';
 import { DomEmitter } from '../../event.js';
 import { StandardKeyboardEvent } from '../../keyboardEvent.js';
 import { Gesture } from '../../touch.js';
 import { alert } from '../aria/aria.js';
 import { CombinedSpliceable } from './splice.js';
-import { binarySearch, firstOrDefault, range } from '../../../common/arrays.js';
+import { binarySearch, range } from '../../../common/arrays.js';
 import { timeout } from '../../../common/async.js';
 import { Color } from '../../../common/color.js';
 import { memoize } from '../../../common/decorators.js';
@@ -37,6 +30,7 @@ import './list.css';
 import { ListError } from './list.js';
 import { ListView } from './listView.js';
 import { StandardMouseEvent } from '../../mouseEvent.js';
+import { autorun, constObservable } from '../../../common/observable.js';
 class TraitRenderer {
     constructor(trait) {
         this.trait = trait;
@@ -92,21 +86,18 @@ class TraitRenderer {
     }
 }
 class Trait {
+    get onChange() { return this._onChange.event; }
     get name() { return this._trait; }
     get renderer() {
         return new TraitRenderer(this);
     }
     constructor(_trait) {
         this._trait = _trait;
-        this.length = 0;
         this.indexes = [];
         this.sortedIndexes = [];
         this._onChange = new Emitter();
-        this.onChange = this._onChange.event;
     }
     splice(start, deleteCount, elements) {
-        var _a;
-        deleteCount = Math.max(0, Math.min(deleteCount, this.length - start));
         const diff = elements.length - deleteCount;
         const end = start + deleteCount;
         const sortedIndexes = [];
@@ -122,14 +113,8 @@ class Trait {
         while (i < this.sortedIndexes.length && this.sortedIndexes[i] >= end) {
             sortedIndexes.push(this.sortedIndexes[i++] + diff);
         }
-        const length = this.length + diff;
-        if (this.sortedIndexes.length > 0 && sortedIndexes.length === 0 && length > 0) {
-            const first = (_a = this.sortedIndexes.find(index => index >= start)) !== null && _a !== void 0 ? _a : length - 1;
-            sortedIndexes.push(Math.min(first, length - 1));
-        }
         this.renderer.splice(start, deleteCount, elements.length);
         this._set(sortedIndexes, sortedIndexes);
-        this.length = length;
     }
     renderIndex(index, container) {
         container.classList.toggle(this._trait, this.contains(index));
@@ -210,11 +195,8 @@ class TraitSpliceable {
         this.trait.splice(start, deleteCount, elementsWithTrait);
     }
 }
-export function isInputElement(e) {
-    return e.tagName === 'INPUT' || e.tagName === 'TEXTAREA';
-}
-export function isMonacoEditor(e) {
-    if (e.classList.contains('monaco-editor')) {
+function isListElementDescendantOfClass(e, className) {
+    if (e.classList.contains(className)) {
         return true;
     }
     if (e.classList.contains('monaco-list')) {
@@ -223,7 +205,22 @@ export function isMonacoEditor(e) {
     if (!e.parentElement) {
         return false;
     }
-    return isMonacoEditor(e.parentElement);
+    return isListElementDescendantOfClass(e.parentElement, className);
+}
+export function isMonacoEditor(e) {
+    return isListElementDescendantOfClass(e, 'monaco-editor');
+}
+export function isMonacoCustomToggle(e) {
+    return isListElementDescendantOfClass(e, 'monaco-custom-toggle');
+}
+export function isActionItem(e) {
+    return isListElementDescendantOfClass(e, 'action-item');
+}
+export function isStickyScrollElement(e) {
+    return isListElementDescendantOfClass(e, 'monaco-tree-sticky-row');
+}
+export function isStickyScrollContainer(e) {
+    return e.classList.contains('monaco-tree-sticky-container');
 }
 export function isButton(e) {
     if ((e.tagName === 'A' && e.classList.contains('monaco-button')) ||
@@ -240,7 +237,7 @@ export function isButton(e) {
 }
 class KeyboardController {
     get onKeyDown() {
-        return Event.chain(this.disposables.add(new DomEmitter(this.view.domNode, 'keydown')).event, $ => $.filter(e => !isInputElement(e.target))
+        return Event.chain(this.disposables.add(new DomEmitter(this.view.domNode, 'keydown')).event, $ => $.filter(e => !isEditableElement(e.target))
             .map(e => new StandardKeyboardEvent(e)));
     }
     constructor(list, view, options) {
@@ -378,21 +375,20 @@ class TypeNavigationController {
         this.updateOptions(list.options);
     }
     updateOptions(options) {
-        var _a, _b;
-        if ((_a = options.typeNavigationEnabled) !== null && _a !== void 0 ? _a : true) {
+        if (options.typeNavigationEnabled ?? true) {
             this.enable();
         }
         else {
             this.disable();
         }
-        this.mode = (_b = options.typeNavigationMode) !== null && _b !== void 0 ? _b : TypeNavigationMode.Automatic;
+        this.mode = options.typeNavigationMode ?? TypeNavigationMode.Automatic;
     }
     enable() {
         if (this.enabled) {
             return;
         }
         let typing = false;
-        const onChar = Event.chain(this.enabledDisposables.add(new DomEmitter(this.view.domNode, 'keydown')).event, $ => $.filter(e => !isInputElement(e.target))
+        const onChar = Event.chain(this.enabledDisposables.add(new DomEmitter(this.view.domNode, 'keydown')).event, $ => $.filter(e => !isEditableElement(e.target))
             .filter(() => this.mode === TypeNavigationMode.Automatic || this.triggered)
             .map(event => new StandardKeyboardEvent(event))
             .filter(e => typing || this.keyboardNavigationEventFilter(e))
@@ -417,14 +413,16 @@ class TypeNavigationController {
         this.triggered = false;
     }
     onClear() {
-        var _a;
         const focus = this.list.getFocus();
         if (focus.length > 0 && focus[0] === this.previouslyFocused) {
             // List: re-announce element on typing end since typed keys will interrupt aria label of focused element
             // Do not announce if there was a focus change at the end to prevent duplication https://github.com/microsoft/vscode/issues/95961
-            const ariaLabel = (_a = this.list.options.accessibilityProvider) === null || _a === void 0 ? void 0 : _a.getAriaLabel(this.list.element(focus[0]));
-            if (ariaLabel) {
+            const ariaLabel = this.list.options.accessibilityProvider?.getAriaLabel(this.list.element(focus[0]));
+            if (typeof ariaLabel === 'string') {
                 alert(ariaLabel);
+            }
+            else if (ariaLabel) {
+                alert(ariaLabel.get());
             }
         }
         this.previouslyFocused = -1;
@@ -485,7 +483,7 @@ class DOMFocusController {
         this.view = view;
         this.disposables = new DisposableStore();
         const onKeyDown = Event.chain(this.disposables.add(new DomEmitter(view.domNode, 'keydown')).event, $ => $
-            .filter(e => !isInputElement(e.target))
+            .filter(e => !isEditableElement(e.target))
             .map(e => new StandardKeyboardEvent(e)));
         const onTab = Event.chain(onKeyDown, $ => $.filter(e => e.keyCode === 2 /* KeyCode.Tab */ && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey));
         onTab(this.onTab, this, this.disposables);
@@ -503,10 +501,10 @@ class DOMFocusController {
             return;
         }
         const tabIndexElement = focusedDomElement.querySelector('[tabIndex]');
-        if (!tabIndexElement || !(tabIndexElement instanceof HTMLElement) || tabIndexElement.tabIndex === -1) {
+        if (!tabIndexElement || !(isHTMLElement(tabIndexElement)) || tabIndexElement.tabIndex === -1) {
             return;
         }
-        const style = window.getComputedStyle(tabIndexElement);
+        const style = getWindow(tabIndexElement).getComputedStyle(tabIndexElement);
         if (style.visibility === 'hidden' || style.display === 'none') {
             return;
         }
@@ -525,18 +523,18 @@ export function isSelectionRangeChangeEvent(event) {
     return event.browserEvent.shiftKey;
 }
 function isMouseRightClick(event) {
-    return event instanceof MouseEvent && event.button === 2;
+    return isMouseEvent(event) && event.button === 2;
 }
 const DefaultMultipleSelectionController = {
     isSelectionSingleChangeEvent,
     isSelectionRangeChangeEvent
 };
 export class MouseController {
+    get onPointer() { return this._onPointer.event; }
     constructor(list) {
         this.list = list;
         this.disposables = new DisposableStore();
-        this._onPointer = new Emitter();
-        this.onPointer = this._onPointer.event;
+        this._onPointer = this.disposables.add(new Emitter());
         if (list.options.multipleSelectionSupport !== false) {
             this.multipleSelectionController = this.list.options.multipleSelectionController || DefaultMultipleSelectionController;
         }
@@ -577,12 +575,12 @@ export class MouseController {
         if (isMonacoEditor(e.browserEvent.target)) {
             return;
         }
-        if (document.activeElement !== e.browserEvent.target) {
+        if (getActiveElement() !== e.browserEvent.target) {
             this.list.domFocus();
         }
     }
     onContextMenu(e) {
-        if (isInputElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
+        if (isEditableElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
             return;
         }
         const focus = typeof e.index === 'undefined' ? [] : [e.index];
@@ -592,7 +590,7 @@ export class MouseController {
         if (!this.mouseSupport) {
             return;
         }
-        if (isInputElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
+        if (isEditableElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
             return;
         }
         if (e.browserEvent.isHandledByList) {
@@ -617,7 +615,7 @@ export class MouseController {
         this._onPointer.fire(e);
     }
     onDoubleClick(e) {
-        if (isInputElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
+        if (isEditableElement(e.browserEvent.target) || isMonacoEditor(e.browserEvent.target)) {
             return;
         }
         if (this.isSelectionChangeEvent(e)) {
@@ -636,7 +634,7 @@ export class MouseController {
         if (this.isSelectionRangeChangeEvent(e)) {
             if (typeof anchor === 'undefined') {
                 const currentFocus = this.list.getFocus()[0];
-                anchor = currentFocus !== null && currentFocus !== void 0 ? currentFocus : focus;
+                anchor = currentFocus ?? focus;
                 this.list.setAnchor(anchor);
             }
             const min = Math.min(anchor, focus);
@@ -674,7 +672,6 @@ export class DefaultStyleController {
         this.selectorSuffix = selectorSuffix;
     }
     style(styles) {
-        var _a, _b;
         const suffix = this.selectorSuffix && `.${this.selectorSuffix}`;
         const content = [];
         if (styles.listBackground) {
@@ -699,13 +696,13 @@ export class DefaultStyleController {
         }
         if (styles.listFocusAndSelectionBackground) {
             content.push(`
-				.monaco-drag-image,
+				.monaco-drag-image${suffix},
 				.monaco-list${suffix}:focus .monaco-list-row.selected.focused { background-color: ${styles.listFocusAndSelectionBackground}; }
 			`);
         }
         if (styles.listFocusAndSelectionForeground) {
             content.push(`
-				.monaco-drag-image,
+				.monaco-drag-image${suffix},
 				.monaco-list${suffix}:focus .monaco-list-row.selected.focused { color: ${styles.listFocusAndSelectionForeground}; }
 			`);
         }
@@ -736,18 +733,18 @@ export class DefaultStyleController {
         /**
          * Outlines
          */
-        const focusAndSelectionOutline = asCssValueWithDefault(styles.listFocusAndSelectionOutline, asCssValueWithDefault(styles.listSelectionOutline, (_a = styles.listFocusOutline) !== null && _a !== void 0 ? _a : ''));
+        const focusAndSelectionOutline = asCssValueWithDefault(styles.listFocusAndSelectionOutline, asCssValueWithDefault(styles.listSelectionOutline, styles.listFocusOutline ?? ''));
         if (focusAndSelectionOutline) { // default: listFocusOutline
             content.push(`.monaco-list${suffix}:focus .monaco-list-row.focused.selected { outline: 1px solid ${focusAndSelectionOutline}; outline-offset: -1px;}`);
         }
         if (styles.listFocusOutline) { // default: set
             content.push(`
-				.monaco-drag-image,
-				.monaco-list${suffix}:focus .monaco-list-row.focused { outline: 1px solid ${styles.listFocusOutline}; outline-offset: -1px; }
+				.monaco-drag-image${suffix},
+				.monaco-list${suffix}:focus .monaco-list-row.focused,
 				.monaco-workbench.context-menu-visible .monaco-list${suffix}.last-focused .monaco-list-row.focused { outline: 1px solid ${styles.listFocusOutline}; outline-offset: -1px; }
 			`);
         }
-        const inactiveFocusAndSelectionOutline = asCssValueWithDefault(styles.listSelectionOutline, (_b = styles.listInactiveFocusOutline) !== null && _b !== void 0 ? _b : '');
+        const inactiveFocusAndSelectionOutline = asCssValueWithDefault(styles.listSelectionOutline, styles.listInactiveFocusOutline ?? '');
         if (inactiveFocusAndSelectionOutline) {
             content.push(`.monaco-list${suffix} .monaco-list-row.focused.selected { outline: 1px dotted ${inactiveFocusAndSelectionOutline}; outline-offset: -1px; }`);
         }
@@ -760,12 +757,26 @@ export class DefaultStyleController {
         if (styles.listHoverOutline) { // default: activeContrastBorder
             content.push(`.monaco-list${suffix} .monaco-list-row:hover { outline: 1px dashed ${styles.listHoverOutline}; outline-offset: -1px; }`);
         }
-        if (styles.listDropBackground) {
+        if (styles.listDropOverBackground) {
             content.push(`
 				.monaco-list${suffix}.drop-target,
 				.monaco-list${suffix} .monaco-list-rows.drop-target,
-				.monaco-list${suffix} .monaco-list-row.drop-target { background-color: ${styles.listDropBackground} !important; color: inherit !important; }
+				.monaco-list${suffix} .monaco-list-row.drop-target { background-color: ${styles.listDropOverBackground} !important; color: inherit !important; }
 			`);
+        }
+        if (styles.listDropBetweenBackground) {
+            content.push(`
+			.monaco-list${suffix} .monaco-list-rows.drop-target-before .monaco-list-row:first-child::before,
+			.monaco-list${suffix} .monaco-list-row.drop-target-before::before {
+				content: ""; position: absolute; top: 0px; left: 0px; width: 100%; height: 1px;
+				background-color: ${styles.listDropBetweenBackground};
+			}`);
+            content.push(`
+			.monaco-list${suffix} .monaco-list-rows.drop-target-after .monaco-list-row:last-child::after,
+			.monaco-list${suffix} .monaco-list-row.drop-target-after::after {
+				content: ""; position: absolute; bottom: 0px; left: 0px; width: 100%; height: 1px;
+				background-color: ${styles.listDropBetweenBackground};
+			}`);
         }
         if (styles.tableColumnsBorder) {
             content.push(`
@@ -805,7 +816,8 @@ export const unthemedListStyles = {
     listInactiveSelectionBackground: '#3F3F46',
     listInactiveSelectionIconForeground: '#FFFFFF',
     listHoverBackground: '#2A2D2E',
-    listDropBackground: '#383B3D',
+    listDropOverBackground: '#383B3D',
+    listDropBetweenBackground: '#EEEEEE',
     treeIndentGuidesStroke: '#a9a9a9',
     treeInactiveIndentGuidesStroke: Color.fromHex('#a9a9a9').transparent(0.4).toString(),
     tableColumnsBorder: Color.fromHex('#cccccc').transparent(0.2).toString(),
@@ -819,7 +831,10 @@ export const unthemedListStyles = {
     listFocusOutline: undefined,
     listInactiveFocusOutline: undefined,
     listSelectionOutline: undefined,
-    listHoverOutline: undefined
+    listHoverOutline: undefined,
+    treeStickyScrollBackground: undefined,
+    treeStickyScrollBorder: undefined,
+    treeStickyScrollShadow: undefined
 };
 const DefaultOptions = {
     keyboardSupport: true,
@@ -920,17 +935,16 @@ class PipelineRenderer {
     renderTemplate(container) {
         return this.renderers.map(r => r.renderTemplate(container));
     }
-    renderElement(element, index, templateData, height) {
+    renderElement(element, index, templateData, renderDetails) {
         let i = 0;
         for (const renderer of this.renderers) {
-            renderer.renderElement(element, index, templateData[i++], height);
+            renderer.renderElement(element, index, templateData[i++], renderDetails);
         }
     }
-    disposeElement(element, index, templateData, height) {
-        var _a;
+    disposeElement(element, index, templateData, renderDetails) {
         let i = 0;
         for (const renderer of this.renderers) {
-            (_a = renderer.disposeElement) === null || _a === void 0 ? void 0 : _a.call(renderer, element, index, templateData[i], height);
+            renderer.disposeElement?.(element, index, templateData[i], renderDetails);
             i += 1;
         }
     }
@@ -947,26 +961,35 @@ class AccessibiltyRenderer {
         this.templateId = 'a18n';
     }
     renderTemplate(container) {
-        return container;
+        return { container, disposables: new DisposableStore() };
     }
-    renderElement(element, index, container) {
+    renderElement(element, index, data) {
         const ariaLabel = this.accessibilityProvider.getAriaLabel(element);
-        if (ariaLabel) {
-            container.setAttribute('aria-label', ariaLabel);
-        }
-        else {
-            container.removeAttribute('aria-label');
-        }
+        const observable = (ariaLabel && typeof ariaLabel !== 'string') ? ariaLabel : constObservable(ariaLabel);
+        data.disposables.add(autorun(reader => {
+            this.setAriaLabel(reader.readObservable(observable), data.container);
+        }));
         const ariaLevel = this.accessibilityProvider.getAriaLevel && this.accessibilityProvider.getAriaLevel(element);
         if (typeof ariaLevel === 'number') {
-            container.setAttribute('aria-level', `${ariaLevel}`);
+            data.container.setAttribute('aria-level', `${ariaLevel}`);
         }
         else {
-            container.removeAttribute('aria-level');
+            data.container.removeAttribute('aria-level');
         }
     }
+    setAriaLabel(ariaLabel, element) {
+        if (ariaLabel) {
+            element.setAttribute('aria-label', ariaLabel);
+        }
+        else {
+            element.removeAttribute('aria-label');
+        }
+    }
+    disposeElement(element, index, templateData) {
+        templateData.disposables.clear();
+    }
     disposeTemplate(templateData) {
-        // noop
+        templateData.disposables.dispose();
     }
 }
 class ListViewDragAndDrop {
@@ -989,22 +1012,19 @@ class ListViewDragAndDrop {
         return undefined;
     }
     onDragStart(data, originalEvent) {
-        var _a, _b;
-        (_b = (_a = this.dnd).onDragStart) === null || _b === void 0 ? void 0 : _b.call(_a, data, originalEvent);
+        this.dnd.onDragStart?.(data, originalEvent);
     }
-    onDragOver(data, targetElement, targetIndex, originalEvent) {
-        return this.dnd.onDragOver(data, targetElement, targetIndex, originalEvent);
+    onDragOver(data, targetElement, targetIndex, targetSector, originalEvent) {
+        return this.dnd.onDragOver(data, targetElement, targetIndex, targetSector, originalEvent);
     }
     onDragLeave(data, targetElement, targetIndex, originalEvent) {
-        var _a, _b;
-        (_b = (_a = this.dnd).onDragLeave) === null || _b === void 0 ? void 0 : _b.call(_a, data, targetElement, targetIndex, originalEvent);
+        this.dnd.onDragLeave?.(data, targetElement, targetIndex, originalEvent);
     }
     onDragEnd(originalEvent) {
-        var _a, _b;
-        (_b = (_a = this.dnd).onDragEnd) === null || _b === void 0 ? void 0 : _b.call(_a, originalEvent);
+        this.dnd.onDragEnd?.(originalEvent);
     }
-    drop(data, targetElement, targetIndex, originalEvent) {
-        this.dnd.drop(data, targetElement, targetIndex, originalEvent);
+    drop(data, targetElement, targetIndex, targetSector, originalEvent) {
+        this.dnd.drop(data, targetElement, targetIndex, targetSector, originalEvent);
     }
     dispose() {
         this.dnd.dispose();
@@ -1068,13 +1088,13 @@ export class List {
             return { index, element, anchor, browserEvent };
         }));
         const fromMouse = Event.chain(this.view.onContextMenu, $ => $.filter(_ => !didJustPressContextMenuKey)
-            .map(({ element, index, browserEvent }) => ({ element, index, anchor: new StandardMouseEvent(browserEvent), browserEvent })));
+            .map(({ element, index, browserEvent }) => ({ element, index, anchor: new StandardMouseEvent(getWindow(this.view.domNode), browserEvent), browserEvent })));
         return Event.any(fromKeyDown, fromKeyUp, fromMouse);
     }
     get onKeyDown() { return this.disposables.add(new DomEmitter(this.view.domNode, 'keydown')).event; }
     get onDidFocus() { return Event.signal(this.disposables.add(new DomEmitter(this.view.domNode, 'focus', true)).event); }
+    get onDidBlur() { return Event.signal(this.disposables.add(new DomEmitter(this.view.domNode, 'blur', true)).event); }
     constructor(user, container, virtualDelegate, renderers, _options = DefaultOptions) {
-        var _a, _b, _c, _d;
         this.user = user;
         this._options = _options;
         this.focus = new Trait('focused');
@@ -1084,16 +1104,19 @@ export class List {
         this.disposables = new DisposableStore();
         this._onDidDispose = new Emitter();
         this.onDidDispose = this._onDidDispose.event;
-        const role = this._options.accessibilityProvider && this._options.accessibilityProvider.getWidgetRole ? (_a = this._options.accessibilityProvider) === null || _a === void 0 ? void 0 : _a.getWidgetRole() : 'list';
+        const role = this._options.accessibilityProvider && this._options.accessibilityProvider.getWidgetRole ? this._options.accessibilityProvider?.getWidgetRole() : 'list';
         this.selection = new SelectionTrait(role !== 'listbox');
         const baseRenderers = [this.focus.renderer, this.selection.renderer];
         this.accessibilityProvider = _options.accessibilityProvider;
         if (this.accessibilityProvider) {
             baseRenderers.push(new AccessibiltyRenderer(this.accessibilityProvider));
-            (_c = (_b = this.accessibilityProvider).onDidChangeActiveDescendant) === null || _c === void 0 ? void 0 : _c.call(_b, this.onDidChangeActiveDescendant, this, this.disposables);
+            this.accessibilityProvider.onDidChangeActiveDescendant?.(this.onDidChangeActiveDescendant, this, this.disposables);
         }
         renderers = renderers.map(r => new PipelineRenderer(r.templateId, [...baseRenderers, r]));
-        const viewOptions = Object.assign(Object.assign({}, _options), { dnd: _options.dnd && new ListViewDragAndDrop(this, _options.dnd) });
+        const viewOptions = {
+            ..._options,
+            dnd: _options.dnd && new ListViewDragAndDrop(this, _options.dnd)
+        };
         this.view = this.createListView(container, virtualDelegate, renderers, viewOptions);
         this.view.domNode.setAttribute('role', role);
         if (_options.styleController) {
@@ -1121,7 +1144,7 @@ export class List {
         }
         if (_options.keyboardNavigationLabelProvider) {
             const delegate = _options.keyboardNavigationDelegate || DefaultKeyboardNavigationDelegate;
-            this.typeNavigationController = new TypeNavigationController(this, this.view, _options.keyboardNavigationLabelProvider, (_d = _options.keyboardNavigationEventFilter) !== null && _d !== void 0 ? _d : (() => true), delegate);
+            this.typeNavigationController = new TypeNavigationController(this, this.view, _options.keyboardNavigationLabelProvider, _options.keyboardNavigationEventFilter ?? (() => true), delegate);
             this.disposables.add(this.typeNavigationController);
         }
         this.mouseController = this.createMouseController(_options);
@@ -1129,7 +1152,11 @@ export class List {
         this.onDidChangeFocus(this._onFocusChange, this, this.disposables);
         this.onDidChangeSelection(this._onSelectionChange, this, this.disposables);
         if (this.accessibilityProvider) {
-            this.ariaLabel = this.accessibilityProvider.getWidgetAriaLabel();
+            const ariaLabel = this.accessibilityProvider.getWidgetAriaLabel();
+            const observable = (ariaLabel && typeof ariaLabel !== 'string') ? ariaLabel : constObservable(ariaLabel);
+            this.disposables.add(autorun(reader => {
+                this.ariaLabel = reader.readObservable(observable);
+            }));
         }
         if (this._options.multipleSelectionSupport !== false) {
             this.view.domNode.setAttribute('aria-multiselectable', 'true');
@@ -1142,9 +1169,8 @@ export class List {
         return new MouseController(this);
     }
     updateOptions(optionsUpdate = {}) {
-        var _a, _b;
-        this._options = Object.assign(Object.assign({}, this._options), optionsUpdate);
-        (_a = this.typeNavigationController) === null || _a === void 0 ? void 0 : _a.updateOptions(this._options);
+        this._options = { ...this._options, ...optionsUpdate };
+        this.typeNavigationController?.updateOptions(this._options);
         if (this._options.multipleSelectionController !== undefined) {
             if (this._options.multipleSelectionSupport) {
                 this.view.domNode.setAttribute('aria-multiselectable', 'true');
@@ -1154,7 +1180,7 @@ export class List {
             }
         }
         this.mouseController.updateOptions(optionsUpdate);
-        (_b = this.keyboardController) === null || _b === void 0 ? void 0 : _b.updateOptions(optionsUpdate);
+        this.keyboardController?.updateOptions(optionsUpdate);
         this.view.updateOptions(optionsUpdate);
     }
     get options() {
@@ -1178,11 +1204,20 @@ export class List {
     element(index) {
         return this.view.element(index);
     }
+    indexOf(element) {
+        return this.view.indexOf(element);
+    }
+    indexAt(position) {
+        return this.view.indexAt(position);
+    }
     get length() {
         return this.view.length;
     }
     get contentHeight() {
         return this.view.contentHeight;
+    }
+    get onDidChangeContentHeight() {
+        return this.view.onDidChangeContentHeight;
     }
     get scrollTop() {
         return this.view.getScrollTop();
@@ -1237,7 +1272,7 @@ export class List {
         this.anchor.set([index]);
     }
     getAnchor() {
-        return firstOrDefault(this.anchor.get(), undefined);
+        return this.anchor.get().at(0);
     }
     getAnchorElement() {
         const anchor = this.getAnchor();
@@ -1271,68 +1306,65 @@ export class List {
             this.setFocus([index], browserEvent);
         }
     }
-    focusNextPage(browserEvent, filter) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let lastPageIndex = this.view.indexAt(this.view.getScrollTop() + this.view.renderHeight);
-            lastPageIndex = lastPageIndex === 0 ? 0 : lastPageIndex - 1;
-            const currentlyFocusedElementIndex = this.getFocus()[0];
-            if (currentlyFocusedElementIndex !== lastPageIndex && (currentlyFocusedElementIndex === undefined || lastPageIndex > currentlyFocusedElementIndex)) {
-                const lastGoodPageIndex = this.findPreviousIndex(lastPageIndex, false, filter);
-                if (lastGoodPageIndex > -1 && currentlyFocusedElementIndex !== lastGoodPageIndex) {
-                    this.setFocus([lastGoodPageIndex], browserEvent);
-                }
-                else {
-                    this.setFocus([lastPageIndex], browserEvent);
-                }
+    async focusNextPage(browserEvent, filter) {
+        let lastPageIndex = this.view.indexAt(this.view.getScrollTop() + this.view.renderHeight);
+        lastPageIndex = lastPageIndex === 0 ? 0 : lastPageIndex - 1;
+        const currentlyFocusedElementIndex = this.getFocus()[0];
+        if (currentlyFocusedElementIndex !== lastPageIndex && (currentlyFocusedElementIndex === undefined || lastPageIndex > currentlyFocusedElementIndex)) {
+            const lastGoodPageIndex = this.findPreviousIndex(lastPageIndex, false, filter);
+            if (lastGoodPageIndex > -1 && currentlyFocusedElementIndex !== lastGoodPageIndex) {
+                this.setFocus([lastGoodPageIndex], browserEvent);
             }
             else {
-                const previousScrollTop = this.view.getScrollTop();
-                let nextpageScrollTop = previousScrollTop + this.view.renderHeight;
-                if (lastPageIndex > currentlyFocusedElementIndex) {
-                    // scroll last page element to the top only if the last page element is below the focused element
-                    nextpageScrollTop -= this.view.elementHeight(lastPageIndex);
-                }
-                this.view.setScrollTop(nextpageScrollTop);
-                if (this.view.getScrollTop() !== previousScrollTop) {
-                    this.setFocus([]);
-                    // Let the scroll event listener run
-                    yield timeout(0);
-                    yield this.focusNextPage(browserEvent, filter);
-                }
+                this.setFocus([lastPageIndex], browserEvent);
             }
-        });
+        }
+        else {
+            const previousScrollTop = this.view.getScrollTop();
+            let nextpageScrollTop = previousScrollTop + this.view.renderHeight;
+            if (lastPageIndex > currentlyFocusedElementIndex) {
+                // scroll last page element to the top only if the last page element is below the focused element
+                nextpageScrollTop -= this.view.elementHeight(lastPageIndex);
+            }
+            this.view.setScrollTop(nextpageScrollTop);
+            if (this.view.getScrollTop() !== previousScrollTop) {
+                this.setFocus([]);
+                // Let the scroll event listener run
+                await timeout(0);
+                await this.focusNextPage(browserEvent, filter);
+            }
+        }
     }
-    focusPreviousPage(browserEvent, filter) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let firstPageIndex;
-            const scrollTop = this.view.getScrollTop();
-            if (scrollTop === 0) {
-                firstPageIndex = this.view.indexAt(scrollTop);
+    async focusPreviousPage(browserEvent, filter, getPaddingTop = () => 0) {
+        let firstPageIndex;
+        const paddingTop = getPaddingTop();
+        const scrollTop = this.view.getScrollTop() + paddingTop;
+        if (scrollTop === 0) {
+            firstPageIndex = this.view.indexAt(scrollTop);
+        }
+        else {
+            firstPageIndex = this.view.indexAfter(scrollTop - 1);
+        }
+        const currentlyFocusedElementIndex = this.getFocus()[0];
+        if (currentlyFocusedElementIndex !== firstPageIndex && (currentlyFocusedElementIndex === undefined || currentlyFocusedElementIndex >= firstPageIndex)) {
+            const firstGoodPageIndex = this.findNextIndex(firstPageIndex, false, filter);
+            if (firstGoodPageIndex > -1 && currentlyFocusedElementIndex !== firstGoodPageIndex) {
+                this.setFocus([firstGoodPageIndex], browserEvent);
             }
             else {
-                firstPageIndex = this.view.indexAfter(scrollTop - 1);
+                this.setFocus([firstPageIndex], browserEvent);
             }
-            const currentlyFocusedElementIndex = this.getFocus()[0];
-            if (currentlyFocusedElementIndex !== firstPageIndex && (currentlyFocusedElementIndex === undefined || currentlyFocusedElementIndex >= firstPageIndex)) {
-                const firstGoodPageIndex = this.findNextIndex(firstPageIndex, false, filter);
-                if (firstGoodPageIndex > -1 && currentlyFocusedElementIndex !== firstGoodPageIndex) {
-                    this.setFocus([firstGoodPageIndex], browserEvent);
-                }
-                else {
-                    this.setFocus([firstPageIndex], browserEvent);
-                }
+        }
+        else {
+            const previousScrollTop = scrollTop;
+            this.view.setScrollTop(scrollTop - this.view.renderHeight - paddingTop);
+            if (this.view.getScrollTop() + getPaddingTop() !== previousScrollTop) {
+                this.setFocus([]);
+                // Let the scroll event listener run
+                await timeout(0);
+                await this.focusPreviousPage(browserEvent, filter, getPaddingTop);
             }
-            else {
-                const previousScrollTop = scrollTop;
-                this.view.setScrollTop(scrollTop - this.view.renderHeight);
-                if (this.view.getScrollTop() !== previousScrollTop) {
-                    this.setFocus([]);
-                    // Let the scroll event listener run
-                    yield timeout(0);
-                    yield this.focusPreviousPage(browserEvent, filter);
-                }
-            }
-        });
+        }
     }
     focusLast(browserEvent, filter) {
         if (this.length === 0) {
@@ -1387,7 +1419,7 @@ export class List {
     getFocusedElements() {
         return this.getFocus().map(i => this.view.element(i));
     }
-    reveal(index, relativeTop) {
+    reveal(index, relativeTop, paddingTop = 0) {
         if (index < 0 || index >= this.length) {
             throw new ListError(this.user, `Invalid index ${index}`);
         }
@@ -1396,28 +1428,52 @@ export class List {
         const elementHeight = this.view.elementHeight(index);
         if (isNumber(relativeTop)) {
             // y = mx + b
-            const m = elementHeight - this.view.renderHeight;
-            this.view.setScrollTop(m * clamp(relativeTop, 0, 1) + elementTop);
+            const m = elementHeight - this.view.renderHeight + paddingTop;
+            this.view.setScrollTop(m * clamp(relativeTop, 0, 1) + elementTop - paddingTop);
         }
         else {
             const viewItemBottom = elementTop + elementHeight;
             const scrollBottom = scrollTop + this.view.renderHeight;
-            if (elementTop < scrollTop && viewItemBottom >= scrollBottom) {
+            if (elementTop < scrollTop + paddingTop && viewItemBottom >= scrollBottom) {
                 // The element is already overflowing the viewport, no-op
             }
-            else if (elementTop < scrollTop || (viewItemBottom >= scrollBottom && elementHeight >= this.view.renderHeight)) {
-                this.view.setScrollTop(elementTop);
+            else if (elementTop < scrollTop + paddingTop || (viewItemBottom >= scrollBottom && elementHeight >= this.view.renderHeight)) {
+                this.view.setScrollTop(elementTop - paddingTop);
             }
             else if (viewItemBottom >= scrollBottom) {
                 this.view.setScrollTop(viewItemBottom - this.view.renderHeight);
             }
         }
     }
+    /**
+     * Returns the relative position of an element rendered in the list.
+     * Returns `null` if the element isn't *entirely* in the visible viewport.
+     */
+    getRelativeTop(index, paddingTop = 0) {
+        if (index < 0 || index >= this.length) {
+            throw new ListError(this.user, `Invalid index ${index}`);
+        }
+        const scrollTop = this.view.getScrollTop();
+        const elementTop = this.view.elementTop(index);
+        const elementHeight = this.view.elementHeight(index);
+        if (elementTop < scrollTop + paddingTop || elementTop + elementHeight > scrollTop + this.view.renderHeight) {
+            return null;
+        }
+        // y = mx + b
+        const m = elementHeight - this.view.renderHeight + paddingTop;
+        return Math.abs((scrollTop + paddingTop - elementTop) / m);
+    }
     getHTMLElement() {
         return this.view.domNode;
     }
+    getScrollableElement() {
+        return this.view.scrollableElementDomNode;
+    }
     getElementID(index) {
         return this.view.getElementDomId(index);
+    }
+    getElementTop(index) {
+        return this.view.elementTop(index);
     }
     style(styles) {
         this.styleController.style(styles);
@@ -1431,11 +1487,10 @@ export class List {
         this.onDidChangeActiveDescendant();
     }
     onDidChangeActiveDescendant() {
-        var _a;
         const focus = this.focus.get();
         if (focus.length > 0) {
             let id;
-            if ((_a = this.accessibilityProvider) === null || _a === void 0 ? void 0 : _a.getActiveDescendantId) {
+            if (this.accessibilityProvider?.getActiveDescendantId) {
                 id = this.accessibilityProvider.getActiveDescendantId(this.view.element(focus[0]));
             }
             this.view.domNode.setAttribute('aria-activedescendant', id || this.view.getElementDomId(focus[0]));
@@ -1471,3 +1526,7 @@ __decorate([
 __decorate([
     memoize
 ], List.prototype, "onDidFocus", null);
+__decorate([
+    memoize
+], List.prototype, "onDidBlur", null);
+//# sourceMappingURL=listWidget.js.map

@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { LRUCache } from './map.js';
+import { getKoreanAltChars } from './naturalLanguage/korean.js';
 import * as strings from './strings.js';
 // Combined filters
 /**
@@ -98,6 +99,30 @@ function isWordSeparator(code) {
 }
 function charactersMatch(codeA, codeB) {
     return (codeA === codeB) || (isWordSeparator(codeA) && isWordSeparator(codeB));
+}
+const alternateCharsCache = new Map();
+/**
+ * Gets alternative codes to the character code passed in. This comes in the
+ * form of an array of character codes, all of which must match _in order_ to
+ * successfully match.
+ *
+ * @param code The character code to check.
+ */
+function getAlternateCodes(code) {
+    if (alternateCharsCache.has(code)) {
+        return alternateCharsCache.get(code);
+    }
+    // NOTE: This function is written in such a way that it can be extended in
+    // the future, but right now the return type takes into account it's only
+    // supported by a single "alt codes provider".
+    // `ArrayLike<ArrayLike<number>>` is a more appropriate type if changed.
+    let result;
+    const codes = getKoreanAltChars(code);
+    if (codes) {
+        result = codes;
+    }
+    alternateCharsCache.set(code, result);
+    return result;
 }
 function isAlphanumeric(code) {
     return isLower(code) || isUpper(code) || isNumber(code);
@@ -211,8 +236,9 @@ export function matchesCamelCase(word, camelCaseWord) {
     if (!isCamelCasePattern(word)) {
         return null;
     }
+    // TODO: Consider removing this check
     if (camelCaseWord.length > 60) {
-        return null;
+        camelCaseWord = camelCaseWord.substring(0, 60);
     }
     const analysis = analyzeCamelCaseWord(camelCaseWord);
     if (!isCamelCaseWord(analysis)) {
@@ -238,44 +264,66 @@ export function matchesWords(word, target, contiguous = false) {
         return null;
     }
     let result = null;
-    let i = 0;
+    let targetIndex = 0;
     word = word.toLowerCase();
     target = target.toLowerCase();
-    while (i < target.length && (result = _matchesWords(word, target, 0, i, contiguous)) === null) {
-        i = nextWord(target, i + 1);
+    while (targetIndex < target.length) {
+        result = _matchesWords(word, target, 0, targetIndex, contiguous);
+        if (result !== null) {
+            break;
+        }
+        targetIndex = nextWord(target, targetIndex + 1);
     }
     return result;
 }
-function _matchesWords(word, target, i, j, contiguous) {
-    if (i === word.length) {
+function _matchesWords(word, target, wordIndex, targetIndex, contiguous) {
+    let targetIndexOffset = 0;
+    if (wordIndex === word.length) {
         return [];
     }
-    else if (j === target.length) {
+    else if (targetIndex === target.length) {
         return null;
     }
-    else if (!charactersMatch(word.charCodeAt(i), target.charCodeAt(j))) {
-        return null;
-    }
-    else {
-        let result = null;
-        let nextWordIndex = j + 1;
-        result = _matchesWords(word, target, i + 1, j + 1, contiguous);
-        if (!contiguous) {
-            while (!result && (nextWordIndex = nextWord(target, nextWordIndex)) < target.length) {
-                result = _matchesWords(word, target, i + 1, nextWordIndex, contiguous);
-                nextWordIndex++;
-            }
-        }
-        if (!result) {
+    else if (!charactersMatch(word.charCodeAt(wordIndex), target.charCodeAt(targetIndex))) {
+        // Verify alternate characters before exiting
+        const altChars = getAlternateCodes(word.charCodeAt(wordIndex));
+        if (!altChars) {
             return null;
         }
-        // If the characters don't exactly match, then they must be word separators (see charactersMatch(...)).
-        // We don't want to include this in the matches but we don't want to throw the target out all together so we return `result`.
-        if (word.charCodeAt(i) !== target.charCodeAt(j)) {
+        for (let k = 0; k < altChars.length; k++) {
+            if (!charactersMatch(altChars[k], target.charCodeAt(targetIndex + k))) {
+                return null;
+            }
+        }
+        targetIndexOffset += altChars.length - 1;
+    }
+    let result = null;
+    let nextWordIndex = targetIndex + targetIndexOffset + 1;
+    result = _matchesWords(word, target, wordIndex + 1, nextWordIndex, contiguous);
+    if (!contiguous) {
+        while (!result && (nextWordIndex = nextWord(target, nextWordIndex)) < target.length) {
+            result = _matchesWords(word, target, wordIndex + 1, nextWordIndex, contiguous);
+            nextWordIndex++;
+        }
+    }
+    if (!result) {
+        return null;
+    }
+    // If the characters don't exactly match, then they must be word separators (see charactersMatch(...)).
+    // We don't want to include this in the matches but we don't want to throw the target out all together so we return `result`.
+    if (word.charCodeAt(wordIndex) !== target.charCodeAt(targetIndex)) {
+        // Verify alternate characters before exiting
+        const altChars = getAlternateCodes(word.charCodeAt(wordIndex));
+        if (!altChars) {
             return result;
         }
-        return join({ start: j, end: j + 1 }, result);
+        for (let k = 0; k < altChars.length; k++) {
+            if (altChars[k] !== target.charCodeAt(targetIndex + k)) {
+                return result;
+            }
+        }
     }
+    return join({ start: targetIndex, end: targetIndex + targetIndexOffset + 1 }, result);
 }
 function nextWord(word, start) {
     for (let i = start; i < word.length; i++) {
@@ -471,12 +519,12 @@ export var FuzzyScore;
     FuzzyScore.isDefault = isDefault;
 })(FuzzyScore || (FuzzyScore = {}));
 export class FuzzyScoreOptions {
+    static { this.default = { boostFullMatch: true, firstMatchCanBeWeak: false }; }
     constructor(firstMatchCanBeWeak, boostFullMatch) {
         this.firstMatchCanBeWeak = firstMatchCanBeWeak;
         this.boostFullMatch = boostFullMatch;
     }
 }
-FuzzyScoreOptions.default = { boostFullMatch: true, firstMatchCanBeWeak: false };
 export function fuzzyScore(pattern, patternLow, patternStart, word, wordLow, wordStart, options = FuzzyScoreOptions.default) {
     const patternLen = pattern.length > _maxLen ? _maxLen : pattern.length;
     const wordLen = word.length > _maxLen ? _maxLen : word.length;
@@ -510,7 +558,7 @@ export function fuzzyScore(pattern, patternLow, patternStart, word, wordLow, wor
                 score = _doScore(pattern, patternLow, patternPos, patternStart, word, wordLow, wordPos, wordLen, wordStart, _diag[row - 1][column - 1] === 0, hasStrongFirstMatch);
             }
             let diagScore = 0;
-            if (score !== Number.MAX_SAFE_INTEGER) {
+            if (score !== Number.MIN_SAFE_INTEGER) {
                 canComeDiag = true;
                 diagScore = score + _table[row - 1][column - 1];
             }
@@ -590,7 +638,7 @@ export function fuzzyScore(pattern, patternLow, patternStart, word, wordLow, wor
         column = diagColumn - 1;
         result.push(column);
     }
-    if (wordLen === patternLen && options.boostFullMatch) {
+    if (wordLen - wordStart === patternLen && options.boostFullMatch) {
         // the word matches the pattern with all characters!
         // giving the score a total match boost (to come up ahead other words)
         result[0] += 2;
@@ -719,3 +767,4 @@ function nextTypoPermutation(pattern, patternPos) {
         + pattern.slice(patternPos + 2);
 }
 //#endregion
+//# sourceMappingURL=filters.js.map

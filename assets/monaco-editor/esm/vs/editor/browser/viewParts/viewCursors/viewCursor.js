@@ -21,25 +21,33 @@ class ViewCursorRenderData {
         this.textContentClassName = textContentClassName;
     }
 }
+export var CursorPlurality;
+(function (CursorPlurality) {
+    CursorPlurality[CursorPlurality["Single"] = 0] = "Single";
+    CursorPlurality[CursorPlurality["MultiPrimary"] = 1] = "MultiPrimary";
+    CursorPlurality[CursorPlurality["MultiSecondary"] = 2] = "MultiSecondary";
+})(CursorPlurality || (CursorPlurality = {}));
 export class ViewCursor {
-    constructor(context) {
+    constructor(context, plurality) {
         this._context = context;
         const options = this._context.configuration.options;
-        const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        const fontInfo = options.get(59 /* EditorOption.fontInfo */);
+        this._cursorStyle = options.get(161 /* EditorOption.effectiveCursorStyle */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
-        this._lineCursorWidth = Math.min(options.get(31 /* EditorOption.cursorWidth */), this._typicalHalfwidthCharacterWidth);
+        this._lineCursorWidth = Math.min(options.get(37 /* EditorOption.cursorWidth */), this._typicalHalfwidthCharacterWidth);
+        this._lineCursorHeight = options.get(38 /* EditorOption.cursorHeight */);
         this._isVisible = true;
         // Create the dom node
         this._domNode = createFastDomNode(document.createElement('div'));
         this._domNode.setClassName(`cursor ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME}`);
-        this._domNode.setHeight(this._lineHeight);
+        this._domNode.setHeight(this._context.viewLayout.getLineHeightForLineNumber(1));
         this._domNode.setTop(0);
         this._domNode.setLeft(0);
         applyFontInfo(this._domNode, fontInfo);
         this._domNode.setDisplay('none');
         this._position = new Position(1, 1);
+        this._pluralityClass = '';
+        this.setPlurality(plurality);
         this._lastRenderedContent = '';
         this._renderData = null;
     }
@@ -48,6 +56,20 @@ export class ViewCursor {
     }
     getPosition() {
         return this._position;
+    }
+    setPlurality(plurality) {
+        switch (plurality) {
+            default:
+            case CursorPlurality.Single:
+                this._pluralityClass = '';
+                break;
+            case CursorPlurality.MultiPrimary:
+                this._pluralityClass = 'cursor-primary';
+                break;
+            case CursorPlurality.MultiSecondary:
+                this._pluralityClass = 'cursor-secondary';
+                break;
+        }
     }
     show() {
         if (!this._isVisible) {
@@ -63,11 +85,11 @@ export class ViewCursor {
     }
     onConfigurationChanged(e) {
         const options = this._context.configuration.options;
-        const fontInfo = options.get(50 /* EditorOption.fontInfo */);
-        this._cursorStyle = options.get(28 /* EditorOption.cursorStyle */);
-        this._lineHeight = options.get(66 /* EditorOption.lineHeight */);
+        const fontInfo = options.get(59 /* EditorOption.fontInfo */);
+        this._cursorStyle = options.get(161 /* EditorOption.effectiveCursorStyle */);
         this._typicalHalfwidthCharacterWidth = fontInfo.typicalHalfwidthCharacterWidth;
-        this._lineCursorWidth = Math.min(options.get(31 /* EditorOption.cursorWidth */), this._typicalHalfwidthCharacterWidth);
+        this._lineCursorWidth = Math.min(options.get(37 /* EditorOption.cursorWidth */), this._typicalHalfwidthCharacterWidth);
+        this._lineCursorHeight = options.get(38 /* EditorOption.cursorHeight */);
         applyFontInfo(this._domNode, fontInfo);
         return true;
     }
@@ -95,22 +117,28 @@ export class ViewCursor {
         let textContent = '';
         let textContentClassName = '';
         const [position, nextGrapheme] = this._getGraphemeAwarePosition();
+        const lineHeight = this._context.viewLayout.getLineHeightForLineNumber(position.lineNumber);
+        const lineCursorHeight = (this._lineCursorHeight === 0
+            ? lineHeight // 0 indicates that the cursor should take the full line height
+            : Math.min(lineHeight, this._lineCursorHeight));
+        const lineHeightAdjustment = (lineHeight - lineCursorHeight) / 2;
         if (this._cursorStyle === TextEditorCursorStyle.Line || this._cursorStyle === TextEditorCursorStyle.LineThin) {
             const visibleRange = ctx.visibleRangeForPosition(position);
             if (!visibleRange || visibleRange.outsideRenderedLine) {
                 // Outside viewport
                 return null;
             }
+            const window = dom.getWindow(this._domNode.domNode);
             let width;
             if (this._cursorStyle === TextEditorCursorStyle.Line) {
-                width = dom.computeScreenAwareSize(this._lineCursorWidth > 0 ? this._lineCursorWidth : 2);
+                width = dom.computeScreenAwareSize(window, this._lineCursorWidth > 0 ? this._lineCursorWidth : 2);
                 if (width > 2) {
                     textContent = nextGrapheme;
                     textContentClassName = this._getTokenClassName(position);
                 }
             }
             else {
-                width = dom.computeScreenAwareSize(1);
+                width = dom.computeScreenAwareSize(window, 1);
             }
             let left = visibleRange.left;
             let paddingLeft = 0;
@@ -119,8 +147,8 @@ export class ViewCursor {
                 paddingLeft = 1;
                 left -= paddingLeft;
             }
-            const top = ctx.getVerticalOffsetForLineNumber(position.lineNumber) - ctx.bigNumbersDelta;
-            return new ViewCursorRenderData(top, left, paddingLeft, width, this._lineHeight, textContent, textContentClassName);
+            const top = ctx.getVerticalOffsetForLineNumber(position.lineNumber) - ctx.bigNumbersDelta + lineHeightAdjustment;
+            return new ViewCursorRenderData(top, left, paddingLeft, width, lineCursorHeight, textContent, textContentClassName);
         }
         const visibleRangeForCharacter = ctx.linesVisibleRangesForRange(new Range(position.lineNumber, position.column, position.lineNumber, position.column + nextGrapheme.length), false);
         if (!visibleRangeForCharacter || visibleRangeForCharacter.length === 0) {
@@ -143,10 +171,10 @@ export class ViewCursor {
             textContentClassName = this._getTokenClassName(position);
         }
         let top = ctx.getVerticalOffsetForLineNumber(position.lineNumber) - ctx.bigNumbersDelta;
-        let height = this._lineHeight;
+        let height = lineHeight;
         // Underline might interfere with clicking
         if (this._cursorStyle === TextEditorCursorStyle.Underline || this._cursorStyle === TextEditorCursorStyle.UnderlineThin) {
-            top += this._lineHeight - 2;
+            top += lineHeight - 2;
             height = 2;
         }
         return new ViewCursorRenderData(top, range.left, 0, width, height, textContent, textContentClassName);
@@ -168,7 +196,7 @@ export class ViewCursor {
             this._lastRenderedContent = this._renderData.textContent;
             this._domNode.domNode.textContent = this._lastRenderedContent;
         }
-        this._domNode.setClassName(`cursor ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME} ${this._renderData.textContentClassName}`);
+        this._domNode.setClassName(`cursor ${this._pluralityClass} ${MOUSE_CURSOR_TEXT_CSS_CLASS_NAME} ${this._renderData.textContentClassName}`);
         this._domNode.setDisplay('block');
         this._domNode.setTop(this._renderData.top);
         this._domNode.setLeft(this._renderData.left);
@@ -185,3 +213,4 @@ export class ViewCursor {
         };
     }
 }
+//# sourceMappingURL=viewCursor.js.map

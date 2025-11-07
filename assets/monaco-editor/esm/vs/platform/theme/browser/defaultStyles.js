@@ -1,7 +1,7 @@
-import { keybindingLabelBackground, keybindingLabelBorder, keybindingLabelBottomBorder, keybindingLabelForeground, asCssVariable, widgetShadow, buttonForeground, buttonSeparator, buttonBackground, buttonHoverBackground, buttonSecondaryForeground, buttonSecondaryBackground, buttonSecondaryHoverBackground, buttonBorder, progressBarBackground, inputActiveOptionBorder, inputActiveOptionForeground, inputActiveOptionBackground, editorWidgetBackground, editorWidgetForeground, contrastBorder, checkboxBorder, checkboxBackground, checkboxForeground, problemsErrorIconForeground, problemsWarningIconForeground, problemsInfoIconForeground, inputBackground, inputForeground, inputBorder, textLinkForeground, inputValidationInfoBorder, inputValidationInfoBackground, inputValidationInfoForeground, inputValidationWarningBorder, inputValidationWarningBackground, inputValidationWarningForeground, inputValidationErrorBorder, inputValidationErrorBackground, inputValidationErrorForeground, listFilterWidgetBackground, listFilterWidgetNoMatchesOutline, listFilterWidgetOutline, listFilterWidgetShadow, badgeBackground, badgeForeground, breadcrumbsBackground, breadcrumbsForeground, breadcrumbsFocusForeground, breadcrumbsActiveSelectionForeground, activeContrastBorder, listActiveSelectionBackground, listActiveSelectionForeground, listActiveSelectionIconForeground, listDropBackground, listFocusAndSelectionOutline, listFocusBackground, listFocusForeground, listFocusOutline, listHoverBackground, listHoverForeground, listInactiveFocusBackground, listInactiveFocusOutline, listInactiveSelectionBackground, listInactiveSelectionForeground, listInactiveSelectionIconForeground, tableColumnsBorder, tableOddRowsBackgroundColor, treeIndentGuidesStroke, asCssVariableWithDefault, editorWidgetBorder, focusBorder, pickerGroupForeground, quickInputListFocusBackground, quickInputListFocusForeground, quickInputListFocusIconForeground, selectBackground, selectBorder, selectForeground, selectListBackground, treeInactiveIndentGuidesStroke, menuBorder, menuForeground, menuBackground, menuSelectionForeground, menuSelectionBackground, menuSelectionBorder, menuSeparatorBackground, scrollbarShadow, scrollbarSliderActiveBackground, scrollbarSliderBackground, scrollbarSliderHoverBackground } from '../common/colorRegistry.js';
+import { keybindingLabelBackground, keybindingLabelBorder, keybindingLabelBottomBorder, keybindingLabelForeground, asCssVariable, widgetShadow, buttonForeground, buttonSeparator, buttonBackground, buttonHoverBackground, buttonSecondaryForeground, buttonSecondaryBackground, buttonSecondaryHoverBackground, buttonBorder, progressBarBackground, inputActiveOptionBorder, inputActiveOptionForeground, inputActiveOptionBackground, editorWidgetBackground, editorWidgetForeground, contrastBorder, checkboxBorder, checkboxBackground, checkboxForeground, problemsErrorIconForeground, problemsWarningIconForeground, problemsInfoIconForeground, inputBackground, inputForeground, inputBorder, textLinkForeground, inputValidationInfoBorder, inputValidationInfoBackground, inputValidationInfoForeground, inputValidationWarningBorder, inputValidationWarningBackground, inputValidationWarningForeground, inputValidationErrorBorder, inputValidationErrorBackground, inputValidationErrorForeground, listFilterWidgetBackground, listFilterWidgetNoMatchesOutline, listFilterWidgetOutline, listFilterWidgetShadow, badgeBackground, badgeForeground, breadcrumbsBackground, breadcrumbsForeground, breadcrumbsFocusForeground, breadcrumbsActiveSelectionForeground, activeContrastBorder, listActiveSelectionBackground, listActiveSelectionForeground, listActiveSelectionIconForeground, listDropOverBackground, listFocusAndSelectionOutline, listFocusBackground, listFocusForeground, listFocusOutline, listHoverBackground, listHoverForeground, listInactiveFocusBackground, listInactiveFocusOutline, listInactiveSelectionBackground, listInactiveSelectionForeground, listInactiveSelectionIconForeground, tableColumnsBorder, tableOddRowsBackgroundColor, treeIndentGuidesStroke, asCssVariableWithDefault, editorWidgetBorder, focusBorder, pickerGroupForeground, quickInputListFocusBackground, quickInputListFocusForeground, quickInputListFocusIconForeground, selectBackground, selectBorder, selectForeground, selectListBackground, treeInactiveIndentGuidesStroke, menuBorder, menuForeground, menuBackground, menuSelectionForeground, menuSelectionBackground, menuSelectionBorder, menuSeparatorBackground, scrollbarShadow, scrollbarSliderActiveBackground, scrollbarSliderBackground, scrollbarSliderHoverBackground, listDropBetweenBackground, radioActiveBackground, radioActiveForeground, radioInactiveBackground, radioInactiveForeground, radioInactiveBorder, radioInactiveHoverBackground, radioActiveBorder, checkboxDisabledBackground, checkboxDisabledForeground, widgetBorder } from '../common/colorRegistry.js';
 import { Color } from '../../../base/common/color.js';
 function overrideStyles(override, styles) {
-    const result = Object.assign({}, styles);
+    const result = { ...styles };
     for (const key in override) {
         const val = override[key];
         result[key] = val !== undefined ? asCssVariable(val) : undefined;
@@ -33,16 +33,27 @@ export const defaultToggleStyles = {
     inputActiveOptionForeground: asCssVariable(inputActiveOptionForeground),
     inputActiveOptionBackground: asCssVariable(inputActiveOptionBackground)
 };
+export const defaultRadioStyles = {
+    activeForeground: asCssVariable(radioActiveForeground),
+    activeBackground: asCssVariable(radioActiveBackground),
+    activeBorder: asCssVariable(radioActiveBorder),
+    inactiveForeground: asCssVariable(radioInactiveForeground),
+    inactiveBackground: asCssVariable(radioInactiveBackground),
+    inactiveBorder: asCssVariable(radioInactiveBorder),
+    inactiveHoverBackground: asCssVariable(radioInactiveHoverBackground),
+};
 export const defaultCheckboxStyles = {
     checkboxBackground: asCssVariable(checkboxBackground),
     checkboxBorder: asCssVariable(checkboxBorder),
-    checkboxForeground: asCssVariable(checkboxForeground)
+    checkboxForeground: asCssVariable(checkboxForeground),
+    checkboxDisabledBackground: asCssVariable(checkboxDisabledBackground),
+    checkboxDisabledForeground: asCssVariable(checkboxDisabledForeground),
 };
 export const defaultDialogStyles = {
     dialogBackground: asCssVariable(editorWidgetBackground),
     dialogForeground: asCssVariable(editorWidgetForeground),
     dialogShadow: asCssVariable(widgetShadow),
-    dialogBorder: asCssVariable(contrastBorder),
+    dialogBorder: asCssVariable(widgetBorder),
     errorIconForeground: asCssVariable(problemsErrorIconForeground),
     warningIconForeground: asCssVariable(problemsWarningIconForeground),
     infoIconForeground: asCssVariable(problemsInfoIconForeground),
@@ -101,11 +112,15 @@ export const defaultListStyles = {
     listInactiveFocusOutline: asCssVariable(listInactiveFocusOutline),
     listHoverBackground: asCssVariable(listHoverBackground),
     listHoverForeground: asCssVariable(listHoverForeground),
-    listDropBackground: asCssVariable(listDropBackground),
+    listDropOverBackground: asCssVariable(listDropOverBackground),
+    listDropBetweenBackground: asCssVariable(listDropBetweenBackground),
     listSelectionOutline: asCssVariable(activeContrastBorder),
     listHoverOutline: asCssVariable(activeContrastBorder),
     treeIndentGuidesStroke: asCssVariable(treeIndentGuidesStroke),
     treeInactiveIndentGuidesStroke: asCssVariable(treeInactiveIndentGuidesStroke),
+    treeStickyScrollBackground: undefined,
+    treeStickyScrollBorder: undefined,
+    treeStickyScrollShadow: asCssVariable(scrollbarShadow),
     tableColumnsBorder: asCssVariable(tableColumnsBorder),
     tableOddRowsBackgroundColor: asCssVariable(tableOddRowsBackgroundColor),
 };
@@ -132,7 +147,8 @@ export const defaultSelectBoxStyles = {
     listActiveSelectionForeground: undefined,
     listActiveSelectionIconForeground: undefined,
     listFocusAndSelectionBackground: undefined,
-    listDropBackground: undefined,
+    listDropOverBackground: undefined,
+    listDropBetweenBackground: undefined,
     listInactiveSelectionBackground: undefined,
     listInactiveSelectionForeground: undefined,
     listInactiveFocusBackground: undefined,
@@ -145,6 +161,9 @@ export const defaultSelectBoxStyles = {
     tableOddRowsBackgroundColor: undefined,
     treeIndentGuidesStroke: undefined,
     treeInactiveIndentGuidesStroke: undefined,
+    treeStickyScrollBackground: undefined,
+    treeStickyScrollBorder: undefined,
+    treeStickyScrollShadow: undefined
 };
 export const defaultMenuStyles = {
     shadowColor: asCssVariable(widgetShadow),
@@ -160,3 +179,4 @@ export const defaultMenuStyles = {
     scrollbarSliderHoverBackground: asCssVariable(scrollbarSliderHoverBackground),
     scrollbarSliderActiveBackground: asCssVariable(scrollbarSliderActiveBackground)
 };
+//# sourceMappingURL=defaultStyles.js.map

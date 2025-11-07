@@ -6,7 +6,7 @@ import { Codicon } from './codicons.js';
 export var ThemeColor;
 (function (ThemeColor) {
     function isThemeColor(obj) {
-        return obj && typeof obj === 'object' && typeof obj.id === 'string';
+        return !!obj && typeof obj === 'object' && typeof obj.id === 'string';
     }
     ThemeColor.isThemeColor = isThemeColor;
 })(ThemeColor || (ThemeColor = {}));
@@ -39,7 +39,7 @@ export var ThemeIcon;
     }
     ThemeIcon.asCSSSelector = asCSSSelector;
     function isThemeIcon(obj) {
-        return obj && typeof obj === 'object' && typeof obj.id === 'string' && (typeof obj.color === 'undefined' || ThemeColor.isThemeColor(obj.color));
+        return !!obj && typeof obj === 'object' && typeof obj.id === 'string' && (typeof obj.color === 'undefined' || ThemeColor.isThemeColor(obj.color));
     }
     ThemeIcon.isThemeIcon = isThemeIcon;
     const _regexFromString = new RegExp(`^\\$\\((${ThemeIcon.iconNameExpression}(?:${ThemeIcon.iconModifierExpression})?)\\)$`);
@@ -77,8 +77,8 @@ export var ThemeIcon;
     }
     ThemeIcon.getModifier = getModifier;
     function isEqual(ti1, ti2) {
-        var _a, _b;
-        return ti1.id === ti2.id && ((_a = ti1.color) === null || _a === void 0 ? void 0 : _a.id) === ((_b = ti2.color) === null || _b === void 0 ? void 0 : _b.id);
+        return ti1.id === ti2.id && ti1.color?.id === ti2.color?.id;
     }
     ThemeIcon.isEqual = isEqual;
 })(ThemeIcon || (ThemeIcon = {}));
+//# sourceMappingURL=themables.js.map

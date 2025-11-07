@@ -1,9 +1,10 @@
 /*!-----------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
- * Version: 0.44.0(3e047efd345ff102c8c61b5398fb30845aaac166)
+ * Version: 0.54.0(7c2310116c57517348bbd868a21139f32454be22)
  * Released under the MIT license
  * https://github.com/microsoft/monaco-editor/blob/main/LICENSE.txt
  *-----------------------------------------------------------------------------*/
+
 
 // src/basic-languages/sparql/sparql.ts
 var conf = {
@@ -144,16 +145,23 @@ var language = {
     "uuid",
     "year"
   ],
+  // describe tokens
   ignoreCase: true,
   tokenizer: {
     root: [
+      // resource indicators
       [/<[^\s\u00a0>]*>?/, "tag"],
+      // strings
       { include: "@strings" },
+      // line comment
       [/#.*/, "comment"],
+      // special chars with special meaning
       [/[{}()\[\]]/, "@brackets"],
       [/[;,.]/, "delimiter"],
+      // (prefixed) name
       [/[_\w\d]+:(\.(?=[\w_\-\\%])|[:\w_-]|\\[-\\_~.!$&'()*+,;=/?#@%]|%[a-f\d][a-f\d])*/, "tag"],
       [/:(\.(?=[\w_\-\\%])|[:\w_-]|\\[-\\_~.!$&'()*+,;=/?#@%]|%[a-f\d][a-f\d])+/, "tag"],
+      // identifiers, builtinFunctions and keywords
       [
         /[$?]?[_\w\d]+/,
         {
@@ -164,25 +172,32 @@ var language = {
           }
         }
       ],
+      // operators
       [/\^\^/, "operator.sql"],
       [/\^[*+\-<>=&|^\/!?]*/, "operator.sql"],
       [/[*+\-<>=&|\/!?]/, "operator.sql"],
+      // symbol
       [/@[a-z\d\-]*/, "metatag.html"],
+      // whitespaces
       [/\s+/, "white"]
     ],
     strings: [
       [/'([^'\\]|\\.)*$/, "string.invalid"],
+      // non-terminated single-quoted string
       [/'$/, "string.sql", "@pop"],
       [/'/, "string.sql", "@stringBody"],
       [/"([^"\\]|\\.)*$/, "string.invalid"],
+      // non-terminated single-quoted string
       [/"$/, "string.sql", "@pop"],
       [/"/, "string.sql", "@dblStringBody"]
     ],
+    // single-quoted strings
     stringBody: [
       [/[^\\']+/, "string.sql"],
       [/\\./, "string.escape"],
       [/'/, "string.sql", "@pop"]
     ],
+    // double-quoted strings
     dblStringBody: [
       [/[^\\"]+/, "string.sql"],
       [/\\./, "string.escape"],

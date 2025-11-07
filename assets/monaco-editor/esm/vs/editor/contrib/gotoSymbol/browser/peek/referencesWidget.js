@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import * as dom from '../../../../../base/browser/dom.js';
 import { Sizing, SplitView } from '../../../../../base/browser/ui/splitview/splitview.js';
 import { Color } from '../../../../../base/common/color.js';
@@ -28,12 +19,10 @@ import { DisposableStore, dispose } from '../../../../../base/common/lifecycle.j
 import { Schemas } from '../../../../../base/common/network.js';
 import { basenameOrAuthority, dirname } from '../../../../../base/common/resources.js';
 import './referencesWidget.css';
-import { EmbeddedCodeEditorWidget } from '../../../../browser/widget/embeddedCodeEditorWidget.js';
+import { EmbeddedCodeEditorWidget } from '../../../../browser/widget/codeEditor/embeddedCodeEditorWidget.js';
 import { Range } from '../../../../common/core/range.js';
 import { ModelDecorationOptions, TextModel } from '../../../../common/model/textModel.js';
-import { ILanguageConfigurationService } from '../../../../common/languages/languageConfigurationRegistry.js';
 import { PLAINTEXT_LANGUAGE_ID } from '../../../../common/languages/modesRegistry.js';
-import { ILanguageService } from '../../../../common/languages/language.js';
 import { ITextModelService } from '../../../../common/services/resolverService.js';
 import { AccessibilityProvider, DataSource, Delegate, FileReferencesRenderer, IdentityProvider, OneReferenceRenderer, StringRepresentationProvider } from './referencesTree.js';
 import * as peekView from '../../../peekView/browser/peekView.js';
@@ -43,9 +32,15 @@ import { IKeybindingService } from '../../../../../platform/keybinding/common/ke
 import { ILabelService } from '../../../../../platform/label/common/label.js';
 import { WorkbenchAsyncDataTree } from '../../../../../platform/list/browser/listService.js';
 import { IThemeService } from '../../../../../platform/theme/common/themeService.js';
-import { IUndoRedoService } from '../../../../../platform/undoRedo/common/undoRedo.js';
 import { FileReferences, OneReference } from '../referencesModel.js';
+import { DataTransfers } from '../../../../../base/browser/dnd.js';
+import { withSelection } from '../../../../../platform/opener/common/opener.js';
 class DecorationsManager {
+    static { this.DecorationOptions = ModelDecorationOptions.register({
+        description: 'reference-decoration',
+        stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+        className: 'reference-decoration'
+    }); }
     constructor(_editor, _model) {
         this._editor = _editor;
         this._model = _model;
@@ -145,11 +140,6 @@ class DecorationsManager {
         this._decorations.clear();
     }
 }
-DecorationsManager.DecorationOptions = ModelDecorationOptions.register({
-    description: 'reference-decoration',
-    stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
-    className: 'reference-decoration'
-});
 export class LayoutData {
     constructor() {
         this.ratio = 0.7;
@@ -163,7 +153,7 @@ export class LayoutData {
             ratio = data.ratio;
             heightInLines = data.heightInLines;
         }
-        catch (_a) {
+        catch {
             //
         }
         return {
@@ -174,11 +164,52 @@ export class LayoutData {
 }
 class ReferencesTree extends WorkbenchAsyncDataTree {
 }
+let ReferencesDragAndDrop = class ReferencesDragAndDrop {
+    constructor(labelService) {
+        this.labelService = labelService;
+        this.disposables = new DisposableStore();
+    }
+    getDragURI(element) {
+        if (element instanceof FileReferences) {
+            return element.uri.toString();
+        }
+        else if (element instanceof OneReference) {
+            return withSelection(element.uri, element.range).toString();
+        }
+        return null;
+    }
+    getDragLabel(elements) {
+        if (elements.length === 0) {
+            return undefined;
+        }
+        const labels = elements.map(e => this.labelService.getUriBasenameLabel(e.uri));
+        return labels.join(', ');
+    }
+    onDragStart(data, originalEvent) {
+        if (!originalEvent.dataTransfer) {
+            return;
+        }
+        const elements = data.elements;
+        const resources = elements.map(e => this.getDragURI(e)).filter(Boolean);
+        if (resources.length) {
+            // Apply resources as resource-list
+            originalEvent.dataTransfer.setData(DataTransfers.RESOURCES, JSON.stringify(resources));
+            // Also add as plain text for outside consumers
+            originalEvent.dataTransfer.setData(DataTransfers.TEXT, resources.join('\n'));
+        }
+    }
+    onDragOver() { return false; }
+    drop() { }
+    dispose() { this.disposables.dispose(); }
+};
+ReferencesDragAndDrop = __decorate([
+    __param(0, ILabelService)
+], ReferencesDragAndDrop);
 /**
  * ZoneWidget that is shown inside the editor
  */
 let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
-    constructor(editor, _defaultTreeKeyboardSupport, layoutData, themeService, _textModelResolverService, _instantiationService, _peekViewService, _uriLabel, _undoRedoService, _keybindingService, _languageService, _languageConfigurationService) {
+    constructor(editor, _defaultTreeKeyboardSupport, layoutData, themeService, _textModelResolverService, _instantiationService, _peekViewService, _uriLabel, _keybindingService) {
         super(editor, { showFrame: false, showArrow: true, isResizeable: true, isAccessible: true, supportOnTitleClick: true }, _instantiationService);
         this._defaultTreeKeyboardSupport = _defaultTreeKeyboardSupport;
         this.layoutData = layoutData;
@@ -186,21 +217,23 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
         this._instantiationService = _instantiationService;
         this._peekViewService = _peekViewService;
         this._uriLabel = _uriLabel;
-        this._undoRedoService = _undoRedoService;
         this._keybindingService = _keybindingService;
-        this._languageService = _languageService;
-        this._languageConfigurationService = _languageConfigurationService;
         this._disposeOnNewModel = new DisposableStore();
         this._callOnDispose = new DisposableStore();
         this._onDidSelectReference = new Emitter();
         this.onDidSelectReference = this._onDidSelectReference.event;
         this._dim = new dom.Dimension(0, 0);
+        this._isClosing = false; // whether or not a dispose is already in progress
         this._applyTheme(themeService.getColorTheme());
         this._callOnDispose.add(themeService.onDidColorThemeChange(this._applyTheme.bind(this)));
         this._peekViewService.addExclusiveWidget(editor, this);
         this.create();
     }
+    get isClosing() {
+        return this._isClosing;
+    }
     dispose() {
+        this._isClosing = true;
         this.setModel(undefined);
         this._callOnDispose.dispose();
         this._disposeOnNewModel.dispose();
@@ -268,7 +301,7 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
         };
         this._preview = this._instantiationService.createInstance(EmbeddedCodeEditorWidget, this._previewContainer, options, {}, this.editor);
         dom.hide(this._previewContainer);
-        this._previewNotAvailableMessage = new TextModel(nls.localize('missingPreviewMessage', "no preview available"), PLAINTEXT_LANGUAGE_ID, TextModel.DEFAULT_CREATION_OPTIONS, null, this._undoRedoService, this._languageService, this._languageConfigurationService);
+        this._previewNotAvailableMessage = this._instantiationService.createInstance(TextModel, nls.localize(1079, "no preview available"), PLAINTEXT_LANGUAGE_ID, TextModel.DEFAULT_CREATION_OPTIONS, null);
         // tree
         this._treeContainer = dom.append(containerElement, dom.$('div.ref-tree.inline'));
         const treeOptions = {
@@ -280,7 +313,8 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
             selectionNavigation: true,
             overrideStyles: {
                 listBackground: peekView.peekViewResultsBackground
-            }
+            },
+            dnd: this._instantiationService.createInstance(ReferencesDragAndDrop)
         };
         if (this._defaultTreeKeyboardSupport) {
             // the tree will consume `Escape` and prevent the widget from closing
@@ -330,7 +364,7 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
                 this._onDidSelectReference.fire({ element, kind, source: 'tree' });
             }
         };
-        this._tree.onDidOpen(e => {
+        this._disposables.add(this._tree.onDidOpen(e => {
             if (e.sideBySide) {
                 onEvent(e.element, 'side');
             }
@@ -340,7 +374,7 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
             else {
                 onEvent(e.element, 'show');
             }
-        });
+        }));
         dom.hide(this._treeContainer);
     }
     _onWidth(width) {
@@ -381,7 +415,7 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
         }
         if (this._model.isEmpty) {
             this.setTitle('');
-            this._messageContainer.innerText = nls.localize('noResults', "No results");
+            this._messageContainer.innerText = nls.localize(1080, "No results");
             dom.show(this._messageContainer);
             return Promise.resolve(undefined);
         }
@@ -427,59 +461,55 @@ let ReferenceWidget = class ReferenceWidget extends peekView.PeekViewWidget {
         }
         return undefined;
     }
-    revealReference(reference) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this._revealReference(reference, false);
-            this._onDidSelectReference.fire({ element: reference, kind: 'goto', source: 'tree' });
-        });
+    async revealReference(reference) {
+        await this._revealReference(reference, false);
+        this._onDidSelectReference.fire({ element: reference, kind: 'goto', source: 'tree' });
     }
-    _revealReference(reference, revealParent) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // check if there is anything to do...
-            if (this._revealedReference === reference) {
-                return;
+    async _revealReference(reference, revealParent) {
+        // check if there is anything to do...
+        if (this._revealedReference === reference) {
+            return;
+        }
+        this._revealedReference = reference;
+        // Update widget header
+        if (reference.uri.scheme !== Schemas.inMemory) {
+            this.setTitle(basenameOrAuthority(reference.uri), this._uriLabel.getUriLabel(dirname(reference.uri)));
+        }
+        else {
+            this.setTitle(nls.localize(1081, "References"));
+        }
+        const promise = this._textModelResolverService.createModelReference(reference.uri);
+        if (this._tree.getInput() === reference.parent) {
+            this._tree.reveal(reference);
+        }
+        else {
+            if (revealParent) {
+                this._tree.reveal(reference.parent);
             }
-            this._revealedReference = reference;
-            // Update widget header
-            if (reference.uri.scheme !== Schemas.inMemory) {
-                this.setTitle(basenameOrAuthority(reference.uri), this._uriLabel.getUriLabel(dirname(reference.uri)));
-            }
-            else {
-                this.setTitle(nls.localize('peekView.alternateTitle', "References"));
-            }
-            const promise = this._textModelResolverService.createModelReference(reference.uri);
-            if (this._tree.getInput() === reference.parent) {
-                this._tree.reveal(reference);
-            }
-            else {
-                if (revealParent) {
-                    this._tree.reveal(reference.parent);
-                }
-                yield this._tree.expand(reference.parent);
-                this._tree.reveal(reference);
-            }
-            const ref = yield promise;
-            if (!this._model) {
-                // disposed
-                ref.dispose();
-                return;
-            }
-            dispose(this._previewModelReference);
-            // show in editor
-            const model = ref.object;
-            if (model) {
-                const scrollType = this._preview.getModel() === model.textEditorModel ? 0 /* ScrollType.Smooth */ : 1 /* ScrollType.Immediate */;
-                const sel = Range.lift(reference.range).collapseToStart();
-                this._previewModelReference = ref;
-                this._preview.setModel(model.textEditorModel);
-                this._preview.setSelection(sel);
-                this._preview.revealRangeInCenter(sel, scrollType);
-            }
-            else {
-                this._preview.setModel(this._previewNotAvailableMessage);
-                ref.dispose();
-            }
-        });
+            await this._tree.expand(reference.parent);
+            this._tree.reveal(reference);
+        }
+        const ref = await promise;
+        if (!this._model) {
+            // disposed
+            ref.dispose();
+            return;
+        }
+        dispose(this._previewModelReference);
+        // show in editor
+        const model = ref.object;
+        if (model) {
+            const scrollType = this._preview.getModel() === model.textEditorModel ? 0 /* ScrollType.Smooth */ : 1 /* ScrollType.Immediate */;
+            const sel = Range.lift(reference.range).collapseToStart();
+            this._previewModelReference = ref;
+            this._preview.setModel(model.textEditorModel);
+            this._preview.setSelection(sel);
+            this._preview.revealRangeInCenter(sel, scrollType);
+        }
+        else {
+            this._preview.setModel(this._previewNotAvailableMessage);
+            ref.dispose();
+        }
     }
 };
 ReferenceWidget = __decorate([
@@ -488,9 +518,7 @@ ReferenceWidget = __decorate([
     __param(5, IInstantiationService),
     __param(6, peekView.IPeekViewService),
     __param(7, ILabelService),
-    __param(8, IUndoRedoService),
-    __param(9, IKeybindingService),
-    __param(10, ILanguageService),
-    __param(11, ILanguageConfigurationService)
+    __param(8, IKeybindingService)
 ], ReferenceWidget);
 export { ReferenceWidget };
+//# sourceMappingURL=referencesWidget.js.map

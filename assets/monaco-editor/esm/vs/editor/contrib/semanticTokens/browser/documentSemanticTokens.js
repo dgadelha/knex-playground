@@ -12,35 +12,37 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var ModelSemanticColoring_1;
-import { Disposable, dispose } from '../../../../base/common/lifecycle.js';
-import * as errors from '../../../../base/common/errors.js';
-import { IModelService } from '../../../common/services/model.js';
-import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 import { RunOnceScheduler } from '../../../../base/common/async.js';
 import { CancellationTokenSource } from '../../../../base/common/cancellation.js';
-import { IThemeService } from '../../../../platform/theme/common/themeService.js';
-import { toMultilineTokens2 } from '../../../common/services/semanticTokensProviderStyling.js';
-import { getDocumentSemanticTokens, hasDocumentSemanticTokensProvider, isSemanticTokens, isSemanticTokensEdits } from '../common/getSemanticTokens.js';
-import { ILanguageFeatureDebounceService } from '../../../common/services/languageFeatureDebounce.js';
+import * as errors from '../../../../base/common/errors.js';
+import { Disposable, dispose } from '../../../../base/common/lifecycle.js';
+import { ResourceMap } from '../../../../base/common/map.js';
 import { StopWatch } from '../../../../base/common/stopwatch.js';
-import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
-import { ISemanticTokensStylingService } from '../../../common/services/semanticTokensStyling.js';
+import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
+import { IThemeService } from '../../../../platform/theme/common/themeService.js';
 import { registerEditorFeature } from '../../../common/editorFeatures.js';
+import { ILanguageFeatureDebounceService } from '../../../common/services/languageFeatureDebounce.js';
+import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
+import { IModelService } from '../../../common/services/model.js';
+import { toMultilineTokens2 } from '../../../common/services/semanticTokensProviderStyling.js';
+import { ISemanticTokensStylingService } from '../../../common/services/semanticTokensStyling.js';
+import { getDocumentSemanticTokens, hasDocumentSemanticTokensProvider, isSemanticTokens, isSemanticTokensEdits } from '../common/getSemanticTokens.js';
 import { SEMANTIC_HIGHLIGHTING_SETTING_ID, isSemanticColoringEnabled } from '../common/semanticTokensConfig.js';
 let DocumentSemanticTokensFeature = class DocumentSemanticTokensFeature extends Disposable {
     constructor(semanticTokensStylingService, modelService, themeService, configurationService, languageFeatureDebounceService, languageFeaturesService) {
         super();
-        this._watchers = Object.create(null);
+        this._watchers = new ResourceMap();
         const register = (model) => {
-            this._watchers[model.uri.toString()] = new ModelSemanticColoring(model, semanticTokensStylingService, themeService, languageFeatureDebounceService, languageFeaturesService);
+            this._watchers.get(model.uri)?.dispose();
+            this._watchers.set(model.uri, new ModelSemanticColoring(model, semanticTokensStylingService, themeService, languageFeatureDebounceService, languageFeaturesService));
         };
         const deregister = (model, modelSemanticColoring) => {
             modelSemanticColoring.dispose();
-            delete this._watchers[model.uri.toString()];
+            this._watchers.delete(model.uri);
         };
         const handleSettingOrThemeChange = () => {
             for (const model of modelService.getModels()) {
-                const curr = this._watchers[model.uri.toString()];
+                const curr = this._watchers.get(model.uri);
                 if (isSemanticColoringEnabled(model, themeService, configurationService)) {
                     if (!curr) {
                         register(model);
@@ -53,13 +55,18 @@ let DocumentSemanticTokensFeature = class DocumentSemanticTokensFeature extends 
                 }
             }
         };
+        modelService.getModels().forEach(model => {
+            if (isSemanticColoringEnabled(model, themeService, configurationService)) {
+                register(model);
+            }
+        });
         this._register(modelService.onModelAdded((model) => {
             if (isSemanticColoringEnabled(model, themeService, configurationService)) {
                 register(model);
             }
         }));
         this._register(modelService.onModelRemoved((model) => {
-            const curr = this._watchers[model.uri.toString()];
+            const curr = this._watchers.get(model.uri);
             if (curr) {
                 deregister(model, curr);
             }
@@ -72,10 +79,8 @@ let DocumentSemanticTokensFeature = class DocumentSemanticTokensFeature extends 
         this._register(themeService.onDidColorThemeChange(handleSettingOrThemeChange));
     }
     dispose() {
-        // Dispose all watchers
-        for (const watcher of Object.values(this._watchers)) {
-            watcher.dispose();
-        }
+        dispose(this._watchers.values());
+        this._watchers.clear();
         super.dispose();
     }
 };
@@ -88,7 +93,10 @@ DocumentSemanticTokensFeature = __decorate([
     __param(5, ILanguageFeaturesService)
 ], DocumentSemanticTokensFeature);
 export { DocumentSemanticTokensFeature };
-let ModelSemanticColoring = ModelSemanticColoring_1 = class ModelSemanticColoring extends Disposable {
+let ModelSemanticColoring = class ModelSemanticColoring extends Disposable {
+    static { ModelSemanticColoring_1 = this; }
+    static { this.REQUEST_MIN_DELAY = 300; }
+    static { this.REQUEST_MAX_DELAY = 2000; }
     constructor(model, _semanticTokensStylingService, themeService, languageFeatureDebounceService, languageFeaturesService) {
         super();
         this._semanticTokensStylingService = _semanticTokensStylingService;
@@ -333,8 +341,6 @@ let ModelSemanticColoring = ModelSemanticColoring_1 = class ModelSemanticColorin
         rescheduleIfNeeded();
     }
 };
-ModelSemanticColoring.REQUEST_MIN_DELAY = 300;
-ModelSemanticColoring.REQUEST_MAX_DELAY = 2000;
 ModelSemanticColoring = ModelSemanticColoring_1 = __decorate([
     __param(1, ISemanticTokensStylingService),
     __param(2, IThemeService),
@@ -352,3 +358,4 @@ class SemanticTokensResponse {
     }
 }
 registerEditorFeature(DocumentSemanticTokensFeature);
+//# sourceMappingURL=documentSemanticTokens.js.map

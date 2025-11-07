@@ -3,10 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as dom from '../../dom.js';
+import * as cssJs from '../../cssValue.js';
 import { DomEmitter } from '../../event.js';
 import { renderFormattedText, renderText } from '../../formattedTextRenderer.js';
 import { ActionBar } from '../actionbar/actionbar.js';
 import * as aria from '../aria/aria.js';
+import { getBaseLayerHoverDelegate } from '../hover/hoverDelegate2.js';
 import { ScrollableElement } from '../scrollbar/scrollableElement.js';
 import { Widget } from '../widget.js';
 import { Emitter, Event } from '../../../common/event.js';
@@ -14,6 +16,7 @@ import { HistoryNavigator } from '../../../common/history.js';
 import { equals } from '../../../common/objects.js';
 import './inputBox.css';
 import * as nls from '../../../../nls.js';
+import { MutableDisposable } from '../../../common/lifecycle.js';
 const $ = dom.$;
 export const unthemedInboxStyles = {
     inputBackground: '#3C3C3C',
@@ -30,20 +33,20 @@ export const unthemedInboxStyles = {
     inputValidationWarningForeground: undefined
 };
 export class InputBox extends Widget {
+    get onDidChange() { return this._onDidChange.event; }
+    get onDidHeightChange() { return this._onDidHeightChange.event; }
     constructor(container, contextViewProvider, options) {
-        var _a;
         super();
         this.state = 'idle';
         this.maxHeight = Number.POSITIVE_INFINITY;
+        this.hover = this._register(new MutableDisposable());
         this._onDidChange = this._register(new Emitter());
-        this.onDidChange = this._onDidChange.event;
         this._onDidHeightChange = this._register(new Emitter());
-        this.onDidHeightChange = this._onDidHeightChange.event;
         this.contextViewProvider = contextViewProvider;
         this.options = options;
         this.message = null;
         this.placeholder = this.options.placeholder || '';
-        this.tooltip = (_a = this.options.tooltip) !== null && _a !== void 0 ? _a : (this.placeholder || '');
+        this.tooltip = this.options.tooltip ?? (this.placeholder || '');
         this.ariaLabel = this.options.ariaLabel || '';
         if (this.options.validationOptions) {
             this.validation = this.options.validationOptions.validation;
@@ -71,10 +74,10 @@ export class InputBox extends Widget {
             this._register(this.scrollableElement);
             // from ScrollableElement to DOM
             this._register(this.scrollableElement.onScroll(e => this.input.scrollTop = e.scrollTop));
-            const onSelectionChange = this._register(new DomEmitter(document, 'selectionchange'));
+            const onSelectionChange = this._register(new DomEmitter(container.ownerDocument, 'selectionchange'));
             const onAnchoredSelectionChange = Event.filter(onSelectionChange.event, () => {
-                const selection = document.getSelection();
-                return (selection === null || selection === void 0 ? void 0 : selection.anchorNode) === wrapper;
+                const selection = container.ownerDocument.getSelection();
+                return selection?.anchorNode === wrapper;
             });
             // from DOM to ScrollableElement
             this._register(onAnchoredSelectionChange(this.updateScrollDimensions, this));
@@ -123,7 +126,14 @@ export class InputBox extends Widget {
     }
     setTooltip(tooltip) {
         this.tooltip = tooltip;
-        this.input.title = tooltip;
+        if (!this.hover.value) {
+            this.hover.value = this._register(getBaseLayerHoverDelegate().setupDelayedHoverAtMouse(this.input, () => ({
+                content: this.tooltip,
+                appearance: {
+                    compact: true,
+                }
+            })));
+        }
     }
     get inputElement() {
         return this.input;
@@ -147,7 +157,7 @@ export class InputBox extends Widget {
         this.input.blur();
     }
     hasFocus() {
-        return document.activeElement === this.input;
+        return dom.isActiveElement(this.input);
     }
     select(range = null) {
         this.input.select();
@@ -160,6 +170,17 @@ export class InputBox extends Widget {
     }
     isSelectionAtEnd() {
         return this.input.selectionEnd === this.input.value.length && this.input.selectionStart === this.input.selectionEnd;
+    }
+    getSelection() {
+        const selectionStart = this.input.selectionStart;
+        if (selectionStart === null) {
+            return null;
+        }
+        const selectionEnd = this.input.selectionEnd ?? selectionStart;
+        return {
+            start: selectionStart,
+            end: selectionEnd,
+        };
     }
     enable() {
         this.input.removeAttribute('disabled');
@@ -198,7 +219,7 @@ export class InputBox extends Widget {
         this.element.classList.remove('error');
         this.element.classList.add(this.classForType(message.type));
         const styles = this.stylesForType(this.message.type);
-        this.element.style.border = `1px solid ${dom.asCssValueWithDefault(styles.border, 'transparent')}`;
+        this.element.style.border = `1px solid ${cssJs.asCssValueWithDefault(styles.border, 'transparent')}`;
         if (this.message.content && (this.hasFocus() || force)) {
             this._showMessage();
         }
@@ -225,7 +246,7 @@ export class InputBox extends Widget {
                 this.hideMessage();
             }
         }
-        return errorMsg === null || errorMsg === void 0 ? void 0 : errorMsg.type;
+        return errorMsg?.type;
     }
     stylesForType(type) {
         const styles = this.options.inputBoxStyles;
@@ -252,23 +273,22 @@ export class InputBox extends Widget {
             getAnchor: () => this.element,
             anchorAlignment: 1 /* AnchorAlignment.RIGHT */,
             render: (container) => {
-                var _a, _b;
                 if (!this.message) {
                     return null;
                 }
                 div = dom.append(container, $('.monaco-inputbox-container'));
                 layout();
-                const renderOptions = {
-                    inline: true,
-                    className: 'monaco-inputbox-message'
-                };
-                const spanElement = (this.message.formatContent
-                    ? renderFormattedText(this.message.content, renderOptions)
-                    : renderText(this.message.content, renderOptions));
+                const spanElement = $('span.monaco-inputbox-message');
+                if (this.message.formatContent) {
+                    renderFormattedText(this.message.content, undefined, spanElement);
+                }
+                else {
+                    renderText(this.message.content, undefined, spanElement);
+                }
                 spanElement.classList.add(this.classForType(this.message.type));
                 const styles = this.stylesForType(this.message.type);
-                spanElement.style.backgroundColor = (_a = styles.background) !== null && _a !== void 0 ? _a : '';
-                spanElement.style.color = (_b = styles.foreground) !== null && _b !== void 0 ? _b : '';
+                spanElement.style.backgroundColor = styles.background ?? '';
+                spanElement.style.color = styles.foreground ?? '';
                 spanElement.style.border = styles.border ? `1px solid ${styles.border}` : '';
                 dom.append(div, spanElement);
                 return null;
@@ -281,13 +301,13 @@ export class InputBox extends Widget {
         // ARIA Support
         let alertText;
         if (this.message.type === 3 /* MessageType.ERROR */) {
-            alertText = nls.localize('alertErrorMessage', "Error: {0}", this.message.content);
+            alertText = nls.localize(9, "Error: {0}", this.message.content);
         }
         else if (this.message.type === 2 /* MessageType.WARNING */) {
-            alertText = nls.localize('alertWarningMessage', "Warning: {0}", this.message.content);
+            alertText = nls.localize(10, "Warning: {0}", this.message.content);
         }
         else {
-            alertText = nls.localize('alertInfoMessage', "Info: {0}", this.message.content);
+            alertText = nls.localize(11, "Info: {0}", this.message.content);
         }
         aria.alert(alertText);
         this.state = 'open';
@@ -328,17 +348,16 @@ export class InputBox extends Widget {
         this.layout();
     }
     applyStyles() {
-        var _a, _b, _c;
         const styles = this.options.inputBoxStyles;
-        const background = (_a = styles.inputBackground) !== null && _a !== void 0 ? _a : '';
-        const foreground = (_b = styles.inputForeground) !== null && _b !== void 0 ? _b : '';
-        const border = (_c = styles.inputBorder) !== null && _c !== void 0 ? _c : '';
+        const background = styles.inputBackground ?? '';
+        const foreground = styles.inputForeground ?? '';
+        const border = styles.inputBorder ?? '';
         this.element.style.backgroundColor = background;
         this.element.style.color = foreground;
         this.input.style.backgroundColor = 'inherit';
         this.input.style.color = foreground;
         // there's always a border, even if the color is not set.
-        this.element.style.border = `1px solid ${dom.asCssValueWithDefault(border, 'transparent')}`;
+        this.element.style.border = `1px solid ${cssJs.asCssValueWithDefault(border, 'transparent')}`;
     }
     layout() {
         if (!this.mirror) {
@@ -364,30 +383,34 @@ export class InputBox extends Widget {
         }
     }
     dispose() {
-        var _a;
         this._hideMessage();
         this.message = null;
-        (_a = this.actionbar) === null || _a === void 0 ? void 0 : _a.dispose();
+        this.actionbar?.dispose();
         super.dispose();
     }
 }
 export class HistoryInputBox extends InputBox {
     constructor(container, contextViewProvider, options) {
-        const NLS_PLACEHOLDER_HISTORY_HINT = nls.localize({ key: 'history.inputbox.hint', comment: ['Text will be prefixed with \u21C5 plus a single space, then used as a hint where input field keeps history'] }, "for history");
-        const NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX = ` or \u21C5 ${NLS_PLACEHOLDER_HISTORY_HINT}`;
-        const NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS = ` (\u21C5 ${NLS_PLACEHOLDER_HISTORY_HINT})`;
+        const NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_NO_PARENS = nls.localize(12, ' or {0} for history', `\u21C5`);
+
+
+
+        const NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS = nls.localize(13, ' ({0} for history)', `\u21C5`);
+
+
+
         super(container, contextViewProvider, options);
         this._onDidFocus = this._register(new Emitter());
         this.onDidFocus = this._onDidFocus.event;
         this._onDidBlur = this._register(new Emitter());
         this.onDidBlur = this._onDidBlur.event;
-        this.history = new HistoryNavigator(options.history, 100);
+        this.history = this._register(new HistoryNavigator(options.history, 100));
         // Function to append the history suffix to the placeholder if necessary
         const addSuffix = () => {
-            if (options.showHistoryHint && options.showHistoryHint() && !this.placeholder.endsWith(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX) && !this.placeholder.endsWith(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS) && this.history.getHistory().length) {
-                const suffix = this.placeholder.endsWith(')') ? NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX : NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS;
+            if (options.showHistoryHint && options.showHistoryHint() && !this.placeholder.endsWith(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_NO_PARENS) && !this.placeholder.endsWith(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS) && this.history.getHistory().length) {
+                const suffix = this.placeholder.endsWith(')') ? NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_NO_PARENS : NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS;
                 const suffixedPlaceholder = this.placeholder + suffix;
-                if (options.showPlaceholderOnFocus && document.activeElement !== this.input) {
+                if (options.showPlaceholderOnFocus && !dom.isActiveElement(this.input)) {
                     this.placeholder = suffixedPlaceholder;
                 }
                 else {
@@ -423,7 +446,7 @@ export class HistoryInputBox extends InputBox {
                 }
             };
             if (!resetPlaceholder(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_IN_PARENS)) {
-                resetPlaceholder(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX);
+                resetPlaceholder(NLS_PLACEHOLDER_HISTORY_HINT_SUFFIX_NO_PARENS);
             }
         });
     }
@@ -453,8 +476,8 @@ export class HistoryInputBox extends InputBox {
         if (next) {
             next = next === this.value ? this.getNextValue() : next;
         }
-        this.value = next !== null && next !== void 0 ? next : '';
-        aria.status(this.value ? this.value : nls.localize('clearedInput', "Cleared Input"));
+        this.value = next ?? '';
+        aria.status(this.value ? this.value : nls.localize(14, "Cleared Input"));
     }
     showPreviousValue() {
         if (!this.history.has(this.value)) {
@@ -468,6 +491,10 @@ export class HistoryInputBox extends InputBox {
             this.value = previous;
             aria.status(this.value);
         }
+    }
+    setPlaceHolder(placeHolder) {
+        super.setPlaceHolder(placeHolder);
+        this.setTooltip(placeHolder);
     }
     onBlur() {
         super.onBlur();
@@ -492,3 +519,4 @@ export class HistoryInputBox extends InputBox {
         return this.history.next();
     }
 }
+//# sourceMappingURL=inputBox.js.map

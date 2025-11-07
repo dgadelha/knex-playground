@@ -12,56 +12,61 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 import { ContextView } from '../../../base/browser/ui/contextview/contextview.js';
-import { Disposable, toDisposable } from '../../../base/common/lifecycle.js';
+import { Disposable } from '../../../base/common/lifecycle.js';
 import { ILayoutService } from '../../layout/browser/layoutService.js';
-let ContextViewService = class ContextViewService extends Disposable {
+import { getWindow } from '../../../base/browser/dom.js';
+let ContextViewHandler = class ContextViewHandler extends Disposable {
     constructor(layoutService) {
         super();
         this.layoutService = layoutService;
-        this.currentViewDisposable = Disposable.None;
-        this.container = layoutService.hasContainer ? layoutService.container : null;
-        this.contextView = this._register(new ContextView(this.container, 1 /* ContextViewDOMPosition.ABSOLUTE */));
+        this.contextView = this._register(new ContextView(this.layoutService.mainContainer, 1 /* ContextViewDOMPosition.ABSOLUTE */));
         this.layout();
-        this._register(layoutService.onDidLayout(() => this.layout()));
+        this._register(layoutService.onDidLayoutContainer(() => this.layout()));
     }
     // ContextView
-    setContainer(container, domPosition) {
-        this.contextView.setContainer(container, domPosition || 1 /* ContextViewDOMPosition.ABSOLUTE */);
-    }
     showContextView(delegate, container, shadowRoot) {
+        let domPosition;
         if (container) {
-            if (container !== this.container || this.shadowRoot !== shadowRoot) {
-                this.container = container;
-                this.setContainer(container, shadowRoot ? 3 /* ContextViewDOMPosition.FIXED_SHADOW */ : 2 /* ContextViewDOMPosition.FIXED */);
+            if (container === this.layoutService.getContainer(getWindow(container))) {
+                domPosition = 1 /* ContextViewDOMPosition.ABSOLUTE */;
+            }
+            else if (shadowRoot) {
+                domPosition = 3 /* ContextViewDOMPosition.FIXED_SHADOW */;
+            }
+            else {
+                domPosition = 2 /* ContextViewDOMPosition.FIXED */;
             }
         }
         else {
-            if (this.layoutService.hasContainer && this.container !== this.layoutService.container) {
-                this.container = this.layoutService.container;
-                this.setContainer(this.container, 1 /* ContextViewDOMPosition.ABSOLUTE */);
-            }
+            domPosition = 1 /* ContextViewDOMPosition.ABSOLUTE */;
         }
-        this.shadowRoot = shadowRoot;
+        this.contextView.setContainer(container ?? this.layoutService.activeContainer, domPosition);
         this.contextView.show(delegate);
-        const disposable = toDisposable(() => {
-            if (this.currentViewDisposable === disposable) {
-                this.hideContextView();
+        const openContextView = {
+            close: () => {
+                if (this.openContextView === openContextView) {
+                    this.hideContextView();
+                }
             }
-        });
-        this.currentViewDisposable = disposable;
-        return disposable;
-    }
-    getContextViewElement() {
-        return this.contextView.getViewElement();
+        };
+        this.openContextView = openContextView;
+        return openContextView;
     }
     layout() {
         this.contextView.layout();
     }
     hideContextView(data) {
         this.contextView.hide(data);
+        this.openContextView = undefined;
     }
 };
-ContextViewService = __decorate([
+ContextViewHandler = __decorate([
     __param(0, ILayoutService)
-], ContextViewService);
-export { ContextViewService };
+], ContextViewHandler);
+export { ContextViewHandler };
+export class ContextViewService extends ContextViewHandler {
+    getContextViewElement() {
+        return this.contextView.getViewElement();
+    }
+}
+//# sourceMappingURL=contextViewService.js.map

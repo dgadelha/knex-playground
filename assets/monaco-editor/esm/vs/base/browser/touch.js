@@ -9,8 +9,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import * as DomUtils from './dom.js';
-import * as arrays from '../common/arrays.js';
+import { mainWindow } from './window.js';
 import { memoize } from '../common/decorators.js';
+import { Event as EventUtils } from '../common/event.js';
 import { Disposable, markAsSingleton, toDisposable } from '../common/lifecycle.js';
 import { LinkedList } from '../common/linkedList.js';
 export var EventType;
@@ -22,6 +23,9 @@ export var EventType;
     EventType.Contextmenu = '-monaco-gesturecontextmenu';
 })(EventType || (EventType = {}));
 export class Gesture extends Disposable {
+    static { this.SCROLL_FRICTION = -0.005; }
+    static { this.HOLD_DELAY = 700; }
+    static { this.CLEAR_TAP_COUNT_TIME = 400; } // ms
     constructor() {
         super();
         this.dispatched = false;
@@ -30,9 +34,11 @@ export class Gesture extends Disposable {
         this.activeTouches = {};
         this.handle = null;
         this._lastSetTapCountTime = 0;
-        this._register(DomUtils.addDisposableListener(document, 'touchstart', (e) => this.onTouchStart(e), { passive: false }));
-        this._register(DomUtils.addDisposableListener(document, 'touchend', (e) => this.onTouchEnd(e)));
-        this._register(DomUtils.addDisposableListener(document, 'touchmove', (e) => this.onTouchMove(e), { passive: false }));
+        this._register(EventUtils.runAndSubscribe(DomUtils.onDidRegisterWindow, ({ window, disposables }) => {
+            disposables.add(DomUtils.addDisposableListener(window.document, 'touchstart', (e) => this.onTouchStart(e), { passive: false }));
+            disposables.add(DomUtils.addDisposableListener(window.document, 'touchend', (e) => this.onTouchEnd(window, e)));
+            disposables.add(DomUtils.addDisposableListener(window.document, 'touchmove', (e) => this.onTouchMove(e), { passive: false }));
+        }, { window: mainWindow, disposables: this._store }));
     }
     static addTarget(element) {
         if (!Gesture.isTouchDevice()) {
@@ -57,7 +63,7 @@ export class Gesture extends Disposable {
     static isTouchDevice() {
         // `'ontouchstart' in window` always evaluates to true with typescript's modern typings. This causes `window` to be
         // `never` later in `window.navigator`. That's why we need the explicit `window as Window` cast
-        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        return 'ontouchstart' in mainWindow || navigator.maxTouchPoints > 0;
     }
     dispose() {
         if (this.handle) {
@@ -95,7 +101,7 @@ export class Gesture extends Disposable {
             this.dispatched = false;
         }
     }
-    onTouchEnd(e) {
+    onTouchEnd(targetWindow, e) {
         const timestamp = Date.now(); // use Date.now() because on FF e.timeStamp is not epoch based.
         const activeTouchCount = Object.keys(this.activeTouches).length;
         for (let i = 0, len = e.changedTouches.length; i < len; i++) {
@@ -106,30 +112,30 @@ export class Gesture extends Disposable {
             }
             const data = this.activeTouches[touch.identifier], holdTime = Date.now() - data.initialTimeStamp;
             if (holdTime < Gesture.HOLD_DELAY
-                && Math.abs(data.initialPageX - arrays.tail(data.rollingPageX)) < 30
-                && Math.abs(data.initialPageY - arrays.tail(data.rollingPageY)) < 30) {
+                && Math.abs(data.initialPageX - data.rollingPageX.at(-1)) < 30
+                && Math.abs(data.initialPageY - data.rollingPageY.at(-1)) < 30) {
                 const evt = this.newGestureEvent(EventType.Tap, data.initialTarget);
-                evt.pageX = arrays.tail(data.rollingPageX);
-                evt.pageY = arrays.tail(data.rollingPageY);
+                evt.pageX = data.rollingPageX.at(-1);
+                evt.pageY = data.rollingPageY.at(-1);
                 this.dispatchEvent(evt);
             }
             else if (holdTime >= Gesture.HOLD_DELAY
-                && Math.abs(data.initialPageX - arrays.tail(data.rollingPageX)) < 30
-                && Math.abs(data.initialPageY - arrays.tail(data.rollingPageY)) < 30) {
+                && Math.abs(data.initialPageX - data.rollingPageX.at(-1)) < 30
+                && Math.abs(data.initialPageY - data.rollingPageY.at(-1)) < 30) {
                 const evt = this.newGestureEvent(EventType.Contextmenu, data.initialTarget);
-                evt.pageX = arrays.tail(data.rollingPageX);
-                evt.pageY = arrays.tail(data.rollingPageY);
+                evt.pageX = data.rollingPageX.at(-1);
+                evt.pageY = data.rollingPageY.at(-1);
                 this.dispatchEvent(evt);
             }
             else if (activeTouchCount === 1) {
-                const finalX = arrays.tail(data.rollingPageX);
-                const finalY = arrays.tail(data.rollingPageY);
-                const deltaT = arrays.tail(data.rollingTimestamps) - data.rollingTimestamps[0];
+                const finalX = data.rollingPageX.at(-1);
+                const finalY = data.rollingPageY.at(-1);
+                const deltaT = data.rollingTimestamps.at(-1) - data.rollingTimestamps[0];
                 const deltaX = finalX - data.rollingPageX[0];
                 const deltaY = finalY - data.rollingPageY[0];
                 // We need to get all the dispatch targets on the start of the inertia event
                 const dispatchTo = [...this.targets].filter(t => data.initialTarget instanceof Node && t.contains(data.initialTarget));
-                this.inertia(dispatchTo, timestamp, // time now
+                this.inertia(targetWindow, dispatchTo, timestamp, // time now
                 Math.abs(deltaX) / deltaT, // speed
                 deltaX > 0 ? 1 : -1, // x direction
                 finalX, // x now
@@ -178,16 +184,27 @@ export class Gesture extends Disposable {
                     return;
                 }
             }
+            const targets = [];
             for (const target of this.targets) {
                 if (target.contains(event.initialTarget)) {
-                    target.dispatchEvent(event);
-                    this.dispatched = true;
+                    let depth = 0;
+                    let now = event.initialTarget;
+                    while (now && now !== target) {
+                        depth++;
+                        now = now.parentElement;
+                    }
+                    targets.push([depth, target]);
                 }
+            }
+            targets.sort((a, b) => a[0] - b[0]);
+            for (const [_, target] of targets) {
+                target.dispatchEvent(event);
+                this.dispatched = true;
             }
         }
     }
-    inertia(dispatchTo, t1, vX, dirX, x, vY, dirY, y) {
-        this.handle = DomUtils.scheduleAtNextAnimationFrame(() => {
+    inertia(targetWindow, dispatchTo, t1, vX, dirX, x, vY, dirY, y) {
+        this.handle = DomUtils.scheduleAtNextAnimationFrame(targetWindow, () => {
             const now = Date.now();
             // velocity: old speed + accel_over_time
             const deltaT = now - t1;
@@ -209,7 +226,7 @@ export class Gesture extends Disposable {
             evt.translationY = delta_pos_y;
             dispatchTo.forEach(d => d.dispatchEvent(evt));
             if (!stopped) {
-                this.inertia(dispatchTo, now, vX, dirX, x + delta_pos_x, vY, dirY, y + delta_pos_y);
+                this.inertia(targetWindow, dispatchTo, now, vX, dirX, x + delta_pos_x, vY, dirY, y + delta_pos_y);
             }
         });
     }
@@ -223,8 +240,8 @@ export class Gesture extends Disposable {
             }
             const data = this.activeTouches[touch.identifier];
             const evt = this.newGestureEvent(EventType.Change, data.initialTarget);
-            evt.translationX = touch.pageX - arrays.tail(data.rollingPageX);
-            evt.translationY = touch.pageY - arrays.tail(data.rollingPageY);
+            evt.translationX = touch.pageX - data.rollingPageX.at(-1);
+            evt.translationY = touch.pageY - data.rollingPageY.at(-1);
             evt.pageX = touch.pageX;
             evt.pageY = touch.pageY;
             this.dispatchEvent(evt);
@@ -245,9 +262,7 @@ export class Gesture extends Disposable {
         }
     }
 }
-Gesture.SCROLL_FRICTION = -0.005;
-Gesture.HOLD_DELAY = 700;
-Gesture.CLEAR_TAP_COUNT_TIME = 400; // ms
 __decorate([
     memoize
 ], Gesture, "isTouchDevice", null);
+//# sourceMappingURL=touch.js.map

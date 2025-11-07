@@ -2,31 +2,16 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
-import { createCancelableAsyncIterable, RunOnceScheduler } from '../../../../base/common/async.js';
+import { createCancelableAsyncIterableProducer, RunOnceScheduler } from '../../../../base/common/async.js';
 import { onUnexpectedError } from '../../../../base/common/errors.js';
 import { Emitter } from '../../../../base/common/event.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
 export class HoverResult {
-    constructor(value, isComplete, hasLoadingMessage) {
+    constructor(value, isComplete, hasLoadingMessage, options) {
         this.value = value;
         this.isComplete = isComplete;
         this.hasLoadingMessage = hasLoadingMessage;
+        this.options = options;
     }
 }
 /**
@@ -46,9 +31,9 @@ export class HoverOperation extends Disposable {
         this._computer = _computer;
         this._onResult = this._register(new Emitter());
         this.onResult = this._onResult.event;
-        this._firstWaitScheduler = this._register(new RunOnceScheduler(() => this._triggerAsyncComputation(), 0));
-        this._secondWaitScheduler = this._register(new RunOnceScheduler(() => this._triggerSyncComputation(), 0));
-        this._loadingMessageScheduler = this._register(new RunOnceScheduler(() => this._triggerLoadingMessage(), 0));
+        this._asyncComputationScheduler = this._register(new Debouncer((options) => this._triggerAsyncComputation(options), 0));
+        this._syncComputationScheduler = this._register(new Debouncer((options) => this._triggerSyncComputation(options), 0));
+        this._loadingMessageScheduler = this._register(new Debouncer((options) => this._triggerLoadingMessage(options), 0));
         this._state = 0 /* HoverOperationState.Idle */;
         this._asyncIterable = null;
         this._asyncIterableDone = false;
@@ -59,10 +44,11 @@ export class HoverOperation extends Disposable {
             this._asyncIterable.cancel();
             this._asyncIterable = null;
         }
+        this._options = undefined;
         super.dispose();
     }
     get _hoverTime() {
-        return this._editor.getOption(60 /* EditorOption.hover */).delay;
+        return this._editor.getOption(69 /* EditorOption.hover */).delay;
     }
     get _firstWaitTime() {
         return this._hoverTime / 2;
@@ -73,104 +59,108 @@ export class HoverOperation extends Disposable {
     get _loadingMessageTime() {
         return 3 * this._hoverTime;
     }
-    _setState(state, fireResult = true) {
+    _setState(state, options) {
+        this._options = options;
         this._state = state;
-        if (fireResult) {
-            this._fireResult();
-        }
+        this._fireResult(options);
     }
-    _triggerAsyncComputation() {
-        this._setState(2 /* HoverOperationState.SecondWait */);
-        this._secondWaitScheduler.schedule(this._secondWaitTime);
+    _triggerAsyncComputation(options) {
+        this._setState(2 /* HoverOperationState.SecondWait */, options);
+        this._syncComputationScheduler.schedule(options, this._secondWaitTime);
         if (this._computer.computeAsync) {
             this._asyncIterableDone = false;
-            this._asyncIterable = createCancelableAsyncIterable(token => this._computer.computeAsync(token));
-            (() => __awaiter(this, void 0, void 0, function* () {
-                var _a, e_1, _b, _c;
+            this._asyncIterable = createCancelableAsyncIterableProducer(token => this._computer.computeAsync(options, token));
+            (async () => {
                 try {
-                    try {
-                        for (var _d = true, _e = __asyncValues(this._asyncIterable), _f; _f = yield _e.next(), _a = _f.done, !_a; _d = true) {
-                            _c = _f.value;
-                            _d = false;
-                            const item = _c;
-                            if (item) {
-                                this._result.push(item);
-                                this._fireResult();
-                            }
+                    for await (const item of this._asyncIterable) {
+                        if (item) {
+                            this._result.push(item);
+                            this._fireResult(options);
                         }
-                    }
-                    catch (e_1_1) { e_1 = { error: e_1_1 }; }
-                    finally {
-                        try {
-                            if (!_d && !_a && (_b = _e.return)) yield _b.call(_e);
-                        }
-                        finally { if (e_1) throw e_1.error; }
                     }
                     this._asyncIterableDone = true;
                     if (this._state === 3 /* HoverOperationState.WaitingForAsync */ || this._state === 4 /* HoverOperationState.WaitingForAsyncShowingLoading */) {
-                        this._setState(0 /* HoverOperationState.Idle */);
+                        this._setState(0 /* HoverOperationState.Idle */, options);
                     }
                 }
                 catch (e) {
                     onUnexpectedError(e);
                 }
-            }))();
+            })();
         }
         else {
             this._asyncIterableDone = true;
         }
     }
-    _triggerSyncComputation() {
+    _triggerSyncComputation(options) {
         if (this._computer.computeSync) {
-            this._result = this._result.concat(this._computer.computeSync());
+            this._result = this._result.concat(this._computer.computeSync(options));
         }
-        this._setState(this._asyncIterableDone ? 0 /* HoverOperationState.Idle */ : 3 /* HoverOperationState.WaitingForAsync */);
+        this._setState(this._asyncIterableDone ? 0 /* HoverOperationState.Idle */ : 3 /* HoverOperationState.WaitingForAsync */, options);
     }
-    _triggerLoadingMessage() {
+    _triggerLoadingMessage(options) {
         if (this._state === 3 /* HoverOperationState.WaitingForAsync */) {
-            this._setState(4 /* HoverOperationState.WaitingForAsyncShowingLoading */);
+            this._setState(4 /* HoverOperationState.WaitingForAsyncShowingLoading */, options);
         }
     }
-    _fireResult() {
+    _fireResult(options) {
         if (this._state === 1 /* HoverOperationState.FirstWait */ || this._state === 2 /* HoverOperationState.SecondWait */) {
             // Do not send out results before the hover time
             return;
         }
         const isComplete = (this._state === 0 /* HoverOperationState.Idle */);
         const hasLoadingMessage = (this._state === 4 /* HoverOperationState.WaitingForAsyncShowingLoading */);
-        this._onResult.fire(new HoverResult(this._result.slice(0), isComplete, hasLoadingMessage));
+        this._onResult.fire(new HoverResult(this._result.slice(0), isComplete, hasLoadingMessage, options));
     }
-    start(mode) {
+    start(mode, options) {
         if (mode === 0 /* HoverStartMode.Delayed */) {
             if (this._state === 0 /* HoverOperationState.Idle */) {
-                this._setState(1 /* HoverOperationState.FirstWait */);
-                this._firstWaitScheduler.schedule(this._firstWaitTime);
-                this._loadingMessageScheduler.schedule(this._loadingMessageTime);
+                this._setState(1 /* HoverOperationState.FirstWait */, options);
+                this._asyncComputationScheduler.schedule(options, this._firstWaitTime);
+                this._loadingMessageScheduler.schedule(options, this._loadingMessageTime);
             }
         }
         else {
             switch (this._state) {
                 case 0 /* HoverOperationState.Idle */:
-                    this._triggerAsyncComputation();
-                    this._secondWaitScheduler.cancel();
-                    this._triggerSyncComputation();
+                    this._triggerAsyncComputation(options);
+                    this._syncComputationScheduler.cancel();
+                    this._triggerSyncComputation(options);
                     break;
                 case 2 /* HoverOperationState.SecondWait */:
-                    this._secondWaitScheduler.cancel();
-                    this._triggerSyncComputation();
+                    this._syncComputationScheduler.cancel();
+                    this._triggerSyncComputation(options);
                     break;
             }
         }
     }
     cancel() {
-        this._firstWaitScheduler.cancel();
-        this._secondWaitScheduler.cancel();
+        this._asyncComputationScheduler.cancel();
+        this._syncComputationScheduler.cancel();
         this._loadingMessageScheduler.cancel();
         if (this._asyncIterable) {
             this._asyncIterable.cancel();
             this._asyncIterable = null;
         }
         this._result = [];
-        this._setState(0 /* HoverOperationState.Idle */, false);
+        this._options = undefined;
+        this._state = 0 /* HoverOperationState.Idle */;
+    }
+    get options() {
+        return this._options;
     }
 }
+class Debouncer extends Disposable {
+    constructor(runner, debounceTimeMs) {
+        super();
+        this._scheduler = this._register(new RunOnceScheduler(() => runner(this._options), debounceTimeMs));
+    }
+    schedule(options, debounceTimeMs) {
+        this._options = options;
+        this._scheduler.schedule(debounceTimeMs);
+    }
+    cancel() {
+        this._scheduler.cancel();
+    }
+}
+//# sourceMappingURL=hoverOperation.js.map

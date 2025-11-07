@@ -3,14 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { EditorCommand, registerEditorCommand, registerEditorContribution } from '../../../browser/editorExtensions.js';
-import { editorConfigurationBaseNode } from '../../../common/config/editorConfigurationSchema.js';
 import { registerEditorFeature } from '../../../common/editorFeatures.js';
 import { DefaultDropProvidersFeature } from './defaultProviders.js';
-import * as nls from '../../../../nls.js';
-import { Extensions as ConfigurationExtensions } from '../../../../platform/configuration/common/configurationRegistry.js';
-import { Registry } from '../../../../platform/registry/common/platform.js';
-import { DropIntoEditorController, changeDropTypeCommandId, defaultProviderConfig, dropWidgetVisibleCtx } from './dropIntoEditorController.js';
+import { DropIntoEditorController, changeDropTypeCommandId, dropWidgetVisibleCtx } from './dropIntoEditorController.js';
 registerEditorContribution(DropIntoEditorController.ID, DropIntoEditorController, 2 /* EditorContributionInstantiation.BeforeFirstInteraction */);
+registerEditorFeature(DefaultDropProvidersFeature);
 registerEditorCommand(new class extends EditorCommand {
     constructor() {
         super({
@@ -23,19 +20,22 @@ registerEditorCommand(new class extends EditorCommand {
         });
     }
     runEditorCommand(_accessor, editor, _args) {
-        var _a;
-        (_a = DropIntoEditorController.get(editor)) === null || _a === void 0 ? void 0 : _a.changeDropType();
+        DropIntoEditorController.get(editor)?.changeDropType();
     }
 });
-registerEditorFeature(DefaultDropProvidersFeature);
-Registry.as(ConfigurationExtensions.Configuration).registerConfiguration(Object.assign(Object.assign({}, editorConfigurationBaseNode), { properties: {
-        [defaultProviderConfig]: {
-            type: 'object',
-            scope: 5 /* ConfigurationScope.LANGUAGE_OVERRIDABLE */,
-            description: nls.localize('defaultProviderDescription', "Configures the default drop provider to use for content of a given mime type."),
-            default: {},
-            additionalProperties: {
-                type: 'string',
-            },
-        },
-    } }));
+registerEditorCommand(new class extends EditorCommand {
+    constructor() {
+        super({
+            id: 'editor.hideDropWidget',
+            precondition: dropWidgetVisibleCtx,
+            kbOpts: {
+                weight: 100 /* KeybindingWeight.EditorContrib */,
+                primary: 9 /* KeyCode.Escape */,
+            }
+        });
+    }
+    runEditorCommand(_accessor, editor, _args) {
+        DropIntoEditorController.get(editor)?.clearWidgets();
+    }
+});
+//# sourceMappingURL=dropIntoEditorContribution.js.map

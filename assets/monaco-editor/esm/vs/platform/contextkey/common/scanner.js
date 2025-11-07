@@ -7,17 +7,17 @@ import { localize } from '../../../nls.js';
 function hintDidYouMean(...meant) {
     switch (meant.length) {
         case 1:
-            return localize('contextkey.scanner.hint.didYouMean1', "Did you mean {0}?", meant[0]);
+            return localize(1678, "Did you mean {0}?", meant[0]);
         case 2:
-            return localize('contextkey.scanner.hint.didYouMean2', "Did you mean {0} or {1}?", meant[0], meant[1]);
+            return localize(1679, "Did you mean {0} or {1}?", meant[0], meant[1]);
         case 3:
-            return localize('contextkey.scanner.hint.didYouMean3', "Did you mean {0}, {1} or {2}?", meant[0], meant[1], meant[2]);
+            return localize(1680, "Did you mean {0}, {1} or {2}?", meant[0], meant[1], meant[2]);
         default: // we just don't expect that many
             return undefined;
     }
 }
-const hintDidYouForgetToOpenOrCloseQuote = localize('contextkey.scanner.hint.didYouForgetToOpenOrCloseQuote', "Did you forget to open or close the quote?");
-const hintDidYouForgetToEscapeSlash = localize('contextkey.scanner.hint.didYouForgetToEscapeSlash', "Did you forget to escape the '/' (slash) character? Put two backslashes before it to escape, e.g., '\\\\/\'.");
+const hintDidYouForgetToOpenOrCloseQuote = localize(1681, "Did you forget to open or close the quote?");
+const hintDidYouForgetToEscapeSlash = localize(1682, "Did you forget to escape the '/' (slash) character? Put two backslashes before it to escape, e.g., '\\\\/\'.");
 /**
  * A simple scanner for context keys.
  *
@@ -91,6 +91,13 @@ export class Scanner {
                 throw illegalState(`unhandled token type: ${JSON.stringify(token)}; have you forgotten to add a case?`);
         }
     }
+    static { this._regexFlags = new Set(['i', 'g', 's', 'm', 'y', 'u'].map(ch => ch.charCodeAt(0))); }
+    static { this._keywords = new Map([
+        ['not', 14 /* TokenType.Not */],
+        ['in', 13 /* TokenType.In */],
+        ['false', 12 /* TokenType.False */],
+        ['true', 11 /* TokenType.True */],
+    ]); }
     reset(value) {
         this._input = value;
         this._start = 0;
@@ -275,10 +282,4 @@ export class Scanner {
         return this._current >= this._input.length;
     }
 }
-Scanner._regexFlags = new Set(['i', 'g', 's', 'm', 'y', 'u'].map(ch => ch.charCodeAt(0)));
-Scanner._keywords = new Map([
-    ['not', 14 /* TokenType.Not */],
-    ['in', 13 /* TokenType.In */],
-    ['false', 12 /* TokenType.False */],
-    ['true', 11 /* TokenType.True */],
-]);
+//# sourceMappingURL=scanner.js.map

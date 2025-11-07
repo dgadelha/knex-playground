@@ -2,32 +2,23 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { LinkedList } from '../../../../base/common/linkedList.js';
 import { Position } from '../../../common/core/position.js';
 import { Range } from '../../../common/core/range.js';
 export class BracketSelectionRangeProvider {
-    provideSelectionRanges(model, positions) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const result = [];
-            for (const position of positions) {
-                const bucket = [];
-                result.push(bucket);
-                const ranges = new Map();
-                yield new Promise(resolve => BracketSelectionRangeProvider._bracketsRightYield(resolve, 0, model, position, ranges));
-                yield new Promise(resolve => BracketSelectionRangeProvider._bracketsLeftYield(resolve, 0, model, position, ranges, bucket));
-            }
-            return result;
-        });
+    async provideSelectionRanges(model, positions) {
+        const result = [];
+        for (const position of positions) {
+            const bucket = [];
+            result.push(bucket);
+            const ranges = new Map();
+            await new Promise(resolve => BracketSelectionRangeProvider._bracketsRightYield(resolve, 0, model, position, ranges));
+            await new Promise(resolve => BracketSelectionRangeProvider._bracketsLeftYield(resolve, 0, model, position, ranges, bucket));
+        }
+        return result;
     }
+    static { this._maxDuration = 30; }
+    static { this._maxRounds = 2; }
     static _bracketsRightYield(resolve, round, model, pos, ranges) {
         const counts = new Map();
         const t1 = Date.now();
@@ -153,5 +144,4 @@ export class BracketSelectionRangeProvider {
         }
     }
 }
-BracketSelectionRangeProvider._maxDuration = 30;
-BracketSelectionRangeProvider._maxRounds = 2;
+//# sourceMappingURL=bracketSelections.js.map

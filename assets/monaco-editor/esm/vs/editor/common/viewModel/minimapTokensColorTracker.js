@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 import { Emitter } from '../../../base/common/event.js';
 import { Disposable, markAsSingleton } from '../../../base/common/lifecycle.js';
-import { RGBA8 } from '../core/rgba.js';
+import { RGBA8 } from '../core/misc/rgba.js';
 import { TokenizationRegistry } from '../languages.js';
 export class MinimapTokensColorTracker extends Disposable {
+    static { this._INSTANCE = null; }
     static getInstance() {
         if (!this._INSTANCE) {
             this._INSTANCE = markAsSingleton(new MinimapTokensColorTracker());
@@ -52,4 +53,4 @@ export class MinimapTokensColorTracker extends Disposable {
         return this._backgroundIsLight;
     }
 }
-MinimapTokensColorTracker._INSTANCE = null;
+//# sourceMappingURL=minimapTokensColorTracker.js.map

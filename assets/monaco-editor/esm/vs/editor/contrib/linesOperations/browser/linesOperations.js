@@ -8,6 +8,7 @@ import { EditorAction, registerEditorAction } from '../../../browser/editorExten
 import { ReplaceCommand, ReplaceCommandThatPreservesSelection, ReplaceCommandThatSelectsText } from '../../../common/commands/replaceCommand.js';
 import { TrimTrailingWhitespaceCommand } from '../../../common/commands/trimTrailingWhitespaceCommand.js';
 import { TypeOperations } from '../../../common/cursor/cursorTypeOperations.js';
+import { EnterOperation } from '../../../common/cursor/cursorTypeEditOperations.js';
 import { EditOperation } from '../../../common/core/editOperation.js';
 import { Position } from '../../../common/core/position.js';
 import { Range } from '../../../common/core/range.js';
@@ -19,6 +20,7 @@ import { SortLinesCommand } from './sortLinesCommand.js';
 import * as nls from '../../../../nls.js';
 import { MenuId } from '../../../../platform/actions/common/actions.js';
 import { ILanguageConfigurationService } from '../../../common/languages/languageConfigurationRegistry.js';
+import { IConfigurationService } from '../../../../platform/configuration/common/configuration.js';
 // copy lines
 class AbstractCopyLinesAction extends EditorAction {
     constructor(down, opts) {
@@ -61,8 +63,7 @@ class CopyLinesUpAction extends AbstractCopyLinesAction {
     constructor() {
         super(false, {
             id: 'editor.action.copyLinesUpAction',
-            label: nls.localize('lines.copyUp', "Copy Line Up"),
-            alias: 'Copy Line Up',
+            label: nls.localize2(1239, "Copy Line Up"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -73,7 +74,7 @@ class CopyLinesUpAction extends AbstractCopyLinesAction {
             menuOpts: {
                 menuId: MenuId.MenubarSelectionMenu,
                 group: '2_line',
-                title: nls.localize({ key: 'miCopyLinesUp', comment: ['&& denotes a mnemonic'] }, "&&Copy Line Up"),
+                title: nls.localize(1234, "&&Copy Line Up"),
                 order: 1
             }
         });
@@ -83,8 +84,7 @@ class CopyLinesDownAction extends AbstractCopyLinesAction {
     constructor() {
         super(true, {
             id: 'editor.action.copyLinesDownAction',
-            label: nls.localize('lines.copyDown', "Copy Line Down"),
-            alias: 'Copy Line Down',
+            label: nls.localize2(1240, "Copy Line Down"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -95,7 +95,7 @@ class CopyLinesDownAction extends AbstractCopyLinesAction {
             menuOpts: {
                 menuId: MenuId.MenubarSelectionMenu,
                 group: '2_line',
-                title: nls.localize({ key: 'miCopyLinesDown', comment: ['&& denotes a mnemonic'] }, "Co&&py Line Down"),
+                title: nls.localize(1235, "Co&&py Line Down"),
                 order: 2
             }
         });
@@ -105,13 +105,12 @@ export class DuplicateSelectionAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.duplicateSelection',
-            label: nls.localize('duplicateSelection', "Duplicate Selection"),
-            alias: 'Duplicate Selection',
+            label: nls.localize2(1241, "Duplicate Selection"),
             precondition: EditorContextKeys.writable,
             menuOpts: {
                 menuId: MenuId.MenubarSelectionMenu,
                 group: '2_line',
-                title: nls.localize({ key: 'miDuplicateSelection', comment: ['&& denotes a mnemonic'] }, "&&Duplicate Selection"),
+                title: nls.localize(1236, "&&Duplicate Selection"),
                 order: 5
             }
         });
@@ -147,7 +146,7 @@ class AbstractMoveLinesAction extends EditorAction {
         const languageConfigurationService = accessor.get(ILanguageConfigurationService);
         const commands = [];
         const selections = editor.getSelections() || [];
-        const autoIndent = editor.getOption(12 /* EditorOption.autoIndent */);
+        const autoIndent = editor.getOption(16 /* EditorOption.autoIndent */);
         for (const selection of selections) {
             commands.push(new MoveLinesCommand(selection, this.down, autoIndent, languageConfigurationService));
         }
@@ -160,8 +159,7 @@ class MoveLinesUpAction extends AbstractMoveLinesAction {
     constructor() {
         super(false, {
             id: 'editor.action.moveLinesUpAction',
-            label: nls.localize('lines.moveUp', "Move Line Up"),
-            alias: 'Move Line Up',
+            label: nls.localize2(1242, "Move Line Up"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -172,7 +170,7 @@ class MoveLinesUpAction extends AbstractMoveLinesAction {
             menuOpts: {
                 menuId: MenuId.MenubarSelectionMenu,
                 group: '2_line',
-                title: nls.localize({ key: 'miMoveLinesUp', comment: ['&& denotes a mnemonic'] }, "Mo&&ve Line Up"),
+                title: nls.localize(1237, "Mo&&ve Line Up"),
                 order: 3
             }
         });
@@ -182,8 +180,7 @@ class MoveLinesDownAction extends AbstractMoveLinesAction {
     constructor() {
         super(true, {
             id: 'editor.action.moveLinesDownAction',
-            label: nls.localize('lines.moveDown', "Move Line Down"),
-            alias: 'Move Line Down',
+            label: nls.localize2(1243, "Move Line Down"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -194,7 +191,7 @@ class MoveLinesDownAction extends AbstractMoveLinesAction {
             menuOpts: {
                 menuId: MenuId.MenubarSelectionMenu,
                 group: '2_line',
-                title: nls.localize({ key: 'miMoveLinesDown', comment: ['&& denotes a mnemonic'] }, "Move &&Line Down"),
+                title: nls.localize(1238, "Move &&Line Down"),
                 order: 4
             }
         });
@@ -206,7 +203,15 @@ export class AbstractSortLinesAction extends EditorAction {
         this.descending = descending;
     }
     run(_accessor, editor) {
-        const selections = editor.getSelections() || [];
+        if (!editor.hasModel()) {
+            return;
+        }
+        const model = editor.getModel();
+        let selections = editor.getSelections();
+        if (selections.length === 1 && selections[0].isEmpty()) {
+            // Apply to whole document.
+            selections = [new Selection(1, 1, model.getLineCount(), model.getLineMaxColumn(model.getLineCount()))];
+        }
         for (const selection of selections) {
             if (!SortLinesCommand.canRun(editor.getModel(), selection, this.descending)) {
                 return;
@@ -225,8 +230,7 @@ export class SortLinesAscendingAction extends AbstractSortLinesAction {
     constructor() {
         super(false, {
             id: 'editor.action.sortLinesAscending',
-            label: nls.localize('lines.sortAscending', "Sort Lines Ascending"),
-            alias: 'Sort Lines Ascending',
+            label: nls.localize2(1244, "Sort Lines Ascending"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -235,8 +239,7 @@ export class SortLinesDescendingAction extends AbstractSortLinesAction {
     constructor() {
         super(true, {
             id: 'editor.action.sortLinesDescending',
-            label: nls.localize('lines.sortDescending', "Sort Lines Descending"),
-            alias: 'Sort Lines Descending',
+            label: nls.localize2(1245, "Sort Lines Descending"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -245,8 +248,7 @@ export class DeleteDuplicateLinesAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.removeDuplicateLines',
-            label: nls.localize('lines.deleteDuplicates', "Delete Duplicate Lines"),
-            alias: 'Delete Duplicate Lines',
+            label: nls.localize2(1246, "Delete Duplicate Lines"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -261,7 +263,14 @@ export class DeleteDuplicateLinesAction extends EditorAction {
         const edits = [];
         const endCursorState = [];
         let linesDeleted = 0;
-        for (const selection of editor.getSelections()) {
+        let updateSelection = true;
+        let selections = editor.getSelections();
+        if (selections.length === 1 && selections[0].isEmpty()) {
+            // Apply to whole document.
+            selections = [new Selection(1, 1, model.getLineCount(), model.getLineMaxColumn(model.getLineCount()))];
+            updateSelection = false;
+        }
+        for (const selection of selections) {
             const uniqueLines = new Set();
             const lines = [];
             for (let i = selection.startLineNumber; i <= selection.endLineNumber; i++) {
@@ -280,16 +289,81 @@ export class DeleteDuplicateLinesAction extends EditorAction {
             linesDeleted += (selection.endLineNumber - selection.startLineNumber + 1) - lines.length;
         }
         editor.pushUndoStop();
-        editor.executeEdits(this.id, edits, endCursorState);
+        editor.executeEdits(this.id, edits, updateSelection ? endCursorState : undefined);
+        editor.pushUndoStop();
+    }
+}
+export class ReverseLinesAction extends EditorAction {
+    constructor() {
+        super({
+            id: 'editor.action.reverseLines',
+            label: nls.localize2(1247, "Reverse lines"),
+            precondition: EditorContextKeys.writable
+        });
+    }
+    run(_accessor, editor) {
+        if (!editor.hasModel()) {
+            return;
+        }
+        const model = editor.getModel();
+        const originalSelections = editor.getSelections();
+        let selections = originalSelections;
+        if (selections.length === 1 && selections[0].isEmpty()) {
+            // Apply to whole document.
+            selections = [new Selection(1, 1, model.getLineCount(), model.getLineMaxColumn(model.getLineCount()))];
+        }
+        const edits = [];
+        const resultingSelections = [];
+        for (let i = 0; i < selections.length; i++) {
+            const selection = selections[i];
+            const originalSelection = originalSelections[i];
+            let endLineNumber = selection.endLineNumber;
+            if (selection.startLineNumber < selection.endLineNumber && selection.endColumn === 1) {
+                endLineNumber--;
+            }
+            let range = new Range(selection.startLineNumber, 1, endLineNumber, model.getLineMaxColumn(endLineNumber));
+            // Exclude last line if empty and we're at the end of the document
+            if (endLineNumber === model.getLineCount() && model.getLineContent(range.endLineNumber) === '') {
+                range = range.setEndPosition(range.endLineNumber - 1, model.getLineMaxColumn(range.endLineNumber - 1));
+            }
+            const lines = [];
+            for (let i = range.endLineNumber; i >= range.startLineNumber; i--) {
+                lines.push(model.getLineContent(i));
+            }
+            const edit = EditOperation.replace(range, lines.join('\n'));
+            edits.push(edit);
+            const updateLineNumber = function (lineNumber) {
+                return lineNumber <= range.endLineNumber ? range.endLineNumber - lineNumber + range.startLineNumber : lineNumber;
+            };
+            const updateSelection = function (sel) {
+                if (sel.isEmpty()) {
+                    // keep just the cursor
+                    return new Selection(updateLineNumber(sel.positionLineNumber), sel.positionColumn, updateLineNumber(sel.positionLineNumber), sel.positionColumn);
+                }
+                else {
+                    // keep selection - maintain direction by creating backward selection
+                    const newSelectionStart = updateLineNumber(sel.selectionStartLineNumber);
+                    const newPosition = updateLineNumber(sel.positionLineNumber);
+                    const newSelectionStartColumn = sel.selectionStartColumn;
+                    const newPositionColumn = sel.positionColumn;
+                    // Create selection: from (newSelectionStart, newSelectionStartColumn) to (newPosition, newPositionColumn)
+                    // After reversal: from (3, 2) to (1, 3)
+                    return new Selection(newSelectionStart, newSelectionStartColumn, newPosition, newPositionColumn);
+                }
+            };
+            resultingSelections.push(updateSelection(originalSelection));
+        }
+        editor.pushUndoStop();
+        editor.executeEdits(this.id, edits, resultingSelections);
         editor.pushUndoStop();
     }
 }
 export class TrimTrailingWhitespaceAction extends EditorAction {
+    static { this.ID = 'editor.action.trimTrailingWhitespace'; }
     constructor() {
         super({
             id: TrimTrailingWhitespaceAction.ID,
-            label: nls.localize('lines.trimTrailingWhitespace', "Trim Trailing Whitespace"),
-            alias: 'Trim Trailing Whitespace',
+            label: nls.localize2(1248, "Trim Trailing Whitespace"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -310,19 +384,20 @@ export class TrimTrailingWhitespaceAction extends EditorAction {
         if (selection === null) {
             return;
         }
-        const command = new TrimTrailingWhitespaceCommand(selection, cursors);
+        const config = _accessor.get(IConfigurationService);
+        const model = editor.getModel();
+        const trimInRegexAndStrings = config.getValue('files.trimTrailingWhitespaceInRegexAndStrings', { overrideIdentifier: model?.getLanguageId(), resource: model?.uri });
+        const command = new TrimTrailingWhitespaceCommand(selection, cursors, trimInRegexAndStrings);
         editor.pushUndoStop();
         editor.executeCommands(this.id, [command]);
         editor.pushUndoStop();
     }
 }
-TrimTrailingWhitespaceAction.ID = 'editor.action.trimTrailingWhitespace';
 export class DeleteLinesAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.deleteLines',
-            label: nls.localize('lines.delete', "Delete Line"),
-            alias: 'Delete Line',
+            label: nls.localize2(1249, "Delete Line"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.textInputFocus,
@@ -410,8 +485,7 @@ export class IndentLinesAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.indentLines',
-            label: nls.localize('lines.indent', "Indent Line"),
-            alias: 'Indent Line',
+            label: nls.localize2(1250, "Indent Line"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -434,8 +508,7 @@ class OutdentLinesAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.outdentLines',
-            label: nls.localize('lines.outdent', "Outdent Line"),
-            alias: 'Outdent Line',
+            label: nls.localize2(1251, "Outdent Line"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -452,8 +525,7 @@ export class InsertLineBeforeAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.insertLineBefore',
-            label: nls.localize('lines.insertBefore', "Insert Line Above"),
-            alias: 'Insert Line Above',
+            label: nls.localize2(1252, "Insert Line Above"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -468,15 +540,14 @@ export class InsertLineBeforeAction extends EditorAction {
             return;
         }
         editor.pushUndoStop();
-        editor.executeCommands(this.id, TypeOperations.lineInsertBefore(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
+        editor.executeCommands(this.id, EnterOperation.lineInsertBefore(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
     }
 }
 export class InsertLineAfterAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.insertLineAfter',
-            label: nls.localize('lines.insertAfter', "Insert Line Below"),
-            alias: 'Insert Line Below',
+            label: nls.localize2(1253, "Insert Line Below"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -491,7 +562,7 @@ export class InsertLineAfterAction extends EditorAction {
             return;
         }
         editor.pushUndoStop();
-        editor.executeCommands(this.id, TypeOperations.lineInsertAfter(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
+        editor.executeCommands(this.id, EnterOperation.lineInsertAfter(viewModel.cursorConfig, editor.getModel(), editor.getSelections()));
     }
 }
 export class AbstractDeleteAllToBoundaryAction extends EditorAction {
@@ -527,8 +598,7 @@ export class DeleteAllLeftAction extends AbstractDeleteAllToBoundaryAction {
     constructor() {
         super({
             id: 'deleteAllLeft',
-            label: nls.localize('lines.deleteAllLeft', "Delete All Left"),
-            alias: 'Delete All Left',
+            label: nls.localize2(1254, "Delete All Left"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.textInputFocus,
@@ -597,8 +667,7 @@ export class DeleteAllRightAction extends AbstractDeleteAllToBoundaryAction {
     constructor() {
         super({
             id: 'deleteAllRight',
-            label: nls.localize('lines.deleteAllRight', "Delete All Right"),
-            alias: 'Delete All Right',
+            label: nls.localize2(1255, "Delete All Right"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.textInputFocus,
@@ -655,8 +724,7 @@ export class JoinLinesAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.joinLines',
-            label: nls.localize('lines.joinLines', "Join Lines"),
-            alias: 'Join Lines',
+            label: nls.localize2(1256, "Join Lines"),
             precondition: EditorContextKeys.writable,
             kbOpts: {
                 kbExpr: EditorContextKeys.editorTextFocus,
@@ -797,8 +865,7 @@ export class TransposeAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.transpose',
-            label: nls.localize('editor.transpose', "Transpose Characters around the Cursor"),
-            alias: 'Transpose Characters around the Cursor',
+            label: nls.localize2(1257, "Transpose Characters around the Cursor"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -850,7 +917,7 @@ export class AbstractCaseAction extends EditorAction {
         if (model === null) {
             return;
         }
-        const wordSeparators = editor.getOption(129 /* EditorOption.wordSeparators */);
+        const wordSeparators = editor.getOption(148 /* EditorOption.wordSeparators */);
         const textEdits = [];
         for (const selection of selections) {
             if (selection.isEmpty()) {
@@ -877,8 +944,7 @@ export class UpperCaseAction extends AbstractCaseAction {
     constructor() {
         super({
             id: 'editor.action.transformToUppercase',
-            label: nls.localize('editor.transformToUppercase', "Transform to Uppercase"),
-            alias: 'Transform to Uppercase',
+            label: nls.localize2(1258, "Transform to Uppercase"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -890,8 +956,7 @@ export class LowerCaseAction extends AbstractCaseAction {
     constructor() {
         super({
             id: 'editor.action.transformToLowercase',
-            label: nls.localize('editor.transformToLowercase', "Transform to Lowercase"),
-            alias: 'Transform to Lowercase',
+            label: nls.localize2(1259, "Transform to Lowercase"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -923,11 +988,11 @@ class BackwardsCompatibleRegExp {
     }
 }
 export class TitleCaseAction extends AbstractCaseAction {
+    static { this.titleBoundary = new BackwardsCompatibleRegExp('(^|[^\\p{L}\\p{N}\']|((^|\\P{L})\'))\\p{L}', 'gmu'); }
     constructor() {
         super({
             id: 'editor.action.transformToTitlecase',
-            label: nls.localize('editor.transformToTitlecase', "Transform to Title Case"),
-            alias: 'Transform to Title Case',
+            label: nls.localize2(1260, "Transform to Title Case"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -942,13 +1007,13 @@ export class TitleCaseAction extends AbstractCaseAction {
             .replace(titleBoundary, (b) => b.toLocaleUpperCase());
     }
 }
-TitleCaseAction.titleBoundary = new BackwardsCompatibleRegExp('(^|[^\\p{L}\\p{N}\']|((^|\\P{L})\'))\\p{L}', 'gmu');
 export class SnakeCaseAction extends AbstractCaseAction {
+    static { this.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu'); }
+    static { this.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu})(\\p{Ll})', 'gmu'); }
     constructor() {
         super({
             id: 'editor.action.transformToSnakecase',
-            label: nls.localize('editor.transformToSnakecase', "Transform to Snake Case"),
-            alias: 'Transform to Snake Case',
+            label: nls.localize2(1261, "Transform to Snake Case"),
             precondition: EditorContextKeys.writable
         });
     }
@@ -965,30 +1030,53 @@ export class SnakeCaseAction extends AbstractCaseAction {
             .toLocaleLowerCase());
     }
 }
-SnakeCaseAction.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu');
-SnakeCaseAction.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu})(\\p{Ll})', 'gmu');
 export class CamelCaseAction extends AbstractCaseAction {
+    static { this.singleLineWordBoundary = new BackwardsCompatibleRegExp('[_\\s-]+', 'gm'); }
+    static { this.multiLineWordBoundary = new BackwardsCompatibleRegExp('[_-]+', 'gm'); }
+    static { this.validWordStart = new BackwardsCompatibleRegExp('^(\\p{Lu}[^\\p{Lu}])', 'gmu'); }
     constructor() {
         super({
             id: 'editor.action.transformToCamelcase',
-            label: nls.localize('editor.transformToCamelcase', "Transform to Camel Case"),
-            alias: 'Transform to Camel Case',
+            label: nls.localize2(1262, "Transform to Camel Case"),
             precondition: EditorContextKeys.writable
         });
     }
     _modifyText(text, wordSeparators) {
-        const wordBoundary = CamelCaseAction.wordBoundary.get();
-        if (!wordBoundary) {
+        const wordBoundary = /\r\n|\r|\n/.test(text) ? CamelCaseAction.multiLineWordBoundary.get() : CamelCaseAction.singleLineWordBoundary.get();
+        const validWordStart = CamelCaseAction.validWordStart.get();
+        if (!wordBoundary || !validWordStart) {
             // cannot support this
             return text;
         }
         const words = text.split(wordBoundary);
-        const firstWord = words.shift();
+        const firstWord = words.shift()?.replace(validWordStart, (start) => start.toLocaleLowerCase());
         return firstWord + words.map((word) => word.substring(0, 1).toLocaleUpperCase() + word.substring(1))
             .join('');
     }
 }
-CamelCaseAction.wordBoundary = new BackwardsCompatibleRegExp('[_\\s-]', 'gm');
+export class PascalCaseAction extends AbstractCaseAction {
+    static { this.wordBoundary = new BackwardsCompatibleRegExp('[_ \\t-]', 'gm'); }
+    static { this.wordBoundaryToMaintain = new BackwardsCompatibleRegExp('(?<=\\.)', 'gm'); }
+    constructor() {
+        super({
+            id: 'editor.action.transformToPascalcase',
+            label: nls.localize2(1263, "Transform to Pascal Case"),
+            precondition: EditorContextKeys.writable
+        });
+    }
+    _modifyText(text, wordSeparators) {
+        const wordBoundary = PascalCaseAction.wordBoundary.get();
+        const wordBoundaryToMaintain = PascalCaseAction.wordBoundaryToMaintain.get();
+        if (!wordBoundary || !wordBoundaryToMaintain) {
+            // cannot support this
+            return text;
+        }
+        const wordsWithMaintainBoundaries = text.split(wordBoundaryToMaintain);
+        const words = wordsWithMaintainBoundaries.map((word) => word.split(wordBoundary)).flat();
+        return words.map((word) => word.substring(0, 1).toLocaleUpperCase() + word.substring(1))
+            .join('');
+    }
+}
 export class KebabCaseAction extends AbstractCaseAction {
     static isSupported() {
         const areAllRegexpsSupported = [
@@ -998,11 +1086,13 @@ export class KebabCaseAction extends AbstractCaseAction {
         ].every((regexp) => regexp.isSupported());
         return areAllRegexpsSupported;
     }
+    static { this.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu'); }
+    static { this.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu}\\p{Ll})', 'gmu'); }
+    static { this.underscoreBoundary = new BackwardsCompatibleRegExp('(\\S)(_)(\\S)', 'gm'); }
     constructor() {
         super({
             id: 'editor.action.transformToKebabcase',
-            label: nls.localize('editor.transformToKebabcase', 'Transform to Kebab Case'),
-            alias: 'Transform to Kebab Case',
+            label: nls.localize2(1264, 'Transform to Kebab Case'),
             precondition: EditorContextKeys.writable
         });
     }
@@ -1021,9 +1111,6 @@ export class KebabCaseAction extends AbstractCaseAction {
             .toLocaleLowerCase();
     }
 }
-KebabCaseAction.caseBoundary = new BackwardsCompatibleRegExp('(\\p{Ll})(\\p{Lu})', 'gmu');
-KebabCaseAction.singleLetters = new BackwardsCompatibleRegExp('(\\p{Lu}|\\p{N})(\\p{Lu}\\p{Ll})', 'gmu');
-KebabCaseAction.underscoreBoundary = new BackwardsCompatibleRegExp('(\\S)(_)(\\S)', 'gm');
 registerEditorAction(CopyLinesUpAction);
 registerEditorAction(CopyLinesDownAction);
 registerEditorAction(DuplicateSelectionAction);
@@ -1044,11 +1131,15 @@ registerEditorAction(JoinLinesAction);
 registerEditorAction(TransposeAction);
 registerEditorAction(UpperCaseAction);
 registerEditorAction(LowerCaseAction);
+registerEditorAction(ReverseLinesAction);
 if (SnakeCaseAction.caseBoundary.isSupported() && SnakeCaseAction.singleLetters.isSupported()) {
     registerEditorAction(SnakeCaseAction);
 }
-if (CamelCaseAction.wordBoundary.isSupported()) {
+if (CamelCaseAction.singleLineWordBoundary.isSupported() && CamelCaseAction.multiLineWordBoundary.isSupported()) {
     registerEditorAction(CamelCaseAction);
+}
+if (PascalCaseAction.wordBoundary.isSupported()) {
+    registerEditorAction(PascalCaseAction);
 }
 if (TitleCaseAction.titleBoundary.isSupported()) {
     registerEditorAction(TitleCaseAction);
@@ -1056,3 +1147,4 @@ if (TitleCaseAction.titleBoundary.isSupported()) {
 if (KebabCaseAction.isSupported()) {
     registerEditorAction(KebabCaseAction);
 }
+//# sourceMappingURL=linesOperations.js.map

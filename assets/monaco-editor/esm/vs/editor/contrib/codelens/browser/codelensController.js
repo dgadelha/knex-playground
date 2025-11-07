@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { createCancelablePromise, disposableTimeout, RunOnceScheduler } from '../../../../base/common/async.js';
 import { onUnexpectedError, onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { DisposableStore, toDisposable } from '../../../../base/common/lifecycle.js';
@@ -30,13 +21,14 @@ import { EditorContextKeys } from '../../../common/editorContextKeys.js';
 import { getCodeLensModel } from './codelens.js';
 import { ICodeLensCache } from './codeLensCache.js';
 import { CodeLensHelper, CodeLensWidget } from './codelensWidget.js';
-import { localize } from '../../../../nls.js';
+import { localize, localize2 } from '../../../../nls.js';
 import { ICommandService } from '../../../../platform/commands/common/commands.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IQuickInputService } from '../../../../platform/quickinput/common/quickInput.js';
 import { ILanguageFeatureDebounceService } from '../../../common/services/languageFeatureDebounce.js';
 import { ILanguageFeaturesService } from '../../../common/services/languageFeatures.js';
 let CodeLensContribution = class CodeLensContribution {
+    static { this.ID = 'css.editor.codeLens'; }
     constructor(_editor, _languageFeaturesService, debounceService, _commandService, _notificationService, _codeLensCache) {
         this._editor = _editor;
         this._languageFeaturesService = _languageFeaturesService;
@@ -53,10 +45,10 @@ let CodeLensContribution = class CodeLensContribution {
         this._disposables.add(this._editor.onDidChangeModel(() => this._onModelChange()));
         this._disposables.add(this._editor.onDidChangeModelLanguage(() => this._onModelChange()));
         this._disposables.add(this._editor.onDidChangeConfiguration((e) => {
-            if (e.hasChanged(50 /* EditorOption.fontInfo */) || e.hasChanged(19 /* EditorOption.codeLensFontSize */) || e.hasChanged(18 /* EditorOption.codeLensFontFamily */)) {
+            if (e.hasChanged(59 /* EditorOption.fontInfo */) || e.hasChanged(25 /* EditorOption.codeLensFontSize */) || e.hasChanged(24 /* EditorOption.codeLensFontFamily */)) {
                 this._updateLensStyle();
             }
-            if (e.hasChanged(17 /* EditorOption.codeLens */)) {
+            if (e.hasChanged(23 /* EditorOption.codeLens */)) {
                 this._onModelChange();
             }
         }));
@@ -65,17 +57,17 @@ let CodeLensContribution = class CodeLensContribution {
         this._updateLensStyle();
     }
     dispose() {
-        var _a;
         this._localDispose();
+        this._localToDispose.dispose();
         this._disposables.dispose();
         this._oldCodeLensModels.dispose();
-        (_a = this._currentCodeLensModel) === null || _a === void 0 ? void 0 : _a.dispose();
+        this._currentCodeLensModel?.dispose();
     }
     _getLayoutInfo() {
-        const lineHeightFactor = Math.max(1.3, this._editor.getOption(66 /* EditorOption.lineHeight */) / this._editor.getOption(52 /* EditorOption.fontSize */));
-        let fontSize = this._editor.getOption(19 /* EditorOption.codeLensFontSize */);
+        const lineHeightFactor = Math.max(1.3, this._editor.getOption(75 /* EditorOption.lineHeight */) / this._editor.getOption(61 /* EditorOption.fontSize */));
+        let fontSize = this._editor.getOption(25 /* EditorOption.codeLensFontSize */);
         if (!fontSize || fontSize < 5) {
-            fontSize = (this._editor.getOption(52 /* EditorOption.fontSize */) * .9) | 0;
+            fontSize = (this._editor.getOption(61 /* EditorOption.fontSize */) * .9) | 0;
         }
         return {
             fontSize,
@@ -84,8 +76,8 @@ let CodeLensContribution = class CodeLensContribution {
     }
     _updateLensStyle() {
         const { codeLensHeight, fontSize } = this._getLayoutInfo();
-        const fontFamily = this._editor.getOption(18 /* EditorOption.codeLensFontFamily */);
-        const editorFontInfo = this._editor.getOption(50 /* EditorOption.fontInfo */);
+        const fontFamily = this._editor.getOption(24 /* EditorOption.codeLensFontFamily */);
+        const editorFontInfo = this._editor.getOption(59 /* EditorOption.fontInfo */);
         const { style } = this._editor.getContainerDomNode();
         style.setProperty('--vscode-editorCodeLens-lineHeight', `${codeLensHeight}px`);
         style.setProperty('--vscode-editorCodeLens-fontSize', `${fontSize}px`);
@@ -102,14 +94,13 @@ let CodeLensContribution = class CodeLensContribution {
         });
     }
     _localDispose() {
-        var _a, _b, _c;
-        (_a = this._getCodeLensModelPromise) === null || _a === void 0 ? void 0 : _a.cancel();
+        this._getCodeLensModelPromise?.cancel();
         this._getCodeLensModelPromise = undefined;
-        (_b = this._resolveCodeLensesPromise) === null || _b === void 0 ? void 0 : _b.cancel();
+        this._resolveCodeLensesPromise?.cancel();
         this._resolveCodeLensesPromise = undefined;
         this._localToDispose.clear();
         this._oldCodeLensModels.clear();
-        (_c = this._currentCodeLensModel) === null || _c === void 0 ? void 0 : _c.dispose();
+        this._currentCodeLensModel?.dispose();
     }
     _onModelChange() {
         this._localDispose();
@@ -117,7 +108,7 @@ let CodeLensContribution = class CodeLensContribution {
         if (!model) {
             return;
         }
-        if (!this._editor.getOption(17 /* EditorOption.codeLens */) || model.isTooLargeForTokenization()) {
+        if (!this._editor.getOption(23 /* EditorOption.codeLens */) || model.isTooLargeForTokenization()) {
             return;
         }
         const cachedLenses = this._codeLensCache.get(model);
@@ -128,13 +119,13 @@ let CodeLensContribution = class CodeLensContribution {
             // no provider -> return but check with
             // cached lenses. they expire after 30 seconds
             if (cachedLenses) {
-                this._localToDispose.add(disposableTimeout(() => {
+                disposableTimeout(() => {
                     const cachedLensesNow = this._codeLensCache.get(model);
                     if (cachedLenses === cachedLensesNow) {
                         this._codeLensCache.delete(model);
                         this._onModelChange();
                     }
-                }, 30 * 1000));
+                }, 30 * 1000, this._localToDispose);
             }
             return;
         }
@@ -145,9 +136,8 @@ let CodeLensContribution = class CodeLensContribution {
             }
         }
         const scheduler = new RunOnceScheduler(() => {
-            var _a;
             const t1 = Date.now();
-            (_a = this._getCodeLensModelPromise) === null || _a === void 0 ? void 0 : _a.cancel();
+            this._getCodeLensModelPromise?.cancel();
             this._getCodeLensModelPromise = createCancelablePromise(token => getCodeLensModel(this._languageFeaturesService.codeLensProvider, model, token));
             this._getCodeLensModelPromise.then(result => {
                 if (this._currentCodeLensModel) {
@@ -168,7 +158,6 @@ let CodeLensContribution = class CodeLensContribution {
         this._localToDispose.add(scheduler);
         this._localToDispose.add(toDisposable(() => this._resolveCodeLensesScheduler.cancel()));
         this._localToDispose.add(this._editor.onDidChangeModelContent(() => {
-            var _a;
             this._editor.changeDecorations(decorationsAccessor => {
                 this._editor.changeViewZones(viewZonesAccessor => {
                     const toDispose = [];
@@ -196,10 +185,10 @@ let CodeLensContribution = class CodeLensContribution {
             scheduler.schedule();
             // Cancel pending and active resolve requests
             this._resolveCodeLensesScheduler.cancel();
-            (_a = this._resolveCodeLensesPromise) === null || _a === void 0 ? void 0 : _a.cancel();
+            this._resolveCodeLensesPromise?.cancel();
             this._resolveCodeLensesPromise = undefined;
         }));
-        this._localToDispose.add(this._editor.onDidFocusEditorWidget(() => {
+        this._localToDispose.add(this._editor.onDidFocusEditorText(() => {
             scheduler.schedule();
         }));
         this._localToDispose.add(this._editor.onDidBlurEditorText(() => {
@@ -233,10 +222,10 @@ let CodeLensContribution = class CodeLensContribution {
                 return;
             }
             let target = e.target.element;
-            if ((target === null || target === void 0 ? void 0 : target.tagName) === 'SPAN') {
+            if (target?.tagName === 'SPAN') {
                 target = target.parentElement;
             }
-            if ((target === null || target === void 0 ? void 0 : target.tagName) === 'A') {
+            if (target?.tagName === 'A') {
                 for (const lens of this._lenses) {
                     const command = lens.getCommand(target);
                     if (command) {
@@ -332,8 +321,7 @@ let CodeLensContribution = class CodeLensContribution {
         }
     }
     _resolveCodeLensesInViewport() {
-        var _a;
-        (_a = this._resolveCodeLensesPromise) === null || _a === void 0 ? void 0 : _a.cancel();
+        this._resolveCodeLensesPromise?.cancel();
         this._resolveCodeLensesPromise = undefined;
         const model = this._editor.getModel();
         if (!model) {
@@ -349,6 +337,7 @@ let CodeLensContribution = class CodeLensContribution {
             }
         });
         if (toResolve.length === 0) {
+            this._oldCodeLensModels.clear();
             return;
         }
         const t1 = Date.now();
@@ -393,18 +382,14 @@ let CodeLensContribution = class CodeLensContribution {
             }
         });
     }
-    getModel() {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this._getCodeLensModelPromise;
-            yield this._resolveCodeLensesPromise;
-            return !((_a = this._currentCodeLensModel) === null || _a === void 0 ? void 0 : _a.isDisposed)
-                ? this._currentCodeLensModel
-                : undefined;
-        });
+    async getModel() {
+        await this._getCodeLensModelPromise;
+        await this._resolveCodeLensesPromise;
+        return !this._currentCodeLensModel?.isDisposed
+            ? this._currentCodeLensModel
+            : undefined;
     }
 };
-CodeLensContribution.ID = 'css.editor.codeLens';
 CodeLensContribution = __decorate([
     __param(1, ILanguageFeaturesService),
     __param(2, ILanguageFeatureDebounceService),
@@ -419,67 +404,65 @@ registerEditorAction(class ShowLensesInCurrentLine extends EditorAction {
         super({
             id: 'codelens.showLensesInCurrentLine',
             precondition: EditorContextKeys.hasCodeLensProvider,
-            label: localize('showLensOnLine', "Show CodeLens Commands For Current Line"),
-            alias: 'Show CodeLens Commands For Current Line',
+            label: localize2(880, "Show CodeLens Commands for Current Line"),
         });
     }
-    run(accessor, editor) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!editor.hasModel()) {
-                return;
+    async run(accessor, editor) {
+        if (!editor.hasModel()) {
+            return;
+        }
+        const quickInputService = accessor.get(IQuickInputService);
+        const commandService = accessor.get(ICommandService);
+        const notificationService = accessor.get(INotificationService);
+        const lineNumber = editor.getSelection().positionLineNumber;
+        const codelensController = editor.getContribution(CodeLensContribution.ID);
+        if (!codelensController) {
+            return;
+        }
+        const model = await codelensController.getModel();
+        if (!model) {
+            // nothing
+            return;
+        }
+        const items = [];
+        for (const lens of model.lenses) {
+            if (lens.symbol.command && lens.symbol.range.startLineNumber === lineNumber) {
+                items.push({
+                    label: lens.symbol.command.title,
+                    command: lens.symbol.command
+                });
             }
-            const quickInputService = accessor.get(IQuickInputService);
-            const commandService = accessor.get(ICommandService);
-            const notificationService = accessor.get(INotificationService);
-            const lineNumber = editor.getSelection().positionLineNumber;
-            const codelensController = editor.getContribution(CodeLensContribution.ID);
-            if (!codelensController) {
-                return;
-            }
-            const model = yield codelensController.getModel();
-            if (!model) {
-                // nothing
-                return;
-            }
-            const items = [];
-            for (const lens of model.lenses) {
-                if (lens.symbol.command && lens.symbol.range.startLineNumber === lineNumber) {
-                    items.push({
-                        label: lens.symbol.command.title,
-                        command: lens.symbol.command
-                    });
-                }
-            }
-            if (items.length === 0) {
-                // We dont want an empty picker
-                return;
-            }
-            const item = yield quickInputService.pick(items, {
-                canPickMany: false,
-                placeHolder: localize('placeHolder', "Select a command")
-            });
-            if (!item) {
-                // Nothing picked
-                return;
-            }
-            let command = item.command;
-            if (model.isDisposed) {
-                // try to find the same command again in-case the model has been re-created in the meantime
-                // this is a best attempt approach which shouldn't be needed because eager model re-creates
-                // shouldn't happen due to focus in/out anymore
-                const newModel = yield codelensController.getModel();
-                const newLens = newModel === null || newModel === void 0 ? void 0 : newModel.lenses.find(lens => { var _a; return lens.symbol.range.startLineNumber === lineNumber && ((_a = lens.symbol.command) === null || _a === void 0 ? void 0 : _a.title) === command.title; });
-                if (!newLens || !newLens.symbol.command) {
-                    return;
-                }
-                command = newLens.symbol.command;
-            }
-            try {
-                yield commandService.executeCommand(command.id, ...(command.arguments || []));
-            }
-            catch (err) {
-                notificationService.error(err);
-            }
+        }
+        if (items.length === 0) {
+            // We dont want an empty picker
+            return;
+        }
+        const item = await quickInputService.pick(items, {
+            canPickMany: false,
+            placeHolder: localize(879, "Select a command")
         });
+        if (!item) {
+            // Nothing picked
+            return;
+        }
+        let command = item.command;
+        if (model.isDisposed) {
+            // try to find the same command again in-case the model has been re-created in the meantime
+            // this is a best attempt approach which shouldn't be needed because eager model re-creates
+            // shouldn't happen due to focus in/out anymore
+            const newModel = await codelensController.getModel();
+            const newLens = newModel?.lenses.find(lens => lens.symbol.range.startLineNumber === lineNumber && lens.symbol.command?.title === command.title);
+            if (!newLens || !newLens.symbol.command) {
+                return;
+            }
+            command = newLens.symbol.command;
+        }
+        try {
+            await commandService.executeCommand(command.id, ...(command.arguments || []));
+        }
+        catch (err) {
+            notificationService.error(err);
+        }
     }
 });
+//# sourceMappingURL=codelensController.js.map

@@ -31,6 +31,7 @@ export class AbstractKeybindingService extends Disposable {
         this._ignoreSingleModifiers = KeybindingModifierSet.EMPTY;
         this._currentSingleModifier = null;
         this._currentSingleModifierClearTimeout = new TimeoutTimer();
+        this._currentlyDispatchingCommandId = null;
         this._logging = false;
     }
     dispose() {
@@ -44,8 +45,8 @@ export class AbstractKeybindingService extends Disposable {
     getKeybindings() {
         return this._getResolver().getKeybindings();
     }
-    lookupKeybinding(commandId, context) {
-        const result = this._getResolver().lookupPrimaryKeybinding(commandId, context || this._contextKeyService);
+    lookupKeybinding(commandId, context, enforceContextCheck = false) {
+        const result = this._getResolver().lookupPrimaryKeybinding(commandId, context || this._contextKeyService, enforceContextCheck);
         if (!result) {
             return undefined;
         }
@@ -94,11 +95,11 @@ export class AbstractKeybindingService extends Disposable {
                 throw illegalState('impossible');
             case 1:
                 // TODO@ulugbekna: revise this message and the one below (at least, fix terminology)
-                this._currentChordStatusMessage = this._notificationService.status(nls.localize('first.chord', "({0}) was pressed. Waiting for second key of chord...", keypressLabel));
+                this._currentChordStatusMessage = this._notificationService.status(nls.localize(1684, "({0}) was pressed. Waiting for second key of chord...", keypressLabel));
                 break;
             default: {
                 const fullKeypressLabel = this._currentChords.map(({ label }) => label).join(', ');
-                this._currentChordStatusMessage = this._notificationService.status(nls.localize('next.chord', "({0}) was pressed. Waiting for next key of chord...", fullKeypressLabel));
+                this._currentChordStatusMessage = this._notificationService.status(nls.localize(1685, "({0}) was pressed. Waiting for next key of chord...", fullKeypressLabel));
             }
         }
         this._scheduleLeaveChordMode();
@@ -108,7 +109,7 @@ export class AbstractKeybindingService extends Disposable {
     }
     _leaveChordMode() {
         if (this._currentChordStatusMessage) {
-            this._currentChordStatusMessage.dispose();
+            this._currentChordStatusMessage.close();
             this._currentChordStatusMessage = null;
         }
         this._currentChordChecker.cancel();
@@ -164,7 +165,6 @@ export class AbstractKeybindingService extends Disposable {
         return false;
     }
     _doDispatch(userKeypress, target, isSingleModiferChord = false) {
-        var _a;
         let shouldPreventDefault = false;
         if (userKeypress.hasMultipleChords()) { // warn - because user can press a single chord at a time
             console.warn('Unexpected keyboard event mapped to multiple chords');
@@ -198,7 +198,7 @@ export class AbstractKeybindingService extends Disposable {
                 if (this.inChordMode) {
                     const currentChordsLabel = this._currentChords.map(({ label }) => label).join(', ');
                     this._log(`+ Leaving multi-chord mode: Nothing bound to "${currentChordsLabel}, ${keypressLabel}".`);
-                    this._notificationService.status(nls.localize('missing.chord', "The key combination ({0}, {1}) is not a command.", currentChordsLabel, keypressLabel), { hideAfter: 10 * 1000 /* 10s */ });
+                    this._notificationService.status(nls.localize(1686, "The key combination ({0}, {1}) is not a command.", currentChordsLabel, keypressLabel), { hideAfter: 10 * 1000 /* 10s */ });
                     this._leaveChordMode();
                     shouldPreventDefault = true;
                 }
@@ -217,7 +217,7 @@ export class AbstractKeybindingService extends Disposable {
                     if (this.inChordMode) {
                         const currentChordsLabel = this._currentChords.map(({ label }) => label).join(', ');
                         this._log(`+ Leaving chord mode: Nothing bound to "${currentChordsLabel}, ${keypressLabel}".`);
-                        this._notificationService.status(nls.localize('missing.chord', "The key combination ({0}, {1}) is not a command.", currentChordsLabel, keypressLabel), { hideAfter: 10 * 1000 /* 10s */ });
+                        this._notificationService.status(nls.localize(1687, "The key combination ({0}, {1}) is not a command.", currentChordsLabel, keypressLabel), { hideAfter: 10 * 1000 /* 10s */ });
                         this._leaveChordMode();
                         shouldPreventDefault = true;
                     }
@@ -230,14 +230,20 @@ export class AbstractKeybindingService extends Disposable {
                         shouldPreventDefault = true;
                     }
                     this._log(`+ Invoking command ${resolveResult.commandId}.`);
-                    if (typeof resolveResult.commandArgs === 'undefined') {
-                        this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
+                    this._currentlyDispatchingCommandId = resolveResult.commandId;
+                    try {
+                        if (typeof resolveResult.commandArgs === 'undefined') {
+                            this._commandService.executeCommand(resolveResult.commandId).then(undefined, err => this._notificationService.warn(err));
+                        }
+                        else {
+                            this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
+                        }
                     }
-                    else {
-                        this._commandService.executeCommand(resolveResult.commandId, resolveResult.commandArgs).then(undefined, err => this._notificationService.warn(err));
+                    finally {
+                        this._currentlyDispatchingCommandId = null;
                     }
                     if (!HIGH_FREQ_COMMANDS.test(resolveResult.commandId)) {
-                        this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding', detail: (_a = userKeypress.getUserSettingsLabel()) !== null && _a !== void 0 ? _a : undefined });
+                        this._telemetryService.publicLog2('workbenchActionExecuted', { id: resolveResult.commandId, from: 'keybinding', detail: userKeypress.getUserSettingsLabel() ?? undefined });
                     }
                 }
                 return shouldPreventDefault;
@@ -259,6 +265,7 @@ export class AbstractKeybindingService extends Disposable {
     }
 }
 class KeybindingModifierSet {
+    static { this.EMPTY = new KeybindingModifierSet(null); }
     constructor(source) {
         this._ctrlKey = source ? source.ctrlKey : false;
         this._shiftKey = source ? source.shiftKey : false;
@@ -274,4 +281,4 @@ class KeybindingModifierSet {
         }
     }
 }
-KeybindingModifierSet.EMPTY = new KeybindingModifierSet(null);
+//# sourceMappingURL=abstractKeybindingService.js.map

@@ -5,7 +5,7 @@
 /**
  * Given a function, returns a function that is only calling that function once.
  */
-export function createSingleCallFunction(fn) {
+export function createSingleCallFunction(fn, fnDidRunCallback) {
     const _this = this;
     let didCall = false;
     let result;
@@ -14,7 +14,18 @@ export function createSingleCallFunction(fn) {
             return result;
         }
         didCall = true;
-        result = fn.apply(_this, arguments);
+        if (fnDidRunCallback) {
+            try {
+                result = fn.apply(_this, arguments);
+            }
+            finally {
+                fnDidRunCallback();
+            }
+        }
+        else {
+            result = fn.apply(_this, arguments);
+        }
         return result;
     };
 }
+//# sourceMappingURL=functional.js.map

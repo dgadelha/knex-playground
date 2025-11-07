@@ -41,6 +41,17 @@ export class EncodedTokenizationResult {
         this._encodedTokenizationResultBrand = undefined;
     }
 }
+export var HoverVerbosityAction;
+(function (HoverVerbosityAction) {
+    /**
+     * Increase the verbosity of the hover
+     */
+    HoverVerbosityAction[HoverVerbosityAction["Increase"] = 0] = "Increase";
+    /**
+     * Decrease the verbosity of the hover
+     */
+    HoverVerbosityAction[HoverVerbosityAction["Decrease"] = 1] = "Decrease";
+})(HoverVerbosityAction || (HoverVerbosityAction = {}));
 /**
  * @internal
  */
@@ -66,7 +77,7 @@ export var CompletionItemKinds;
     byKind.set(15 /* CompletionItemKind.Enum */, Codicon.symbolEnum);
     byKind.set(16 /* CompletionItemKind.EnumMember */, Codicon.symbolEnumMember);
     byKind.set(17 /* CompletionItemKind.Keyword */, Codicon.symbolKeyword);
-    byKind.set(27 /* CompletionItemKind.Snippet */, Codicon.symbolSnippet);
+    byKind.set(28 /* CompletionItemKind.Snippet */, Codicon.symbolSnippet);
     byKind.set(18 /* CompletionItemKind.Text */, Codicon.symbolText);
     byKind.set(19 /* CompletionItemKind.Color */, Codicon.symbolColor);
     byKind.set(20 /* CompletionItemKind.File */, Codicon.symbolFile);
@@ -76,6 +87,7 @@ export var CompletionItemKinds;
     byKind.set(24 /* CompletionItemKind.TypeParameter */, Codicon.symbolTypeParameter);
     byKind.set(25 /* CompletionItemKind.User */, Codicon.account);
     byKind.set(26 /* CompletionItemKind.Issue */, Codicon.issues);
+    byKind.set(27 /* CompletionItemKind.Tool */, Codicon.tools);
     /**
      * @internal
      */
@@ -88,6 +100,44 @@ export var CompletionItemKinds;
         return codicon;
     }
     CompletionItemKinds.toIcon = toIcon;
+    /**
+     * @internal
+     */
+    function toLabel(kind) {
+        switch (kind) {
+            case 0 /* CompletionItemKind.Method */: return localize(724, 'Method');
+            case 1 /* CompletionItemKind.Function */: return localize(725, 'Function');
+            case 2 /* CompletionItemKind.Constructor */: return localize(726, 'Constructor');
+            case 3 /* CompletionItemKind.Field */: return localize(727, 'Field');
+            case 4 /* CompletionItemKind.Variable */: return localize(728, 'Variable');
+            case 5 /* CompletionItemKind.Class */: return localize(729, 'Class');
+            case 6 /* CompletionItemKind.Struct */: return localize(730, 'Struct');
+            case 7 /* CompletionItemKind.Interface */: return localize(731, 'Interface');
+            case 8 /* CompletionItemKind.Module */: return localize(732, 'Module');
+            case 9 /* CompletionItemKind.Property */: return localize(733, 'Property');
+            case 10 /* CompletionItemKind.Event */: return localize(734, 'Event');
+            case 11 /* CompletionItemKind.Operator */: return localize(735, 'Operator');
+            case 12 /* CompletionItemKind.Unit */: return localize(736, 'Unit');
+            case 13 /* CompletionItemKind.Value */: return localize(737, 'Value');
+            case 14 /* CompletionItemKind.Constant */: return localize(738, 'Constant');
+            case 15 /* CompletionItemKind.Enum */: return localize(739, 'Enum');
+            case 16 /* CompletionItemKind.EnumMember */: return localize(740, 'Enum Member');
+            case 17 /* CompletionItemKind.Keyword */: return localize(741, 'Keyword');
+            case 18 /* CompletionItemKind.Text */: return localize(742, 'Text');
+            case 19 /* CompletionItemKind.Color */: return localize(743, 'Color');
+            case 20 /* CompletionItemKind.File */: return localize(744, 'File');
+            case 21 /* CompletionItemKind.Reference */: return localize(745, 'Reference');
+            case 22 /* CompletionItemKind.Customcolor */: return localize(746, 'Custom Color');
+            case 23 /* CompletionItemKind.Folder */: return localize(747, 'Folder');
+            case 24 /* CompletionItemKind.TypeParameter */: return localize(748, 'Type Parameter');
+            case 25 /* CompletionItemKind.User */: return localize(749, 'User');
+            case 26 /* CompletionItemKind.Issue */: return localize(750, 'Issue');
+            case 27 /* CompletionItemKind.Tool */: return localize(751, 'Tool');
+            case 28 /* CompletionItemKind.Snippet */: return localize(752, 'Snippet');
+            default: return '';
+        }
+    }
+    CompletionItemKinds.toLabel = toLabel;
     const data = new Map();
     data.set('method', 0 /* CompletionItemKind.Method */);
     data.set('function', 1 /* CompletionItemKind.Function */);
@@ -108,7 +158,7 @@ export var CompletionItemKinds;
     data.set('enum-member', 16 /* CompletionItemKind.EnumMember */);
     data.set('enumMember', 16 /* CompletionItemKind.EnumMember */);
     data.set('keyword', 17 /* CompletionItemKind.Keyword */);
-    data.set('snippet', 27 /* CompletionItemKind.Snippet */);
+    data.set('snippet', 28 /* CompletionItemKind.Snippet */);
     data.set('text', 18 /* CompletionItemKind.Text */);
     data.set('color', 19 /* CompletionItemKind.Color */);
     data.set('file', 20 /* CompletionItemKind.File */);
@@ -119,6 +169,7 @@ export var CompletionItemKinds;
     data.set('typeParameter', 24 /* CompletionItemKind.TypeParameter */);
     data.set('account', 25 /* CompletionItemKind.User */);
     data.set('issue', 26 /* CompletionItemKind.Issue */);
+    data.set('tool', 27 /* CompletionItemKind.Tool */);
     /**
      * @internal
      */
@@ -161,6 +212,62 @@ export class SelectedSuggestionInfo {
             && this.isSnippetText === other.isSnippetText;
     }
 }
+export var InlineCompletionDisplayLocationKind;
+(function (InlineCompletionDisplayLocationKind) {
+    InlineCompletionDisplayLocationKind[InlineCompletionDisplayLocationKind["Code"] = 1] = "Code";
+    InlineCompletionDisplayLocationKind[InlineCompletionDisplayLocationKind["Label"] = 2] = "Label";
+})(InlineCompletionDisplayLocationKind || (InlineCompletionDisplayLocationKind = {}));
+/** @internal */
+export class ProviderId {
+    static fromExtensionId(extensionId) {
+        return new ProviderId(extensionId, undefined, undefined);
+    }
+    constructor(extensionId, extensionVersion, providerId) {
+        this.extensionId = extensionId;
+        this.extensionVersion = extensionVersion;
+        this.providerId = providerId;
+    }
+    toString() {
+        let result = '';
+        if (this.extensionId) {
+            result += this.extensionId;
+        }
+        if (this.extensionVersion) {
+            result += `@${this.extensionVersion}`;
+        }
+        if (this.providerId) {
+            result += `:${this.providerId}`;
+        }
+        if (result.length === 0) {
+            result = 'unknown';
+        }
+        return result;
+    }
+}
+/** @internal */
+export class VersionedExtensionId {
+    constructor(extensionId, version) {
+        this.extensionId = extensionId;
+        this.version = version;
+    }
+    toString() {
+        return `${this.extensionId}@${this.version}`;
+    }
+}
+export var InlineCompletionEndOfLifeReasonKind;
+(function (InlineCompletionEndOfLifeReasonKind) {
+    InlineCompletionEndOfLifeReasonKind[InlineCompletionEndOfLifeReasonKind["Accepted"] = 0] = "Accepted";
+    InlineCompletionEndOfLifeReasonKind[InlineCompletionEndOfLifeReasonKind["Rejected"] = 1] = "Rejected";
+    InlineCompletionEndOfLifeReasonKind[InlineCompletionEndOfLifeReasonKind["Ignored"] = 2] = "Ignored";
+})(InlineCompletionEndOfLifeReasonKind || (InlineCompletionEndOfLifeReasonKind = {}));
+/**
+ * @internal
+ */
+export var DocumentPasteTriggerKind;
+(function (DocumentPasteTriggerKind) {
+    DocumentPasteTriggerKind[DocumentPasteTriggerKind["Automatic"] = 0] = "Automatic";
+    DocumentPasteTriggerKind[DocumentPasteTriggerKind["PasteAs"] = 1] = "PasteAs";
+})(DocumentPasteTriggerKind || (DocumentPasteTriggerKind = {}));
 export var SignatureHelpTriggerKind;
 (function (SignatureHelpTriggerKind) {
     SignatureHelpTriggerKind[SignatureHelpTriggerKind["Invoke"] = 1] = "Invoke";
@@ -198,38 +305,38 @@ export function isLocationLink(thing) {
  * @internal
  */
 export const symbolKindNames = {
-    [17 /* SymbolKind.Array */]: localize('Array', "array"),
-    [16 /* SymbolKind.Boolean */]: localize('Boolean', "boolean"),
-    [4 /* SymbolKind.Class */]: localize('Class', "class"),
-    [13 /* SymbolKind.Constant */]: localize('Constant', "constant"),
-    [8 /* SymbolKind.Constructor */]: localize('Constructor', "constructor"),
-    [9 /* SymbolKind.Enum */]: localize('Enum', "enumeration"),
-    [21 /* SymbolKind.EnumMember */]: localize('EnumMember', "enumeration member"),
-    [23 /* SymbolKind.Event */]: localize('Event', "event"),
-    [7 /* SymbolKind.Field */]: localize('Field', "field"),
-    [0 /* SymbolKind.File */]: localize('File', "file"),
-    [11 /* SymbolKind.Function */]: localize('Function', "function"),
-    [10 /* SymbolKind.Interface */]: localize('Interface', "interface"),
-    [19 /* SymbolKind.Key */]: localize('Key', "key"),
-    [5 /* SymbolKind.Method */]: localize('Method', "method"),
-    [1 /* SymbolKind.Module */]: localize('Module', "module"),
-    [2 /* SymbolKind.Namespace */]: localize('Namespace', "namespace"),
-    [20 /* SymbolKind.Null */]: localize('Null', "null"),
-    [15 /* SymbolKind.Number */]: localize('Number', "number"),
-    [18 /* SymbolKind.Object */]: localize('Object', "object"),
-    [24 /* SymbolKind.Operator */]: localize('Operator', "operator"),
-    [3 /* SymbolKind.Package */]: localize('Package', "package"),
-    [6 /* SymbolKind.Property */]: localize('Property', "property"),
-    [14 /* SymbolKind.String */]: localize('String', "string"),
-    [22 /* SymbolKind.Struct */]: localize('Struct', "struct"),
-    [25 /* SymbolKind.TypeParameter */]: localize('TypeParameter', "type parameter"),
-    [12 /* SymbolKind.Variable */]: localize('Variable', "variable"),
+    [17 /* SymbolKind.Array */]: localize(753, "array"),
+    [16 /* SymbolKind.Boolean */]: localize(754, "boolean"),
+    [4 /* SymbolKind.Class */]: localize(755, "class"),
+    [13 /* SymbolKind.Constant */]: localize(756, "constant"),
+    [8 /* SymbolKind.Constructor */]: localize(757, "constructor"),
+    [9 /* SymbolKind.Enum */]: localize(758, "enumeration"),
+    [21 /* SymbolKind.EnumMember */]: localize(759, "enumeration member"),
+    [23 /* SymbolKind.Event */]: localize(760, "event"),
+    [7 /* SymbolKind.Field */]: localize(761, "field"),
+    [0 /* SymbolKind.File */]: localize(762, "file"),
+    [11 /* SymbolKind.Function */]: localize(763, "function"),
+    [10 /* SymbolKind.Interface */]: localize(764, "interface"),
+    [19 /* SymbolKind.Key */]: localize(765, "key"),
+    [5 /* SymbolKind.Method */]: localize(766, "method"),
+    [1 /* SymbolKind.Module */]: localize(767, "module"),
+    [2 /* SymbolKind.Namespace */]: localize(768, "namespace"),
+    [20 /* SymbolKind.Null */]: localize(769, "null"),
+    [15 /* SymbolKind.Number */]: localize(770, "number"),
+    [18 /* SymbolKind.Object */]: localize(771, "object"),
+    [24 /* SymbolKind.Operator */]: localize(772, "operator"),
+    [3 /* SymbolKind.Package */]: localize(773, "package"),
+    [6 /* SymbolKind.Property */]: localize(774, "property"),
+    [14 /* SymbolKind.String */]: localize(775, "string"),
+    [22 /* SymbolKind.Struct */]: localize(776, "struct"),
+    [25 /* SymbolKind.TypeParameter */]: localize(777, "type parameter"),
+    [12 /* SymbolKind.Variable */]: localize(778, "variable"),
 };
 /**
  * @internal
  */
 export function getAriaLabelForSymbol(symbolName, kind) {
-    return localize('symbolAriaLabel', '{0} ({1})', symbolName, symbolKindNames[kind]);
+    return localize(779, '{0} ({1})', symbolName, symbolKindNames[kind]);
 }
 /**
  * @internal
@@ -275,11 +382,63 @@ export var SymbolKinds;
         return icon;
     }
     SymbolKinds.toIcon = toIcon;
+    const byCompletionKind = new Map();
+    byCompletionKind.set(0 /* SymbolKind.File */, 20 /* CompletionItemKind.File */);
+    byCompletionKind.set(1 /* SymbolKind.Module */, 8 /* CompletionItemKind.Module */);
+    byCompletionKind.set(2 /* SymbolKind.Namespace */, 8 /* CompletionItemKind.Module */);
+    byCompletionKind.set(3 /* SymbolKind.Package */, 8 /* CompletionItemKind.Module */);
+    byCompletionKind.set(4 /* SymbolKind.Class */, 5 /* CompletionItemKind.Class */);
+    byCompletionKind.set(5 /* SymbolKind.Method */, 0 /* CompletionItemKind.Method */);
+    byCompletionKind.set(6 /* SymbolKind.Property */, 9 /* CompletionItemKind.Property */);
+    byCompletionKind.set(7 /* SymbolKind.Field */, 3 /* CompletionItemKind.Field */);
+    byCompletionKind.set(8 /* SymbolKind.Constructor */, 2 /* CompletionItemKind.Constructor */);
+    byCompletionKind.set(9 /* SymbolKind.Enum */, 15 /* CompletionItemKind.Enum */);
+    byCompletionKind.set(10 /* SymbolKind.Interface */, 7 /* CompletionItemKind.Interface */);
+    byCompletionKind.set(11 /* SymbolKind.Function */, 1 /* CompletionItemKind.Function */);
+    byCompletionKind.set(12 /* SymbolKind.Variable */, 4 /* CompletionItemKind.Variable */);
+    byCompletionKind.set(13 /* SymbolKind.Constant */, 14 /* CompletionItemKind.Constant */);
+    byCompletionKind.set(14 /* SymbolKind.String */, 18 /* CompletionItemKind.Text */);
+    byCompletionKind.set(15 /* SymbolKind.Number */, 13 /* CompletionItemKind.Value */);
+    byCompletionKind.set(16 /* SymbolKind.Boolean */, 13 /* CompletionItemKind.Value */);
+    byCompletionKind.set(17 /* SymbolKind.Array */, 13 /* CompletionItemKind.Value */);
+    byCompletionKind.set(18 /* SymbolKind.Object */, 13 /* CompletionItemKind.Value */);
+    byCompletionKind.set(19 /* SymbolKind.Key */, 17 /* CompletionItemKind.Keyword */);
+    byCompletionKind.set(20 /* SymbolKind.Null */, 13 /* CompletionItemKind.Value */);
+    byCompletionKind.set(21 /* SymbolKind.EnumMember */, 16 /* CompletionItemKind.EnumMember */);
+    byCompletionKind.set(22 /* SymbolKind.Struct */, 6 /* CompletionItemKind.Struct */);
+    byCompletionKind.set(23 /* SymbolKind.Event */, 10 /* CompletionItemKind.Event */);
+    byCompletionKind.set(24 /* SymbolKind.Operator */, 11 /* CompletionItemKind.Operator */);
+    byCompletionKind.set(25 /* SymbolKind.TypeParameter */, 24 /* CompletionItemKind.TypeParameter */);
+    /**
+     * @internal
+     */
+    function toCompletionKind(kind) {
+        let completionKind = byCompletionKind.get(kind);
+        if (completionKind === undefined) {
+            console.info('No completion kind found for SymbolKind ' + kind);
+            completionKind = 20 /* CompletionItemKind.File */;
+        }
+        return completionKind;
+    }
+    SymbolKinds.toCompletionKind = toCompletionKind;
 })(SymbolKinds || (SymbolKinds = {}));
 /** @internal */
 export class TextEdit {
 }
 export class FoldingRangeKind {
+    /**
+     * Kind for folding range representing a comment. The value of the kind is 'comment'.
+     */
+    static { this.Comment = new FoldingRangeKind('comment'); }
+    /**
+     * Kind for folding range representing a import. The value of the kind is 'imports'.
+     */
+    static { this.Imports = new FoldingRangeKind('imports'); }
+    /**
+     * Kind for folding range representing regions (for example marked by `#region`, `#endregion`).
+     * The value of the kind is 'region'.
+     */
+    static { this.Region = new FoldingRangeKind('region'); }
     /**
      * Returns a {@link FoldingRangeKind} for the given value.
      *
@@ -302,19 +461,15 @@ export class FoldingRangeKind {
         this.value = value;
     }
 }
-/**
- * Kind for folding range representing a comment. The value of the kind is 'comment'.
- */
-FoldingRangeKind.Comment = new FoldingRangeKind('comment');
-/**
- * Kind for folding range representing a import. The value of the kind is 'imports'.
- */
-FoldingRangeKind.Imports = new FoldingRangeKind('imports');
-/**
- * Kind for folding range representing regions (for example marked by `#region`, `#endregion`).
- * The value of the kind is 'region'.
- */
-FoldingRangeKind.Region = new FoldingRangeKind('region');
+export var NewSymbolNameTag;
+(function (NewSymbolNameTag) {
+    NewSymbolNameTag[NewSymbolNameTag["AIGenerated"] = 1] = "AIGenerated";
+})(NewSymbolNameTag || (NewSymbolNameTag = {}));
+export var NewSymbolNameTriggerKind;
+(function (NewSymbolNameTriggerKind) {
+    NewSymbolNameTriggerKind[NewSymbolNameTriggerKind["Invoke"] = 0] = "Invoke";
+    NewSymbolNameTriggerKind[NewSymbolNameTriggerKind["Automatic"] = 1] = "Automatic";
+})(NewSymbolNameTriggerKind || (NewSymbolNameTriggerKind = {}));
 /**
  * @internal
  */
@@ -365,3 +520,4 @@ export class LazyTokenizationSupport {
  * @internal
  */
 export const TokenizationRegistry = new TokenizationRegistryImpl();
+//# sourceMappingURL=languages.js.map

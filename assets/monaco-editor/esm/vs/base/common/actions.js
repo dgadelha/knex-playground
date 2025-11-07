@@ -2,23 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { Emitter } from './event.js';
 import { Disposable } from './lifecycle.js';
 import * as nls from '../../nls.js';
 export class Action extends Disposable {
+    get onDidChange() { return this._onDidChange.event; }
     constructor(id, label = '', cssClass = '', enabled = true, actionCallback) {
         super();
         this._onDidChange = this._register(new Emitter());
-        this.onDidChange = this._onDidChange.event;
         this._enabled = true;
         this._id = id;
         this._label = label;
@@ -89,42 +80,36 @@ export class Action extends Disposable {
             this._onDidChange.fire({ checked: value });
         }
     }
-    run(event, data) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this._actionCallback) {
-                yield this._actionCallback(event);
-            }
-        });
+    async run(event, data) {
+        if (this._actionCallback) {
+            await this._actionCallback(event);
+        }
     }
 }
 export class ActionRunner extends Disposable {
     constructor() {
         super(...arguments);
         this._onWillRun = this._register(new Emitter());
-        this.onWillRun = this._onWillRun.event;
         this._onDidRun = this._register(new Emitter());
-        this.onDidRun = this._onDidRun.event;
     }
-    run(action, context) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!action.enabled) {
-                return;
-            }
-            this._onWillRun.fire({ action });
-            let error = undefined;
-            try {
-                yield this.runAction(action, context);
-            }
-            catch (e) {
-                error = e;
-            }
-            this._onDidRun.fire({ action, error });
-        });
+    get onWillRun() { return this._onWillRun.event; }
+    get onDidRun() { return this._onDidRun.event; }
+    async run(action, context) {
+        if (!action.enabled) {
+            return;
+        }
+        this._onWillRun.fire({ action });
+        let error = undefined;
+        try {
+            await this.runAction(action, context);
+        }
+        catch (e) {
+            error = e;
+        }
+        this._onDidRun.fire({ action, error });
     }
-    runAction(action, context) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield action.run(context);
-        });
+    async runAction(action, context) {
+        await action.run(context);
     }
 }
 export class Separator {
@@ -154,11 +139,9 @@ export class Separator {
         }
         return out;
     }
-    run() {
-        return __awaiter(this, void 0, void 0, function* () { });
-    }
+    static { this.ID = 'vs.actions.separator'; }
+    async run() { }
 }
-Separator.ID = 'vs.actions.separator';
 export class SubmenuAction {
     get actions() { return this._actions; }
     constructor(id, label, actions, cssClass) {
@@ -170,25 +153,23 @@ export class SubmenuAction {
         this.class = cssClass;
         this._actions = actions;
     }
-    run() {
-        return __awaiter(this, void 0, void 0, function* () { });
-    }
+    async run() { }
 }
 export class EmptySubmenuAction extends Action {
+    static { this.ID = 'vs.actions.empty'; }
     constructor() {
-        super(EmptySubmenuAction.ID, nls.localize('submenu.empty', '(empty)'), undefined, false);
+        super(EmptySubmenuAction.ID, nls.localize(28, '(empty)'), undefined, false);
     }
 }
-EmptySubmenuAction.ID = 'vs.actions.empty';
 export function toAction(props) {
-    var _a, _b;
     return {
         id: props.id,
         label: props.label,
-        class: undefined,
-        enabled: (_a = props.enabled) !== null && _a !== void 0 ? _a : true,
-        checked: (_b = props.checked) !== null && _b !== void 0 ? _b : false,
-        run: (...args) => __awaiter(this, void 0, void 0, function* () { return props.run(...args); }),
-        tooltip: props.label
+        tooltip: props.tooltip ?? props.label,
+        class: props.class,
+        enabled: props.enabled ?? true,
+        checked: props.checked,
+        run: async (...args) => props.run(...args),
     };
 }
+//# sourceMappingURL=actions.js.map

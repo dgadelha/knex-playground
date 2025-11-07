@@ -12,11 +12,12 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import './bannerController.css';
+import { localize } from '../../../../nls.js';
 import { $, append, clearNode } from '../../../../base/browser/dom.js';
 import { ActionBar } from '../../../../base/browser/ui/actionbar/actionbar.js';
 import { Action } from '../../../../base/common/actions.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
-import { MarkdownRenderer } from '../../markdownRenderer/browser/markdownRenderer.js';
+import { MarkdownRenderer } from '../../../browser/widget/markdownRenderer/browser/markdownRenderer.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { Link } from '../../../../platform/opener/browser/link.js';
 import { widgetClose } from '../../../../platform/theme/common/iconRegistry.js';
@@ -34,11 +35,13 @@ let BannerController = class BannerController extends Disposable {
         this.banner.clear();
     }
     show(item) {
-        this.banner.show(Object.assign(Object.assign({}, item), { onClose: () => {
-                var _a;
+        this.banner.show({
+            ...item,
+            onClose: () => {
                 this.hide();
-                (_a = item.onClose) === null || _a === void 0 ? void 0 : _a.call(item);
-            } }));
+                item.onClose?.();
+            }
+        });
         this._editor.setBanner(this.banner.element, BANNER_ELEMENT_HEIGHT);
     }
 };
@@ -97,13 +100,13 @@ let Banner = class Banner extends Disposable {
         this.messageActionsContainer = append(this.element, $('div.message-actions-container'));
         if (item.actions) {
             for (const action of item.actions) {
-                this._register(this.instantiationService.createInstance(Link, this.messageActionsContainer, Object.assign(Object.assign({}, action), { tabIndex: -1 }), {}));
+                this._register(this.instantiationService.createInstance(Link, this.messageActionsContainer, { ...action, tabIndex: -1 }, {}));
             }
         }
         // Action
         const actionBarContainer = append(this.element, $('div.action-container'));
         this.actionBar = this._register(new ActionBar(actionBarContainer));
-        this.actionBar.push(this._register(new Action('banner.close', 'Close Banner', ThemeIcon.asClassName(widgetClose), true, () => {
+        this.actionBar.push(this._register(new Action('banner.close', localize(1518, "Close Banner"), ThemeIcon.asClassName(widgetClose), true, () => {
             if (typeof item.onClose === 'function') {
                 item.onClose();
             }
@@ -114,3 +117,4 @@ let Banner = class Banner extends Disposable {
 Banner = __decorate([
     __param(0, IInstantiationService)
 ], Banner);
+//# sourceMappingURL=bannerController.js.map

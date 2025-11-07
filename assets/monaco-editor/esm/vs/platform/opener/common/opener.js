@@ -2,20 +2,17 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { equalsIgnoreCase, startsWithIgnoreCase } from '../../../base/common/strings.js';
-import { URI } from '../../../base/common/uri.js';
 import { createDecorator } from '../../instantiation/common/instantiation.js';
 export const IOpenerService = createDecorator('openerService');
-export function matchesScheme(target, scheme) {
-    if (URI.isUri(target)) {
-        return equalsIgnoreCase(target.scheme, scheme);
-    }
-    else {
-        return startsWithIgnoreCase(target, scheme + ':');
-    }
-}
-export function matchesSomeScheme(target, ...schemes) {
-    return schemes.some(scheme => matchesScheme(target, scheme));
+/**
+ * Encodes selection into the `URI`.
+ *
+ * IMPORTANT: you MUST use `extractSelection` to separate the selection
+ * again from the original `URI` before passing the `URI` into any
+ * component that is not aware of selections.
+ */
+export function withSelection(uri, selection) {
+    return uri.with({ fragment: `${selection.startLineNumber},${selection.startColumn}${selection.endLineNumber ? `-${selection.endLineNumber}${selection.endColumn ? `,${selection.endColumn}` : ''}` : ''}` });
 }
 /**
  * file:///some/file.js#73
@@ -41,3 +38,4 @@ export function extractSelection(uri) {
     }
     return { selection, uri };
 }
+//# sourceMappingURL=opener.js.map

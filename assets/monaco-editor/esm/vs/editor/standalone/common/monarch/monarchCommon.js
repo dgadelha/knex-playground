@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import { escapeRegExpCharacters } from '../../../../base/common/strings.js';
 export function isFuzzyActionArr(what) {
     return (Array.isArray(what));
 }
@@ -81,6 +82,25 @@ export function substituteMatches(lexer, str, id, matches, state) {
     });
 }
 /**
+ * substituteMatchesRe is used on lexer regex rules and can substitutes predefined patterns:
+ * 		$Sn => n'th part of state
+ *
+ */
+export function substituteMatchesRe(lexer, str, state) {
+    const re = /\$[sS](\d\d?)/g;
+    let stateMatches = null;
+    return str.replace(re, function (full, s) {
+        if (stateMatches === null) { // split state on demand
+            stateMatches = state.split('.');
+            stateMatches.unshift(state);
+        }
+        if (!empty(s) && s < stateMatches.length) {
+            return escapeRegExpCharacters(fixCase(lexer, stateMatches[s])); //$Sn
+        }
+        return '';
+    });
+}
+/**
  * Find the tokenizer rules for a specific state (i.e. next action)
  */
 export function findRules(lexer, inState) {
@@ -122,3 +142,4 @@ export function stateExists(lexer, inState) {
     }
     return false;
 }
+//# sourceMappingURL=monarchCommon.js.map

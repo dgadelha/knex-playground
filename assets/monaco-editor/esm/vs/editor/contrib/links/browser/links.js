@@ -11,15 +11,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var LinkDetector_1;
 import { createCancelablePromise, RunOnceScheduler } from '../../../../base/common/async.js';
 import { CancellationToken } from '../../../../base/common/cancellation.js';
@@ -41,7 +32,9 @@ import { getLinks } from './getLinks.js';
 import * as nls from '../../../../nls.js';
 import { INotificationService } from '../../../../platform/notification/common/notification.js';
 import { IOpenerService } from '../../../../platform/opener/common/opener.js';
-let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
+let LinkDetector = class LinkDetector extends Disposable {
+    static { LinkDetector_1 = this; }
+    static { this.ID = 'editor.linkDetector'; }
     static get(editor) {
         return editor.getContribution(LinkDetector_1.ID);
     }
@@ -69,7 +62,7 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
             this.cleanUpActiveLinkDecoration();
         }));
         this._register(editor.onDidChangeConfiguration((e) => {
-            if (!e.hasChanged(70 /* EditorOption.links */)) {
+            if (!e.hasChanged(79 /* EditorOption.links */)) {
                 return;
             }
             // Remove any links (for the getting disabled case)
@@ -101,42 +94,40 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         }));
         this.computeLinks.schedule(0);
     }
-    computeLinksNow() {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!this.editor.hasModel() || !this.editor.getOption(70 /* EditorOption.links */)) {
+    async computeLinksNow() {
+        if (!this.editor.hasModel() || !this.editor.getOption(79 /* EditorOption.links */)) {
+            return;
+        }
+        const model = this.editor.getModel();
+        if (model.isTooLargeForSyncing()) {
+            return;
+        }
+        if (!this.providers.has(model)) {
+            return;
+        }
+        if (this.activeLinksList) {
+            this.activeLinksList.dispose();
+            this.activeLinksList = null;
+        }
+        this.computePromise = createCancelablePromise(token => getLinks(this.providers, model, token));
+        try {
+            const sw = new StopWatch(false);
+            this.activeLinksList = await this.computePromise;
+            this.debounceInformation.update(model, sw.elapsed());
+            if (model.isDisposed()) {
                 return;
             }
-            const model = this.editor.getModel();
-            if (model.isTooLargeForSyncing()) {
-                return;
-            }
-            if (!this.providers.has(model)) {
-                return;
-            }
-            if (this.activeLinksList) {
-                this.activeLinksList.dispose();
-                this.activeLinksList = null;
-            }
-            this.computePromise = createCancelablePromise(token => getLinks(this.providers, model, token));
-            try {
-                const sw = new StopWatch(false);
-                this.activeLinksList = yield this.computePromise;
-                this.debounceInformation.update(model, sw.elapsed());
-                if (model.isDisposed()) {
-                    return;
-                }
-                this.updateDecorations(this.activeLinksList.links);
-            }
-            catch (err) {
-                onUnexpectedError(err);
-            }
-            finally {
-                this.computePromise = null;
-            }
-        });
+            this.updateDecorations(this.activeLinksList.links);
+        }
+        catch (err) {
+            onUnexpectedError(err);
+        }
+        finally {
+            this.computePromise = null;
+        }
     }
     updateDecorations(links) {
-        const useMetaKey = (this.editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey');
+        const useMetaKey = (this.editor.getOption(86 /* EditorOption.multiCursorModifier */) === 'altKey');
         const oldDecorations = [];
         const keys = Object.keys(this.currentOccurrences);
         for (const decorationId of keys) {
@@ -161,7 +152,7 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         });
     }
     _onEditorMouseMove(mouseEvent, withKey) {
-        const useMetaKey = (this.editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey');
+        const useMetaKey = (this.editor.getOption(86 /* EditorOption.multiCursorModifier */) === 'altKey');
         if (this.isEnabled(mouseEvent, withKey)) {
             this.cleanUpActiveLinkDecoration(); // always remove previous link decoration as their can only be one
             const occurrence = this.getLinkOccurrence(mouseEvent.target.position);
@@ -177,7 +168,7 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         }
     }
     cleanUpActiveLinkDecoration() {
-        const useMetaKey = (this.editor.getOption(77 /* EditorOption.multiCursorModifier */) === 'altKey');
+        const useMetaKey = (this.editor.getOption(86 /* EditorOption.multiCursorModifier */) === 'altKey');
         if (this.activeLinkDecorationId) {
             const occurrence = this.currentOccurrences[this.activeLinkDecorationId];
             if (occurrence) {
@@ -212,10 +203,10 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
                     if (parsedUri.scheme === Schemas.file) {
                         const fsPath = resources.originalFSPath(parsedUri);
                         let relativePath = null;
-                        if (fsPath.startsWith('/./')) {
+                        if (fsPath.startsWith('/./') || fsPath.startsWith('\\.\\')) {
                             relativePath = `.${fsPath.substr(1)}`;
                         }
-                        else if (fsPath.startsWith('//./')) {
+                        else if (fsPath.startsWith('//./') || fsPath.startsWith('\\\\.\\')) {
                             relativePath = `.${fsPath.substr(2)}`;
                         }
                         if (relativePath) {
@@ -229,10 +220,10 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
             const messageOrError = err instanceof Error ? err.message : err;
             // different error cases
             if (messageOrError === 'invalid') {
-                this.notificationService.warn(nls.localize('invalid.url', 'Failed to open this link because it is not well-formed: {0}', link.url.toString()));
+                this.notificationService.warn(nls.localize(1267, 'Failed to open this link because it is not well-formed: {0}', link.url.toString()));
             }
             else if (messageOrError === 'missing') {
-                this.notificationService.warn(nls.localize('missing.url', 'Failed to open this link because its target is missing.'));
+                this.notificationService.warn(nls.localize(1268, 'Failed to open this link because its target is missing.'));
             }
             else {
                 onUnexpectedError(err);
@@ -259,13 +250,12 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
     }
     isEnabled(mouseEvent, withKey) {
         return Boolean((mouseEvent.target.type === 6 /* MouseTargetType.CONTENT_TEXT */)
-            && (mouseEvent.hasTriggerModifier || (withKey && withKey.keyCodeIsTriggerKey)));
+            && ((mouseEvent.hasTriggerModifier || (withKey && withKey.keyCodeIsTriggerKey)) || mouseEvent.isMiddleClick && mouseEvent.mouseMiddleClickAction === 'openLink'));
     }
     stop() {
-        var _a;
         this.computeLinks.cancel();
         if (this.activeLinksList) {
-            (_a = this.activeLinksList) === null || _a === void 0 ? void 0 : _a.dispose();
+            this.activeLinksList?.dispose();
             this.activeLinksList = null;
         }
         if (this.computePromise) {
@@ -278,7 +268,6 @@ let LinkDetector = LinkDetector_1 = class LinkDetector extends Disposable {
         this.stop();
     }
 };
-LinkDetector.ID = 'editor.linkDetector';
 LinkDetector = LinkDetector_1 = __decorate([
     __param(1, IOpenerService),
     __param(2, INotificationService),
@@ -308,7 +297,7 @@ class LinkOccurrence {
         };
     }
     static _getOptions(link, useMetaKey, isActive) {
-        const options = Object.assign({}, (isActive ? decoration.active : decoration.general));
+        const options = { ...(isActive ? decoration.active : decoration.general) };
         options.hoverMessage = getHoverMessage(link, useMetaKey);
         return options;
     }
@@ -328,15 +317,15 @@ function getHoverMessage(link, useMetaKey) {
     const label = link.tooltip
         ? link.tooltip
         : executeCmd
-            ? nls.localize('links.navigate.executeCmd', 'Execute command')
-            : nls.localize('links.navigate.follow', 'Follow link');
+            ? nls.localize(1269, 'Execute command')
+            : nls.localize(1270, 'Follow link');
     const kb = useMetaKey
         ? platform.isMacintosh
-            ? nls.localize('links.navigate.kb.meta.mac', "cmd + click")
-            : nls.localize('links.navigate.kb.meta', "ctrl + click")
+            ? nls.localize(1271, "cmd + click")
+            : nls.localize(1272, "ctrl + click")
         : platform.isMacintosh
-            ? nls.localize('links.navigate.kb.alt.mac', "option + click")
-            : nls.localize('links.navigate.kb.alt', "alt + click");
+            ? nls.localize(1273, "option + click")
+            : nls.localize(1274, "alt + click");
     if (link.url) {
         let nativeLabel = '';
         if (/^command:/i.test(link.url.toString())) {
@@ -344,7 +333,7 @@ function getHoverMessage(link, useMetaKey) {
             const match = link.url.toString().match(/^command:([^?#]+)/);
             if (match) {
                 const commandId = match[1];
-                nativeLabel = nls.localize('tooltip.explanation', "Execute command {0}", commandId);
+                nativeLabel = nls.localize(1275, "Execute command {0}", commandId);
             }
         }
         const hoverMessage = new MarkdownString('', true)
@@ -360,8 +349,7 @@ class OpenLinkAction extends EditorAction {
     constructor() {
         super({
             id: 'editor.action.openLink',
-            label: nls.localize('label', "Open Link"),
-            alias: 'Open Link',
+            label: nls.localize2(1276, "Open Link"),
             precondition: undefined
         });
     }
@@ -384,3 +372,4 @@ class OpenLinkAction extends EditorAction {
 }
 registerEditorContribution(LinkDetector.ID, LinkDetector, 1 /* EditorContributionInstantiation.AfterFirstRender */);
 registerEditorAction(OpenLinkAction);
+//# sourceMappingURL=links.js.map

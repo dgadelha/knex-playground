@@ -18,7 +18,9 @@ import { DisposableStore } from '../../../base/common/lifecycle.js';
 import { IKeybindingService } from '../../keybinding/common/keybinding.js';
 import { Extensions } from '../common/quickAccess.js';
 import { IQuickInputService } from '../common/quickInput.js';
-let HelpQuickAccessProvider = HelpQuickAccessProvider_1 = class HelpQuickAccessProvider {
+let HelpQuickAccessProvider = class HelpQuickAccessProvider {
+    static { HelpQuickAccessProvider_1 = this; }
+    static { this.PREFIX = '?'; }
     constructor(quickInputService, keybindingService) {
         this.quickInputService = quickInputService;
         this.keybindingService = keybindingService;
@@ -60,15 +62,15 @@ let HelpQuickAccessProvider = HelpQuickAccessProvider_1 = class HelpQuickAccessP
                 prefix,
                 label,
                 keybinding: helpEntry.commandId ? this.keybindingService.lookupKeybinding(helpEntry.commandId) : undefined,
-                ariaLabel: localize('helpPickAriaLabel', "{0}, {1}", label, helpEntry.description),
+                ariaLabel: localize(1730, "{0}, {1}", label, helpEntry.description),
                 description: helpEntry.description
             };
         });
     }
 };
-HelpQuickAccessProvider.PREFIX = '?';
 HelpQuickAccessProvider = HelpQuickAccessProvider_1 = __decorate([
     __param(0, IQuickInputService),
     __param(1, IKeybindingService)
 ], HelpQuickAccessProvider);
 export { HelpQuickAccessProvider };
+//# sourceMappingURL=helpQuickAccess.js.map

@@ -11,29 +11,30 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var PostEditWidget_1;
 import * as dom from '../../../../base/browser/dom.js';
 import { Button } from '../../../../base/browser/ui/button/button.js';
-import { toAction } from '../../../../base/common/actions.js';
+import { raceCancellationError } from '../../../../base/common/async.js';
+import { Codicon } from '../../../../base/common/codicons.js';
+import { toErrorMessage } from '../../../../base/common/errorMessage.js';
+import { isCancellationError } from '../../../../base/common/errors.js';
 import { Event } from '../../../../base/common/event.js';
 import { Disposable, MutableDisposable, toDisposable } from '../../../../base/common/lifecycle.js';
-import './postEditWidget.css';
-import { IBulkEditService, ResourceTextEdit } from '../../../browser/services/bulkEditService.js';
+import { ThemeIcon } from '../../../../base/common/themables.js';
+import { localize } from '../../../../nls.js';
+import { IActionWidgetService } from '../../../../platform/actionWidget/browser/actionWidget.js';
 import { IContextKeyService } from '../../../../platform/contextkey/common/contextkey.js';
-import { IContextMenuService } from '../../../../platform/contextview/browser/contextView.js';
 import { IInstantiationService } from '../../../../platform/instantiation/common/instantiation.js';
 import { IKeybindingService } from '../../../../platform/keybinding/common/keybinding.js';
-let PostEditWidget = PostEditWidget_1 = class PostEditWidget extends Disposable {
-    constructor(typeId, editor, visibleContext, showCommand, range, edits, onSelectNewEdit, _contextMenuService, contextKeyService, _keybindingService) {
+import { INotificationService } from '../../../../platform/notification/common/notification.js';
+import { IBulkEditService } from '../../../browser/services/bulkEditService.js';
+import { EditorStateCancellationTokenSource } from '../../editorState/browser/editorState.js';
+import { createCombinedWorkspaceEdit } from './edit.js';
+import './postEditWidget.css';
+let PostEditWidget = class PostEditWidget extends Disposable {
+    static { PostEditWidget_1 = this; }
+    static { this.baseId = 'editor.widget.postEditWidget'; }
+    constructor(typeId, editor, visibleContext, showCommand, range, edits, onSelectNewEdit, additionalActions, contextKeyService, _keybindingService, _actionWidgetService) {
         super();
         this.typeId = typeId;
         this.editor = editor;
@@ -41,8 +42,9 @@ let PostEditWidget = PostEditWidget_1 = class PostEditWidget extends Disposable 
         this.range = range;
         this.edits = edits;
         this.onSelectNewEdit = onSelectNewEdit;
-        this._contextMenuService = _contextMenuService;
+        this.additionalActions = additionalActions;
         this._keybindingService = _keybindingService;
+        this._actionWidgetService = _actionWidgetService;
         this.allowEditorOverflow = true;
         this.suppressMouseDown = true;
         this.create();
@@ -53,17 +55,14 @@ let PostEditWidget = PostEditWidget_1 = class PostEditWidget extends Disposable 
         this.editor.layoutContentWidget(this);
         this._register(toDisposable((() => this.editor.removeContentWidget(this))));
         this._register(this.editor.onDidChangeCursorPosition(e => {
-            if (!range.containsPosition(e.position)) {
-                this.dispose();
-            }
+            this.dispose();
         }));
         this._register(Event.runAndSubscribe(_keybindingService.onDidUpdateKeybindings, () => {
             this._updateButtonTitle();
         }));
     }
     _updateButtonTitle() {
-        var _a;
-        const binding = (_a = this._keybindingService.lookupKeybinding(this.showCommand.id)) === null || _a === void 0 ? void 0 : _a.getLabel();
+        const binding = this._keybindingService.lookupKeybinding(this.showCommand.id)?.getLabel();
         this.button.element.title = this.showCommand.label + (binding ? ` (${binding})` : '');
     }
     create() {
@@ -87,114 +86,134 @@ let PostEditWidget = PostEditWidget_1 = class PostEditWidget extends Disposable 
         };
     }
     showSelector() {
-        this._contextMenuService.showContextMenu({
-            getAnchor: () => {
-                const pos = dom.getDomNodePagePosition(this.button.element);
-                return { x: pos.left + pos.width, y: pos.top + pos.height };
+        const pos = dom.getDomNodePagePosition(this.button.element);
+        const anchor = { x: pos.left + pos.width, y: pos.top + pos.height };
+        this._actionWidgetService.show('postEditWidget', false, this.edits.allEdits.map((edit, i) => {
+            return {
+                kind: "action" /* ActionListItemKind.Action */,
+                item: edit,
+                label: edit.title,
+                disabled: false,
+                canPreview: false,
+                group: { title: '', icon: ThemeIcon.fromId(i === this.edits.activeEditIndex ? Codicon.check.id : Codicon.blank.id) },
+            };
+        }), {
+            onHide: () => {
+                this.editor.focus();
             },
-            getActions: () => {
-                return this.edits.allEdits.map((edit, i) => toAction({
-                    id: '',
-                    label: edit.label,
-                    checked: i === this.edits.activeEditIndex,
-                    run: () => {
-                        if (i !== this.edits.activeEditIndex) {
-                            return this.onSelectNewEdit(i);
-                        }
-                    },
-                }));
-            }
-        });
+            onSelect: (item) => {
+                this._actionWidgetService.hide(false);
+                const i = this.edits.allEdits.findIndex(edit => edit === item);
+                if (i !== this.edits.activeEditIndex) {
+                    return this.onSelectNewEdit(i);
+                }
+            },
+        }, anchor, this.editor.getDomNode() ?? undefined, this.additionalActions);
     }
 };
-PostEditWidget.baseId = 'editor.widget.postEditWidget';
 PostEditWidget = PostEditWidget_1 = __decorate([
-    __param(7, IContextMenuService),
     __param(8, IContextKeyService),
-    __param(9, IKeybindingService)
+    __param(9, IKeybindingService),
+    __param(10, IActionWidgetService)
 ], PostEditWidget);
 let PostEditWidgetManager = class PostEditWidgetManager extends Disposable {
-    constructor(_id, _editor, _visibleContext, _showCommand, _instantiationService, _bulkEditService) {
+    constructor(_id, _editor, _visibleContext, _showCommand, _getAdditionalActions, _instantiationService, _bulkEditService, _notificationService) {
         super();
         this._id = _id;
         this._editor = _editor;
         this._visibleContext = _visibleContext;
         this._showCommand = _showCommand;
+        this._getAdditionalActions = _getAdditionalActions;
         this._instantiationService = _instantiationService;
         this._bulkEditService = _bulkEditService;
+        this._notificationService = _notificationService;
         this._currentWidget = this._register(new MutableDisposable());
         this._register(Event.any(_editor.onDidChangeModel, _editor.onDidChangeModelContent)(() => this.clear()));
     }
-    applyEditAndShowIfNeeded(ranges, edits, canShowWidget, token) {
-        var _a, _b;
-        return __awaiter(this, void 0, void 0, function* () {
+    async applyEditAndShowIfNeeded(ranges, edits, canShowWidget, resolve, token) {
+        if (!ranges.length || !this._editor.hasModel()) {
+            return;
+        }
+        const model = this._editor.getModel();
+        const edit = edits.allEdits.at(edits.activeEditIndex);
+        if (!edit) {
+            return;
+        }
+        const onDidSelectEdit = async (newEditIndex) => {
             const model = this._editor.getModel();
-            if (!model || !ranges.length) {
+            if (!model) {
                 return;
             }
-            const edit = edits.allEdits[edits.activeEditIndex];
-            if (!edit) {
+            await model.undo();
+            this.applyEditAndShowIfNeeded(ranges, { activeEditIndex: newEditIndex, allEdits: edits.allEdits }, canShowWidget, resolve, token);
+        };
+        const handleError = (e, message) => {
+            if (isCancellationError(e)) {
                 return;
             }
-            let insertTextEdit = [];
-            if (typeof edit.insertText === 'string' ? edit.insertText === '' : edit.insertText.snippet === '') {
-                insertTextEdit = [];
+            this._notificationService.error(message);
+            if (canShowWidget) {
+                this.show(ranges[0], edits, onDidSelectEdit);
             }
-            else {
-                insertTextEdit = ranges.map(range => new ResourceTextEdit(model.uri, typeof edit.insertText === 'string'
-                    ? { range, text: edit.insertText, insertAsSnippet: false }
-                    : { range, text: edit.insertText.snippet, insertAsSnippet: true }));
-            }
-            const allEdits = [
-                ...insertTextEdit,
-                ...((_b = (_a = edit.additionalEdit) === null || _a === void 0 ? void 0 : _a.edits) !== null && _b !== void 0 ? _b : [])
-            ];
-            const combinedWorkspaceEdit = {
-                edits: allEdits
-            };
-            // Use a decoration to track edits around the trigger range
-            const primaryRange = ranges[0];
-            const editTrackingDecoration = model.deltaDecorations([], [{
-                    range: primaryRange,
-                    options: { description: 'paste-line-suffix', stickiness: 0 /* TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges */ }
-                }]);
-            let editResult;
-            let editRange;
-            try {
-                editResult = yield this._bulkEditService.apply(combinedWorkspaceEdit, { editor: this._editor, token });
-                editRange = model.getDecorationRange(editTrackingDecoration[0]);
-            }
-            finally {
-                model.deltaDecorations(editTrackingDecoration, []);
-            }
-            if (canShowWidget && editResult.isApplied && edits.allEdits.length > 1) {
-                this.show(editRange !== null && editRange !== void 0 ? editRange : primaryRange, edits, (newEditIndex) => __awaiter(this, void 0, void 0, function* () {
-                    const model = this._editor.getModel();
-                    if (!model) {
-                        return;
-                    }
-                    yield model.undo();
-                    this.applyEditAndShowIfNeeded(ranges, { activeEditIndex: newEditIndex, allEdits: edits.allEdits }, canShowWidget, token);
-                }));
-            }
-        });
+        };
+        const editorStateCts = new EditorStateCancellationTokenSource(this._editor, 1 /* CodeEditorStateFlag.Value */ | 2 /* CodeEditorStateFlag.Selection */, undefined, token);
+        let resolvedEdit;
+        try {
+            resolvedEdit = await raceCancellationError(resolve(edit, editorStateCts.token), editorStateCts.token);
+        }
+        catch (e) {
+            return handleError(e, localize(932, "Error resolving edit '{0}':\n{1}", edit.title, toErrorMessage(e)));
+        }
+        finally {
+            editorStateCts.dispose();
+        }
+        if (token.isCancellationRequested) {
+            return;
+        }
+        const combinedWorkspaceEdit = createCombinedWorkspaceEdit(model.uri, ranges, resolvedEdit);
+        // Use a decoration to track edits around the trigger range
+        const primaryRange = ranges[0];
+        const editTrackingDecoration = model.deltaDecorations([], [{
+                range: primaryRange,
+                options: { description: 'paste-line-suffix', stickiness: 0 /* TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges */ }
+            }]);
+        this._editor.focus();
+        let editResult;
+        let editRange;
+        try {
+            editResult = await this._bulkEditService.apply(combinedWorkspaceEdit, { editor: this._editor, token });
+            editRange = model.getDecorationRange(editTrackingDecoration[0]);
+        }
+        catch (e) {
+            return handleError(e, localize(933, "Error applying edit '{0}':\n{1}", edit.title, toErrorMessage(e)));
+        }
+        finally {
+            model.deltaDecorations(editTrackingDecoration, []);
+        }
+        if (token.isCancellationRequested) {
+            return;
+        }
+        if (canShowWidget && editResult.isApplied && edits.allEdits.length > 1) {
+            this.show(editRange ?? primaryRange, edits, onDidSelectEdit);
+        }
     }
     show(range, edits, onDidSelectEdit) {
         this.clear();
         if (this._editor.hasModel()) {
-            this._currentWidget.value = this._instantiationService.createInstance(PostEditWidget, this._id, this._editor, this._visibleContext, this._showCommand, range, edits, onDidSelectEdit);
+            this._currentWidget.value = this._instantiationService.createInstance((PostEditWidget), this._id, this._editor, this._visibleContext, this._showCommand, range, edits, onDidSelectEdit, this._getAdditionalActions());
         }
     }
     clear() {
         this._currentWidget.clear();
     }
     tryShowSelector() {
-        var _a;
-        (_a = this._currentWidget.value) === null || _a === void 0 ? void 0 : _a.showSelector();
+        this._currentWidget.value?.showSelector();
     }
 };
 PostEditWidgetManager = __decorate([
-    __param(4, IInstantiationService),
-    __param(5, IBulkEditService)
+    __param(5, IInstantiationService),
+    __param(6, IBulkEditService),
+    __param(7, INotificationService)
 ], PostEditWidgetManager);
 export { PostEditWidgetManager };
+//# sourceMappingURL=postEditWidget.js.map

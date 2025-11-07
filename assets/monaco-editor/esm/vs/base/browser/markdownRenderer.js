@@ -2,29 +2,27 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as DOM from './dom.js';
-import * as dompurify from './dompurify/dompurify.js';
-import { DomEmitter } from './event.js';
-import { createElement } from './formattedTextRenderer.js';
-import { StandardKeyboardEvent } from './keyboardEvent.js';
-import { StandardMouseEvent } from './mouseEvent.js';
-import { renderLabelWithIcons } from './ui/iconLabel/iconLabels.js';
 import { onUnexpectedError } from '../common/errors.js';
-import { Event } from '../common/event.js';
 import { escapeDoubleQuotes, parseHrefAndDimensions, removeMarkdownEscapes } from '../common/htmlContent.js';
 import { markdownEscapeEscapedIcons } from '../common/iconLabels.js';
 import { defaultGenerator } from '../common/idGenerator.js';
 import { Lazy } from '../common/lazy.js';
 import { DisposableStore } from '../common/lifecycle.js';
-import { marked } from '../common/marked/marked.js';
+import * as marked from '../common/marked/marked.js';
 import { parse } from '../common/marshalling.js';
 import { FileAccess, Schemas } from '../common/network.js';
 import { cloneAndChange } from '../common/objects.js';
 import { dirname, resolvePath } from '../common/resources.js';
 import { escape } from '../common/strings.js';
 import { URI } from '../common/uri.js';
+import * as DOM from './dom.js';
+import * as domSanitize from './domSanitize.js';
+import { convertTagToPlaintext } from './domSanitize.js';
+import { StandardKeyboardEvent } from './keyboardEvent.js';
+import { StandardMouseEvent } from './mouseEvent.js';
+import { renderLabelWithIcons } from './ui/iconLabel/iconLabels.js';
 const defaultMarkedRenderers = Object.freeze({
-    image: (href, title, text) => {
+    image: ({ href, title, text }) => {
         let dimensions = [];
         let attributes = [];
         if (href) {
@@ -42,10 +40,11 @@ const defaultMarkedRenderers = Object.freeze({
         }
         return '<img ' + attributes.join(' ') + '>';
     },
-    paragraph: (text) => {
-        return `<p>${text}</p>`;
+    paragraph({ tokens }) {
+        return `<p>${this.parser.parseInline(tokens)}</p>`;
     },
-    link: (href, title, text) => {
+    link({ href, title, tokens }) {
+        let text = this.parser.parseInline(tokens);
         if (typeof href !== 'string') {
             return '';
         }
@@ -61,178 +60,134 @@ const defaultMarkedRenderers = Object.freeze({
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
-        return `<a href="${href}" title="${title || href}">${text}</a>`;
+        return `<a href="${href}" title="${title || href}" draggable="false">${text}</a>`;
     },
 });
 /**
  * Low-level way create a html element from a markdown string.
  *
- * **Note** that for most cases you should be using [`MarkdownRenderer`](./src/vs/editor/contrib/markdownRenderer/browser/markdownRenderer.ts)
+ * **Note** that for most cases you should be using {@link import('../../editor/browser/widget/markdownRenderer/browser/markdownRenderer.js').MarkdownRenderer MarkdownRenderer}
  * which comes with support for pretty code block rendering and which uses the default way of handling links.
  */
-export function renderMarkdown(markdown, options = {}, markedOptions = {}) {
-    var _a, _b;
+export function renderMarkdown(markdown, options = {}, target) {
     const disposables = new DisposableStore();
     let isDisposed = false;
-    const element = createElement(options);
-    const _uriMassage = function (part) {
-        let data;
-        try {
-            data = parse(decodeURIComponent(part));
-        }
-        catch (e) {
-            // ignore
-        }
-        if (!data) {
-            return part;
-        }
-        data = cloneAndChange(data, value => {
-            if (markdown.uris && markdown.uris[value]) {
-                return URI.revive(markdown.uris[value]);
-            }
-            else {
-                return undefined;
-            }
-        });
-        return encodeURIComponent(JSON.stringify(data));
-    };
-    const _href = function (href, isDomUri) {
-        const data = markdown.uris && markdown.uris[href];
-        let uri = URI.revive(data);
-        if (isDomUri) {
-            if (href.startsWith(Schemas.data + ':')) {
-                return href;
-            }
-            if (!uri) {
-                uri = URI.parse(href);
-            }
-            // this URI will end up as "src"-attribute of a dom node
-            // and because of that special rewriting needs to be done
-            // so that the URI uses a protocol that's understood by
-            // browsers (like http or https)
-            return FileAccess.uriToBrowserUri(uri).toString(true);
-        }
-        if (!uri) {
-            return href;
-        }
-        if (URI.parse(href).toString() === uri.toString()) {
-            return href; // no transformation performed
-        }
-        if (uri.query) {
-            uri = uri.with({ query: _uriMassage(uri.query) });
-        }
-        return uri.toString();
-    };
-    const renderer = new marked.Renderer();
-    renderer.image = defaultMarkedRenderers.image;
-    renderer.link = defaultMarkedRenderers.link;
-    renderer.paragraph = defaultMarkedRenderers.paragraph;
-    // Will collect [id, renderedElement] tuples
-    const codeBlocks = [];
-    const syncCodeBlocks = [];
-    if (options.codeBlockRendererSync) {
-        renderer.code = (code, lang) => {
-            const id = defaultGenerator.nextId();
-            const value = options.codeBlockRendererSync(postProcessCodeBlockLanguageId(lang), code);
-            syncCodeBlocks.push([id, value]);
-            return `<div class="code" data-code="${id}">${escape(code)}</div>`;
-        };
-    }
-    else if (options.codeBlockRenderer) {
-        renderer.code = (code, lang) => {
-            const id = defaultGenerator.nextId();
-            const value = options.codeBlockRenderer(postProcessCodeBlockLanguageId(lang), code);
-            codeBlocks.push(value.then(element => [id, element]));
-            return `<div class="code" data-code="${id}">${escape(code)}</div>`;
-        };
-    }
-    if (options.actionHandler) {
-        const _activateLink = function (event) {
-            let target = event.target;
-            if (target.tagName !== 'A') {
-                target = target.parentElement;
-                if (!target || target.tagName !== 'A') {
-                    return;
-                }
-            }
-            try {
-                let href = target.dataset['href'];
-                if (href) {
-                    if (markdown.baseUri) {
-                        href = resolveWithBaseUri(URI.from(markdown.baseUri), href);
-                    }
-                    options.actionHandler.callback(href, event);
-                }
-            }
-            catch (err) {
-                onUnexpectedError(err);
-            }
-            finally {
-                event.preventDefault();
-            }
-        };
-        const onClick = options.actionHandler.disposables.add(new DomEmitter(element, 'click'));
-        const onAuxClick = options.actionHandler.disposables.add(new DomEmitter(element, 'auxclick'));
-        options.actionHandler.disposables.add(Event.any(onClick.event, onAuxClick.event)(e => {
-            const mouseEvent = new StandardMouseEvent(e);
-            if (!mouseEvent.leftButton && !mouseEvent.middleButton) {
-                return;
-            }
-            _activateLink(mouseEvent);
-        }));
-        options.actionHandler.disposables.add(DOM.addDisposableListener(element, 'keydown', (e) => {
-            const keyboardEvent = new StandardKeyboardEvent(e);
-            if (!keyboardEvent.equals(10 /* KeyCode.Space */) && !keyboardEvent.equals(3 /* KeyCode.Enter */)) {
-                return;
-            }
-            _activateLink(keyboardEvent);
-        }));
-    }
-    if (!markdown.supportHtml) {
-        // TODO: Can we deprecated this in favor of 'supportHtml'?
-        // Use our own sanitizer so that we can let through only spans.
-        // Otherwise, we'd be letting all html be rendered.
-        // If we want to allow markdown permitted tags, then we can delete sanitizer and sanitize.
-        // We always pass the output through dompurify after this so that we don't rely on
-        // marked for sanitization.
-        markedOptions.sanitizer = (html) => {
-            const match = markdown.isTrusted ? html.match(/^(<span[^>]+>)|(<\/\s*span>)$/) : undefined;
-            return match ? html : '';
-        };
-        markedOptions.sanitize = true;
-        markedOptions.silent = true;
-    }
-    markedOptions.renderer = renderer;
-    // values that are too long will freeze the UI
-    let value = (_a = markdown.value) !== null && _a !== void 0 ? _a : '';
-    if (value.length > 100000) {
-        value = `${value.substr(0, 100000)}…`;
-    }
-    // escape theme icons
-    if (markdown.supportThemeIcons) {
-        value = markdownEscapeEscapedIcons(value);
-    }
+    const markedInstance = new marked.Marked(...(options.markedExtensions ?? []));
+    const { renderer, codeBlocks, syncCodeBlocks } = createMarkdownRenderer(markedInstance, options, markdown);
+    const value = preprocessMarkdownString(markdown);
     let renderedMarkdown;
     if (options.fillInIncompleteTokens) {
         // The defaults are applied by parse but not lexer()/parser(), and they need to be present
-        const opts = Object.assign(Object.assign({}, marked.defaults), markedOptions);
-        const tokens = marked.lexer(value, opts);
+        const opts = {
+            ...markedInstance.defaults,
+            ...options.markedOptions,
+            renderer
+        };
+        const tokens = markedInstance.lexer(value, opts);
         const newTokens = fillInIncompleteTokens(tokens);
-        renderedMarkdown = marked.parser(newTokens, opts);
+        renderedMarkdown = markedInstance.parser(newTokens, opts);
     }
     else {
-        renderedMarkdown = marked.parse(value, markedOptions);
+        renderedMarkdown = markedInstance.parse(value, { ...options?.markedOptions, renderer, async: false });
     }
     // Rewrite theme icons
     if (markdown.supportThemeIcons) {
         const elements = renderLabelWithIcons(renderedMarkdown);
         renderedMarkdown = elements.map(e => typeof e === 'string' ? e : e.outerHTML).join('');
     }
-    const htmlParser = new DOMParser();
-    const markdownHtmlDoc = htmlParser.parseFromString(sanitizeRenderedMarkdown(markdown, renderedMarkdown), 'text/html');
-    markdownHtmlDoc.body.querySelectorAll('img')
-        .forEach(img => {
-        const src = img.getAttribute('src'); // Get the raw 'src' attribute value as text, not the resolved 'src'
+    const renderedContent = document.createElement('div');
+    const sanitizerConfig = getDomSanitizerConfig(markdown, options.sanitizerConfig ?? {});
+    domSanitize.safeSetInnerHtml(renderedContent, renderedMarkdown, sanitizerConfig);
+    // Rewrite links and images before potentially inserting them into the real dom
+    rewriteRenderedLinks(markdown, options, renderedContent);
+    let outElement;
+    if (target) {
+        outElement = target;
+        DOM.reset(target, ...renderedContent.children);
+    }
+    else {
+        outElement = renderedContent;
+    }
+    if (codeBlocks.length > 0) {
+        Promise.all(codeBlocks).then((tuples) => {
+            if (isDisposed) {
+                return;
+            }
+            const renderedElements = new Map(tuples);
+            const placeholderElements = outElement.querySelectorAll(`div[data-code]`);
+            for (const placeholderElement of placeholderElements) {
+                const renderedElement = renderedElements.get(placeholderElement.dataset['code'] ?? '');
+                if (renderedElement) {
+                    DOM.reset(placeholderElement, renderedElement);
+                }
+            }
+            options.asyncRenderCallback?.();
+        });
+    }
+    else if (syncCodeBlocks.length > 0) {
+        const renderedElements = new Map(syncCodeBlocks);
+        const placeholderElements = outElement.querySelectorAll(`div[data-code]`);
+        for (const placeholderElement of placeholderElements) {
+            const renderedElement = renderedElements.get(placeholderElement.dataset['code'] ?? '');
+            if (renderedElement) {
+                DOM.reset(placeholderElement, renderedElement);
+            }
+        }
+    }
+    // Signal size changes for image tags
+    if (options.asyncRenderCallback) {
+        for (const img of outElement.getElementsByTagName('img')) {
+            const listener = disposables.add(DOM.addDisposableListener(img, 'load', () => {
+                listener.dispose();
+                options.asyncRenderCallback();
+            }));
+        }
+    }
+    // Add event listeners for links
+    if (options.actionHandler) {
+        const clickCb = (e) => {
+            const mouseEvent = new StandardMouseEvent(DOM.getWindow(outElement), e);
+            if (!mouseEvent.leftButton && !mouseEvent.middleButton) {
+                return;
+            }
+            activateLink(markdown, options, mouseEvent);
+        };
+        disposables.add(DOM.addDisposableListener(outElement, 'click', clickCb));
+        disposables.add(DOM.addDisposableListener(outElement, 'auxclick', clickCb));
+        disposables.add(DOM.addDisposableListener(outElement, 'keydown', (e) => {
+            const keyboardEvent = new StandardKeyboardEvent(e);
+            if (!keyboardEvent.equals(10 /* KeyCode.Space */) && !keyboardEvent.equals(3 /* KeyCode.Enter */)) {
+                return;
+            }
+            activateLink(markdown, options, keyboardEvent);
+        }));
+    }
+    // Remove/disable inputs
+    for (const input of [...outElement.getElementsByTagName('input')]) {
+        if (input.attributes.getNamedItem('type')?.value === 'checkbox') {
+            input.setAttribute('disabled', '');
+        }
+        else {
+            if (options.sanitizerConfig?.replaceWithPlaintext) {
+                const replacement = convertTagToPlaintext(input);
+                input.parentElement?.replaceChild(replacement, input);
+            }
+            else {
+                input.remove();
+            }
+        }
+    }
+    return {
+        element: outElement,
+        dispose: () => {
+            isDisposed = true;
+            disposables.dispose();
+        }
+    };
+}
+function rewriteRenderedLinks(markdown, options, root) {
+    for (const el of root.querySelectorAll('img, audio, video, source')) {
+        const src = el.getAttribute('src'); // Get the raw 'src' attribute value as text, not the resolved 'src'
         if (src) {
             let href = src;
             try {
@@ -241,72 +196,151 @@ export function renderMarkdown(markdown, options = {}, markedOptions = {}) {
                 }
             }
             catch (err) { }
-            img.src = _href(href, true);
+            el.setAttribute('src', massageHref(markdown, href, true));
+            if (options.sanitizerConfig?.remoteImageIsAllowed) {
+                const uri = URI.parse(href);
+                if (uri.scheme !== Schemas.file && uri.scheme !== Schemas.data && !options.sanitizerConfig.remoteImageIsAllowed(uri)) {
+                    el.replaceWith(DOM.$('', undefined, el.outerHTML));
+                }
+            }
         }
-    });
-    markdownHtmlDoc.body.querySelectorAll('a')
-        .forEach(a => {
-        const href = a.getAttribute('href'); // Get the raw 'href' attribute value as text, not the resolved 'href'
-        a.setAttribute('href', ''); // Clear out href. We use the `data-href` for handling clicks instead
+    }
+    for (const el of root.querySelectorAll('a')) {
+        const href = el.getAttribute('href'); // Get the raw 'href' attribute value as text, not the resolved 'href'
+        el.setAttribute('href', ''); // Clear out href. We use the `data-href` for handling clicks instead
         if (!href
             || /^data:|javascript:/i.test(href)
             || (/^command:/i.test(href) && !markdown.isTrusted)
             || /^command:(\/\/\/)?_workbench\.downloadResource/i.test(href)) {
             // drop the link
-            a.replaceWith(...a.childNodes);
+            el.replaceWith(...el.childNodes);
         }
         else {
-            let resolvedHref = _href(href, false);
+            let resolvedHref = massageHref(markdown, href, false);
             if (markdown.baseUri) {
                 resolvedHref = resolveWithBaseUri(URI.from(markdown.baseUri), href);
             }
-            a.dataset.href = resolvedHref;
+            el.dataset.href = resolvedHref;
+        }
+    }
+}
+function createMarkdownRenderer(marked, options, markdown) {
+    const renderer = new marked.Renderer(options.markedOptions);
+    renderer.image = defaultMarkedRenderers.image;
+    renderer.link = defaultMarkedRenderers.link;
+    renderer.paragraph = defaultMarkedRenderers.paragraph;
+    // Will collect [id, renderedElement] tuples
+    const codeBlocks = [];
+    const syncCodeBlocks = [];
+    if (options.codeBlockRendererSync) {
+        renderer.code = ({ text, lang, raw }) => {
+            const id = defaultGenerator.nextId();
+            const value = options.codeBlockRendererSync(postProcessCodeBlockLanguageId(lang), text, raw);
+            syncCodeBlocks.push([id, value]);
+            return `<div class="code" data-code="${id}">${escape(text)}</div>`;
+        };
+    }
+    else if (options.codeBlockRenderer) {
+        renderer.code = ({ text, lang }) => {
+            const id = defaultGenerator.nextId();
+            const value = options.codeBlockRenderer(postProcessCodeBlockLanguageId(lang), text);
+            codeBlocks.push(value.then(element => [id, element]));
+            return `<div class="code" data-code="${id}">${escape(text)}</div>`;
+        };
+    }
+    if (!markdown.supportHtml) {
+        // Note: we always pass the output through dompurify after this so that we don't rely on
+        // marked for real sanitization.
+        renderer.html = ({ text }) => {
+            if (options.sanitizerConfig?.replaceWithPlaintext) {
+                return escape(text);
+            }
+            const match = markdown.isTrusted ? text.match(/^(<span[^>]+>)|(<\/\s*span>)$/) : undefined;
+            return match ? text : '';
+        };
+    }
+    return { renderer, codeBlocks, syncCodeBlocks };
+}
+function preprocessMarkdownString(markdown) {
+    let value = markdown.value;
+    // values that are too long will freeze the UI
+    if (value.length > 100_000) {
+        value = `${value.substr(0, 100_000)}…`;
+    }
+    // escape theme icons
+    if (markdown.supportThemeIcons) {
+        value = markdownEscapeEscapedIcons(value);
+    }
+    return value;
+}
+function activateLink(mdStr, options, event) {
+    const target = event.target.closest('a[data-href]');
+    if (!DOM.isHTMLElement(target)) {
+        return;
+    }
+    try {
+        let href = target.dataset['href'];
+        if (href) {
+            if (mdStr.baseUri) {
+                href = resolveWithBaseUri(URI.from(mdStr.baseUri), href);
+            }
+            options.actionHandler?.(href, mdStr);
+        }
+    }
+    catch (err) {
+        onUnexpectedError(err);
+    }
+    finally {
+        event.preventDefault();
+    }
+}
+function uriMassage(markdown, part) {
+    let data;
+    try {
+        data = parse(decodeURIComponent(part));
+    }
+    catch (e) {
+        // ignore
+    }
+    if (!data) {
+        return part;
+    }
+    data = cloneAndChange(data, value => {
+        if (markdown.uris && markdown.uris[value]) {
+            return URI.revive(markdown.uris[value]);
+        }
+        else {
+            return undefined;
         }
     });
-    element.innerHTML = sanitizeRenderedMarkdown(markdown, markdownHtmlDoc.body.innerHTML);
-    if (codeBlocks.length > 0) {
-        Promise.all(codeBlocks).then((tuples) => {
-            var _a, _b;
-            if (isDisposed) {
-                return;
-            }
-            const renderedElements = new Map(tuples);
-            const placeholderElements = element.querySelectorAll(`div[data-code]`);
-            for (const placeholderElement of placeholderElements) {
-                const renderedElement = renderedElements.get((_a = placeholderElement.dataset['code']) !== null && _a !== void 0 ? _a : '');
-                if (renderedElement) {
-                    DOM.reset(placeholderElement, renderedElement);
-                }
-            }
-            (_b = options.asyncRenderCallback) === null || _b === void 0 ? void 0 : _b.call(options);
-        });
-    }
-    else if (syncCodeBlocks.length > 0) {
-        const renderedElements = new Map(syncCodeBlocks);
-        const placeholderElements = element.querySelectorAll(`div[data-code]`);
-        for (const placeholderElement of placeholderElements) {
-            const renderedElement = renderedElements.get((_b = placeholderElement.dataset['code']) !== null && _b !== void 0 ? _b : '');
-            if (renderedElement) {
-                DOM.reset(placeholderElement, renderedElement);
-            }
+    return encodeURIComponent(JSON.stringify(data));
+}
+function massageHref(markdown, href, isDomUri) {
+    const data = markdown.uris && markdown.uris[href];
+    let uri = URI.revive(data);
+    if (isDomUri) {
+        if (href.startsWith(Schemas.data + ':')) {
+            return href;
         }
-    }
-    // signal size changes for image tags
-    if (options.asyncRenderCallback) {
-        for (const img of element.getElementsByTagName('img')) {
-            const listener = disposables.add(DOM.addDisposableListener(img, 'load', () => {
-                listener.dispose();
-                options.asyncRenderCallback();
-            }));
+        if (!uri) {
+            uri = URI.parse(href);
         }
+        // this URI will end up as "src"-attribute of a dom node
+        // and because of that special rewriting needs to be done
+        // so that the URI uses a protocol that's understood by
+        // browsers (like http or https)
+        return FileAccess.uriToBrowserUri(uri).toString(true);
     }
-    return {
-        element,
-        dispose: () => {
-            isDisposed = true;
-            disposables.dispose();
-        }
-    };
+    if (!uri) {
+        return href;
+    }
+    if (URI.parse(href).toString() === uri.toString()) {
+        return href; // no transformation performed
+    }
+    if (uri.query) {
+        uri = uri.with({ query: uriMassage(markdown, uri.query) });
+    }
+    return uri.toString();
 }
 function postProcessCodeBlockLanguageId(lang) {
     if (!lang) {
@@ -330,100 +364,132 @@ function resolveWithBaseUri(baseUri, href) {
         return resolvePath(dirname(baseUri), href).toString();
     }
 }
-function sanitizeRenderedMarkdown(options, renderedMarkdown) {
-    const { config, allowedSchemes } = getSanitizerOptions(options);
-    dompurify.addHook('uponSanitizeAttribute', (element, e) => {
-        if (e.attrName === 'style' || e.attrName === 'class') {
-            if (element.tagName === 'SPAN') {
-                if (e.attrName === 'style') {
-                    e.keepAttr = /^(color\:(#[0-9a-fA-F]+|var\(--vscode(-[a-zA-Z]+)+\));)?(background-color\:(#[0-9a-fA-F]+|var\(--vscode(-[a-zA-Z]+)+\));)?$/.test(e.attrValue);
-                    return;
-                }
-                else if (e.attrName === 'class') {
-                    e.keepAttr = /^codicon codicon-[a-z\-]+( codicon-modifier-[a-z\-]+)?$/.test(e.attrValue);
-                    return;
-                }
-            }
-            e.keepAttr = false;
-            return;
-        }
-    });
-    const hook = DOM.hookDomPurifyHrefAndSrcSanitizer(allowedSchemes);
-    try {
-        return dompurify.sanitize(renderedMarkdown, Object.assign(Object.assign({}, config), { RETURN_TRUSTED_TYPE: true }));
-    }
-    finally {
-        dompurify.removeHook('uponSanitizeAttribute');
-        hook.dispose();
-    }
+function sanitizeRenderedMarkdown(renderedMarkdown, originalMdStrConfig, options = {}) {
+    const sanitizerConfig = getDomSanitizerConfig(originalMdStrConfig, options);
+    return domSanitize.sanitizeHtml(renderedMarkdown, sanitizerConfig);
 }
-export const allowedMarkdownAttr = [
+export const allowedMarkdownHtmlTags = Object.freeze([
+    ...domSanitize.basicMarkupHtmlTags,
+    'input', // Allow inputs for rendering checkboxes. Other types of inputs are removed and the inputs are always disabled
+]);
+export const allowedMarkdownHtmlAttributes = Object.freeze([
     'align',
     'autoplay',
     'alt',
-    'class',
+    'colspan',
     'controls',
-    'data-code',
-    'data-href',
+    'draggable',
     'height',
     'href',
     'loop',
     'muted',
     'playsinline',
     'poster',
+    'rowspan',
     'src',
-    'style',
     'target',
     'title',
+    'type',
     'width',
     'start',
-];
-function getSanitizerOptions(options) {
-    const allowedSchemes = [
+    // Input (For disabled inputs)
+    'checked',
+    'disabled',
+    'value',
+    // Custom markdown attributes
+    'data-code',
+    'data-href',
+    // Only allow very specific styles
+    {
+        attributeName: 'style',
+        shouldKeep: (element, data) => {
+            if (element.tagName === 'SPAN') {
+                if (data.attrName === 'style') {
+                    return /^(color\:(#[0-9a-fA-F]+|var\(--vscode(-[a-zA-Z0-9]+)+\));)?(background-color\:(#[0-9a-fA-F]+|var\(--vscode(-[a-zA-Z0-9]+)+\));)?(border-radius:[0-9]+px;)?$/.test(data.attrValue);
+                }
+            }
+            return false;
+        }
+    },
+    // Only allow codicons for classes
+    {
+        attributeName: 'class',
+        shouldKeep: (element, data) => {
+            if (element.tagName === 'SPAN') {
+                if (data.attrName === 'class') {
+                    return /^codicon codicon-[a-z\-]+( codicon-modifier-[a-z\-]+)?$/.test(data.attrValue);
+                }
+            }
+            return false;
+        },
+    },
+]);
+function getDomSanitizerConfig(mdStrConfig, options) {
+    const isTrusted = mdStrConfig.isTrusted ?? false;
+    const allowedLinkSchemes = [
         Schemas.http,
         Schemas.https,
         Schemas.mailto,
-        Schemas.data,
         Schemas.file,
         Schemas.vscodeFileResource,
         Schemas.vscodeRemote,
         Schemas.vscodeRemoteResource,
+        Schemas.vscodeNotebookCell
     ];
-    if (options.isTrusted) {
-        allowedSchemes.push(Schemas.command);
+    if (isTrusted) {
+        allowedLinkSchemes.push(Schemas.command);
+    }
+    if (options.allowedLinkSchemes?.augment) {
+        allowedLinkSchemes.push(...options.allowedLinkSchemes.augment);
     }
     return {
-        config: {
-            // allowedTags should included everything that markdown renders to.
-            // Since we have our own sanitize function for marked, it's possible we missed some tag so let dompurify make sure.
-            // HTML tags that can result from markdown are from reading https://spec.commonmark.org/0.29/
-            // HTML table tags that can result from markdown are from https://github.github.com/gfm/#tables-extension-
-            ALLOWED_TAGS: [...DOM.basicMarkupHtmlTags],
-            ALLOWED_ATTR: allowedMarkdownAttr,
-            ALLOW_UNKNOWN_PROTOCOLS: true,
+        // allowedTags should included everything that markdown renders to.
+        // Since we have our own sanitize function for marked, it's possible we missed some tag so let dompurify make sure.
+        // HTML tags that can result from markdown are from reading https://spec.commonmark.org/0.29/
+        // HTML table tags that can result from markdown are from https://github.github.com/gfm/#tables-extension-
+        allowedTags: {
+            override: options.allowedTags?.override ?? allowedMarkdownHtmlTags
         },
-        allowedSchemes
+        allowedAttributes: {
+            override: options.allowedAttributes?.override ?? allowedMarkdownHtmlAttributes,
+        },
+        allowedLinkProtocols: {
+            override: allowedLinkSchemes,
+        },
+        allowRelativeLinkPaths: !!mdStrConfig.baseUri,
+        allowedMediaProtocols: {
+            override: [
+                Schemas.http,
+                Schemas.https,
+                Schemas.data,
+                Schemas.file,
+                Schemas.vscodeFileResource,
+                Schemas.vscodeRemote,
+                Schemas.vscodeRemoteResource,
+            ]
+        },
+        replaceWithPlaintext: options.replaceWithPlaintext,
     };
 }
 /**
- * Strips all markdown from `string`, if it's an IMarkdownString. For example
- * `# Header` would be output as `Header`. If it's not, the string is returned.
+ * Renders `str` as plaintext, stripping out Markdown syntax if it's a {@link IMarkdownString}.
+ *
+ * For example `# Header` would be output as `Header`.
  */
-export function renderStringAsPlaintext(string) {
-    return typeof string === 'string' ? string : renderMarkdownAsPlaintext(string);
-}
-/**
- * Strips all markdown from `markdown`. For example `# Header` would be output as `Header`.
- */
-export function renderMarkdownAsPlaintext(markdown) {
-    var _a;
-    // values that are too long will freeze the UI
-    let value = (_a = markdown.value) !== null && _a !== void 0 ? _a : '';
-    if (value.length > 100000) {
-        value = `${value.substr(0, 100000)}…`;
+export function renderAsPlaintext(str, options) {
+    if (typeof str === 'string') {
+        return str;
     }
-    const html = marked.parse(value, { renderer: plainTextRenderer.value }).replace(/&(#\d+|[a-zA-Z]+);/g, m => { var _a; return (_a = unescapeInfo.get(m)) !== null && _a !== void 0 ? _a : m; });
-    return sanitizeRenderedMarkdown({ isTrusted: false }, html).toString();
+    // values that are too long will freeze the UI
+    let value = str.value ?? '';
+    if (value.length > 100_000) {
+        value = `${value.substr(0, 100_000)}…`;
+    }
+    const html = marked.parse(value, { async: false, renderer: options?.includeCodeBlocksFences ? plainTextWithCodeBlocksRenderer.value : plainTextRenderer.value });
+    return sanitizeRenderedMarkdown(html, { isTrusted: false }, {})
+        .toString()
+        .replace(/&(#\d+|[a-zA-Z]+);/g, m => unescapeInfo.get(m) ?? m)
+        .trim();
 }
 const unescapeInfo = new Map([
     ['&quot;', '"'],
@@ -433,64 +499,72 @@ const unescapeInfo = new Map([
     ['&lt;', '<'],
     ['&gt;', '>'],
 ]);
-const plainTextRenderer = new Lazy(() => {
+function createPlainTextRenderer() {
     const renderer = new marked.Renderer();
-    renderer.code = (code) => {
-        return code;
+    renderer.code = ({ text }) => {
+        return escape(text);
     };
-    renderer.blockquote = (quote) => {
-        return quote;
+    renderer.blockquote = ({ text }) => {
+        return text + '\n';
     };
-    renderer.html = (_html) => {
+    renderer.html = (_) => {
         return '';
     };
-    renderer.heading = (text, _level, _raw) => {
-        return text + '\n';
+    renderer.heading = function ({ tokens }) {
+        return this.parser.parseInline(tokens) + '\n';
     };
     renderer.hr = () => {
         return '';
     };
-    renderer.list = (body, _ordered) => {
-        return body;
+    renderer.list = function ({ items }) {
+        return items.map(x => this.listitem(x)).join('\n') + '\n';
     };
-    renderer.listitem = (text) => {
+    renderer.listitem = ({ text }) => {
         return text + '\n';
     };
-    renderer.paragraph = (text) => {
-        return text + '\n';
+    renderer.paragraph = function ({ tokens }) {
+        return this.parser.parseInline(tokens) + '\n';
     };
-    renderer.table = (header, body) => {
-        return header + body + '\n';
+    renderer.table = function ({ header, rows }) {
+        return header.map(cell => this.tablecell(cell)).join(' ') + '\n' + rows.map(cells => cells.map(cell => this.tablecell(cell)).join(' ')).join('\n') + '\n';
     };
-    renderer.tablerow = (content) => {
-        return content;
-    };
-    renderer.tablecell = (content, _flags) => {
-        return content + ' ';
-    };
-    renderer.strong = (text) => {
+    renderer.tablerow = ({ text }) => {
         return text;
     };
-    renderer.em = (text) => {
+    renderer.tablecell = function ({ tokens }) {
+        return this.parser.parseInline(tokens);
+    };
+    renderer.strong = ({ text }) => {
         return text;
     };
-    renderer.codespan = (code) => {
-        return code;
+    renderer.em = ({ text }) => {
+        return text;
     };
-    renderer.br = () => {
+    renderer.codespan = ({ text }) => {
+        return escape(text);
+    };
+    renderer.br = (_) => {
         return '\n';
     };
-    renderer.del = (text) => {
+    renderer.del = ({ text }) => {
         return text;
     };
-    renderer.image = (_href, _title, _text) => {
+    renderer.image = (_) => {
         return '';
     };
-    renderer.text = (text) => {
+    renderer.text = ({ text }) => {
         return text;
     };
-    renderer.link = (_href, _title, text) => {
+    renderer.link = ({ text }) => {
         return text;
+    };
+    return renderer;
+}
+const plainTextRenderer = new Lazy(createPlainTextRenderer);
+const plainTextWithCodeBlocksRenderer = new Lazy(() => {
+    const renderer = createPlainTextRenderer();
+    renderer.code = ({ text }) => {
+        return `\n\`\`\`\n${escape(text)}\n\`\`\`\n`;
     };
     return renderer;
 });
@@ -502,7 +576,11 @@ function mergeRawTokenText(tokens) {
     return mergedTokenText;
 }
 function completeSingleLinePattern(token) {
-    for (const subtoken of token.tokens) {
+    if (!token.tokens) {
+        return undefined;
+    }
+    for (let i = token.tokens.length - 1; i >= 0; i--) {
+        const subtoken = token.tokens[i];
         if (subtoken.type === 'text') {
             const lines = subtoken.raw.split('\n');
             const lastLine = lines[lines.length - 1];
@@ -521,60 +599,155 @@ function completeSingleLinePattern(token) {
             else if (lastLine.match(/(^|\s)_\w/)) {
                 return completeUnderscore(token);
             }
-            else if (lastLine.match(/(^|\s)\[.*\]\(\w*/)) {
+            else if (
+            // Text with start of link target
+            hasLinkTextAndStartOfLinkTarget(lastLine) ||
+                // This token doesn't have the link text, eg if it contains other markdown constructs that are in other subtokens.
+                // But some preceding token does have an unbalanced [ at least
+                hasStartOfLinkTargetAndNoLinkText(lastLine) && token.tokens.slice(0, i).some(t => t.type === 'text' && t.raw.match(/\[[^\]]*$/))) {
+                const nextTwoSubTokens = token.tokens.slice(i + 1);
+                // A markdown link can look like
+                // [link text](https://microsoft.com "more text")
+                // Where "more text" is a title for the link or an argument to a vscode command link
+                if (
+                // If the link was parsed as a link, then look for a link token and a text token with a quote
+                nextTwoSubTokens[0]?.type === 'link' && nextTwoSubTokens[1]?.type === 'text' && nextTwoSubTokens[1].raw.match(/^ *"[^"]*$/) ||
+                    // And if the link was not parsed as a link (eg command link), just look for a single quote in this token
+                    lastLine.match(/^[^"]* +"[^"]*$/)) {
+                    return completeLinkTargetArg(token);
+                }
                 return completeLinkTarget(token);
             }
-            else if (lastLine.match(/(^|\s)\[\w/)) {
+            // Contains the start of link text, and no following tokens contain the link target
+            else if (lastLine.match(/(^|\s)\[\w*[^\]]*$/)) {
                 return completeLinkText(token);
             }
         }
     }
     return undefined;
 }
-// function completeListItemPattern(token: marked.Tokens.List): marked.Tokens.List | undefined {
-// 	// Patch up this one list item
-// 	const lastItem = token.items[token.items.length - 1];
-// 	const newList = completeSingleLinePattern(lastItem);
-// 	if (!newList || newList.type !== 'list') {
-// 		// Nothing to fix, or not a pattern we were expecting
-// 		return;
-// 	}
-// 	// Re-parse the whole list with the last item replaced
-// 	const completeList = marked.lexer(mergeRawTokenText(token.items.slice(0, token.items.length - 1)) + newList.items[0].raw);
-// 	if (completeList.length === 1 && completeList[0].type === 'list') {
-// 		return completeList[0];
-// 	}
-// 	// Not a pattern we were expecting
-// 	return undefined;
-// }
+function hasLinkTextAndStartOfLinkTarget(str) {
+    return !!str.match(/(^|\s)\[.*\]\(\w*/);
+}
+function hasStartOfLinkTargetAndNoLinkText(str) {
+    return !!str.match(/^[^\[]*\]\([^\)]*$/);
+}
+function completeListItemPattern(list) {
+    // Patch up this one list item
+    const lastListItem = list.items[list.items.length - 1];
+    const lastListSubToken = lastListItem.tokens ? lastListItem.tokens[lastListItem.tokens.length - 1] : undefined;
+    /*
+    Example list token structures:
+
+    list
+        list_item
+            text
+                text
+                codespan
+                link
+        list_item
+            text
+            code // Complete indented codeblock
+        list_item
+            text
+            space
+            text
+                text // Incomplete indented codeblock
+        list_item
+            text
+            list // Nested list
+                list_item
+                    text
+                        text
+
+    Contrast with paragraph:
+    paragraph
+        text
+        codespan
+    */
+    const listEndsInHeading = (list) => {
+        // A list item can be rendered as a heading for some reason when it has a subitem where we haven't rendered the text yet like this:
+        // 1. list item
+        //    -
+        const lastItem = list.items.at(-1);
+        const lastToken = lastItem?.tokens.at(-1);
+        return lastToken?.type === 'heading' || lastToken?.type === 'list' && listEndsInHeading(lastToken);
+    };
+    let newToken;
+    if (lastListSubToken?.type === 'text' && !('inRawBlock' in lastListItem)) { // Why does Tag have a type of 'text'
+        newToken = completeSingleLinePattern(lastListSubToken);
+    }
+    else if (listEndsInHeading(list)) {
+        const newList = marked.lexer(list.raw.trim() + ' &nbsp;')[0];
+        if (newList.type !== 'list') {
+            // Something went wrong
+            return;
+        }
+        return newList;
+    }
+    if (!newToken || newToken.type !== 'paragraph') { // 'text' item inside the list item turns into paragraph
+        // Nothing to fix, or not a pattern we were expecting
+        return;
+    }
+    const previousListItemsText = mergeRawTokenText(list.items.slice(0, -1));
+    // Grabbing the `- ` or `1. ` or `* ` off the list item because I can't find a better way to do this
+    const lastListItemLead = lastListItem.raw.match(/^(\s*(-|\d+\.|\*) +)/)?.[0];
+    if (!lastListItemLead) {
+        // Is badly formatted
+        return;
+    }
+    const newListItemText = lastListItemLead +
+        mergeRawTokenText(lastListItem.tokens.slice(0, -1)) +
+        newToken.raw;
+    const newList = marked.lexer(previousListItemsText + newListItemText)[0];
+    if (newList.type !== 'list') {
+        // Something went wrong
+        return;
+    }
+    return newList;
+}
+function completeHeading(token, fullRawText) {
+    if (token.raw.match(/-\s*$/)) {
+        return marked.lexer(fullRawText + ' &nbsp;');
+    }
+}
+const maxIncompleteTokensFixRounds = 3;
 export function fillInIncompleteTokens(tokens) {
+    for (let i = 0; i < maxIncompleteTokensFixRounds; i++) {
+        const newTokens = fillInIncompleteTokensOnce(tokens);
+        if (newTokens) {
+            tokens = newTokens;
+        }
+        else {
+            break;
+        }
+    }
+    return tokens;
+}
+function fillInIncompleteTokensOnce(tokens) {
     let i;
     let newTokens;
     for (i = 0; i < tokens.length; i++) {
         const token = tokens[i];
-        if (token.type === 'paragraph' && token.raw.match(/(\n|^)```/)) {
-            // If the code block was complete, it would be in a type='code'
-            newTokens = completeCodeBlock(tokens.slice(i));
-            break;
-        }
         if (token.type === 'paragraph' && token.raw.match(/(\n|^)\|/)) {
             newTokens = completeTable(tokens.slice(i));
             break;
         }
-        // if (i === tokens.length - 1 && token.type === 'list') {
-        // 	const newListToken = completeListItemPattern(token);
-        // 	if (newListToken) {
-        // 		newTokens = [newListToken];
-        // 		break;
-        // 	}
-        // }
-        if (i === tokens.length - 1 && token.type === 'paragraph') {
-            // Only operates on a single token, because any newline that follows this should break these patterns
-            const newToken = completeSingleLinePattern(token);
-            if (newToken) {
-                newTokens = [newToken];
-                break;
-            }
+    }
+    const lastToken = tokens.at(-1);
+    if (!newTokens && lastToken?.type === 'list') {
+        const newListToken = completeListItemPattern(lastToken);
+        if (newListToken) {
+            newTokens = [newListToken];
+            i = tokens.length - 1;
+        }
+    }
+    if (!newTokens && lastToken?.type === 'paragraph') {
+        // Only operates on a single token, because any newline that follows this should break these patterns
+        const newToken = completeSingleLinePattern(lastToken);
+        if (newToken) {
+            newTokens = [newToken];
+            i = tokens.length - 1;
         }
     }
     if (newTokens) {
@@ -585,11 +758,13 @@ export function fillInIncompleteTokens(tokens) {
         newTokensList.links = tokens.links;
         return newTokensList;
     }
-    return tokens;
-}
-function completeCodeBlock(tokens) {
-    const mergedRawText = mergeRawTokenText(tokens);
-    return marked.lexer(mergedRawText + '\n```');
+    if (lastToken?.type === 'heading') {
+        const completeTokens = completeHeading(lastToken, mergeRawTokenText(tokens));
+        if (completeTokens) {
+            return completeTokens;
+        }
+    }
+    return null;
 }
 function completeCodespan(token) {
     return completeWithString(token, '`');
@@ -601,10 +776,13 @@ function completeUnderscore(tokens) {
     return completeWithString(tokens, '_');
 }
 function completeLinkTarget(tokens) {
-    return completeWithString(tokens, ')');
+    return completeWithString(tokens, ')', false);
+}
+function completeLinkTargetArg(tokens) {
+    return completeWithString(tokens, '")', false);
 }
 function completeLinkText(tokens) {
-    return completeWithString(tokens, '](about:blank)');
+    return completeWithString(tokens, '](https://microsoft.com)', false);
 }
 function completeDoublestar(tokens) {
     return completeWithString(tokens, '**');
@@ -612,11 +790,12 @@ function completeDoublestar(tokens) {
 function completeDoubleUnderscore(tokens) {
     return completeWithString(tokens, '__');
 }
-function completeWithString(tokens, closingString) {
+function completeWithString(tokens, closingString, shouldTrim = true) {
     const mergedRawText = mergeRawTokenText(Array.isArray(tokens) ? tokens : [tokens]);
     // If it was completed correctly, this should be a single token.
     // Expecting either a Paragraph or a List
-    return marked.lexer(mergedRawText + closingString)[0];
+    const trimmedRawText = shouldTrim ? mergedRawText.trimEnd() : mergedRawText;
+    return marked.lexer(trimmedRawText + closingString)[0];
 }
 function completeTable(tokens) {
     const mergedRawText = mergeRawTokenText(tokens);
@@ -655,3 +834,4 @@ function completeTable(tokens) {
     }
     return undefined;
 }
+//# sourceMappingURL=markdownRenderer.js.map

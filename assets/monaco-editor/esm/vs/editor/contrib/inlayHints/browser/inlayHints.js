@@ -2,21 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { CancellationError, onUnexpectedExternalError } from '../../../../base/common/errors.js';
 import { DisposableStore } from '../../../../base/common/lifecycle.js';
 import { Position } from '../../../common/core/position.js';
 import { Range } from '../../../common/core/range.js';
-import { Schemas } from '../../../../base/common/network.js';
-import { URI } from '../../../../base/common/uri.js';
+import { createCommandUri } from '../../../../base/common/htmlContent.js';
 export class InlayHintAnchor {
     constructor(range, direction) {
         this.range = range;
@@ -36,64 +26,59 @@ export class InlayHintItem {
         result._currentResolve = this._currentResolve;
         return result;
     }
-    resolve(token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (typeof this.provider.resolveInlayHint !== 'function') {
+    async resolve(token) {
+        if (typeof this.provider.resolveInlayHint !== 'function') {
+            return;
+        }
+        if (this._currentResolve) {
+            // wait for an active resolve operation and try again
+            // when that's done.
+            await this._currentResolve;
+            if (token.isCancellationRequested) {
                 return;
             }
-            if (this._currentResolve) {
-                // wait for an active resolve operation and try again
-                // when that's done.
-                yield this._currentResolve;
-                if (token.isCancellationRequested) {
-                    return;
-                }
-                return this.resolve(token);
-            }
-            if (!this._isResolved) {
-                this._currentResolve = this._doResolve(token)
-                    .finally(() => this._currentResolve = undefined);
-            }
-            yield this._currentResolve;
-        });
+            return this.resolve(token);
+        }
+        if (!this._isResolved) {
+            this._currentResolve = this._doResolve(token)
+                .finally(() => this._currentResolve = undefined);
+        }
+        await this._currentResolve;
     }
-    _doResolve(token) {
-        var _a, _b;
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const newHint = yield Promise.resolve(this.provider.resolveInlayHint(this.hint, token));
-                this.hint.tooltip = (_a = newHint === null || newHint === void 0 ? void 0 : newHint.tooltip) !== null && _a !== void 0 ? _a : this.hint.tooltip;
-                this.hint.label = (_b = newHint === null || newHint === void 0 ? void 0 : newHint.label) !== null && _b !== void 0 ? _b : this.hint.label;
-                this._isResolved = true;
-            }
-            catch (err) {
-                onUnexpectedExternalError(err);
-                this._isResolved = false;
-            }
-        });
+    async _doResolve(token) {
+        try {
+            const newHint = await Promise.resolve(this.provider.resolveInlayHint(this.hint, token));
+            this.hint.tooltip = newHint?.tooltip ?? this.hint.tooltip;
+            this.hint.label = newHint?.label ?? this.hint.label;
+            this.hint.textEdits = newHint?.textEdits ?? this.hint.textEdits;
+            this._isResolved = true;
+        }
+        catch (err) {
+            onUnexpectedExternalError(err);
+            this._isResolved = false;
+        }
     }
 }
 export class InlayHintsFragments {
-    static create(registry, model, ranges, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const data = [];
-            const promises = registry.ordered(model).reverse().map(provider => ranges.map((range) => __awaiter(this, void 0, void 0, function* () {
-                try {
-                    const result = yield provider.provideInlayHints(model, range, token);
-                    if (result === null || result === void 0 ? void 0 : result.hints.length) {
-                        data.push([result, provider]);
-                    }
+    static { this._emptyInlayHintList = Object.freeze({ dispose() { }, hints: [] }); }
+    static async create(registry, model, ranges, token) {
+        const data = [];
+        const promises = registry.ordered(model).reverse().map(provider => ranges.map(async (range) => {
+            try {
+                const result = await provider.provideInlayHints(model, range, token);
+                if (result?.hints.length || provider.onDidChangeInlayHints) {
+                    data.push([result ?? InlayHintsFragments._emptyInlayHintList, provider]);
                 }
-                catch (err) {
-                    onUnexpectedExternalError(err);
-                }
-            })));
-            yield Promise.all(promises.flat());
-            if (token.isCancellationRequested || model.isDisposed()) {
-                throw new CancellationError();
             }
-            return new InlayHintsFragments(ranges, data, model);
-        });
+            catch (err) {
+                onUnexpectedExternalError(err);
+            }
+        }));
+        await Promise.all(promises.flat());
+        if (token.isCancellationRequested || model.isDisposed()) {
+            throw new CancellationError();
+        }
+        return new InlayHintsFragments(ranges, data, model);
     }
     constructor(ranges, data, model) {
         this._disposables = new DisposableStore();
@@ -155,9 +140,6 @@ export class InlayHintsFragments {
     }
 }
 export function asCommandLink(command) {
-    return URI.from({
-        scheme: Schemas.command,
-        path: command.id,
-        query: command.arguments && encodeURIComponent(JSON.stringify(command.arguments))
-    }).toString();
+    return createCommandUri(command.id, ...(command.arguments ?? [])).toString();
 }
+//# sourceMappingURL=inlayHints.js.map
