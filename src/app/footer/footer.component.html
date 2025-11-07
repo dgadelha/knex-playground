@@ -1,25 +1,32 @@
 <div id="footer">
   <a href="https://knexjs.org/" rel="external noopener noreferrer" target="_blank">
-    <img src="./assets/knex-icon-white.png" alt="Knex Icon">
+    <img src="./assets/knex-icon-white.png" alt="Knex Icon" />
     Knex.js {{ knexVersion }}
   </a>
 
-  <span (click)="clientSelect.click()">
-    <img [src]="'./assets/clients/' + client + '.png'" alt="Knex Client Icon">
-    <select #clientSelect [ngModel]="client" (ngModelChange)="this.state.setState({ client: $event })" title="Knex Client">
-      <option *ngFor="let option of knexClients" [value]="option.id">{{ option.name }}</option>
+  <span tabindex="0" (click)="clientSelect.click()" (keydown)="clientSelect.click()">
+    <img alt="Knex Client Icon" [src]="`./assets/clients/${client}.png`" />
+    <select
+      #clientSelect
+      title="Knex Client"
+      [ngModel]="client"
+      (ngModelChange)="this.state.setState({ client: $event })"
+    >
+      @for (option of knexClients; track option.id) {
+        <option [value]="option.id">{{ option.name }}</option>
+      }
     </select>
   </span>
 
-  <span (click)="prettify.emit()" title="Prettify code (Ctrl + Shift + P)">
-    <img src="./assets/prettier-icon.svg" alt="Prettier Icon">
+  <span title="Prettify code (Ctrl + Shift + P)" tabindex="0" (click)="prettify.emit()" (keydown)="prettify.emit()">
+    <img src="./assets/prettier-icon.svg" alt="Prettier Icon" />
     Prettify
   </span>
 
   <div class="spacer"></div>
 
   <a href="https://github.com/dgadelha/knex-playground" rel="external noopener noreferrer" target="_blank">
-    <img src="./assets/github.png" alt="GitHub Icon">
+    <img src="./assets/github.png" alt="GitHub Icon" />
     GitHub
   </a>
 </div>

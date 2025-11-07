@@ -1,0 +1,25 @@
+diff --git a/node_modules/knex/lib/dialects/oracle/utils.js b/node_modules/knex/lib/dialects/oracle/utils.js
+index dee38eb..1748032 100644
+--- a/node_modules/knex/lib/dialects/oracle/utils.js
++++ b/node_modules/knex/lib/dialects/oracle/utils.js
+@@ -18,7 +18,6 @@ class NameHelper {
+   }
+ 
+   generateCombinedName(logger, postfix, name, subNames) {
+-    const crypto = require('crypto');
+     if (!Array.isArray(subNames)) subNames = subNames ? [subNames] : [];
+     const table = name.replace(/\.|-/g, '_');
+     const subNamesPart = subNames.join('_');
+@@ -30,12 +29,6 @@ class NameHelper {
+         `Automatically generated name "${result}" exceeds ${this.limit} character ` +
+           `limit for Oracle Database ${this.oracleVersion}. Using base64 encoded sha1 of that name instead.`
+       );
+-      // generates the sha1 of the name and encode it with base64
+-      result = crypto
+-        .createHash('sha1')
+-        .update(result)
+-        .digest('base64')
+-        .replace('=', '');
+     }
+     return result;
+   }

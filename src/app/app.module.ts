@@ -9,7 +9,6 @@ import { AppComponent } from "./app.component";
 import { FooterComponent } from "./footer/footer.component";
 
 @NgModule({
-  declarations: [AppComponent, FooterComponent],
   imports: [
     BrowserModule,
     FormsModule,
@@ -17,6 +16,7 @@ import { FooterComponent } from "./footer/footer.component";
     MonacoEditorModule,
     AngularSplitModule,
   ],
+  declarations: [AppComponent, FooterComponent],
   providers: [],
   bootstrap: [AppComponent],
 })

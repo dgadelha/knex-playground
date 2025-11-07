@@ -1,3 +1,5 @@
+@use "sass:color";
+
 /* You can add global styles to this file, and also import other style files */
 $color-primary: #1E1E1E;
 
@@ -12,5 +14,5 @@ html, body, app-root, ngx-monaco-editor {
 }
 
 .as-split-gutter {
-  background-color: lighten($color-primary, 15%) !important;
+  background-color: color.adjust($color-primary, $lightness: 15%) !important;
 }
