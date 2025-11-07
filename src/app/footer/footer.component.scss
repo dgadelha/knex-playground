@@ -22,6 +22,7 @@
 
     -webkit-user-select: none;
     user-select: none;
+    cursor: pointer;
 
     height: 22px;
     line-height: 22px;
@@ -71,6 +72,19 @@
     color: #FFF;
 
     height: 22px;
+  }
+
+  #select-fix {
+    position: relative;
+    width: 130px;
+
+    select {
+      position: absolute;
+      top: 0;
+      left: 0;
+
+      padding-left: 28px;
+    }
   }
 
   .spacer {
