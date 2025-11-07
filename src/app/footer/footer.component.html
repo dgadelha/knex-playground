@@ -4,7 +4,12 @@
     Knex.js {{ knexVersion }}
   </a>
 
-  <span tabindex="0" (click)="clientSelect.click()" (keydown)="clientSelect.click()">
+  <span
+    tabindex="0"
+    (click)="clientSelect.click()"
+    (keydown.enter)="clientSelect.click()"
+    (keydown.space)="clientSelect.click()"
+  >
     <img alt="Knex Client Icon" [src]="`./assets/clients/${client}.png`" />
     <select
       #clientSelect
@@ -18,7 +23,13 @@
     </select>
   </span>
 
-  <span title="Prettify code (Ctrl + Shift + P)" tabindex="0" (click)="prettify.emit()" (keydown)="prettify.emit()">
+  <span
+    title="Prettify code (Ctrl + Shift + P)"
+    tabindex="0"
+    (click)="prettify.emit()"
+    (keydown.enter)="prettify.emit()"
+    (keydown.space)="prettify.emit()"
+  >
     <img src="./assets/prettier-icon.svg" alt="Prettier Icon" />
     Prettify
   </span>

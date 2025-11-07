@@ -4,7 +4,7 @@ import { filter, take } from "rxjs/operators";
 
 @Injectable({ providedIn: "root" })
 export class MonacoService {
-  monacoLoaderService = inject(MonacoEditorLoaderService);
+  private monacoLoaderService = inject(MonacoEditorLoaderService);
 
   constructor() {
     this.monacoLoaderService.isMonacoLoaded$
