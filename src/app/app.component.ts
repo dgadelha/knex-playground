@@ -1,4 +1,4 @@
-import { Component, HostListener } from "@angular/core";
+import { Component, inject } from "@angular/core";
 import { MonacoStandaloneCodeEditor } from "@materia-ui/ngx-monaco-editor";
 import { js_beautify } from "js-beautify";
 import Knex from "knex";
@@ -10,21 +10,26 @@ import { StateService } from "./state.service";
 
 @Component({
   selector: "app-root",
-  templateUrl: "app.component.html",
-  styleUrls: ["app.component.scss"],
+  standalone: false,
+  templateUrl: "./app.component.html",
+  styleUrl: "./app.component.scss",
+  host: {
+    "window:keydown.control.shift.p": "onPrettify($event)",
+    "window:keydown.shift.alt.f": "onPrettify($event)",
+  },
 })
 export class AppComponent {
   client = knexClients[0];
   knex = Knex({ client: this.client.id });
 
-  knexEditorOptions = {
+  knexEditorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     language: "typescript",
     scrollBeyondLastLine: false,
     wordWrap: "on",
     theme: "vs-dark",
   };
 
-  sqlEditorOptions = {
+  sqlEditorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
     language: "sql",
     readOnly: true,
     scrollBeyondLastLine: false,
@@ -37,11 +42,11 @@ export class AppComponent {
 
   isBelowMd = false;
 
-  constructor(
-    private _monacoService: MonacoService,
-    public state: StateService,
-    responsiveService: ResponsiveService,
-  ) {
+  public state = inject(StateService);
+  public responsiveService = inject(ResponsiveService);
+  private _monacoService = inject(MonacoService);
+
+  constructor() {
     this.state.state$.subscribe(state => {
       this.client = knexClients.find(client => client.id === state.client) ?? this.client;
       this.knex = Knex({ client: state.client });
@@ -49,7 +54,7 @@ export class AppComponent {
       this.onCodeChange();
     });
 
-    responsiveService.isBelowMd().subscribe(isBelowMd => {
+    this.responsiveService.isBelowMd().subscribe(isBelowMd => {
       this.isBelowMd = isBelowMd.matches;
     });
   }
@@ -58,30 +63,38 @@ export class AppComponent {
     editor.focus();
   }
 
+  getError(error: unknown): string {
+    if (error instanceof Error) {
+      return error.toString();
+    }
+
+    return String(error);
+  }
+
   onCodeChange() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const knex = this.knex;
 
     try {
       let sql = "--- generated SQL code\n";
-      let generatedCode = eval(this.code).toQuery();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+      let generatedCode: string = eval(this.code).toQuery();
 
       try {
         generatedCode = sqlFormatter.format(generatedCode, {
           language: this.client.formatter,
         });
-      } catch (e) {
-        sql += `--- sqlFormatter failed to run: ${e?.toString() ?? e}\n`;
+      } catch (error) {
+        sql += `--- sqlFormatter failed to run: ${this.getError(error)}\n`;
       }
 
       this.sql = sql + generatedCode + "\n";
-    } catch (err) {
-      this.sql = `--- ${err?.toString() ?? err}\n`;
+    } catch (error) {
+      this.sql = `--- ${this.getError(error)}\n`;
     }
   }
 
-  @HostListener("window:keydown.control.shift.p", ["$event"])
-  @HostListener("window:keydown.shift.alt.f", ["$event"])
-  onPrettify(event?: KeyboardEvent) {
+  onPrettify(event?: Event) {
     event?.preventDefault();
     this.code = js_beautify(this.code);
   }

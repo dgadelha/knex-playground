@@ -1,4 +1,4 @@
-import { EventEmitter, Injectable } from "@angular/core";
+import { EventEmitter, inject, Injectable } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { combineLatestWith } from "rxjs";
 import { decodeFromUrl, encodeForUrl } from "../helpers/url";
@@ -17,14 +17,14 @@ export class StateService {
 
   state$ = new EventEmitter<State>();
 
-  constructor(
-    private activatedRoute: ActivatedRoute,
-    private router: Router,
-  ) {
+  private activatedRoute = inject(ActivatedRoute);
+  private router = inject(Router);
+
+  constructor() {
     this.activatedRoute.queryParams
       .pipe(combineLatestWith(this.activatedRoute.fragment))
       .subscribe(([params, fragment]) => {
-        this.stateSnapshot.client = params.c ?? this.stateSnapshot.client;
+        this.stateSnapshot.client = String(params.c ?? this.stateSnapshot.client);
         this.stateSnapshot.code = fragment ? decodeFromUrl(fragment) : this.stateSnapshot.code;
 
         this.state$.emit(this.stateSnapshot);
@@ -32,7 +32,7 @@ export class StateService {
   }
 
   setState(state: Partial<State>) {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       queryParams: {
         c: state.client ?? this.stateSnapshot.client,
       },

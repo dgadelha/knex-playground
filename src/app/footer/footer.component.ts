@@ -1,12 +1,13 @@
-import { Component, EventEmitter, Output } from "@angular/core";
-import { knexClients } from "src/helpers/clients";
+import { Component, inject, output } from "@angular/core";
 import knexInfo from "../../../node_modules/knex/package.json";
+import { knexClients } from "../../helpers/clients";
 import { StateService } from "../state.service";
 
 @Component({
   selector: "app-footer",
+  standalone: false,
   templateUrl: "./footer.component.html",
-  styleUrls: ["./footer.component.scss"],
+  styleUrl: "./footer.component.scss",
 })
 export class FooterComponent {
   knexClients = knexClients;
@@ -14,10 +15,10 @@ export class FooterComponent {
 
   client = knexClients[0].id;
 
-  @Output()
-  prettify: EventEmitter<void> = new EventEmitter<void>();
+  readonly prettify = output();
+  public state = inject(StateService);
 
-  constructor(public state: StateService) {
+  constructor() {
     this.state.state$.subscribe(state => {
       this.client = state.client;
     });

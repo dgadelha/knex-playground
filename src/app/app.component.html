@@ -5,13 +5,13 @@
       [options]="knexEditorOptions"
       [(ngModel)]="code"
       (ngModelChange)="state.setState({ code: $event })"
-      (init)="editorInit($event)">
-    </ngx-monaco-editor>
+      (init)="editorInit($event)"
+    />
   </as-split-area>
 
   <as-split-area [size]="50">
-    <ngx-monaco-editor #sqlEditor [options]="sqlEditorOptions" [(ngModel)]="sql"></ngx-monaco-editor>
+    <ngx-monaco-editor #sqlEditor [options]="sqlEditorOptions" [(ngModel)]="sql" />
   </as-split-area>
 </as-split>
 
-<app-footer (prettify)="onPrettify()"></app-footer>
+<app-footer (prettify)="onPrettify()" />
