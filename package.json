@@ -37,7 +37,7 @@
     "@angular/build": "^20.3.9",
     "@angular/cli": "^20.3.9",
     "@angular/compiler-cli": "^20.3.10",
-    "@eslint/compat": "^1.4.1",
+    "@eslint/compat": "^2.0.0",
     "@types/js-beautify": "^1.14.3",
     "@types/node": "^24.10.0",
     "angular-eslint": "^20.5.1",
